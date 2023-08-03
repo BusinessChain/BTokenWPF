@@ -8,6 +8,8 @@ namespace BTokenLib
 {
   public abstract partial class Token
   {
+    public static ILogEntryNotifier LogEntryNotifier;
+
     public Token TokenParent;
     public Token TokenChild;
 
@@ -48,8 +50,11 @@ namespace BTokenLib
 
     public Token(
       UInt16 port, 
-      bool flagEnableInboundConnections)
+      bool flagEnableInboundConnections,
+      ILogEntryNotifier logEntryNotifier)
     {
+      LogEntryNotifier = logEntryNotifier;
+
       PathRootToken = GetName();
       Directory.CreateDirectory(PathRootToken);
 

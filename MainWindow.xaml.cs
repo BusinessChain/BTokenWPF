@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
-using BTokenLib;
 
 namespace BTokenWPF
 {
-  public partial class MainWindow : Window
+  public partial class MainWindow : Window, BTokenLib.ILogEntryNotifier
   {
-    TokenBToken BToken;
+    BTokenLib.TokenBToken BToken;
 
     public MainWindow()
     {
       InitializeComponent();
 
-      BToken = new();
+      BToken = new(this);
       BToken.Start();
 
       UpdateTextBoxStatus();
@@ -37,6 +36,13 @@ namespace BTokenWPF
           MessageBoxButton.OK,
           MessageBoxImage.Error);
       }
+    }
+
+
+    public void NotifyLogEntry(string logEntry, string source)
+    {
+      lock (TextBoxLog)
+        TextBoxLog.Text += $"{logEntry}\n";
     }
 
     void ButtonUpdateTextBoxLog_Click(object sender, RoutedEventArgs e)

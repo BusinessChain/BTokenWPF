@@ -23,11 +23,13 @@ namespace BTokenLib
     DatabaseAccounts DatabaseAccounts = new();
  
 
-    public TokenBToken()
+    public TokenBToken(ILogEntryNotifier logEntryNotifier)
       : base(
           COMPORT_BTOKEN,
-          flagEnableInboundConnections: true)
+          flagEnableInboundConnections: true, 
+          logEntryNotifier)
     {
+      LogEntryNotifier = logEntryNotifier;
 
       TokenParent = new TokenBitcoin();
       TokenParent.TokenChild = this;
