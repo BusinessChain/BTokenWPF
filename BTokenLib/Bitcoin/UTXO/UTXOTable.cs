@@ -50,11 +50,9 @@ namespace BTokenLib
 
       for (int c = 0; c < Tables.Length; c += 1)
       {
-        $"Load UTXO Table {Tables[c].GetType().Name}.".Log(LogFile);
         Tables[c].LoadImage(pathImage);
       }
 
-      $"Load UTXO Image from {pathImage}".Log(LogFile);
     }
 
     public void CreateImage(string path)

@@ -111,7 +111,8 @@ namespace BTokenLib
 
     void EnterStateSynchronization(Peer peer)
     {
-      $"Enter state synchronization of token {Token.GetName()} with peer {peer}.".Log(LogFile);
+      $"Enter state synchronization of token {Token.GetName()} with peer {peer}."
+        .Log(this, LogFile, Token.LogEntryNotifier);
 
       peer.SetStateHeaderSynchronization();
       PeerSynchronizing = peer;
@@ -121,7 +122,8 @@ namespace BTokenLib
 
     void ExitSynchronization()
     {
-      $"Exiting state synchronization of token {Token.GetName()} with peer {PeerSynchronizing}.".Log(LogFile);
+      $"Exiting state synchronization of token {Token.GetName()} with peer {PeerSynchronizing}."
+        .Log(this, LogFile, Token.LogEntryNotifier);
 
       IsStateSynchronizing = false;
       PeerSynchronizing.SetStateIdle();
@@ -157,7 +159,8 @@ namespace BTokenLib
             if (HeaderDownload.HeaderAncestor != Token.HeaderTip)
             {
               ($"Forking chain at height {HeaderDownload.HeaderAncestor.Height + 1} " +
-                $"after common ancestor {HeaderDownload.HeaderAncestor}.").Log(LogFile);
+                $"after common ancestor {HeaderDownload.HeaderAncestor}.")
+                .Log(this, LogFile, Token.LogEntryNotifier);
 
               Token.ForkChain(HeaderDownload.HeaderAncestor.Height);
             }
@@ -175,7 +178,8 @@ namespace BTokenLib
             {
               if (FlagSyncAbort)
               {
-                $"Synchronization with {PeerSynchronizing} is aborted.".Log(LogFile);
+                $"Synchronization with {PeerSynchronizing} is aborted.".Log(this, LogFile, Token.LogEntryNotifier);
+                
                 Token.LoadImage();
 
                 Peers
@@ -189,7 +193,7 @@ namespace BTokenLib
                       break;
 
                   "Waiting for all peers to exit state 'block synchronization'."
-                    .Log(LogFile);
+                    .Log(this, LogFile, Token.LogEntryNotifier);
 
                   await Task.Delay(1000).ConfigureAwait(false);
                 }
@@ -223,7 +227,7 @@ namespace BTokenLib
           catch (Exception ex)
           {
             ($"Unexpected exception {ex.GetType().Name} occured during SyncBlocks.\n" +
-              $"{ex.Message}").Log(LogFile);
+              $"{ex.Message}").Log(this, LogFile, Token.LogEntryNotifier);
           }
         else if (HeaderDownload.HeaderTip.DifficultyAccumulated < Token.HeaderTip.DifficultyAccumulated)
           PeerSynchronizing.SendHeaders(new List<Header>() { Token.HeaderTip });
@@ -231,7 +235,7 @@ namespace BTokenLib
 
       ExitSynchronization();
 
-      $"Synchronization with {PeerSynchronizing} of {Token.GetName()} completed.\n".Log(LogFile);
+      $"Synchronization with {PeerSynchronizing} of {Token.GetName()} completed.\n".Log(this, LogFile, Token.LogEntryNotifier);
 
       if (Token.TokenChild != null)
         Token.TokenChild.Network.TryStartSynchronization();
@@ -265,11 +269,11 @@ namespace BTokenLib
               block.Clear();
 
               $"Inserted block {Token.HeaderTip.Height}, {block}."
-              .Log(LogFile);
+              .Log(this, LogFile, Token.LogEntryNotifier);
             }
             catch (Exception ex)
             {
-              $"Insertion of block {block} failed:\n {ex.Message}.".Log(LogFile);
+              $"Insertion of block {block} failed:\n {ex.Message}.".Log(this, LogFile, Token.LogEntryNotifier);
 
               FlagSyncAbort = true;
 
@@ -388,7 +392,7 @@ namespace BTokenLib
       {
         if (FlagSyncDBAbort)
         {
-          $"Synchronization with {peerSync} was abort.".Log(LogFile);
+          $"Synchronization with {peerSync} was abort.".Log(this, LogFile, Token.LogEntryNotifier);
 
           Token.LoadImage();
 
@@ -404,7 +408,7 @@ namespace BTokenLib
                 break;
 
             "Waiting for all peers to exit state 'synchronization busy'."
-              .Log(LogFile);
+              .Log(this, LogFile, Token.LogEntryNotifier);
 
             await Task.Delay(1000).ConfigureAwait(false);
           }
@@ -435,13 +439,13 @@ namespace BTokenLib
       {
         Token.InsertDB(peer.Payload, peer.LengthDataPayload);
 
-        $"Inserted DB {peer.HashDBDownload.ToHexString()} from {peer}."
-        .Log(LogFile);
+        $"Inserted DB {peer.HashDBDownload.ToHexString()}."
+        .Log(this, LogFile, Token.LogEntryNotifier);
       }
       catch (Exception ex)
       {
         ($"Insertion of DB {peer.HashDBDownload.ToHexString()} failed:\n " +
-          $"{ex.Message}.").Log(LogFile);
+          $"{ex.Message}.").Log(this, LogFile, Token.LogEntryNotifier);
 
         FlagSyncAbort = true;
 

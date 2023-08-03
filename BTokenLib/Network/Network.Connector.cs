@@ -86,7 +86,7 @@ namespace BTokenLib
       catch (Exception ex)
       {
         $"{ex.GetType().Name} in StartPeerConnector of protocol {Token}. This is a bug."
-          .Log(this, LogFile);
+          .Log(this, LogFile, Token.LogEntryNotifier);
       }
     }
 
@@ -107,7 +107,9 @@ namespace BTokenLib
 
             if (0 < secondsBanned)
             {
-              $"{iPDisposed.Name} is banned for {secondsBanned} seconds.".Log(LogFile);
+              $"{iPDisposed.Name} is banned for {secondsBanned} seconds."
+                .Log(this, LogFile, Token.LogEntryNotifier);
+
               PoolIPAddress.RemoveAll(iP => iPDisposed.Name.Contains(iP));
               continue;
             }
@@ -168,7 +170,8 @@ namespace BTokenLib
 
           if (peer != null)
           {
-            $"Connection with peer {peer} already established.".Log(LogFile);
+            $"Connection with peer {peer} already established."
+              .Log(this, LogFile, Token.LogEntryNotifier);
             return;
           }
 
@@ -183,7 +186,9 @@ namespace BTokenLib
       }
       catch (Exception ex)
       {
-        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}.".Log(LogFile);
+        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}."
+          .Log(this, LogFile, Token.LogEntryNotifier);
+
         return;
       }
 
@@ -193,7 +198,9 @@ namespace BTokenLib
       }
       catch (Exception ex)
       {
-        $"Could not connect to {peer}: {ex.Message}".Log(LogFile);
+        $"Could not connect to {peer}: {ex.Message}"
+          .Log(this, LogFile, Token.LogEntryNotifier);
+
         peer.Dispose();
 
         lock (LOCK_Peers)
@@ -211,11 +218,13 @@ namespace BTokenLib
       }
       catch(Exception ex)
       {
-        $"Failed to listen on port {Port}.\n {ex.Message}".Log(LogFile);
+        $"Failed to listen on port {Port}.\n {ex.Message}"
+          .Log(this, LogFile, Token.LogEntryNotifier);
+
         return;
       }
 
-      $"Start TCP listener on port {Port}.".Log(this, LogFile);
+      $"Start TCP listener on port {Port}.".Log(this, LogFile, Token.LogEntryNotifier);
 
       while (true)
       {
@@ -229,7 +238,7 @@ namespace BTokenLib
           continue;
 
         $"Received inbound request on port {Port} from {remoteIP}."
-          .Log(this, LogFile);
+          .Log(this, LogFile, Token.LogEntryNotifier);
 
         while (true)
         {
@@ -288,7 +297,7 @@ namespace BTokenLib
           {
             ($"Failed to create inbound peer {remoteIP}: " +
               $"\n{ex.GetType().Name}: {ex.Message}")
-              .Log(this, LogFile);
+              .Log(this, LogFile, Token.LogEntryNotifier);
 
             tcpClient.Dispose();
 
@@ -300,18 +309,19 @@ namespace BTokenLib
 
           Peers.Add(peer);
 
-          $"Created inbound connection {peer}.".Log(this, LogFile);
+          $"Created inbound connection {peer}.".Log(this, LogFile, Token.LogEntryNotifier);
         }
 
         try
         {
           await peer.Connect();
-          $"Connected to inbound peer {peer}.".Log(this, LogFile);
+          $"Connected to inbound peer {peer}.".Log(this, LogFile, Token.LogEntryNotifier);
         }
         catch (Exception ex)
         {
           ($"Failed to connect to inbound peer {remoteIP}: " +
-            $"\n{ex.GetType().Name}: {ex.Message}").Log(LogFile);
+            $"\n{ex.GetType().Name}: {ex.Message}")
+            .Log(this, LogFile, Token.LogEntryNotifier);
 
           peer.Dispose();
 

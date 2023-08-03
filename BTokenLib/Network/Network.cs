@@ -63,7 +63,8 @@ namespace BTokenLib
 
     public void Start()
     {
-      $"Start Network {Token.GetName()}".Log(this, LogFile);
+      $"Start Network {Token.GetName()}"
+        .Log(this, LogFile, Token.LogEntryNotifier);
 
       StartPeerConnector();
 
@@ -76,7 +77,8 @@ namespace BTokenLib
 
     void LoadNetworkConfiguration(string pathConfigFile)
     {
-      $"Load Network configuration {pathConfigFile}.".Log(this, LogFile);
+      $"Load Network configuration {pathConfigFile}."
+        .Log(this, LogFile, Token.LogEntryNotifier);
     }
 
     public void AdvertizeBlockToNetwork(Block block)

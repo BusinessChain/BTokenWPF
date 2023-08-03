@@ -13,10 +13,11 @@ namespace BTokenLib
 
 
 
-    public TokenBitcoin()
+    public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(
           COMPORT_BITCOIN,
-          flagEnableInboundConnections: true)
+          flagEnableInboundConnections: true,
+          logEntryNotifier)
     { }
 
     public override Block CreateBlock()

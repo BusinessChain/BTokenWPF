@@ -33,7 +33,8 @@ namespace BTokenLib
 
     void RunMining(int indexThread)
     {
-      $"Start {GetName()} miner on thread {indexThread}.".Log(LogFile);
+      $"Start {GetName()} miner on thread {indexThread}."
+        .Log(this, LogFile, LogEntryNotifier);
 
       SHA256 sHA256 = SHA256.Create();
 
@@ -61,14 +62,16 @@ namespace BTokenLib
           Console.Beep();
 
           ($"Bitcoin Miner {indexThread} mined block height " +
-            $"{block.Header.Height} with hash {block}.").Log(LogFile);
+            $"{block.Header.Height} with hash {block}.")
+            .Log(this, LogFile, LogEntryNotifier);
 
           Network.AdvertizeBlockToNetwork(block);
         }
         catch (Exception ex)
         {
           ($"{ex.GetType().Name} when when miner tries to insert mined bitcoin " +
-            $"block height {block.Header.Height}, {block}:\n{ex.Message}.").Log(LogFile);
+            $"block height {block.Header.Height}, {block}:\n{ex.Message}.")
+            .Log(this, LogFile, LogEntryNotifier);
 
           continue;
         }

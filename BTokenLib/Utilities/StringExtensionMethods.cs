@@ -318,22 +318,16 @@ namespace BTokenLib
     public static void Log(
       this string message,
       object module,
-      StreamWriter logFile)
+      StreamWriter logFile,
+      ILogEntryNotifier logEntryNotifier)
     {
-      (module + " >> " + message).Log(logFile);
-    }
+      string dateTime = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss.fff");
+      string logString = dateTime + " --- " + module + " >> " + message;
 
-    public static void Log(
-      this string message,
-      StreamWriter logFile)
-    {
       lock (logFile)
-      {
-        string dateTime = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss.fff");
-        string logString = dateTime + " --- " + message;
         logFile.WriteLine(logString);
-        Debug.WriteLine(logString);
-      }
+
+      logEntryNotifier.NotifyLogEntry(logString, module.GetType().Name);
     }
 
     public static string GetIPFromFileName(this string fileName)

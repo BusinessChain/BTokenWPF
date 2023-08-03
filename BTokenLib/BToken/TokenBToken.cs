@@ -26,12 +26,10 @@ namespace BTokenLib
     public TokenBToken(ILogEntryNotifier logEntryNotifier)
       : base(
           COMPORT_BTOKEN,
-          flagEnableInboundConnections: true, 
+          flagEnableInboundConnections: true,
           logEntryNotifier)
     {
-      LogEntryNotifier = logEntryNotifier;
-
-      TokenParent = new TokenBitcoin();
+      TokenParent = new TokenBitcoin(logEntryNotifier);
       TokenParent.TokenChild = this;
 
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
@@ -59,7 +57,8 @@ namespace BTokenLib
         }
         catch (Exception ex)
         {
-          $"Failed to parse unconfirmed mined block {pathFile}.\n{ex.Message}".Log(LogFile);
+          $"Failed to parse unconfirmed mined block {pathFile}.\n{ex.Message}"
+            .Log(this, LogFile, LogEntryNotifier);
         }
       }
     }
@@ -90,7 +89,8 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
-      $"Insert BToken block {block} in database.".Log(LogFile);
+      $"Insert BToken block {block} in database."
+        .Log(this, LogFile, LogEntryNotifier);
 
       DatabaseAccounts.InsertBlock((BlockBToken)block);
 

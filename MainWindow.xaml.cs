@@ -38,16 +38,10 @@ namespace BTokenWPF
       }
     }
 
-
     public void NotifyLogEntry(string logEntry, string source)
     {
       lock (TextBoxLog)
         TextBoxLog.Text += $"{logEntry}\n";
-    }
-
-    void ButtonUpdateTextBoxLog_Click(object sender, RoutedEventArgs e)
-    {
-      TextBoxLog.Text += "new entry\n";
     }
 
     void ButtonClearTextBoxLog_Click(object sender, RoutedEventArgs e)

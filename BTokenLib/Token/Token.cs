@@ -8,7 +8,7 @@ namespace BTokenLib
 {
   public abstract partial class Token
   {
-    public static ILogEntryNotifier LogEntryNotifier;
+    public ILogEntryNotifier LogEntryNotifier;
 
     public Token TokenParent;
     public Token TokenChild;
@@ -261,7 +261,8 @@ namespace BTokenLib
         try
         {
           ($"Load image of token {pathImage}" +
-            $"{(heightMax < int.MaxValue ? $" with maximal height {heightMax}" : "")}.").Log(LogFile);
+            $"{(heightMax < int.MaxValue ? $" with maximal height {heightMax}" : "")}.")
+            .Log(this, LogFile, LogEntryNotifier);
 
           LoadImageHeaderchain(pathImage);
           LoadImageDatabase(pathImage);
@@ -299,7 +300,8 @@ namespace BTokenLib
         heightBlock <= heightMax &&
         Archiver.TryLoadBlockArchive(heightBlock, out byte[] buffer))
       {
-        $"Pull block height {heightBlock} from Archiver of {GetName()}.".Log(LogFile);
+        $"Pull block height {heightBlock} from Archiver of {GetName()}."
+          .Log(this, LogFile, LogEntryNotifier);
 
         block.Buffer = buffer;
         block.Parse();
@@ -342,7 +344,7 @@ namespace BTokenLib
 
       int index = 0;
 
-      $"Load headerchain of {GetName()}.".Log(LogFile);
+      $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
 
       while (index < bytesHeaderImage.Length)
       {
@@ -367,7 +369,8 @@ namespace BTokenLib
           index += 32;
         }
 
-        $"Append {header} to headerTip {HeaderTip}.".Log(LogFile);
+        $"Append {header} to headerTip {HeaderTip}."
+          .Log(this, LogFile, LogEntryNotifier);
 
         header.AppendToHeader(HeaderTip);
 

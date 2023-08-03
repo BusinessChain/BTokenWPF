@@ -43,7 +43,7 @@ namespace BTokenLib
 
       IsMining = true;
 
-      "Start BToken miner".Log(LogFile);
+      "Start BToken miner".Log(this, LogFile, LogEntryNotifier);
 
       RunMining();
     }
@@ -52,7 +52,7 @@ namespace BTokenLib
     {
       FeeSatoshiPerByte = FEE_SATOSHI_PER_BYTE_INITIAL; // TokenParent.FeePerByteAverage;
 
-      $"Miners starts with fee per byte = {FeeSatoshiPerByte}".Log(LogFile);
+      $"Miners starts with fee per byte = {FeeSatoshiPerByte}".Log(this, LogFile, LogEntryNotifier);
 
       Header headerTipParent = null;
       Header headerTip = null;
@@ -118,7 +118,7 @@ namespace BTokenLib
 
               TokenParent.BroadcastTX(tokenAnchor.TX);
 
-              $"{TokensAnchorUnconfirmed.Count} mined unconfirmed anchor tokens referencing block {tokenAnchor.HashBlockReferenced.ToHexString()}.".Log(LogFile);
+              $"{TokensAnchorUnconfirmed.Count} mined unconfirmed anchor tokens referencing block {tokenAnchor.HashBlockReferenced.ToHexString()}.".Log(this, LogFile, LogEntryNotifier);
 
               // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
               // COUNT_SATOSHIS_PER_DAY_MINING);
@@ -134,7 +134,7 @@ namespace BTokenLib
         await Task.Delay(timeMinerLoopMilliseconds).ConfigureAwait(false);
       }
 
-      $"Exit BToken miner.".Log(LogFile);
+      $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
     void RBFAnchorTokens()
@@ -156,7 +156,7 @@ namespace BTokenLib
       int countTokensAnchorUnconfirmed = TokensAnchorUnconfirmed.Count;
       TokensAnchorUnconfirmed.Clear();
 
-      $"RBF {countTokensAnchorUnconfirmed} anchorTokens".Log(LogFile);
+      $"RBF {countTokensAnchorUnconfirmed} anchorTokens".Log(this, LogFile, LogEntryNotifier);
 
       while (countTokensAnchorUnconfirmed-- > 0)
         if (TryMineAnchorToken(out TokenAnchor tokenAnchor))
@@ -254,7 +254,7 @@ namespace BTokenLib
 
       BlocksMined.Add(block);
 
-      $"BToken miner successfully mined anchor Token {tokenAnchor.TX} with fee {tokenAnchor.TX.Fee}".Log(LogFile);
+      $"BToken miner successfully mined anchor Token {tokenAnchor.TX} with fee {tokenAnchor.TX.Fee}".Log(this, LogFile, LogEntryNotifier);
 
       return true;
     }
@@ -282,9 +282,9 @@ namespace BTokenLib
       TokenAnchor tokenAnchor = new(tX, index, ID_BTOKEN);
 
       if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tX.Hash)) > 0)
-        $"Detected self mined anchor token {tX} in Bitcoin block.".Log(LogFile);
+        $"Detected self mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
       else
-        $"Detected foreign mined anchor token {tX} in Bitcoin block.".Log(LogFile);
+        $"Detected foreign mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
 
       TokensAnchorDetectedInBlock.Add(tokenAnchor);
     }
@@ -317,7 +317,7 @@ namespace BTokenLib
               ($"Self mined block {block} is obsoleted.\n" +
                 $"This may happen, if a miner in the anchor chain withholds a mined block,\n" +
                 $"and releases it after mining a subsequent block which now contains anchor " +
-                $"tokens referencing a block prior to the tip.").Log(LogFile);
+                $"tokens referencing a block prior to the tip.").Log(this, LogFile, LogEntryNotifier);
           }
         }
       }
@@ -327,7 +327,7 @@ namespace BTokenLib
 
         ($"{ex.GetType().Name} when signaling Bitcoin block {headerAnchor}" +
           $" with height {headerAnchor.Height} to BToken:\n" +
-          $"Exception message: {ex.Message}").Log(this, LogFile);
+          $"Exception message: {ex.Message}").Log(this, LogFile, LogEntryNotifier);
       }
     }
 
@@ -357,7 +357,7 @@ namespace BTokenLib
       });
 
       ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
-        $"{tokenAnchorWinner.HashBlockReferenced.ToHexString()}.").Log(LogFile);
+        $"{tokenAnchorWinner.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
 
       return tokenAnchorWinner.HashBlockReferenced;
     }
