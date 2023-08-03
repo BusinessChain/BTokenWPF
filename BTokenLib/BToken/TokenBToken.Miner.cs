@@ -35,20 +35,7 @@ namespace BTokenLib
     List<TokenAnchor> TokensAnchorDetectedInBlock = new();
 
 
-
-    public override void StartMining()
-    {
-      if (IsMining)
-        return;
-
-      IsMining = true;
-
-      "Start BToken miner".Log(this, LogFile, LogEntryNotifier);
-
-      RunMining();
-    }
-
-    async Task RunMining()
+    protected override async void RunMining()
     {
       FeeSatoshiPerByte = FEE_SATOSHI_PER_BYTE_INITIAL; // TokenParent.FeePerByteAverage;
 

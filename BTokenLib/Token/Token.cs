@@ -2,7 +2,8 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BTokenLib
 {
@@ -501,15 +502,27 @@ namespace BTokenLib
       return tX;
     }
 
-    protected bool IsMining;
+    public bool IsMining;
 
     public void StopMining()
     {
-        IsMining = false;
+      IsMining = false;
     }
 
-    public abstract void StartMining();
-    
+    public void StartMining()
+    {
+      if (IsMining)
+        return;
+
+      IsMining = true;
+
+      $"Start {GetName()} miner".Log(this, LogFile, LogEntryNotifier);
+
+      new Thread(RunMining).Start();
+    }
+
+    abstract protected void RunMining();
+
     public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
     {
       if (TryGetHeader(hash, out Header header))

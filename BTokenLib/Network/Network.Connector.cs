@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace BTokenLib
 {
@@ -65,10 +66,17 @@ namespace BTokenLib
             {
               var createPeerTasks = new Task[iPAddresses.Count];
 
-              Parallel.For(
-                0,
-                iPAddresses.Count,
-                i => createPeerTasks[i] = CreatePeer(iPAddresses[i]));
+              try
+              {
+                Parallel.For(
+                  0,
+                  iPAddresses.Count,
+                  i => createPeerTasks[i] = CreatePeer(iPAddresses[i]));
+              }
+              catch(Exception ex)
+              {
+                Debug.WriteLine($"{ex.GetType().Name} on line 79:\n {ex.Message}");
+              }
 
               await Task.WhenAll(createPeerTasks);
             }
@@ -85,6 +93,8 @@ namespace BTokenLib
       }
       catch (Exception ex)
       {
+        Debug.WriteLine($"{this}: {ex.GetType().Name} = {ex.Message}");
+
         $"{ex.GetType().Name} in StartPeerConnector of protocol {Token}. This is a bug."
           .Log(this, LogFile, Token.LogEntryNotifier);
       }
@@ -172,6 +182,7 @@ namespace BTokenLib
           {
             $"Connection with peer {peer} already established."
               .Log(this, LogFile, Token.LogEntryNotifier);
+
             return;
           }
 

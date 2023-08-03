@@ -13,25 +13,20 @@ namespace BTokenLib
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;
 
     const int COUNT_TXS_PER_BLOCK_MAX = 5;
-    int NumberOfProcesses = 1;// Math.Max(Environment.ProcessorCount - 1, 1);
+    int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);
 
 
-    public override void StartMining()
+    protected override void RunMining()
     {
-      if (IsMining)
-        return;
-
-      IsMining = true;
-
       Parallel.For(
         0,
         NumberOfProcesses,
-        i => RunMining(i));
+        i => RunMiningProcess(i));
 
-      Console.WriteLine("Miner canceled.");
+      "Exit Bitcoin miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    void RunMining(int indexThread)
+    void RunMiningProcess(int indexThread)
     {
       $"Start {GetName()} miner on thread {indexThread}."
         .Log(this, LogFile, LogEntryNotifier);

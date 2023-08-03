@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -10,12 +12,22 @@ namespace BTokenWPF
 
     public MainWindow()
     {
-      InitializeComponent();
+      try
+      {
+        InitializeComponent();
 
-      BToken = new(this);
-      BToken.Start();
+        new WindowBitcoin().Show();
 
-      UpdateTextBoxStatus();
+        BToken = new(this);
+
+        new Thread(BToken.Start).Start();
+
+        UpdateTextBoxStatus();
+      }
+      catch(Exception ex)
+      {
+        Debug.WriteLine($"{ex.GetType().Name} on line 25:\n {ex.Message}");
+      }
     }
 
     async Task UpdateTextBoxStatus()
@@ -24,7 +36,7 @@ namespace BTokenWPF
       {
         while (true)
         {
-          await Task.Delay(500);
+          await Task.Delay(1000);
           TextBoxStatus.Text = BToken.GetStatus();
         }
       }
@@ -38,15 +50,46 @@ namespace BTokenWPF
       }
     }
 
+    readonly object LOCK_Dispatcher = new();
     public void NotifyLogEntry(string logEntry, string source)
     {
-      lock (TextBoxLog)
-        TextBoxLog.Text += $"{logEntry}\n";
+      lock (LOCK_Dispatcher)
+        Dispatcher.Invoke(() =>
+        {
+          TextBoxLog.Text += $"{logEntry}\n";
+        });
     }
 
     void ButtonClearTextBoxLog_Click(object sender, RoutedEventArgs e)
     {
       TextBoxLog.Text = "";
+    }
+
+    void ButtonBitcoinMiner_Click(object sender, RoutedEventArgs e)
+    {
+      if (BToken.TokenParent.IsMining)
+      {
+        BToken.TokenParent.StopMining();
+        ButtonStartBitcoinMiner.Content = "Start BitcoinMiner";
+      }
+      else
+      {
+        BToken.TokenParent.StartMining();
+        ButtonStartBitcoinMiner.Content = "Stop BitcoinMiner";
+      }
+    }
+    void ButtonBTokenMiner_Click(object sender, RoutedEventArgs e)
+    {
+      if (BToken.IsMining)
+      {
+        BToken.StopMining();
+        ButtonStartBTokenMiner.Content = "Start BTokenMiner";
+      }
+      else
+      {
+        BToken.StartMining();
+        ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
+      }
     }
   }
 }

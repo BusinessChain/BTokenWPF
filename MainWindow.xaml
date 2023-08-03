@@ -14,14 +14,22 @@
             
         
         <TextBox Name ="TextBoxStatus" HorizontalAlignment="Center" Grid.Column="0"
-                 Text="TextBox" VerticalAlignment="Top" FontSize="10"/>
-                
+                 VerticalAlignment="Top" FontSize="10"/>
+
         <TextBox Name ="TextBoxLog" HorizontalAlignment="Center" Grid.Column="1"
-                 Text="TextBox" VerticalAlignment="Top" FontSize="10"/>
+                 VerticalAlignment="Top" FontSize="10" 
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.CanContentScroll="True"/>
 
         <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Right" Grid.Column="1"
                 VerticalAlignment="Bottom" Content="ClearLog" Click="ButtonClearTextBoxLog_Click"/>
 
+        <Button Name ="ButtonStartBitcoinMiner" HorizontalAlignment="Left" Grid.Column="0"
+                VerticalAlignment="Bottom" Content="Start BitcoinMiner" Click="ButtonBitcoinMiner_Click"/>
+        
+        <Button Name ="ButtonStartBTokenMiner" HorizontalAlignment="Right" Grid.Column="0"
+                VerticalAlignment="Bottom" Content="Start BTokenMiner" Click="ButtonBTokenMiner_Click"/>
 
     </Grid>
 </Window>
