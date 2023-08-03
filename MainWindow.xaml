@@ -7,6 +7,23 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+            
+        
+        <TextBox Name ="TextBoxStatus" HorizontalAlignment="Center" Grid.Column="0"
+                 Text="TextBox" VerticalAlignment="Top" FontSize="10"/>
+                
+        <TextBox Name ="TextBoxLog" HorizontalAlignment="Center" Grid.Column="1"
+                 Text="TextBox" VerticalAlignment="Top" FontSize="10"/>
+
+        <Button Name ="ButtonUpdateTextBoxLog" HorizontalAlignment="center" Grid.Column="1"
+                VerticalAlignment="Bottom" Content="UpdateLog" Click="ButtonUpdateTextBoxLog_Click"/>
+        <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Right" Grid.Column="1"
+                VerticalAlignment="Bottom" Content="ClearLog" Click="ButtonClearTextBoxLog_Click"/>
+
 
     </Grid>
 </Window>
