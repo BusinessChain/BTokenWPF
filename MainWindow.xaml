@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d"
-        WindowState="Maximized"
         Title="MainWindow" Height="450" Width="800">
     
     <Grid Margin="10">
@@ -14,7 +13,7 @@
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
 
-        <Grid Grid.Column="0" Margin="10">
+        <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
@@ -35,15 +34,22 @@
 
                 <Button Name ="ButtonOpenBTokenWindow" Content="Open BToken" Click="ButtonOpenBTokenWindow_Click"/>
             </StackPanel>
-        </Grid>        
+        </Grid>
 
-        <TextBox Name ="TextBoxLog" HorizontalAlignment="Center" Grid.Column="1"
-                 VerticalAlignment="Top" FontSize="10" 
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="91*"/>
+                <RowDefinition Height="9*"/>
+            </Grid.RowDefinitions>
+            
+            <TextBox Name ="TextBoxLog" HorizontalAlignment="Center" Grid.Row="0"
+                 FontSize="10" 
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.CanContentScroll="True"/>
 
-        <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Center" Grid.Column="1"
+            <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Center" Grid.Row="1"
                 VerticalAlignment="Bottom" Content="ClearLog" Click="ButtonClearTextBoxLog_Click"/>
+        </Grid>
     </Grid>
 </Window>

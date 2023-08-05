@@ -6,8 +6,19 @@
              xmlns:local="clr-namespace:BTokenWPF"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-        <TextBlock Name="LabelHash"/>
-        <TextBlock Name="LabelHashChild" Margin="20"/>
+    <Grid Name="Grid">
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="60"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>       
+
+        <TextBlock Name="TextBlockHeight" Grid.Row="0" Grid.Column="0"/>
+        <TextBlock Name="TextBlockHash" Grid.Row="0" Grid.Column="1"/>
+        <TextBlock Name="TextBlockHashChild" Grid.Row="1" Grid.Column="1" Margin="5,0,0,0"/>
     </Grid>
 </UserControl>

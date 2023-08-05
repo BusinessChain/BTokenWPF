@@ -6,8 +6,12 @@ namespace BTokenWPF
 {
   public partial class DisplayHeaderWindow : Window
   {
+    public Header Header;
+
     public DisplayHeaderWindow(Header header)
     {
+      Header = header;
+
       InitializeComponent();
 
       Title = header.Hash.ToHexString();

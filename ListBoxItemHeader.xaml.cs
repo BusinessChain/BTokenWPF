@@ -13,8 +13,13 @@ namespace BTokenWPF
 
       Header = header;
 
-      LabelHash.Content = header.Hash.ToHexString();
-      LabelHashChild.Content = header.HashChild.ToHexString();
+      TextBlockHeight.Text = $"Height: {header.Height}";
+      TextBlockHash.Text = header.Hash.ToHexString();
+
+      if (header.HashChild != null)
+        TextBlockHashChild.Text = $"{char.ConvertFromUtf32(0x21b3)} {header.HashChild.ToHexString()}";
+      else
+        Grid.Children.Remove(TextBlockHashChild);
     }
   }
 }

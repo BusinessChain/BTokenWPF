@@ -1,5 +1,7 @@
-﻿using System;
+﻿using BTokenLib;
+using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -55,7 +57,7 @@ namespace BTokenWPF
       lock (LOCK_Dispatcher)
         Dispatcher.Invoke(() =>
         {
-          TextBoxLog.Text += $"{logEntry}\n";
+          TextBoxLog.AppendText($"{logEntry}\n");
         });
     }
 
@@ -90,13 +92,28 @@ namespace BTokenWPF
         ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
       }
     }
+
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
     {
-      new WindowToken(BToken.TokenParent).Show();
+      OpenWindowToken(BToken.TokenParent);
     }
     void ButtonOpenBTokenWindow_Click(object sender, RoutedEventArgs e)
     {
-      new WindowToken(BToken).Show();
+      OpenWindowToken(BToken);
+    }
+    void OpenWindowToken(Token token)
+    {
+      foreach (Window w in Application.Current.Windows)
+      {
+        WindowToken windowToken = w as WindowToken;
+        if (windowToken != null && windowToken.Token == token)
+        {
+          windowToken.Activate();
+          return;
+        }
+      }
+
+      new WindowToken(token).Show();
     }
   }
 }
