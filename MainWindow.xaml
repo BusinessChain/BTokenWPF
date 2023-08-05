@@ -5,16 +5,37 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d"
+        WindowState="Maximized"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
+    
+    <Grid Margin="10">
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-            
-        
-        <TextBox Name ="TextBoxStatus" HorizontalAlignment="Center" Grid.Column="0"
-                 VerticalAlignment="Top" FontSize="10"/>
+
+        <Grid Grid.Column="0" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+                <TextBox Name ="TextBoxBitcoinStatus" FontSize="10"/>
+
+                <Button Name ="ButtonStartBitcoinMiner" Content="Start BitcoinMiner" Click="ButtonBitcoinMiner_Click"/>
+
+                <Button Name ="ButtonOpenBitcoinWindow" Content="Open Bitcoin" Click="ButtonOpenBitcoinWindow_Click"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                <TextBox Name ="TextBoxBTokenStatus" FontSize="10"/>
+
+                <Button Name ="ButtonStartBTokenMiner" Content="Start BTokenMiner" Click="ButtonBTokenMiner_Click"/>
+
+                <Button Name ="ButtonOpenBTokenWindow" Content="Open BToken" Click="ButtonOpenBTokenWindow_Click"/>
+            </StackPanel>
+        </Grid>        
 
         <TextBox Name ="TextBoxLog" HorizontalAlignment="Center" Grid.Column="1"
                  VerticalAlignment="Top" FontSize="10" 
@@ -22,14 +43,7 @@
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.CanContentScroll="True"/>
 
-        <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Right" Grid.Column="1"
+        <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Center" Grid.Column="1"
                 VerticalAlignment="Bottom" Content="ClearLog" Click="ButtonClearTextBoxLog_Click"/>
-
-        <Button Name ="ButtonStartBitcoinMiner" HorizontalAlignment="Left" Grid.Column="0"
-                VerticalAlignment="Bottom" Content="Start BitcoinMiner" Click="ButtonBitcoinMiner_Click"/>
-        
-        <Button Name ="ButtonStartBTokenMiner" HorizontalAlignment="Right" Grid.Column="0"
-                VerticalAlignment="Bottom" Content="Start BTokenMiner" Click="ButtonBTokenMiner_Click"/>
-
     </Grid>
 </Window>

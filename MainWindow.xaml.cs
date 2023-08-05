@@ -16,8 +16,6 @@ namespace BTokenWPF
       {
         InitializeComponent();
 
-        new WindowBitcoin().Show();
-
         BToken = new(this);
 
         new Thread(BToken.Start).Start();
@@ -37,7 +35,8 @@ namespace BTokenWPF
         while (true)
         {
           await Task.Delay(1000);
-          TextBoxStatus.Text = BToken.GetStatus();
+          TextBoxBitcoinStatus.Text = BToken.TokenParent.GetStatus();
+          TextBoxBTokenStatus.Text = BToken.GetStatus();
         }
       }
       catch(Exception ex)
@@ -90,6 +89,14 @@ namespace BTokenWPF
         BToken.StartMining();
         ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
       }
+    }
+    void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
+    {
+      new WindowToken(BToken.TokenParent).Show();
+    }
+    void ButtonOpenBTokenWindow_Click(object sender, RoutedEventArgs e)
+    {
+      new WindowToken(BToken).Show();
     }
   }
 }

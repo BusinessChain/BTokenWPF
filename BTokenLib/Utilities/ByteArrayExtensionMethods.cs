@@ -31,6 +31,9 @@ namespace BTokenLib
 
     public static string ToHexString(this byte[] array)
     {
+      if (array == null)
+        return "";
+
       string[] stringArrayHex = new string[array.Length];
 
       for (int i = 0; i < array.Length; i += 1)
