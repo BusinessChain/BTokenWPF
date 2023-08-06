@@ -62,7 +62,7 @@ namespace BTokenLib
     List<TX> TXsGet = new();
     int CountMaxTXsGet;
 
-    public List<TX> GetTXs(out int countTXsPool, int countMax)
+    public List<TX> GetTXs(out int countTXsPool, int countMax = int.MaxValue)
     {
       lock (LOCK_TXsPool)
       {

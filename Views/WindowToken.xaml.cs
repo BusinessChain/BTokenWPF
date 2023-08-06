@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -67,9 +68,23 @@ namespace BTokenWPF
       foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsValueDesc)
         ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
+
+    int CountTXsPoolOld;
     void UpdateListBoxTXPool()
     {
+      int countTXsPool = Token.TXPool.GetCountTXs();
+
+      if (countTXsPool == CountTXsPoolOld)
+        return;
+
+      List<TX> tXs = Token.TXPool.GetTXs(out CountTXsPoolOld);
+
+      ListBoxTXPool.Items.Clear();
+
+      foreach (TX tX in tXs)
+        ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
     }
+
     void UpdateListBoxDatabase()
     {
     }

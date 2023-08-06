@@ -8,9 +8,9 @@ using System.Windows;
 
 namespace BTokenWPF
 {
-  public partial class MainWindow : Window, BTokenLib.ILogEntryNotifier
+  public partial class MainWindow : Window, ILogEntryNotifier
   {
-    BTokenLib.TokenBToken BToken;
+    TokenBToken BToken;
 
     public MainWindow()
     {
