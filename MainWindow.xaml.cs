@@ -57,7 +57,9 @@ namespace BTokenWPF
       lock (LOCK_Dispatcher)
         Dispatcher.Invoke(() =>
         {
-          TextBoxLog.AppendText($"{logEntry}\n");
+          TextBoxLog.SelectionStart = 0;
+          TextBoxLog.SelectionLength = 0;
+          TextBoxLog.SelectedText = $"{logEntry}\n";
         });
     }
 

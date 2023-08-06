@@ -6,14 +6,35 @@
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d">
     
-    <Grid>
+    <Grid ShowGridLines="True">
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
-            <ColumnDefinition/>
+            <ColumnDefinition Width="250"/>
         </Grid.ColumnDefinitions>
 
-        <TextBox Name="TextBoxToken" FontSize="20"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
 
-        <ListBox Name="ListBoxHeaderchain"  MouseDoubleClick="ListBoxHeaderchain_MouseDoubleClick" Grid.Column="1"/>
+        <TextBox Name="TextBoxToken" Grid.Row="0" Grid.Column="0" 
+                 HorizontalAlignment="Center" FontWeight="ExtraBold" FontSize="20"/>
+        
+        <TextBox Text="Headerchain" Grid.Row="0" Grid.Column="1"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+        
+        <ListBox Name="ListBoxHeaderchain" 
+                 FontSize="10" MouseDoubleClick="ListBoxHeaderchain_MouseDoubleClick" 
+                 Grid.Row="1" Grid.Column="1"/>
+
+        <StackPanel Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center">
+            <TextBox Text="Wallet" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
+
+            <ListBox Name="ListBoxWallet" FontSize="10"/>
+
+            <TextBox Text="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
+
+            <ListBox Name="ListBoxTXPool" FontSize="10"/>
+        </StackPanel>
+
     </Grid>
 </Window>

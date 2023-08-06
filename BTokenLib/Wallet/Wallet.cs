@@ -26,13 +26,7 @@ namespace BTokenLib
     byte[] PublicKeyHash160 = new byte[20];
     public byte[] PublicScript;
 
-    List<TXOutputWallet> OutputsValueDesc = new();
-
-
-    // Bitcoin Remote: 34028158965394806167608680607240385428045384897727389686353149816093835242965
-    // Bitcoin Local: 102987336249554097029535212322581322789799900648198034993379397001115665086549
-    // BToken Remote: 96776395506679815102655158894022185541899331171646085194829941027009356470640
-    // BToken Local: 88359675621603939173265797657441078721738107517771649508403671881714167221003
+    public List<TXOutputWallet> OutputsValueDesc = new();
 
     public Wallet(string privKeyDec)
     {
@@ -178,21 +172,6 @@ namespace BTokenLib
       POSTFIX_P2PKH.CopyTo(script, 24);
 
       return script;
-    }
-
-    public string GetStatus()
-    {
-      string outputsSpendable =
-        OutputsValueDesc.Any() ? "" : "Wallet empty.";
-
-      foreach (var output in OutputsValueDesc)
-      {
-        outputsSpendable += $"TXID: {output.TXID.ToHexString()}\n";
-        outputsSpendable += $"Output Index: {output.Index}\n";
-        outputsSpendable += $"Value: {output.Value}\n";
-      }
-
-      return outputsSpendable;
     }
 
     public void Clear()

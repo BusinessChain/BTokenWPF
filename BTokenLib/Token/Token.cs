@@ -198,7 +198,6 @@ namespace BTokenLib
         DateTimeOffset.UtcNow.ToUnixTimeSeconds() - HeaderTip.UnixTimeSeconds);
 
       messageStatus +=
-        $"\n\t\t\t\t{GetName()}:\n" +
         $"Height: {HeaderTip.Height}\n" +
         $"Block tip: {HeaderTip}\n" +
         $"Difficulty Tip: {HeaderTip.Difficulty}\n" +

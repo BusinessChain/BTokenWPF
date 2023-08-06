@@ -14,10 +14,11 @@ namespace BTokenWPF
       Header = header;
 
       TextBlockHeight.Text = $"Height: {header.Height}";
-      TextBlockHash.Text = header.Hash.ToHexString();
+      TextBlockHash.Text = header.Hash.ToHexString().Substring(0,16) + " ...";
 
       if (header.HashChild != null)
-        TextBlockHashChild.Text = $"{char.ConvertFromUtf32(0x21b3)} {header.HashChild.ToHexString()}";
+        TextBlockHashChild.Text = $"{char.ConvertFromUtf32(0x21b3)} " +
+          $"{header.HashChild.ToHexString().Substring(0, 16)} ...";
       else
         Grid.Children.Remove(TextBlockHashChild);
     }

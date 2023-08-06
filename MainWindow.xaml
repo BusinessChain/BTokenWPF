@@ -20,7 +20,8 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" HorizontalAlignment="Center">
-                <TextBox Name ="TextBoxBitcoinStatus" FontSize="10"/>
+                <TextBox Text ="Bitcoin" HorizontalAlignment="Center" FontWeight="Bold" FontSize="12"/>
+                <TextBox Name ="TextBoxBitcoinStatus" FontSize="12"/>
 
                 <Button Name ="ButtonStartBitcoinMiner" Content="Start BitcoinMiner" Click="ButtonBitcoinMiner_Click"/>
 
@@ -28,7 +29,8 @@
             </StackPanel>
 
             <StackPanel Grid.Row="1" HorizontalAlignment="Center">
-                <TextBox Name ="TextBoxBTokenStatus" FontSize="10"/>
+                <TextBox Text ="BToken" HorizontalAlignment="Center" FontWeight="Bold" FontSize="12"/>
+                <TextBox Name ="TextBoxBTokenStatus" FontSize="12"/>
 
                 <Button Name ="ButtonStartBTokenMiner" Content="Start BTokenMiner" Click="ButtonBTokenMiner_Click"/>
 
