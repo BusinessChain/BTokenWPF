@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BTokenLib;
+using BTokenWPF.Views;
 
 namespace BTokenWPF
 {
@@ -36,10 +37,10 @@ namespace BTokenWPF
 
             UpdateListBoxTXPool();
 
-            UpdateListBoxDatabase();
-
             Token.ReleaseLock();
           }
+
+          UpdateControlsNetwork();
 
           await Task.Delay(1000);
         }
@@ -52,6 +53,20 @@ namespace BTokenWPF
           MessageBoxButton.OK,
           MessageBoxImage.Error);
       }
+    }
+
+    void UpdateControlsNetwork()
+    {
+      List<Network.Peer> peers = Token.Network.GetPeers();
+
+      TextBoxCountPeers.Text = $"Number of connected peers: {peers.Count}";
+      TextBoxFlagEnableInboundConnections.Text = $"Inbound connections enabled: {Token.Network.EnableInboundConnections}";
+      TextBoxStateNetwork.Text = $"Network state: {Token.Network.State}";
+
+      ListBoxPeers.Items.Clear();
+
+      foreach (Network.Peer peer in peers)
+        ListBoxPeers.Items.Add(new ListBoxItemPeer(peer));
     }
 
     Header HeaderTipAtLastUpdate;
@@ -83,10 +98,6 @@ namespace BTokenWPF
 
       foreach (TX tX in tXs)
         ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
-    }
-
-    void UpdateListBoxDatabase()
-    {
     }
 
     void UpdateListBoxHeaderchain()

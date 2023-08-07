@@ -17,13 +17,13 @@ namespace BTokenLib
 
     const int COUNT_MAX_INBOUND_CONNECTIONS = 3;
 
-    enum StateNetwork
+    public enum StateNetwork
     {
       Idle,
       ConnectingPeerOutbound,
       ConnectingPeerInbound
     }
-    StateNetwork State = StateNetwork.Idle;
+    public StateNetwork State = StateNetwork.Idle;
 
     public enum ConnectionType { OUTBOUND, INBOUND };
 

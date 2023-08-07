@@ -13,7 +13,7 @@ namespace BTokenLib
 {
   partial class Network
   {
-    partial class Peer
+    public partial class Peer
     {
       Network Network;
       public Token Token;

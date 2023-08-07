@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-
+using System.Linq;
 
 namespace BTokenLib
 {
@@ -107,6 +107,12 @@ namespace BTokenLib
       lock (LOCK_Peers)
         foreach (Peer peer in Peers)
           peer.TryAdvertizeTXs(tXs);
+    }
+
+    public List<Peer> GetPeers()
+    {
+      lock (LOCK_Peers)
+        return Peers.ToList();
     }
 
     public string GetStatus()
