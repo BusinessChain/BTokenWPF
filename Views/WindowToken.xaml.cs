@@ -18,7 +18,7 @@ namespace BTokenWPF
       InitializeComponent();
 
       Token = token;
-      TextBoxToken.Text = token.GetName().Substring("Token".Count());
+      LabelToken.Content = token.GetName().Substring("Token".Count());
 
       UpdateControlsWindowToken();
     }
@@ -59,9 +59,9 @@ namespace BTokenWPF
     {
       List<Network.Peer> peers = Token.Network.GetPeers();
 
-      TextBoxCountPeers.Text = $"Number of connected peers: {peers.Count}";
+      LabelCountPeers.Content = $"Number of connected peers: {peers.Count}";
       TextBoxFlagEnableInboundConnections.Text = $"Inbound connections enabled: {Token.Network.EnableInboundConnections}";
-      TextBoxStateNetwork.Text = $"Network state: {Token.Network.State}";
+      LabelStateNetworkConnector.Content = $"State network connector: {Token.Network.State}";
 
       ListBoxPeers.Items.Clear();
 

@@ -14,34 +14,36 @@
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
-            <RowDefinition Height="30"/>
+            <RowDefinition Height="40"/>
             <RowDefinition Height="30"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
 
-        <TextBox Name="TextBoxToken" Grid.Row="0" Grid.Column="1" 
+        <Label Name="LabelToken" Grid.Row="0" Grid.Column="1" 
                  HorizontalAlignment="Center" FontWeight="ExtraBold" FontSize="20"/>
-        
-        <TextBox Text="Network" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
+
+        <Label Content="Network" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
 
         <StackPanel Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center">
-            <TextBox Text="Network Status" HorizontalAlignment="Center" FontWeight="Bold"/>
-            <TextBox Name="TextBoxCountPeers"/>
+            <Label Content="Network Status" HorizontalAlignment="Center" FontWeight="Bold"/>
+
+            <Label Name="LabelCountPeers"/>
             <TextBox Name="TextBoxFlagEnableInboundConnections"/>
-            <TextBox Name="TextBoxStateNetwork"/>
-            <TextBox Text="Peers" HorizontalAlignment="Center" FontWeight="Bold"/>
+            <Label Name="LabelStateNetworkConnector"/>
+
+            <Label Content="Peers" HorizontalAlignment="Center" FontWeight="Bold"/>
             <ListBox Name="ListBoxPeers" FontSize="10"/>
         </StackPanel>
 
-        <TextBox Text="Wallet" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
+        <Label Content="Wallet" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
         <StackPanel Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center">
             <ListBox Name="ListBoxWallet" FontSize="10"/>
 
-            <TextBox Text="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
+            <Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
             <ListBox Name="ListBoxTXPool" FontSize="10"/>
         </StackPanel>
 
-        <TextBox Text="Headerchain" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+        <Label Content="Headerchain" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
 
         <ListBox Name="ListBoxHeaderchain" 
                  FontSize="10" MouseDoubleClick="ListBoxHeaderchain_MouseDoubleClick" 

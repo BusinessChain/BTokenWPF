@@ -13,12 +13,12 @@ namespace BTokenWPF
 
       InitializeComponent();
 
-      TextBoxTXHash.Text = tX.Hash.ToHexString();
-      TextBoxTXRaw.Text = tX.TXRaw.ToArray().ToHexString();
+      LabelTXHash.Content = tX.Hash.ToHexString();
+      LabelTXRaw.Content = tX.TXRaw.ToArray().ToHexString();
 
-      TextBoxCountInputs.AppendText(tX.TXInputs.Count.ToString());
-      TextBoxCountOutputs.AppendText(tX.TXOutputs.Count.ToString());
-      TextBoxFee.AppendText(tX.Fee.ToString());
+      LabelCountInputs.Content = $"Number of Inputs: {tX.TXInputs.Count}";
+      LabelCountOutputs.Content = $"Number of Outputs: {tX.TXOutputs.Count}";
+      LabelFee.Content = $"Fee: {tX.Fee}";
     }
   }
 }

@@ -11,21 +11,21 @@ namespace BTokenWPF
     {
       InitializeComponent();
 
-      TextBlockTXID.HorizontalAlignment = HorizontalAlignment.Center;
-      TextBlockTXID.Text = "TXID";
-      TextBlockIndex.HorizontalAlignment = HorizontalAlignment.Center;
-      TextBlockIndex.Text = $"Index";
-      TextBlockValue.HorizontalAlignment = HorizontalAlignment.Center;
-      TextBlockValue.Text = $"Value";
+      LabelTXID.HorizontalAlignment = HorizontalAlignment.Center;
+      LabelTXID.Content = "TXID";
+      LabelIndex.HorizontalAlignment = HorizontalAlignment.Center;
+      LabelIndex.Content = $"Index";
+      LabelValue.HorizontalAlignment = HorizontalAlignment.Center;
+      LabelValue.Content = $"Value";
     }
 
     public ListBoxItemWallet(TXOutputWallet tXOutputWallet)
     {
       InitializeComponent();
 
-      TextBlockTXID.Text = $"{tXOutputWallet.TXID.ToHexString().Substring(0, 16) + " ..."}";
-      TextBlockIndex.Text = $"{tXOutputWallet.Index}";
-      TextBlockValue.Text = $"{tXOutputWallet.Value}";
+      LabelTXID.Content = $"{tXOutputWallet.TXID.ToHexString().Substring(0, 16) + " ..."}";
+      LabelIndex.Content = $"{tXOutputWallet.Index}";
+      LabelValue.Content = $"{tXOutputWallet.Value}";
     }
   }
 }

@@ -20,8 +20,8 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" HorizontalAlignment="Center">
-                <TextBox Text ="Bitcoin" HorizontalAlignment="Center" FontWeight="Bold" FontSize="12"/>
-                <TextBox Name ="TextBoxBitcoinStatus" FontSize="12"/>
+                <Label Content ="Bitcoin" HorizontalAlignment="Center" FontWeight="Bold" FontSize="12"/>
+                <Label Name ="LabelBitcoinStatus" FontSize="12"/>
 
                 <Button Name ="ButtonStartBitcoinMiner" Content="Start BitcoinMiner" Click="ButtonBitcoinMiner_Click"/>
 
@@ -29,8 +29,8 @@
             </StackPanel>
 
             <StackPanel Grid.Row="1" HorizontalAlignment="Center">
-                <TextBox Text ="BToken" HorizontalAlignment="Center" FontWeight="Bold" FontSize="12"/>
-                <TextBox Name ="TextBoxBTokenStatus" FontSize="12"/>
+                <Label Content ="BToken" HorizontalAlignment="Center" FontWeight="Bold" FontSize="12"/>
+                <Label Name ="LabelBTokenStatus" FontSize="12"/>
 
                 <Button Name ="ButtonStartBTokenMiner" Content="Start BTokenMiner" Click="ButtonBTokenMiner_Click"/>
 
@@ -45,7 +45,7 @@
             </Grid.RowDefinitions>
             
             <TextBox Name ="TextBoxLog" HorizontalAlignment="Center" Grid.Row="0"
-                 FontSize="10" 
+                 FontSize="10" IsReadOnly="True"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.CanContentScroll="True"/>

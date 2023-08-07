@@ -13,7 +13,7 @@
             <ColumnDefinition Width="70*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBox Name="TextBoxHeaderLabels" Grid.Column="0" FontWeight="Bold" TextAlignment="Right"/>
-        <TextBox Name="TextBoxHeaderValues" Grid.Column="1" TextAlignment="Left"/>
+        <TextBox Name="TextBoxHeaderLabels" IsReadOnly="True" Grid.Column="0" FontWeight="Bold" TextAlignment="Right"/>
+        <TextBox Name="TextBoxHeaderValues" IsReadOnly="True" Grid.Column="1" TextAlignment="Left"/>
     </Grid>
 </Window>

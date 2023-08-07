@@ -13,8 +13,8 @@
             <ColumnDefinition Width="70"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Name="TextBlockTXID" HorizontalAlignment="Left" Grid.Column="0"/>
-        <TextBlock Name="TextBlockIndex" HorizontalAlignment="Center" Grid.Column="1"/>
-        <TextBlock Name="TextBlockValue" HorizontalAlignment="Right" Grid.Column="2"/>
+        <Label Name="LabelTXID" HorizontalAlignment="Left" Grid.Column="0"/>
+        <Label Name="LabelIndex" HorizontalAlignment="Center" Grid.Column="1"/>
+        <Label Name="LabelValue" HorizontalAlignment="Right" Grid.Column="2"/>
     </Grid>
 </UserControl>
