@@ -25,7 +25,11 @@ namespace BTokenWPF
       }
       catch(Exception ex)
       {
-        Debug.WriteLine($"{ex.GetType().Name} on line 25:\n {ex.Message}");
+        MessageBox.Show(
+          $"{ex.Message}: {ex.StackTrace}",
+          $"{ex.GetType().Name}",
+          MessageBoxButton.OK,
+          MessageBoxImage.Error);
       }
     }
 
