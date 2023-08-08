@@ -9,12 +9,12 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <WarningLevel>6</WarningLevel>
-    <NoWarn>CS4014;CS8601;CS8618;CS8625;CS8600;CS8602;CS8604;CS8765;CS8767</NoWarn>
+    <NoWarn>CS4014;CS8601;CS8618;CS8625;CS8629;CS8600;CS8602;CS8604;CS8765;CS8767</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <WarningLevel>6</WarningLevel>
-    <NoWarn>CS4014;CS8601;CS8618;CS8625;CS8600;CS8602;CS8604;CS8765;CS8767</NoWarn>
+    <NoWarn>CS4014;CS8601;CS8618;CS8625;CS8629;CS8600;CS8602;CS8604;CS8765;CS8767</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

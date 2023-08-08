@@ -12,7 +12,7 @@ namespace BTokenLib
     const int TIME_LOOP_SYNCHRONIZER_SECONDS = 60;
 
     readonly object LOCK_IsStateSynchronizing = new();
-    bool IsStateSynchronizing;
+    public bool IsStateSynchronizing;
     Peer PeerSynchronizing;
     HeaderDownload HeaderDownload;
 

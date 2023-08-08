@@ -14,7 +14,7 @@ namespace BTokenWPF
 
       InitializeComponent();
 
-      Title = header.Hash.ToHexString();
+      Title = $"Block: {header.Hash.ToHexString()}";
 
       TextBoxHeaderLabels.Text =
         $"Hash\n" +

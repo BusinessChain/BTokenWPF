@@ -17,6 +17,8 @@ namespace BTokenLib
 
     const int COUNT_MAX_INBOUND_CONNECTIONS = 3;
 
+    public bool FlagEnableOutboundConnections = true;
+
     public enum StateNetwork
     {
       Idle,
@@ -46,12 +48,13 @@ namespace BTokenLib
         {
           while (true)
           {
-            lock (this)
-              if (State != StateNetwork.ConnectingPeerInbound)
-              {
-                State = StateNetwork.ConnectingPeerOutbound;
-                break;
-              }
+            if (FlagEnableOutboundConnections)
+              lock (this)
+                if (State != StateNetwork.ConnectingPeerInbound)
+                {
+                  State = StateNetwork.ConnectingPeerOutbound;
+                  break;
+                }
 
             Task.Delay(2000).ConfigureAwait(false);
           }

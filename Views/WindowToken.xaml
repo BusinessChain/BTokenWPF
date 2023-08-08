@@ -24,12 +24,13 @@
 
         <Label Content="Network" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
 
-        <StackPanel Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center">
+        <StackPanel Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left" Margin="30">
             <Label Content="Network Status" HorizontalAlignment="Center" FontWeight="Bold"/>
 
-            <Label Name="LabelCountPeers"/>
-            <TextBox Name="TextBoxFlagEnableInboundConnections"/>
             <Label Name="LabelStateNetworkConnector"/>
+            <Label Name="LabelIsStateSynchronizing"/>
+            <Label Name="LabelCountPeers"/>
+            <CheckBox Name="CheckBoxEnableOutboundConnections" Content="Enable outbound connections"/>
 
             <Label Content="Peers" HorizontalAlignment="Center" FontWeight="Bold"/>
             <ListBox Name="ListBoxPeers" FontSize="10"/>
@@ -43,10 +44,10 @@
             <ListBox Name="ListBoxTXPool" FontSize="10"/>
         </StackPanel>
 
-        <Label Content="Headerchain" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+        <Label Content="Blockchain" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
 
-        <ListBox Name="ListBoxHeaderchain" 
-                 FontSize="10" MouseDoubleClick="ListBoxHeaderchain_MouseDoubleClick" 
+        <ListBox Name="ListBoxBlockchain" 
+                 FontSize="10" MouseDoubleClick="ListBoxBlockchain_MouseDoubleClick" 
                  Grid.Row="2" Grid.Column="2"/>
         
     </Grid>

@@ -7,6 +7,19 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <TextBox Name="TextBoxPeer"/>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        
+        <StackPanel Orientation="Horizontal" Grid.Row="0">
+            <Label Name="LabelPeer"/>
+            <Label Name="LabelState"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1">
+            <Label Name="LabelTimePeerCreation"/>
+            <Label Name="LabelTimeLastSynchronization"/>
+        </StackPanel>
     </Grid>
 </UserControl>

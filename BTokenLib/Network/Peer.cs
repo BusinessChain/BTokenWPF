@@ -20,7 +20,7 @@ namespace BTokenLib
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
-      enum StateProtocol
+      public enum StateProtocol
       {
         NotConnected,
         Idle,
@@ -28,10 +28,11 @@ namespace BTokenLib
         BlockSynchronization,
         DBDownload,
         GetData,
-        AdvertizingTX
+        AdvertizingTX,
+        Disposed
       }
 
-      StateProtocol State = StateProtocol.NotConnected;
+      public StateProtocol State = StateProtocol.NotConnected;
       public DateTime TimeLastStateTransition;
       public DateTime TimeLastSynchronization;
 
@@ -74,7 +75,7 @@ namespace BTokenLib
 
       StreamWriter LogFile;
 
-      DateTime TimePeerCreation = DateTime.Now;
+      public DateTime TimePeerCreation = DateTime.Now;
 
 
 
@@ -452,6 +453,8 @@ namespace BTokenLib
         TcpClient.Dispose();
 
         LogFile.Dispose();
+
+        State = StateProtocol.Disposed;
 
         string pathLogFile = ((FileStream)LogFile.BaseStream).Name;
         string nameLogFile = Path.GetFileName(pathLogFile);

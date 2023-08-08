@@ -27,6 +27,8 @@ namespace BTokenWPF
     {
       try
       {
+        CheckBoxEnableOutboundConnections.IsChecked = Token.Network.FlagEnableOutboundConnections;
+        
         while (true)
         {
           if (Token.TryLock())
@@ -59,9 +61,10 @@ namespace BTokenWPF
     {
       List<Network.Peer> peers = Token.Network.GetPeers();
 
-      LabelCountPeers.Content = $"Number of connected peers: {peers.Count}";
-      TextBoxFlagEnableInboundConnections.Text = $"Inbound connections enabled: {Token.Network.EnableInboundConnections}";
+      LabelCountPeers.Content = $"Number of peers: {peers.Count}";
       LabelStateNetworkConnector.Content = $"State network connector: {Token.Network.State}";
+      LabelIsStateSynchronizing.Content = $"Network synchronizing: {Token.Network.IsStateSynchronizing}";
+      Token.Network.FlagEnableOutboundConnections = (bool)CheckBoxEnableOutboundConnections.IsChecked;
 
       ListBoxPeers.Items.Clear();
 
@@ -104,28 +107,28 @@ namespace BTokenWPF
     {
       Header header = null;
 
-      if (ListBoxHeaderchain.Items.Count > 0)
-        header = ((ListBoxItemHeader)ListBoxHeaderchain.Items.GetItemAt(0)).Header;
+      if (ListBoxBlockchain.Items.Count > 0)
+        header = ((ListBoxItemHeader)ListBoxBlockchain.Items.GetItemAt(0)).Header;
 
       if (Token.HeaderTip != header)
-        if (ListBoxHeaderchain.Items.Count > 0 && Token.HeaderTip.HeaderPrevious == header)
-          ListBoxHeaderchain.Items.Insert(0, new ListBoxItemHeader(Token.HeaderTip));
+        if (ListBoxBlockchain.Items.Count > 0 && Token.HeaderTip.HeaderPrevious == header)
+          ListBoxBlockchain.Items.Insert(0, new ListBoxItemHeader(Token.HeaderTip));
         else
         {
-          ListBoxHeaderchain.Items.Clear();
+          ListBoxBlockchain.Items.Clear();
           header = Token.HeaderTip;
 
           while (header != null)
           {
-            ListBoxHeaderchain.Items.Add(new ListBoxItemHeader(header));
+            ListBoxBlockchain.Items.Add(new ListBoxItemHeader(header));
             header = header.HeaderPrevious;
           }
         }
     }
 
-    private void ListBoxHeaderchain_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void ListBoxBlockchain_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-      Header header = ((ListBoxItemHeader)ListBoxHeaderchain.SelectedItem).Header;
+      Header header = ((ListBoxItemHeader)ListBoxBlockchain.SelectedItem).Header;
 
       foreach (Window w in Application.Current.Windows)
       {
