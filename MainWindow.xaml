@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="1200">
     
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
@@ -17,6 +17,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
+                <RowDefinition Height="20"/>
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" HorizontalAlignment="Center">
@@ -36,6 +37,8 @@
 
                 <Button Name ="ButtonOpenBTokenWindow" Content="Open BToken" Click="ButtonOpenBTokenWindow_Click"/>
             </StackPanel>
+
+            <Button Name="PrintChainsToFile" Grid.Row="2" HorizontalAlignment="Center" Content="PrintChainsToFile" Click="PrintChainsToFile_Click"/>
         </Grid>
 
         <Grid Grid.Column="1">

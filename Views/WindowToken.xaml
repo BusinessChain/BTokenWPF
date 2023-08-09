@@ -31,6 +31,7 @@
             <Label Name="LabelIsStateSynchronizing"/>
             <Label Name="LabelCountPeers"/>
             <CheckBox Name="CheckBoxEnableOutboundConnections" Content="Enable outbound connections"/>
+            <Button Name="ButtonStartSynchronization" Content="Sync" Click="ButtonStartSynchronization_Click"/>
 
             <Label Content="Peers" HorizontalAlignment="Center" FontWeight="Bold"/>
             <ListBox Name="ListBoxPeers" FontSize="10"/>

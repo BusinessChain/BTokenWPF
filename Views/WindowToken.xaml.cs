@@ -28,7 +28,7 @@ namespace BTokenWPF
       try
       {
         CheckBoxEnableOutboundConnections.IsChecked = Token.Network.FlagEnableOutboundConnections;
-        
+
         while (true)
         {
           if (Token.TryLock())
@@ -141,6 +141,11 @@ namespace BTokenWPF
       }
 
       new DisplayHeaderWindow(header).Show();
+    }
+
+    private void ButtonStartSynchronization_Click(object sender, RoutedEventArgs e)
+    {
+      Token.Network.TryStartSynchronization();
     }
   }
 }

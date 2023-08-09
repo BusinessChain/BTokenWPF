@@ -326,15 +326,10 @@ namespace BTokenLib
       byte[] biggestDifferenceTemp = new byte[32];
       TokenAnchor tokenAnchorWinner = null;
 
-      Debug.WriteLine($"Targetvalue {targetValue.ToHexString()}");
-
       TokensAnchorDetectedInBlock.ForEach(t =>
       {
         byte[] differenceHash = targetValue.SubtractByteWise(
           t.HashBlockReferenced);
-
-        Debug.WriteLine($"differenceHash {differenceHash.ToHexString()} " +
-          $"of HashBlockReferenced {t.HashBlockReferenced.ToHexString()} of token {t}");
 
         if (differenceHash.IsGreaterThan(biggestDifferenceTemp))
         {
