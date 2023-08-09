@@ -396,15 +396,13 @@ namespace BTokenLib
             
       Archiver.ArchiveBlock(block);
 
-      if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
-        CreateImage();
-
       if (TokenChild != null)
-      {
         TokenChild.SignalParentBlockInsertion(
           block.Header,
           out block.BlockChild);
-      }
+
+      if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
+        CreateImage();
     }
 
     public void CreateImage()
