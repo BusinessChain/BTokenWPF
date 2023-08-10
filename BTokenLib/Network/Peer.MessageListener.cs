@@ -32,7 +32,7 @@ namespace BTokenLib
 
               Block.Parse();
 
-              $"Received block {Block}".Log(this, LogFile, Token.LogEntryNotifier);
+              $"Received block {Block}".Log(this, LogFiles, Token.LogEntryNotifier);
 
               if (!Block.Header.Hash.IsEqual(HeaderSync.Hash))
                 throw new ProtocolException(
@@ -77,7 +77,7 @@ namespace BTokenLib
 
               tX.TXRaw = Payload.Take(index).ToList();
 
-              $"Received TX {tX}.".Log(this, LogFile, Token.LogEntryNotifier);
+              $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               if (!Token.TXPool.TryGetTX(tX.Hash, out TX tXInPool))
                 Token.TXPool.TryAddTX(tX);
@@ -108,7 +108,7 @@ namespace BTokenLib
             }
             else if (Command == "ping")
             {
-              $"Received ping message.".Log(this, LogFile, Token.LogEntryNotifier);
+              $"Received ping message.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               await ReadBytes(Payload, LengthDataPayload);
 
@@ -143,7 +143,7 @@ namespace BTokenLib
                 Payload,
                 ref byteIndex);
 
-              $"Receiving {countHeaders} headers.".Log(this, LogFile, Token.LogEntryNotifier);
+              $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               if (IsStateHeaderSynchronization())
               {
@@ -234,11 +234,11 @@ namespace BTokenLib
               int headersCount = VarInt.GetInt32(Payload, ref startIndex);
 
               $"Received getHeaders with {headersCount} locator hashes."
-                .Log(this, LogFile, Token.LogEntryNotifier);
+                .Log(this, LogFiles, Token.LogEntryNotifier);
 
               if (!Token.TryLock())
               {
-                $"... but Token is locked.".Log(this, LogFile, Token.LogEntryNotifier);
+                $"... but Token is locked.".Log(this, LogFiles, Token.LogEntryNotifier);
                 continue;
               }
 
@@ -255,7 +255,7 @@ namespace BTokenLib
                 if (Token.TryGetHeader(hashHeaderAncestor, out Header header))
                 {
                   $"In getheaders locator common ancestor is {header}."
-                    .Log(this, LogFile, Token.LogEntryNotifier);
+                    .Log(this, LogFiles, Token.LogEntryNotifier);
 
                   while (header.HeaderNext != null && headers.Count < 2000)
                   {
@@ -264,10 +264,10 @@ namespace BTokenLib
                   }
 
                   if (headers.Any())
-                    $"Send headers {headers.First()}...{headers.Last()}.".Log(this, LogFile, Token.LogEntryNotifier);
+                    $"Send headers {headers.First()}...{headers.Last()}.".Log(this, LogFiles, Token.LogEntryNotifier);
                   else
                   {
-                    $"Send empty headers.".Log(this, LogFile, Token.LogEntryNotifier);
+                    $"Send empty headers.".Log(this, LogFiles, Token.LogEntryNotifier);
                     flagInitiateSynchronization = flagNotSameTipAsPeer;
                   }
 
@@ -291,7 +291,7 @@ namespace BTokenLib
             {
               await ReadBytes(Payload, LengthDataPayload);
 
-              $"Receiving DB hashes.".Log(this, LogFile, Token.LogEntryNotifier);
+              $"Receiving DB hashes.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               HashesDB = Token.ParseHashesDB(
                 Payload,
@@ -309,7 +309,7 @@ namespace BTokenLib
               NotFoundMessage notFoundMessage = new(Payload);
 
               notFoundMessage.Inventories.ForEach(
-                i => $"Did not find {i.Hash.ToHexString()}".Log(this, LogFile, Token.LogEntryNotifier));
+                i => $"Did not find {i.Hash.ToHexString()}".Log(this, LogFiles, Token.LogEntryNotifier));
 
               if (IsStateBlockSynchronization())
                 Network.ReturnPeerBlockDownloadIncomplete(this);
@@ -345,7 +345,7 @@ namespace BTokenLib
                 {
                   if (Token.TryGetBlockBytes(inventory.Hash, out byte[] buffer))
                   {
-                    $"Send block {inventory}.".Log(this, LogFile, Token.LogEntryNotifier);
+                    $"Send block {inventory}.".Log(this, LogFiles, Token.LogEntryNotifier);
                     await SendMessage(new MessageBlock(buffer));
                   }
                   else
@@ -367,7 +367,7 @@ namespace BTokenLib
               RejectMessage rejectMessage = new(Payload);
 
               $"Get reject message: {rejectMessage.GetReasonReject()}"
-                .Log(this, LogFile, Token.LogEntryNotifier);
+                .Log(this, LogFiles, Token.LogEntryNotifier);
             }
           }
         }
@@ -376,7 +376,7 @@ namespace BTokenLib
           Network.HandleExceptionPeerListener(this);
 
           $"{ex.GetType().Name} in listener: \n{ex.Message}"
-            .Log(this, LogFile, Token.LogEntryNotifier);
+            .Log(this, LogFiles, Token.LogEntryNotifier);
 
           Dispose();
         }

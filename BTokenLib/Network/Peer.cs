@@ -73,7 +73,8 @@ namespace BTokenLib
 
       SHA256 SHA256 = SHA256.Create();
 
-      StreamWriter LogFile;
+      StreamWriter LogFilePeer;
+      List<StreamWriter> LogFiles = new();
 
       public DateTime TimePeerCreation = DateTime.Now;
 
@@ -142,14 +143,17 @@ namespace BTokenLib
         if (File.Exists(pathLogFileArchive))
           File.Move(pathLogFileArchive, pathLogFileActive);
 
-        LogFile = new StreamWriter(
+        LogFilePeer = new StreamWriter(
           pathLogFileActive,
           append: true);
+
+        LogFiles.Add(LogFilePeer);
+        LogFiles.Add(Token.LogFile);
       }
 
       public async Task Connect()
       {
-        $"Connect.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Connect.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         if (!TcpClient.Connected)
           await TcpClient.ConnectAsync(IPAddress, Network.Port)
@@ -173,14 +177,14 @@ namespace BTokenLib
 
         await SendMessage(new VerAckMessage());
 
-        $"Await verack.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Await verack.".Log(this, LogFiles, Token.LogEntryNotifier);
         ResetTimer(TIMEOUT_VERACK_MILLISECONDS);
 
         do
           await ListenForNextMessage();
         while (Command != "verack");
 
-        $"Received verack.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Received verack.".Log(this, LogFiles, Token.LogEntryNotifier);
         ResetTimer();
 
         SetStateIdle();
@@ -241,12 +245,12 @@ namespace BTokenLib
 
           ($"Send getheaders.\n" +
             $"locator: {locator.First()} ... {locator.Last()}")
-            .Log(this, LogFile, Token.LogEntryNotifier);
+            .Log(this, LogFiles, Token.LogEntryNotifier);
         }
         catch (Exception ex)
         {
           $"Exception {ex.GetType().Name} when sending getheaders message."
-            .Log(this, LogFile, Token.LogEntryNotifier);
+            .Log(this, LogFiles, Token.LogEntryNotifier);
 
           throw ex;
         }
@@ -265,7 +269,7 @@ namespace BTokenLib
           else
             return false;
 
-        $"Advertize token {tX}.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Advertize token {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         Inventory inventoryTX = new(
           InventoryType.MSG_TX,
@@ -293,7 +297,7 @@ namespace BTokenLib
 
         tXs.ForEach(t =>
         {
-          $"Advertize token {t}.".Log(this, LogFile, Token.LogEntryNotifier);
+          $"Advertize token {t}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
           inventories.Add(new(InventoryType.MSG_TX,t.Hash));
         });
@@ -307,7 +311,7 @@ namespace BTokenLib
       public async Task RequestDB()
       {
         $"Start downloading DB {HashDBDownload.ToHexString()}."
-          .Log(this, LogFile, Token.LogEntryNotifier);
+          .Log(this, LogFiles, Token.LogEntryNotifier);
 
         State = StateProtocol.DBDownload;
 
@@ -328,7 +332,7 @@ namespace BTokenLib
           HeaderSync = header;
 
         $"Start downloading block {HeaderSync}."
-          .Log(this, LogFile, Token.LogEntryNotifier);
+          .Log(this, LogFiles, Token.LogEntryNotifier);
 
         State = StateProtocol.BlockSynchronization;
 
@@ -352,7 +356,7 @@ namespace BTokenLib
         if (headers.Count > 1)
           logText += $" ... {headers.Last()}.";
 
-        logText.Log(this, LogFile, Token.LogEntryNotifier);
+        logText.Log(this, LogFiles, Token.LogEntryNotifier);
 
         await SendMessage(new HeadersMessage(headers));
       }
@@ -363,21 +367,22 @@ namespace BTokenLib
         {
           if(State != StateProtocol.Idle)
           {
-            $"Is not idle when attempting to send block {block} but in state {State}.".Log(this, LogFile, Token.LogEntryNotifier);
+            $"Is not idle when attempting to send block {block} but in state {State}."
+              .Log(this, LogFiles, Token.LogEntryNotifier);
             return;
           }
 
           if (HeaderUnsolicited != null &&
             HeaderUnsolicited.Hash.IsEqual(block.Header.Hash))
           {
-            $"Advertized block {block} was received by same peer.".Log(this, LogFile, Token.LogEntryNotifier);
+            $"Advertized block {block} was received by same peer.".Log(this, LogFiles, Token.LogEntryNotifier);
             return;
           }
 
           State = StateProtocol.HeaderSynchronization;
         }
 
-        $"Advertize block {block}.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Advertize block {block}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         await SendHeaders(new List<Header>() { block.Header });
         SetStateIdle();
@@ -448,15 +453,15 @@ namespace BTokenLib
 
       public void Dispose()
       {
-        $"Dispose {Connection}".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Dispose {Connection}".Log(this, LogFiles, Token.LogEntryNotifier);
 
         TcpClient.Dispose();
 
-        LogFile.Dispose();
+        LogFilePeer.Dispose();
 
         State = StateProtocol.Disposed;
 
-        string pathLogFile = ((FileStream)LogFile.BaseStream).Name;
+        string pathLogFile = ((FileStream)LogFilePeer.BaseStream).Name;
         string nameLogFile = Path.GetFileName(pathLogFile);
         string pathLogFileDisposed = Path.Combine(
           Network.DirectoryPeersDisposed.FullName,

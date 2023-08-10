@@ -9,8 +9,6 @@ namespace BTokenLib
   {
     Token Token;
 
-    StreamWriter LogFile;
-
     UInt16 Port;
 
     public bool EnableInboundConnections;
@@ -34,10 +32,6 @@ namespace BTokenLib
       EnableInboundConnections = flagEnableInboundConnections;
 
       string pathRoot = token.GetName();
-
-      LogFile = new StreamWriter(
-        Path.Combine(pathRoot, "LogNetwork"),
-        false);
 
       DirectoryPeers = Directory.CreateDirectory(
         Path.Combine(pathRoot, "logPeers"));
@@ -64,7 +58,7 @@ namespace BTokenLib
     public void Start()
     {
       $"Start Network {Token.GetName()}"
-        .Log(this, LogFile, Token.LogEntryNotifier);
+        .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       StartPeerConnector();
 
@@ -78,7 +72,7 @@ namespace BTokenLib
     void LoadNetworkConfiguration(string pathConfigFile)
     {
       $"Load Network configuration {pathConfigFile}."
-        .Log(this, LogFile, Token.LogEntryNotifier);
+        .Log(this, Token.LogFile, Token.LogEntryNotifier);
     }
 
     public void AdvertizeBlockToNetwork(Block block)

@@ -321,11 +321,28 @@ namespace BTokenLib
       StreamWriter logFile,
       ILogEntryNotifier logEntryNotifier)
     {
+      Log(
+        message, 
+        module, 
+        new List<StreamWriter>() { logFile },
+        logEntryNotifier);
+    }
+
+    public static void Log(
+      this string message,
+      object module,
+      List<StreamWriter> logFiles,
+      ILogEntryNotifier logEntryNotifier)
+    {
       string dateTime = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss.fff");
       string logString = dateTime + " --- " + module + " >> " + message;
 
-      lock (logFile)
-        logFile.WriteLine(logString);
+      foreach (StreamWriter logFile in logFiles)
+        lock (logFile)
+        {
+          logFile.WriteLine(logString);
+          logFile.Flush();
+        }
 
       logEntryNotifier.NotifyLogEntry(logString, module.GetType().Name);
     }

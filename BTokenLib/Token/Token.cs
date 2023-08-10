@@ -3,7 +3,6 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace BTokenLib
 {
@@ -28,7 +27,7 @@ namespace BTokenLib
     public Network Network;
     public UInt16 Port;
 
-    protected StreamWriter LogFile;
+    public StreamWriter LogFile;
 
     static string NameImage = "Image";
     static string NameImageOld = "ImageOld";
