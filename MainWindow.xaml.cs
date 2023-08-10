@@ -18,8 +18,7 @@ namespace BTokenWPF
         InitializeComponent();
 
         BToken = new(this);
-
-        new Thread(BToken.Start).Start();
+        BToken.Start();
 
         UpdateTextBoxStatus();
       }

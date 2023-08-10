@@ -91,7 +91,7 @@ namespace BTokenLib
 
       while (token != null)
       {
-        token.Network.Start();
+        new Thread(token.Network.Start).Start();
         token = token.TokenChild;
       }
     }
