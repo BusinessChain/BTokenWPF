@@ -96,6 +96,14 @@ namespace BTokenWPF
         ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
       }
     }
+    void ButtonStartSynchronizationBitcoin_Click(object sender, RoutedEventArgs e)
+    {
+      BToken.TokenParent.Network.TryStartSynchronization();
+    }
+    void ButtonStartSynchronizationBToken_Click(object sender, RoutedEventArgs e)
+    {
+      BToken.Network.TryStartSynchronization();
+    }
 
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
     {

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="1200">
+        Title="MainWindow" Height="550" Width="1200">
     
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
@@ -15,8 +15,8 @@
 
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
-                <RowDefinition/>
-                <RowDefinition/>
+                <RowDefinition Height="220"/>
+                <RowDefinition Height="220"/>
                 <RowDefinition Height="20"/>
             </Grid.RowDefinitions>
 
@@ -25,8 +25,8 @@
                 <Label Name ="LabelBitcoinStatus" FontSize="12"/>
 
                 <Button Name ="ButtonStartBitcoinMiner" Content="Start BitcoinMiner" Click="ButtonBitcoinMiner_Click"/>
-
                 <Button Name ="ButtonOpenBitcoinWindow" Content="Open Bitcoin" Click="ButtonOpenBitcoinWindow_Click"/>
+                <Button Content="Sync Bitcoin" Click="ButtonStartSynchronizationBitcoin_Click"/>
             </StackPanel>
 
             <StackPanel Grid.Row="1" HorizontalAlignment="Center">
@@ -34,8 +34,8 @@
                 <Label Name ="LabelBTokenStatus" FontSize="12"/>
 
                 <Button Name ="ButtonStartBTokenMiner" Content="Start BTokenMiner" Click="ButtonBTokenMiner_Click"/>
-
                 <Button Name ="ButtonOpenBTokenWindow" Content="Open BToken" Click="ButtonOpenBTokenWindow_Click"/>
+                <Button Content="Sync BToken" Click="ButtonStartSynchronizationBToken_Click"/>
             </StackPanel>
 
             <Button Name="PrintChainsToFile" Grid.Row="2" HorizontalAlignment="Center" Content="PrintChainsToFile" Click="PrintChainsToFile_Click"/>
