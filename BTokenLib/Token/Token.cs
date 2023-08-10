@@ -58,6 +58,15 @@ namespace BTokenLib
       PathRootToken = GetName();
       Directory.CreateDirectory(PathRootToken);
 
+      LogFile = new StreamWriter(
+        Path.Combine(GetName(), "LogToken"),
+        false);
+
+      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"));
+
+      PathImage = Path.Combine(PathRootToken, NameImage);
+      PathImageOld = Path.Combine(PathRootToken, NameImageOld);
+
       HeaderGenesis = CreateHeaderGenesis();
 
       Archiver = new(GetName());
@@ -66,15 +75,6 @@ namespace BTokenLib
 
       Port = port;
       Network = new(this, flagEnableInboundConnections);
-
-      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"));
-
-      PathImage = Path.Combine(PathRootToken, NameImage);
-      PathImageOld = Path.Combine(PathRootToken, NameImageOld);
-
-      LogFile = new StreamWriter(
-        Path.Combine(GetName(), "LogToken"),
-        false);
 
       Reset();
     }
