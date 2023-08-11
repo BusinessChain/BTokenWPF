@@ -166,6 +166,7 @@ namespace BTokenLib
             FlagSyncAbort = false;
             QueueBlockInsertion.Clear();
             QueueDownloadsIncomplete.Clear();
+            HeadersBeingDownloadedByCountPeers.Clear();
 
             HeaderRoot = HeaderDownload.HeaderRoot;
             HeightInsertion = HeaderRoot.Height;

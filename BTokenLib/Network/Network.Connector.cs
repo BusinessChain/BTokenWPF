@@ -273,6 +273,9 @@ namespace BTokenLib
 
         if (peer != null && TryEnterStateSynchronization(peer))
         {
+          $"Peer {peer} is already connected but received inbount connection request, therefore initiate synchronization."
+            .Log(this, Token.LogFile, Token.LogEntryNotifier);
+
           if (TryEnterStateSynchronization(peer))
             await peer.SendGetHeaders(Token.GetLocator());
 
