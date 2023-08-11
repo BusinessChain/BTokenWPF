@@ -269,48 +269,56 @@ namespace BTokenLib
         Peer peer = null;
 
         lock (LOCK_Peers)
+          peer = Peers.Find(p => p.IPAddress.Equals(remoteIP));
+
+        if (peer != null && TryEnterStateSynchronization(peer))
         {
-          try
+          if (TryEnterStateSynchronization(peer))
+            await peer.SendGetHeaders(Token.GetLocator());
+
+          continue;
+        }
+
+        lock (LOCK_Peers)
+        {
+          string rejectionString = "";
+
+          if (Peers.Count(p => p.Connection == ConnectionType.INBOUND) >= COUNT_MAX_INBOUND_CONNECTIONS)
+            rejectionString = $"Max number ({COUNT_MAX_INBOUND_CONNECTIONS}) of inbound connections reached.";
+
+          foreach (FileInfo iPDisposed in DirectoryPeersDisposed.EnumerateFiles())
           {
-            string rejectionString = "";
-
-            if (Peers.Count(p => p.Connection == ConnectionType.INBOUND) >= COUNT_MAX_INBOUND_CONNECTIONS)
-              rejectionString = $"Max number ({COUNT_MAX_INBOUND_CONNECTIONS}) of inbound connections reached.";
-
-            if (Peers.Any(p => p.IPAddress.Equals(remoteIP)))
-              rejectionString = $"Connection already established.";
-
-            foreach (FileInfo iPDisposed in DirectoryPeersDisposed.EnumerateFiles())
+            if (
+              iPDisposed.Name.Contains(remoteIP.ToString()) &&
+              iPDisposed.Name.Contains(ConnectionType.INBOUND.ToString()))
             {
-              if (
-                iPDisposed.Name.Contains(remoteIP.ToString()) &&
-                iPDisposed.Name.Contains(ConnectionType.INBOUND.ToString()))
-              {
-                int secondsBanned = TIMESPAN_PEER_BANNED_SECONDS -
-                  (int)(DateTime.Now - iPDisposed.CreationTime).TotalSeconds;
+              int secondsBanned = TIMESPAN_PEER_BANNED_SECONDS -
+                (int)(DateTime.Now - iPDisposed.CreationTime).TotalSeconds;
 
-                if (0 < secondsBanned)
-                {
-                  rejectionString = $"{iPDisposed.Name} is banned for {secondsBanned} seconds.";
-                  break;
-                }
+              if (0 < secondsBanned)
+              {
+                rejectionString = $"{iPDisposed.Name} is banned for {secondsBanned} seconds.";
+                break;
               }
             }
+          }
 
-            if (rejectionString != "")
-              throw new ProtocolException(rejectionString);
-
+          if (rejectionString == "")
+          {
             peer = new(
               this,
               Token,
               remoteIP,
               tcpClient,
               ConnectionType.INBOUND);
+
+            Peers.Add(peer);
+
+            $"Created inbound connection {peer}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
           }
-          catch (Exception ex)
+          else
           {
-            ($"Failed to create inbound peer {remoteIP}: " +
-              $"\n{ex.GetType().Name}: {ex.Message}")
+            $"Failed to create inbound peer {remoteIP}: \n{rejectionString}"
               .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
             tcpClient.Dispose();
@@ -320,10 +328,6 @@ namespace BTokenLib
 
             continue;
           }
-
-          Peers.Add(peer);
-
-          $"Created inbound connection {peer}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
 
         try
