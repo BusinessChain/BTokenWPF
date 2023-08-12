@@ -123,6 +123,7 @@ namespace BTokenLib
       $"Exiting state synchronization of token {Token.GetName()} with peer {PeerSynchronizing}."
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
+      FlagSyncAbort = true;
       IsStateSynchronizing = false;
       PeerSynchronizing.SetStateIdle();
       PeerSynchronizing.TimeLastSynchronization = DateTime.Now;
@@ -135,14 +136,14 @@ namespace BTokenLib
       $"HandleExceptionPeerListener {peer}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       lock (LOCK_IsStateSynchronizing) lock (LOCK_Peers)
-        {
-          if (IsStateSynchronizing && PeerSynchronizing == peer)
-            ExitSynchronization();
-          else if (peer.IsStateBlockSynchronization())
+        {          
+          if (peer.IsStateBlockSynchronization())
           {
             $"ReturnPeerBlockDownloadIncomplete".Log(this, Token.LogFile, Token.LogEntryNotifier);
             ReturnPeerBlockDownloadIncomplete(peer);
           }
+          else if (IsStateSynchronizing && PeerSynchronizing == peer)
+            ExitSynchronization();
           else if (peer.IsStateDBDownload())
             ReturnPeerDBDownloadIncomplete(peer.HashDBDownload);
 
@@ -201,6 +202,9 @@ namespace BTokenLib
 
                   await Task.Delay(1000).ConfigureAwait(false);
                 }
+
+                "Terminate synchronization process."
+                  .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
                 return;
               }

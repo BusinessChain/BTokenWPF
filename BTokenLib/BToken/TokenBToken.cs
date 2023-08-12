@@ -8,7 +8,7 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    const int COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX = 1000;
+    const int COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX = 300;
 
     const long BLOCK_REWARD_INITIAL = 200000000000000; // 200 BTK
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;

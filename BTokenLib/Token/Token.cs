@@ -37,7 +37,7 @@ namespace BTokenLib
 
     string PathRootToken;
 
-    const int INTERVAL_BLOCKHEIGHT_IMAGE = 5;
+    const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
 
     protected int CountBytesDataTokenBasis = 120;
 
