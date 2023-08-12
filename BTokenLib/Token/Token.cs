@@ -198,7 +198,7 @@ namespace BTokenLib
 
       messageStatus +=
         $"Height: {HeaderTip.Height}\n" +
-        $"Block tip: {HeaderTip}\n" +
+        $"Block tip: {HeaderTip.Hash.ToHexString().Substring(0, 24) + " ..."}\n" +
         $"Difficulty Tip: {HeaderTip.Difficulty}\n" +
         $"Acc. Difficulty: {HeaderTip.DifficultyAccumulated}\n" +
         $"Timestamp: {DateTimeOffset.FromUnixTimeSeconds(HeaderTip.UnixTimeSeconds)}\n" +

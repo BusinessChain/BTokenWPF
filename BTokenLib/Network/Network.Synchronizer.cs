@@ -132,6 +132,8 @@ namespace BTokenLib
 
     void HandleExceptionPeerListener(Peer peer)
     {
+      $"HandleExceptionPeerListener {peer}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
       lock (LOCK_IsStateSynchronizing) lock (LOCK_Peers)
         {
           if (IsStateSynchronizing && PeerSynchronizing == peer)
