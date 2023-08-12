@@ -9,8 +9,8 @@
     
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="400"/>
-            <ColumnDefinition Width="800"/>
+            <ColumnDefinition Width="350"/>
+            <ColumnDefinition Width="750"/>
         </Grid.ColumnDefinitions>
 
         <Grid Grid.Column="0">
@@ -54,8 +54,11 @@
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.CanContentScroll="True"/>
 
-            <Button Name ="ButtonClearTextBoxLog" HorizontalAlignment="Center" Grid.Row="1"
-                VerticalAlignment="Bottom" Content="ClearLog" Click="ButtonClearTextBoxLog_Click"/>
+            <StackPanel Orientation="Horizontal" Grid.Row="1" HorizontalAlignment="Center" >
+                <Button Content="ClearLog" Click="ButtonClearTextBoxLog_Click" Margin="0,5,10,0"/>
+                <Button Name ="ButtonFreezeLog" Content="FreezeLog" Margin="0,5,0,0" Click="ButtonFreezeTextBoxLog_Click"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>
+ 

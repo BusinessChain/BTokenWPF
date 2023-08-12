@@ -53,9 +53,13 @@ namespace BTokenWPF
       }
     }
 
+    bool FlagTextBoxLogFreezed;
     readonly object LOCK_Dispatcher = new();
     public void NotifyLogEntry(string logEntry, string source)
     {
+      if (FlagTextBoxLogFreezed)
+        return;
+
       lock (LOCK_Dispatcher)
         Dispatcher.Invoke(() =>
         {
@@ -67,7 +71,17 @@ namespace BTokenWPF
 
     void ButtonClearTextBoxLog_Click(object sender, RoutedEventArgs e)
     {
-      TextBoxLog.Text = "";
+      TextBoxLog.Clear();
+    }
+
+    void ButtonFreezeTextBoxLog_Click(object sender, RoutedEventArgs e)
+    {
+      if(FlagTextBoxLogFreezed)
+        ButtonFreezeLog.Content = "Freeze Log";
+      else
+        ButtonFreezeLog.Content = "Resume Log";
+
+      FlagTextBoxLogFreezed = !FlagTextBoxLogFreezed;
     }
 
     void ButtonBitcoinMiner_Click(object sender, RoutedEventArgs e)
