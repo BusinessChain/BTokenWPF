@@ -83,6 +83,7 @@ namespace BTokenWPF
         ButtonStartBitcoinMiner.Content = "Stop BitcoinMiner";
       }
     }
+
     void ButtonBTokenMiner_Click(object sender, RoutedEventArgs e)
     {
       if (BToken.IsMining)
@@ -96,23 +97,22 @@ namespace BTokenWPF
         ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
       }
     }
-    void ButtonStartSynchronizationBitcoin_Click(object sender, RoutedEventArgs e)
+
+    void ButtonStartSynchronizationNode_Click(object sender, RoutedEventArgs e)
     {
-      BToken.TokenParent.Network.TryStartSynchronization();
-    }
-    void ButtonStartSynchronizationBToken_Click(object sender, RoutedEventArgs e)
-    {
-      BToken.Network.TryStartSynchronization();
+      BToken.TryStartSynchronization();
     }
 
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
     {
       OpenWindowToken(BToken.TokenParent);
     }
+
     void ButtonOpenBTokenWindow_Click(object sender, RoutedEventArgs e)
     {
       OpenWindowToken(BToken);
     }
+
     void OpenWindowToken(Token token)
     {
       foreach (Window w in Application.Current.Windows)

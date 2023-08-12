@@ -137,7 +137,10 @@ namespace BTokenLib
           if (IsStateSynchronizing && PeerSynchronizing == peer)
             ExitSynchronization();
           else if (peer.IsStateBlockSynchronization())
+          {
+            $"ReturnPeerBlockDownloadIncomplete".Log(this, Token.LogFile, Token.LogEntryNotifier);
             ReturnPeerBlockDownloadIncomplete(peer);
+          }
           else if (peer.IsStateDBDownload())
             ReturnPeerDBDownloadIncomplete(peer.HashDBDownload);
 
@@ -377,9 +380,13 @@ namespace BTokenLib
               (headerBeingDownloaded, countPeers - 1);
         }
         else
+        {
           QueueDownloadsIncomplete.Add(
             peer.HeaderSync.Height,
             peer.HeaderSync);
+
+          $"Add download {peer.HeaderSync} to QueueDownloadsIncomplete.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        }
     }
 
     async Task SyncDB(Peer peer)

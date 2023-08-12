@@ -373,10 +373,10 @@ namespace BTokenLib
         }
         catch (Exception ex)
         {
-          Network.HandleExceptionPeerListener(this);
-
           $"{ex.GetType().Name} in listener: \n{ex.Message}"
             .Log(this, LogFiles, Token.LogEntryNotifier);
+
+          Network.HandleExceptionPeerListener(this);
 
           Dispose();
         }
