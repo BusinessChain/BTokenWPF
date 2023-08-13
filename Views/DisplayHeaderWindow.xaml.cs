@@ -24,6 +24,7 @@ namespace BTokenWPF
         $"Parent\n" +
         $"Child\n" +
         $"MerkleRoot\n" +
+        $"Count TXs\n" +
         $"Difficulty\n" +
         $"DifficultyAccumulated\n" +
         $"CountBytesBlock\n" +
@@ -39,6 +40,7 @@ namespace BTokenWPF
         $"{header.HeaderParent}\n" +
         $"{header.HashChild.ToHexString()}\n" +
         $"{header.MerkleRoot.ToHexString()}\n" +
+        $"{header.CountTXs}\n" +
         $"{header.Difficulty}\n" +
         $"{header.DifficultyAccumulated}\n" +
         $"{header.CountBytesBlock}\n" +

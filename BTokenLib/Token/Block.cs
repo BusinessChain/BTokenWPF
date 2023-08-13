@@ -45,6 +45,7 @@ namespace BTokenLib
       ParseTXs(Header.MerkleRoot, ref indexBuffer);
 
       Header.CountBytesBlock = indexBuffer;
+      Header.CountTXs = TXs.Count;
     }
 
     public abstract Header ParseHeader(

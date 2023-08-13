@@ -37,7 +37,7 @@ namespace BTokenWPF
 
             UpdateTextBoxWallet();
 
-            UpdateListBoxTXPool();
+            //UpdateListBoxTXPool();
 
             Token.ReleaseLock();
           }
@@ -87,21 +87,21 @@ namespace BTokenWPF
         ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 
-    int CountTXsPoolOld;
-    void UpdateListBoxTXPool()
-    {
-      int countTXsPool = Token.TXPool.GetCountTXs();
+    //int CountTXsPoolOld;
+    //void UpdateListBoxTXPool()
+    //{
+    //  int countTXsPool = Token.TXPool.GetCountTXs();
 
-      if (countTXsPool == CountTXsPoolOld)
-        return;
+    //  if (countTXsPool == CountTXsPoolOld)
+    //    return;
 
-      List<TX> tXs = Token.TXPool.GetTXs(out CountTXsPoolOld);
+    //  List<TX> tXs = Token.TXPool.GetTXs(out CountTXsPoolOld);
 
-      ListBoxTXPool.Items.Clear();
+    //  ListBoxTXPool.Items.Clear();
 
-      foreach (TX tX in tXs)
-        ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
-    }
+    //  foreach (TX tX in tXs)
+    //    ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
+    //}
 
     void UpdateListBoxHeaderchain()
     {

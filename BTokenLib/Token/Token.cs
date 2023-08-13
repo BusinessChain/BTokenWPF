@@ -374,9 +374,6 @@ namespace BTokenLib
           index += 32;
         }
 
-        $"Append {header} to headerTip {HeaderTip}."
-          .Log(this, LogFile, LogEntryNotifier);
-
         header.AppendToHeader(HeaderTip);
 
         HeaderTip.HeaderNext = header;

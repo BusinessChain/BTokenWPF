@@ -23,6 +23,8 @@ namespace BTokenLib
 
     public int Height;
 
+    public int CountTXs;
+
     public int CountBytesBlock;
     public long CountBytesBlocksAccumulated;
 

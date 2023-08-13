@@ -24,8 +24,8 @@
 
         <Label Content="Network" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
 
-        <StackPanel Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left" Margin="30">
-            <Label Content="Network Status" HorizontalAlignment="Center" FontWeight="Bold"/>
+        <StackPanel Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" Margin="30">
+            <Label Content="Status" HorizontalAlignment="Center" FontWeight="Bold"/>
 
             <Label Name="LabelStateNetworkConnector"/>
             <Label Name="LabelIsStateSynchronizing"/>
@@ -40,8 +40,8 @@
         <StackPanel Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center">
             <ListBox Name="ListBoxWallet" FontSize="10"/>
 
-            <Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
-            <ListBox Name="ListBoxTXPool" FontSize="10"/>
+            <!--<Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
+            <ListBox Name="ListBoxTXPool" FontSize="10"/>-->
         </StackPanel>
 
         <Label Content="Blockchain" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
