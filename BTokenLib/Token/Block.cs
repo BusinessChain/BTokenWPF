@@ -46,6 +46,7 @@ namespace BTokenLib
 
       Header.CountBytesBlock = indexBuffer;
       Header.CountTXs = TXs.Count;
+      FeePerByte = Fee / Header.CountBytesBlock;
     }
 
     public abstract Header ParseHeader(
@@ -218,12 +219,6 @@ namespace BTokenLib
     public void Clear()
     {
       TXs.Clear();
-    }
-
-    public void SetFee(long fee)
-    {
-      Fee = fee;
-      FeePerByte = Fee / Header.CountBytesBlock;
     }
   }
 }

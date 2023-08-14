@@ -38,6 +38,7 @@
 
         <Label Content="Wallet" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
         <StackPanel Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center">
+            <Label Name="LabelBalanceSatoshies" HorizontalAlignment="Left"/>
             <ListBox Name="ListBoxWallet" FontSize="10"/>
 
             <!--<Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>

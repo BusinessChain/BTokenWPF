@@ -52,7 +52,7 @@ namespace BTokenLib
         {
           while(fileCache.Read(bytesRecord) == LENGTH_RECORD_DB)
           {
-            RecordDB record = new()
+            Account record = new()
             {
               IDAccount = bytesRecord.Take(LENGTH_ID_ACCOUNT).ToArray(),
               CountdownToReplay = BitConverter.ToUInt32(bytesRecord, LENGTH_ID_ACCOUNT),
@@ -113,7 +113,7 @@ namespace BTokenLib
 
         while (index < lengthDataInBuffer)
         {
-          RecordDB recordDB = new();
+          Account recordDB = new();
 
           recordDB.CountdownToReplay = BitConverter.ToUInt32(bufferDB, index);
           index += 4;
@@ -132,11 +132,9 @@ namespace BTokenLib
           $"Invalid prefix {bufferDB[index]} in serialized DB data.");
     }
 
-    public void InsertBlock(BlockBToken block)
+    public void InsertBlock(Block block)
     {
       List<TX> tXs = block.TXs;
-
-      long feeBlock = 0;
 
       for (int t = 1; t < tXs.Count; t++)
       {
@@ -145,7 +143,7 @@ namespace BTokenLib
         int c = IndexCache;
         while (true)
         {
-          if (Caches[c].TryGetValue(iDAccount, out RecordDB account))
+          if (Caches[c].TryGetValue(iDAccount, out Account account))
           {
             SpendAccount(tXs[t], account);
 
@@ -164,13 +162,9 @@ namespace BTokenLib
           }
         }
 
-        InsertOutputs(tXs[t].TXOutputs);
-        
-        feeBlock += tXs[t].Fee;
+        InsertOutputs(tXs[t].TXOutputs);        
       }
       
-      block.SetFee(feeBlock);
-
       InsertOutputs(tXs[0].TXOutputs);
 
       UpdateHashDatabase();
@@ -243,7 +237,7 @@ namespace BTokenLib
     }
 
     // Validate signature
-    static void SpendAccount(TX tX, RecordDB accountInput)
+    static void SpendAccount(TX tX, Account accountInput)
     {
       long valueSpend = tX.Fee;
       tX.TXOutputs.ForEach(o => valueSpend += o.Value);
@@ -278,7 +272,7 @@ namespace BTokenLib
         {
           if (Caches[c].TryGetValue(
             iDAccount,
-            out RecordDB account))
+            out Account account))
           {
             account.Value += outputValueTX;
 
@@ -298,7 +292,7 @@ namespace BTokenLib
             if (GetFileDB(iDAccount).TryFetchAccount(iDAccount, out account))
               account.Value += outputValueTX;
             else
-              account = new RecordDB
+              account = new Account
               {
                 CountdownToReplay = uint.MaxValue,
                 Value = outputValueTX,
@@ -313,7 +307,7 @@ namespace BTokenLib
       }
     }
 
-    void AddToCacheIndexed(byte[] iDAccount, RecordDB account)
+    void AddToCacheIndexed(byte[] iDAccount, Account account)
     {
       Caches[IndexCache].Add(iDAccount, account);
 
@@ -324,7 +318,7 @@ namespace BTokenLib
 
         IndexCache = (IndexCache + COUNT_CACHES + 1) % COUNT_CACHES;
 
-        foreach(KeyValuePair<byte[], RecordDB> item in Caches[IndexCache])
+        foreach(KeyValuePair<byte[], Account> item in Caches[IndexCache])
           GetFileDB(item.Value.IDAccount).WriteRecordDBAccount(item.Value);
 
         Caches[IndexCache].Clear();

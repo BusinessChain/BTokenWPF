@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BTokenLib
 {
-  class RecordDB
+  class Account
   {
     public uint CountdownToReplay; 
     // was ist wenn ein Account value null wird und aus der DB gelöscht wird?

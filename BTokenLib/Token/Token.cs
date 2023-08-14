@@ -62,14 +62,14 @@ namespace BTokenLib
         Path.Combine(GetName(), "LogToken"),
         false);
 
-      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"));
-
       PathImage = Path.Combine(PathRootToken, NameImage);
       PathImageOld = Path.Combine(PathRootToken, NameImageOld);
 
       HeaderGenesis = CreateHeaderGenesis();
 
       Archiver = new(GetName());
+
+      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"));
 
       TXPool = new();
 
@@ -390,6 +390,9 @@ namespace BTokenLib
 
     public void InsertBlock(Block block)
     {
+      $"Insert block {block}."
+        .Log(this, LogFile, LogEntryNotifier);
+
       block.Header.AppendToHeader(HeaderTip);
       InsertInDatabase(block);
       AppendHeaderToTip(block.Header);

@@ -9,7 +9,7 @@ namespace BTokenLib
 {
   partial class DatabaseAccounts
   {
-    class CacheDatabaseAccounts : Dictionary<byte[], RecordDB>
+    class CacheDatabaseAccounts : Dictionary<byte[], Account>
     {
       public byte[] Hash;
       SHA256 SHA256 = SHA256.Create();
@@ -23,7 +23,7 @@ namespace BTokenLib
         int i = 0;
         byte[] bytesCaches = new byte[Values.Count * LENGTH_RECORD_DB];
 
-        foreach (RecordDB record in Values)
+        foreach (Account record in Values)
         {
           record.IDAccount.CopyTo(bytesCaches, i);
           i += LENGTH_ID_ACCOUNT;
@@ -41,7 +41,7 @@ namespace BTokenLib
       public void CreateImage(string path)
       {
         using (FileStream file = new(path, FileMode.Create))
-          foreach (RecordDB record in Values)
+          foreach (Account record in Values)
           {
             file.Write(record.IDAccount);
             file.Write(BitConverter.GetBytes(record.CountdownToReplay));
@@ -54,7 +54,7 @@ namespace BTokenLib
         byte[] dataDB = new byte[LENGTH_RECORD_DB * Count];
         int index = 0;
 
-        foreach(RecordDB recordDB in Values)
+        foreach(Account recordDB in Values)
         {
           BitConverter.GetBytes(recordDB.CountdownToReplay).CopyTo(dataDB, index);
           index += 4;

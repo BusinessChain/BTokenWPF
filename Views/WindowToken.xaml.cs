@@ -78,6 +78,8 @@ namespace BTokenWPF
       if (HeaderTipAtLastUpdate == Token.HeaderTip)
         return;
 
+      LabelBalanceSatoshies.Content = $"Balance: {Token.Wallet.GetBalance()}";
+
       HeaderTipAtLastUpdate = Token.HeaderTip;
 
       ListBoxWallet.Items.Clear();

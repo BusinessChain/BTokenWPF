@@ -48,7 +48,7 @@ namespace BTokenLib
               byte[] value = new byte[8];
               Read(value);
 
-              RecordDB account = new()
+              Account account = new()
               {
                 IDAccount = iDAccount,
                 CountdownToReplay = BitConverter.ToUInt32(value),
@@ -85,7 +85,7 @@ namespace BTokenLib
 
       public bool TryFetchAccount(
         byte[] iDAccount,
-        out RecordDB account)
+        out Account account)
       {
         Position = 0;
 
@@ -124,7 +124,7 @@ namespace BTokenLib
         return false;
       }
 
-      public void WriteRecordDBAccount(RecordDB account)
+      public void WriteRecordDBAccount(Account account)
       {
         Seek(Position, SeekOrigin.End);
 

@@ -41,6 +41,11 @@ namespace BTokenLib
         .Concat(POSTFIX_P2PKH).ToArray();
     }
 
+    public long GetBalance()
+    {
+      return OutputsValueDesc.Sum(o => o.Value);
+    }
+
     public byte[] ComputeHash160Pubkey(byte[] publicKey)
     {
       byte[] publicKeyHash160 = new byte[20];
@@ -69,28 +74,26 @@ namespace BTokenLib
 
       indexScript += 20;
 
-      if (POSTFIX_P2PKH.IsEqual(
+      if (POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
+        return;
+
+      byte[] scriptPubKey = new byte[LENGTH_P2PKH];
+
+      Array.Copy(
         tXOutput.Buffer,
-        indexScript))
-      {
-        byte[] scriptPubKey = new byte[LENGTH_P2PKH];
+        tXOutput.StartIndexScript,
+        scriptPubKey,
+        0,
+        LENGTH_P2PKH);
 
-        Array.Copy(
-          tXOutput.Buffer,
-          tXOutput.StartIndexScript,
-          scriptPubKey,
-          0,
-          LENGTH_P2PKH);
-
-        AddOutput(
-          new TXOutputWallet
-          {
-            TXID = tX.Hash,
-            TXIDShort = tX.TXIDShort,
-            Index = tX.TXOutputs.IndexOf(tXOutput),
-            Value = tXOutput.Value
-          });
-      }
+      AddOutput(
+        new TXOutputWallet
+        {
+          TXID = tX.Hash,
+          TXIDShort = tX.TXIDShort,
+          Index = tX.TXOutputs.IndexOf(tXOutput),
+          Value = tXOutput.Value
+        });
     }
 
     public List<byte> GetScriptSignature(byte[] tXRaw)
@@ -100,6 +103,7 @@ namespace BTokenLib
       tXRaw.ToArray());
 
       List<byte> scriptSig = new();
+
       scriptSig.Add((byte)(signature.Length + 1));
       scriptSig.AddRange(signature);
       scriptSig.Add(0x01);
@@ -127,6 +131,13 @@ namespace BTokenLib
 
     public void RemoveOutput(byte[] hash)
     {
+      List<TXOutputWallet> outputsRemove =
+        OutputsValueDesc.FindAll(t => t.TXID.Equals(hash));
+
+      outputsRemove.ForEach(o => {
+        OutputsValueDesc.Remove(o);
+      });
+
       int i = OutputsValueDesc.RemoveAll(t => t.TXID.Equals(hash));
     }
 

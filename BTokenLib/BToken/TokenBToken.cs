@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows.Documents.DocumentStructures;
 
 namespace BTokenLib
 {
@@ -89,10 +90,7 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
-      $"Insert BToken block {block} in database."
-        .Log(this, LogFile, LogEntryNotifier);
-
-      DatabaseAccounts.InsertBlock((BlockBToken)block);
+      DatabaseAccounts.InsertBlock(block);
 
       long outputValueTXCoinbase = 0;
       block.TXs[0].TXOutputs.ForEach(o => outputValueTXCoinbase += o.Value);
