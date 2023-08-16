@@ -11,6 +11,14 @@ namespace BTokenLib
 {
   public partial class Wallet
   {
+    public enum TypeWallet
+    {
+      AccountType,
+      UTXOType
+    }
+
+    TypeWallet Type;
+
     const int HASH_BYTE_SIZE = 32;
     const int LENGTH_P2PKH = 25;
     byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
@@ -28,8 +36,10 @@ namespace BTokenLib
 
     public List<TXOutputWallet> OutputsValueDesc = new();
 
-    public Wallet(string privKeyDec)
+    public Wallet(string privKeyDec, TypeWallet typeWallet)
     {
+      Type = typeWallet;
+
       PrivKeyDec = privKeyDec;
 
       PublicKey = Crypto.GetPubKeyFromPrivKey(PrivKeyDec);
@@ -74,7 +84,7 @@ namespace BTokenLib
 
       indexScript += 20;
 
-      if (POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
+      if (!POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
         return;
 
       byte[] scriptPubKey = new byte[LENGTH_P2PKH];
@@ -90,7 +100,6 @@ namespace BTokenLib
         new TXOutputWallet
         {
           TXID = tX.Hash,
-          TXIDShort = tX.TXIDShort,
           Index = tX.TXOutputs.IndexOf(tXOutput),
           Value = tXOutput.Value
         });
@@ -207,8 +216,6 @@ namespace BTokenLib
         Array.Copy(buffer, index, tXOutput.TXID, 0, HASH_BYTE_SIZE);
         index += HASH_BYTE_SIZE;
 
-        tXOutput.TXIDShort = BitConverter.ToInt32(tXOutput.TXID, 0);
-
         tXOutput.Index = BitConverter.ToInt32(buffer, index);
         index += 4;
 
@@ -234,22 +241,15 @@ namespace BTokenLib
       {
         foreach (TXOutputWallet tXOutput in OutputsValueDesc)
         {
-          fileImageWallet.Write(
-            tXOutput.TXID, 0, tXOutput.TXID.Length);
+          fileImageWallet.Write(tXOutput.TXID, 0, tXOutput.TXID.Length);
 
+          byte[] outputIndex = BitConverter.GetBytes(tXOutput.Index);
 
-          byte[] outputIndex = BitConverter.GetBytes(
-            tXOutput.Index);
+          fileImageWallet.Write(outputIndex, 0, outputIndex.Length);
 
-          fileImageWallet.Write(
-            outputIndex, 0, outputIndex.Length);
+          byte[] value = BitConverter.GetBytes(tXOutput.Value);
 
-
-          byte[] value = BitConverter.GetBytes(
-            tXOutput.Value);
-
-          fileImageWallet.Write(
-            value, 0, value.Length);
+          fileImageWallet.Write(value, 0, value.Length);
         }
       }
     }

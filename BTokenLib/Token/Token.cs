@@ -51,7 +51,8 @@ namespace BTokenLib
     public Token(
       UInt16 port, 
       bool flagEnableInboundConnections,
-      ILogEntryNotifier logEntryNotifier)
+      ILogEntryNotifier logEntryNotifier,
+      Wallet.TypeWallet typeWallet)
     {
       LogEntryNotifier = logEntryNotifier;
 
@@ -69,7 +70,7 @@ namespace BTokenLib
 
       Archiver = new(GetName());
 
-      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"));
+      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"), typeWallet);
 
       TXPool = new();
 

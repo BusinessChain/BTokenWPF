@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Security.Cryptography;
-using System.Windows.Documents.DocumentStructures;
 
 namespace BTokenLib
 {
@@ -28,7 +27,8 @@ namespace BTokenLib
       : base(
           COMPORT_BTOKEN,
           flagEnableInboundConnections: true,
-          logEntryNotifier)
+          logEntryNotifier,
+          Wallet.TypeWallet.AccountType)
     {
       TokenParent = new TokenBitcoin(logEntryNotifier);
       TokenParent.TokenChild = this;

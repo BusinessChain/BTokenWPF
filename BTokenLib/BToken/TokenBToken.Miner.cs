@@ -228,7 +228,6 @@ namespace BTokenLib
           new TXOutputWallet
           {
             TXID = tokenAnchor.TX.Hash,
-            TXIDShort = tokenAnchor.TX.TXIDShort,
             Index = 1,
             Value = tokenAnchor.ValueChange
           });
