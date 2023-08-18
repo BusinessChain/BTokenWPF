@@ -19,7 +19,6 @@ namespace BTokenLib
 
     TypeWallet Type;
 
-    const int HASH_BYTE_SIZE = 32;
     const int LENGTH_P2PKH = 25;
     byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
@@ -197,61 +196,6 @@ namespace BTokenLib
     public void Clear()
     {
       OutputsValueDesc.Clear();
-    }
-
-    public void LoadImage(string pathImage)
-    {
-      string pathFile = Path.Combine(
-        pathImage, "ImageWallet");
-
-      int index = 0;
-
-      byte[] buffer = File.ReadAllBytes(pathFile);
-
-      while (index < buffer.Length)
-      {
-        var tXOutput = new TXOutputWallet();
-
-        tXOutput.TXID = new byte[HASH_BYTE_SIZE];
-        Array.Copy(buffer, index, tXOutput.TXID, 0, HASH_BYTE_SIZE);
-        index += HASH_BYTE_SIZE;
-
-        tXOutput.Index = BitConverter.ToInt32(buffer, index);
-        index += 4;
-
-        tXOutput.Value = BitConverter.ToInt64(buffer, index);
-        index += 8;
-
-        AddOutput(tXOutput);
-      }
-    }
-
-    public void CreateImage(string pathDirectory)
-    {
-      string pathimageWallet = Path.Combine(
-         pathDirectory,
-         "ImageWallet");
-
-      using (var fileImageWallet =
-        new FileStream(
-          pathimageWallet,
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
-      {
-        foreach (TXOutputWallet tXOutput in OutputsValueDesc)
-        {
-          fileImageWallet.Write(tXOutput.TXID, 0, tXOutput.TXID.Length);
-
-          byte[] outputIndex = BitConverter.GetBytes(tXOutput.Index);
-
-          fileImageWallet.Write(outputIndex, 0, outputIndex.Length);
-
-          byte[] value = BitConverter.GetBytes(tXOutput.Value);
-
-          fileImageWallet.Write(value, 0, value.Length);
-        }
-      }
     }
   }
 }

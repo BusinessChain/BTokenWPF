@@ -9,6 +9,6 @@ namespace BTokenLib
 {
   class TXBToken : TX
   {
-    public uint CountdownToReplay;
+    public ulong Nonce;
   }
 }

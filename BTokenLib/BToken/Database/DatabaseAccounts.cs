@@ -20,9 +20,9 @@ namespace BTokenLib
     List<FileDB> FilesDB = new();
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
 
-    const int LENGTH_RECORD_DB = 37;
+    const int LENGTH_RECORD_DB = 41;
     const int LENGTH_ID_ACCOUNT = 25;
-    const int LENGTH_COUNTDOWN_TO_REPLAY = 4;
+    const int LENGTH_NONCE = 8;
     const int LENGTH_VALUE = 8;
 
     SHA256 SHA256 = SHA256.Create();
@@ -55,8 +55,8 @@ namespace BTokenLib
             Account record = new()
             {
               IDAccount = bytesRecord.Take(LENGTH_ID_ACCOUNT).ToArray(),
-              CountdownToReplay = BitConverter.ToUInt32(bytesRecord, LENGTH_ID_ACCOUNT),
-              Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + LENGTH_COUNTDOWN_TO_REPLAY)
+              Nonce = BitConverter.ToUInt64(bytesRecord, LENGTH_ID_ACCOUNT),
+              Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + LENGTH_NONCE)
             };
 
             Caches[i].Add(record.IDAccount, record);
@@ -115,8 +115,8 @@ namespace BTokenLib
         {
           Account recordDB = new();
 
-          recordDB.CountdownToReplay = BitConverter.ToUInt32(bufferDB, index);
-          index += 4;
+          recordDB.Nonce = BitConverter.ToUInt64(bufferDB, index);
+          index += 8;
 
           recordDB.Value = BitConverter.ToUInt32(bufferDB, index);
           index += 8;
@@ -162,10 +162,10 @@ namespace BTokenLib
           }
         }
 
-        InsertOutputs(tXs[t].TXOutputs);        
+        InsertOutputs(tXs[t].TXOutputs, block.Header.Height);        
       }
       
-      InsertOutputs(tXs[0].TXOutputs);
+      InsertOutputs(tXs[0].TXOutputs, block.Header.Height);
 
       UpdateHashDatabase();
 
@@ -242,7 +242,7 @@ namespace BTokenLib
       long valueSpend = tX.Fee;
       tX.TXOutputs.ForEach(o => valueSpend += o.Value);
             
-      if (accountInput.CountdownToReplay != ((TXBToken)tX).CountdownToReplay)
+      if (accountInput.Nonce != ((TXBToken)tX).Nonce)
         throw new ProtocolException(
           $"Account {accountInput.IDAccount.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} has unequal CountdownToReplay.");
@@ -252,11 +252,11 @@ namespace BTokenLib
           $"Account {accountInput.IDAccount.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} does not have enough fund.");
 
-      accountInput.CountdownToReplay -= 1;
+      accountInput.Nonce += 1;
       accountInput.Value -= valueSpend;
     }
 
-    void InsertOutputs(List<TXOutput> tXOutputs)
+    void InsertOutputs(List<TXOutput> tXOutputs, int blockHeight)
     {
       for (int i = 0; i < tXOutputs.Count; i++)
       {
@@ -294,7 +294,7 @@ namespace BTokenLib
             else
               account = new Account
               {
-                CountdownToReplay = uint.MaxValue,
+                Nonce = (ulong)blockHeight << 32,
                 Value = outputValueTX,
                 IDAccount = iDAccount
               };

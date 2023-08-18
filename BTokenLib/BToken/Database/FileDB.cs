@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -18,7 +16,6 @@ namespace BTokenLib
       public byte[] Hash;
       bool FlagHashOutdated;
       SHA256 SHA256 = SHA256.Create();
-
 
 
       public FileDB(string path) : base(
@@ -42,8 +39,8 @@ namespace BTokenLib
           while (ReadByte() == iDAccount[i++])
             if (i == LENGTH_ID_ACCOUNT)
             {
-              byte[] countdownToReplay = new byte[4];
-              Read(countdownToReplay);
+              byte[] nonce = new byte[8];
+              Read(nonce);
 
               byte[] value = new byte[8];
               Read(value);
@@ -51,7 +48,7 @@ namespace BTokenLib
               Account account = new()
               {
                 IDAccount = iDAccount,
-                CountdownToReplay = BitConverter.ToUInt32(value),
+                Nonce = BitConverter.ToUInt64(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 
@@ -59,8 +56,8 @@ namespace BTokenLib
 
               if (account.Value > 0)
               {
-                Position -= LENGTH_COUNTDOWN_TO_REPLAY + LENGTH_VALUE;
-                Write(BitConverter.GetBytes(account.CountdownToReplay));
+                Position -= LENGTH_NONCE + LENGTH_VALUE;
+                Write(BitConverter.GetBytes(account.Nonce));
                 Write(BitConverter.GetBytes(account.Value));
               }
               else
@@ -95,8 +92,8 @@ namespace BTokenLib
           while (ReadByte() == iDAccount[i++])
             if (i == LENGTH_ID_ACCOUNT)
             {
-              byte[] countdownToReplay = new byte[4];
-              Read(countdownToReplay);
+              byte[] nonce = new byte[8];
+              Read(nonce);
 
               byte[] value = new byte[8];
               Read(value);
@@ -104,7 +101,7 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                CountdownToReplay = BitConverter.ToUInt32(value),
+                Nonce = BitConverter.ToUInt64(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 
@@ -129,7 +126,7 @@ namespace BTokenLib
         Seek(Position, SeekOrigin.End);
 
         Write(account.IDAccount);
-        Write(BitConverter.GetBytes(account.CountdownToReplay));
+        Write(BitConverter.GetBytes(account.Nonce));
         Write(BitConverter.GetBytes(account.Value));
 
         CountRecords += 1;

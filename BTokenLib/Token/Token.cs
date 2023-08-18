@@ -29,8 +29,8 @@ namespace BTokenLib
 
     public StreamWriter LogFile;
 
-    static string NameImage = "Image";
-    static string NameImageOld = "ImageOld";
+    const string NameImage = "Image";
+    const string NameImageOld = "ImageOld";
 
     string PathImage;
     string PathImageOld;
@@ -384,10 +384,7 @@ namespace BTokenLib
       }
     }
 
-    public virtual void LoadImageDatabase(string path)
-    {
-      Wallet.LoadImage(path);
-    }
+    public abstract void LoadImageDatabase(string path);
 
     public void InsertBlock(Block block)
     {
@@ -424,8 +421,6 @@ namespace BTokenLib
       CreateImageHeaderchain(PathImage);
 
       CreateImageDatabase(PathImage);
-
-      Wallet.CreateImage(PathImage);
     }
 
     void CreateImageHeaderchain(string pathImage)
@@ -461,8 +456,7 @@ namespace BTokenLib
       }
     }
 
-    public virtual void CreateImageDatabase(string path)
-    { }
+    public abstract void CreateImageDatabase(string path);
 
     public abstract Block CreateBlock();
 

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -28,8 +26,8 @@ namespace BTokenLib
           record.IDAccount.CopyTo(bytesCaches, i);
           i += LENGTH_ID_ACCOUNT;
 
-          BitConverter.GetBytes(record.CountdownToReplay).CopyTo(bytesCaches, i);
-          i += LENGTH_COUNTDOWN_TO_REPLAY;
+          BitConverter.GetBytes(record.Nonce).CopyTo(bytesCaches, i);
+          i += LENGTH_NONCE;
 
           BitConverter.GetBytes(record.Value).CopyTo(bytesCaches, i);
           i += LENGTH_VALUE;
@@ -44,7 +42,7 @@ namespace BTokenLib
           foreach (Account record in Values)
           {
             file.Write(record.IDAccount);
-            file.Write(BitConverter.GetBytes(record.CountdownToReplay));
+            file.Write(BitConverter.GetBytes(record.Nonce));
             file.Write(BitConverter.GetBytes(record.Value));
           }
       }
@@ -56,8 +54,8 @@ namespace BTokenLib
 
         foreach(Account recordDB in Values)
         {
-          BitConverter.GetBytes(recordDB.CountdownToReplay).CopyTo(dataDB, index);
-          index += 4;
+          BitConverter.GetBytes(recordDB.Nonce).CopyTo(dataDB, index);
+          index += 8;
 
           BitConverter.GetBytes(recordDB.Value).CopyTo(dataDB, index);
           index += 8;
