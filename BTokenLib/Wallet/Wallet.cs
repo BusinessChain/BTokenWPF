@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
-using System.Diagnostics;
 using System.Security.Cryptography;
 using Org.BouncyCastle.Crypto.Digests;
 
@@ -34,6 +32,8 @@ namespace BTokenLib
     public byte[] PublicScript;
 
     public List<TXOutputWallet> OutputsValueDesc = new();
+    public List<TX> HistoryTransactions = new();
+
 
     public Wallet(string privKeyDec, TypeWallet typeWallet)
     {
@@ -48,6 +48,39 @@ namespace BTokenLib
       PublicScript = PREFIX_P2PKH
         .Concat(PublicKeyHash160)
         .Concat(POSTFIX_P2PKH).ToArray();
+    }
+
+    public void LoadImage(string path)
+    {
+      // load TX history
+    }
+
+    public void CreateImage(string path)
+    {
+      // store TX history
+    }
+
+    public void InsertBlock(Block block)
+    {
+      foreach (TX tX in block.TXs)
+        foreach (TXOutput tXOutput in tX.TXOutputs)
+          if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
+          {
+            AddOutput(
+              new TXOutputWallet
+              {
+                TXID = tX.Hash,
+                Index = tX.TXOutputs.IndexOf(tXOutput),
+                Value = tXOutput.Value
+              });
+
+            AddTXToHistory(tX);
+          }            
+
+      foreach (TX tX in block.TXs)
+        foreach (TXInput tXInput in tX.TXInputs)
+          if(TrySpend(tXInput))
+            AddTXToHistory(tX);
     }
 
     public long GetBalance()
@@ -66,25 +99,25 @@ namespace BTokenLib
       return publicKeyHash160;
     }
 
-    public void DetectTXOutputSpendable(TX tX, TXOutput tXOutput)
+    bool TryDetectTXOutputSpendable(TXOutput tXOutput)
     {
       if (tXOutput.LengthScript != LENGTH_P2PKH)
-        return;
+        return false;
 
       int indexScript = tXOutput.StartIndexScript;
 
       if (!PREFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return;
+        return false;
 
       indexScript += 3;
 
       if (!PublicKeyHash160.IsEqual(tXOutput.Buffer, indexScript))
-        return;
+        return false;
 
       indexScript += 20;
 
       if (!POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return;
+        return false;
 
       byte[] scriptPubKey = new byte[LENGTH_P2PKH];
 
@@ -95,13 +128,13 @@ namespace BTokenLib
         0,
         LENGTH_P2PKH);
 
-      AddOutput(
-        new TXOutputWallet
-        {
-          TXID = tX.Hash,
-          Index = tX.TXOutputs.IndexOf(tXOutput),
-          Value = tXOutput.Value
-        });
+      return true;
+    }
+
+    void AddTXToHistory(TX tX)
+    {
+      if (!HistoryTransactions.Any(t => t.Hash.IsEqual(tX.Hash)))
+        HistoryTransactions.Add(tX);
     }
 
     public List<byte> GetScriptSignature(byte[] tXRaw)

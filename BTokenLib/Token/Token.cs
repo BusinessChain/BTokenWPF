@@ -272,6 +272,9 @@ namespace BTokenLib
 
           LoadImageHeaderchain(pathImage);
           LoadImageDatabase(pathImage);
+          Wallet.LoadImage(pathImage);
+
+          // Make safety crosscheck with database to see if wallet balance is correct.
 
           if (HeaderTip.Height > heightMax)
             throw new ProtocolException(
@@ -388,12 +391,13 @@ namespace BTokenLib
 
     public void InsertBlock(Block block)
     {
-      $"Insert block {block}."
-        .Log(this, LogFile, LogEntryNotifier);
+      $"Insert block {block}.".Log(this, LogFile, LogEntryNotifier);
 
       block.Header.AppendToHeader(HeaderTip);
       InsertInDatabase(block);
       AppendHeaderToTip(block.Header);
+
+      Wallet.InsertBlock(block);
 
       FeePerByteAverage =
         ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeePerByteAverage + block.FeePerByte) /
@@ -421,6 +425,8 @@ namespace BTokenLib
       CreateImageHeaderchain(PathImage);
 
       CreateImageDatabase(PathImage);
+
+      Wallet.CreateImage(PathImage);
     }
 
     void CreateImageHeaderchain(string pathImage)

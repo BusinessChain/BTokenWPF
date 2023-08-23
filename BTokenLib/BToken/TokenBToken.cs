@@ -118,6 +118,7 @@ namespace BTokenLib
         
     public override void RevokeBlockInsertion()
     {
+      // TokensAnchorUnconfirmed should be restored
       TokensAnchorDetectedInBlock.Clear();
     }
 

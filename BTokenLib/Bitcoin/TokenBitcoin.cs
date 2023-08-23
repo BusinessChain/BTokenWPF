@@ -59,28 +59,10 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
-      List<TX> tXs = block.TXs;
-
-      try
-      {
-        foreach (TX tX in tXs)
-          foreach (TXOutput tXOutput in tX.TXOutputs)
-            if (tXOutput.Value > 0)
-              Wallet.DetectTXOutputSpendable(tX, tXOutput);
-            else
-              TokenChild.DetectAnchorTokenInBlock(tX);
-
-        foreach (TX tX in tXs)
-          foreach (TXInput tXInput in tX.TXInputs)
-            Wallet.TrySpend(tXInput);
-      }
-      catch (ProtocolException ex)
-      {
-        // Database (wallet) recovery.
-
-        TokenChild.RevokeBlockInsertion();
-        throw ex;
-      }
+      foreach (TX tX in block.TXs)
+        foreach (TXOutput tXOutput in tX.TXOutputs)
+          if (tXOutput.Value == 0)
+            TokenChild.DetectAnchorTokenInBlock(tX);
     }
 
     public override List<string> GetSeedAddresses()

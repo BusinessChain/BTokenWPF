@@ -263,6 +263,7 @@ namespace BTokenLib
 
       if (!ID_BTOKEN.IsEqual(tXOutput.Buffer, index))
         return;
+
       index += ID_BTOKEN.Length;
 
       TokenAnchor tokenAnchor = new(tX, index, ID_BTOKEN);
