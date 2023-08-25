@@ -177,7 +177,6 @@ namespace BTokenLib
       //  throw new ProtocolException(
       //    $"Hash database not equal as given in header {block},\n" +
       //    $"height {block.Header.Height}.");
-
     }
 
     void UpdateHashDatabase()

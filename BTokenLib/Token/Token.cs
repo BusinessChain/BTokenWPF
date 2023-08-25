@@ -351,14 +351,14 @@ namespace BTokenLib
       byte[] bytesHeaderImage = File.ReadAllBytes(
         Path.Combine(pathImage, "ImageHeaderchain"));
 
+      Block block = CreateBlock();
+
       int index = 0;
 
       $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
 
       while (index < bytesHeaderImage.Length)
       {
-        Block block = CreateBlock();
-
         Header header = block.ParseHeader(
           bytesHeaderImage,
           ref index);
@@ -495,11 +495,11 @@ namespace BTokenLib
       int indexTXRaw = 0;
 
       TX tX = Block.ParseTX(
-        true,
         tXRaw.ToArray(),
         ref indexTXRaw,
         block.SHA256);
 
+      tX.IsCoinbase = true;
       tX.TXRaw = tXRaw;
 
       return tX;

@@ -12,10 +12,13 @@ namespace BTokenLib
 
     public int TXIDShort;
 
+    public bool IsCoinbase;
+
     public List<TXInput> TXInputs = new();
     public List<TXOutput> TXOutputs = new();
 
     public long Fee;
+
 
     public string GetStringTXRaw()
     {

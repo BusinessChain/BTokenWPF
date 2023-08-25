@@ -150,7 +150,6 @@ namespace BTokenLib
         int index = 0;
 
         TX = Block.ParseTX(
-          isCoinbase: false,
           tXRaw.ToArray(),
           ref index,
           sHA256);

@@ -67,22 +67,27 @@ namespace BTokenLib
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
       
       if (tXCount == 1)
-        TXs.Add(
-          ParseTX(
-            isCoinbase: true,
+      {
+        TX tX = ParseTX(
             Buffer,
-            ref bufferIndex, 
-            SHA256));
+            ref bufferIndex,
+            SHA256);
+
+        tX.IsCoinbase = true;
+
+        TXs.Add(tX);
+      }
       else
       {
         int tXsLengthMod2 = tXCount & 1;
         var merkleList = new byte[tXCount + tXsLengthMod2][];
 
         TX tX = ParseTX(
-          isCoinbase: true,
           Buffer,
           ref bufferIndex, 
           SHA256);
+
+        tX.IsCoinbase = true;
 
         TXs.Add(tX);
 
@@ -91,7 +96,6 @@ namespace BTokenLib
         for (int t = 1; t < tXCount; t += 1)
         {
           tX = ParseTX(
-          isCoinbase: false,
           Buffer,
           ref bufferIndex,
           SHA256);
@@ -112,7 +116,6 @@ namespace BTokenLib
     }
 
     public static TX ParseTX(
-      bool isCoinbase,
       byte[] buffer,
       ref int indexBuffer,
       SHA256 sHA256)
@@ -126,18 +129,14 @@ namespace BTokenLib
         indexBuffer += 4; // Version
 
         if (buffer[indexBuffer] == 0x00)
-          throw new NotImplementedException(
-            "Parsing of segwit txs not implemented");
+          throw new NotImplementedException("Segwit txs not implemented");
 
         int countInputs = VarInt.GetInt32(
           buffer,
           ref indexBuffer);
 
-        if (isCoinbase)
-          new TXInput(buffer, ref indexBuffer);
-        else
-          for (int i = 0; i < countInputs; i += 1)
-            tX.TXInputs.Add(new TXInput(buffer, ref indexBuffer));
+        for (int i = 0; i < countInputs; i += 1)
+          tX.TXInputs.Add(new TXInput(buffer, ref indexBuffer));
 
         int countTXOutputs = VarInt.GetInt32(
           buffer,

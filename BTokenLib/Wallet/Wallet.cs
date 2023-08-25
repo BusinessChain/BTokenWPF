@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using Org.BouncyCastle.Crypto.Digests;
@@ -52,12 +53,35 @@ namespace BTokenLib
 
     public void LoadImage(string path)
     {
-      // load TX history
+      byte[] bytesImageWallet = File.ReadAllBytes(
+        Path.Combine(path, "wallet"));
+
+      SHA256 sHA256 = SHA256.Create();
+
+      int index = 0;
+
+      while (index < bytesImageWallet.Length)
+        HistoryTransactions.Add(
+          Block.ParseTX(
+            bytesImageWallet, 
+            ref index, 
+            sHA256));
     }
 
     public void CreateImage(string path)
     {
-      // store TX history
+      using (FileStream fileImageWallet = new(
+          Path.Combine(path, "wallet"),
+          FileMode.Create,
+          FileAccess.Write,
+          FileShare.None))
+      {
+        foreach(TX tX in HistoryTransactions)
+        {
+          byte[] txRaw = tX.TXRaw.ToArray();
+          fileImageWallet.Write(txRaw, 0, txRaw.Length);
+        }
+      }
     }
 
     public void InsertBlock(Block block)
@@ -75,11 +99,13 @@ namespace BTokenLib
               });
 
             AddTXToHistory(tX);
-          }            
+          }
 
       foreach (TX tX in block.TXs)
         foreach (TXInput tXInput in tX.TXInputs)
-          if(TrySpend(tXInput))
+          if (OutputsValueDesc.RemoveAll(o =>
+            o.TXID.IsEqual(tXInput.TXIDOutput) &&
+            o.Index == tXInput.OutputIndex) > 0)
             AddTXToHistory(tX);
     }
 
@@ -153,21 +179,6 @@ namespace BTokenLib
       scriptSig.AddRange(PublicKey);
 
       return scriptSig;
-    }
-
-    public bool TrySpend(TXInput tXInput)
-    {
-      TXOutputWallet output =
-        OutputsValueDesc.Find(o =>
-        o.TXID.IsEqual(tXInput.TXIDOutput) &&
-        o.Index == tXInput.OutputIndex);
-
-      if (output == null)
-        return false;
-
-      OutputsValueDesc.Remove(output);
-
-      return true;
     }
 
     public void RemoveOutput(byte[] hash)
