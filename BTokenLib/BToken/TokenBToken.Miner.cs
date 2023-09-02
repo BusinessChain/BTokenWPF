@@ -4,7 +4,6 @@ using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
-using System.Diagnostics;
 
 namespace BTokenLib
 {
@@ -128,16 +127,13 @@ namespace BTokenLib
     {
       TokensAnchorUnconfirmed.Reverse();
 
-      foreach (TokenAnchor t in TokensAnchorUnconfirmed)
+      foreach (TokenAnchor tokenAnchor in TokensAnchorUnconfirmed)
       {
-        if (t.ValueChange > 0)
-          TokenParent.Wallet.RemoveOutput(t.TX.Hash);
-
-        t.Inputs.ForEach(i => TokenParent.Wallet.AddOutput(i));
+        TokenParent.Wallet.ReverseTXUnconfirmed(tokenAnchor.TX);
 
         File.Delete(Path.Combine(
           PathBlocksMinedUnconfirmed,
-          t.HashBlockReferenced.ToHexString()));
+          tokenAnchor.HashBlockReferenced.ToHexString()));
       }
 
       int countTokensAnchorUnconfirmed = TokensAnchorUnconfirmed.Count;

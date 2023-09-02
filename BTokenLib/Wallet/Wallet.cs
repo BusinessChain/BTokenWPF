@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Policy;
 using Org.BouncyCastle.Crypto.Digests;
+using static BTokenLib.TokenBToken;
 
 
 namespace BTokenLib
@@ -32,8 +34,12 @@ namespace BTokenLib
     byte[] PublicKeyHash160 = new byte[20];
     public byte[] PublicScript;
 
-    public List<TXOutputWallet> OutputsValueDesc = new();
+    public List<TXOutputWallet> OutputsValue = new();
+    public List<TXOutputWallet> OutputsValueUnconfirmed = new();
+    public List<TXOutputWallet> OutputsValueUnconfirmedSpent = new();
     public List<TX> HistoryTransactions = new();
+
+    public long Balance;
 
 
     public Wallet(string privKeyDec, TypeWallet typeWallet)
@@ -84,13 +90,13 @@ namespace BTokenLib
       }
     }
 
-    public void InsertBlock(Block block)
+    public void InsertBlock(Block block, Token token)
     {
       foreach (TX tX in block.TXs)
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
-            AddOutput(
+            OutputsValue.Add(
               new TXOutputWallet
               {
                 TXID = tX.Hash,
@@ -98,20 +104,35 @@ namespace BTokenLib
                 Value = tXOutput.Value
               });
 
+            $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
+
             AddTXToHistory(tX);
+
+            Balance += tXOutput.Value;
+
+            $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
           }
 
       foreach (TX tX in block.TXs)
         foreach (TXInput tXInput in tX.TXInputs)
-          if (OutputsValueDesc.RemoveAll(o =>
-            o.TXID.IsEqual(tXInput.TXIDOutput) &&
-            o.Index == tXInput.OutputIndex) > 0)
-            AddTXToHistory(tX);
-    }
+        {
+          $"Try spend input in wallet {token} refing output: {tXInput.TXIDOutput.ToHexString()}, index {tXInput.OutputIndex}".Log(this, token.LogFile, token.LogEntryNotifier);
 
-    public long GetBalance()
-    {
-      return OutputsValueDesc.Sum(o => o.Value);
+          TXOutputWallet tXOutputWallet = OutputsValue.Find(o =>
+            o.TXID.IsEqual(tXInput.TXIDOutput) &&
+            o.Index == tXInput.OutputIndex);
+
+          if(tXOutputWallet != null)
+          {
+            OutputsValue.Remove(tXOutputWallet);
+            AddTXToHistory(tX);
+            Balance -= tXOutputWallet.Value;
+
+            $"Remove TXOutputWalletTXID of wallet{token}: {tXOutputWallet.TXID.ToHexString()}, Index {tXOutputWallet.Index}, Value {tXOutputWallet.Value}.".Log(this, token.LogFile, token.LogEntryNotifier);
+
+            $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
+          }
+        }
     }
 
     public byte[] ComputeHash160Pubkey(byte[] publicKey)
@@ -181,47 +202,50 @@ namespace BTokenLib
       return scriptSig;
     }
 
-    public void RemoveOutput(byte[] hash)
+    public void ReverseTXUnconfirmed(TX tX)
     {
-      List<TXOutputWallet> outputsRemove =
-        OutputsValueDesc.FindAll(t => t.TXID.Equals(hash));
-
-      outputsRemove.ForEach(o => {
-        OutputsValueDesc.Remove(o);
-      });
-
-      int i = OutputsValueDesc.RemoveAll(t => t.TXID.Equals(hash));
+      OutputsValueUnconfirmed.RemoveAll(t => t.TXID.Equals(tX.Hash));
+      tX.TXInputs.ForEach(i => OutputsValueUnconfirmedSpent.RemoveAll(t => t.TXID.Equals(i.TXIDOutput)));
     }
 
     public void AddOutput(TXOutputWallet output)
     {
-      if (OutputsValueDesc.Any(
-        o => o.TXID.IsEqual(output.TXID) && 
-        o.Index == output.Index))
-        return;
-
-      int j = 0;
-
-      while(j < OutputsValueDesc.Count && output.Value < OutputsValueDesc[j].Value)
-        j += 1;
-
-      OutputsValueDesc.Insert(j, output);
+      OutputsValue.Add(output);
     }
 
     public bool TryGetOutput(
       long fee,
       out TXOutputWallet tXOutputWallet)
     {
-      tXOutputWallet = null;
-
-      if (OutputsValueDesc.Any() && 
-        OutputsValueDesc[0].Value > fee)
+      if (OutputsValue.Any())
       {
-        tXOutputWallet = OutputsValueDesc[0];
-        OutputsValueDesc.RemoveAt(0);
+        long valueLargest = OutputsValue.Max(t => t.Value);
+
+        if (valueLargest > fee)
+        {
+          tXOutputWallet = OutputsValue.Find(t => t.Value == valueLargest);
+          OutputsValueUnconfirmedSpent.Add(tXOutputWallet);
+          return true;
+        }
       }
 
-      return tXOutputWallet != null;
+      List<TXOutputWallet> outputsValueUnconfirmedNotSpent = 
+        OutputsValueUnconfirmed.Except(OutputsValueUnconfirmedSpent).ToList();
+
+      if (outputsValueUnconfirmedNotSpent.Any())
+      {
+        long valueLargest = outputsValueUnconfirmedNotSpent.Max(t => t.Value);
+
+        if (valueLargest > fee)
+        {
+          tXOutputWallet = outputsValueUnconfirmedNotSpent.Find(t => t.Value == valueLargest);
+          OutputsValueUnconfirmedSpent.Add(tXOutputWallet);
+          return true;
+        }
+      }
+
+      tXOutputWallet = null;
+      return false;
     }
     
     public byte[] GetReceptionScript()
@@ -239,7 +263,9 @@ namespace BTokenLib
 
     public void Clear()
     {
-      OutputsValueDesc.Clear();
+      OutputsValue.Clear();
+      OutputsValueUnconfirmed.Clear();
+      OutputsValueUnconfirmedSpent.Clear();
     }
   }
 }

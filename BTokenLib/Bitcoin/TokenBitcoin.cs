@@ -114,7 +114,7 @@ namespace BTokenLib
           FileAccess.Write,
           FileShare.None))
       {
-        foreach (TXOutputWallet tXOutput in Wallet.OutputsValueDesc)
+        foreach (TXOutputWallet tXOutput in Wallet.OutputsValue)
         {
           fileImageWallet.Write(tXOutput.TXID, 0, tXOutput.TXID.Length);
 

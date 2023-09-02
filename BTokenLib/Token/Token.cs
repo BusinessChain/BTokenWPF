@@ -397,7 +397,7 @@ namespace BTokenLib
       InsertInDatabase(block);
       AppendHeaderToTip(block.Header);
 
-      Wallet.InsertBlock(block);
+      Wallet.InsertBlock(block, this);
 
       FeePerByteAverage =
         ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeePerByteAverage + block.FeePerByte) /

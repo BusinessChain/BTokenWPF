@@ -78,7 +78,7 @@ namespace BTokenWPF
       if (HeaderTipAtLastUpdate == Token.HeaderTip)
         return;
 
-      LabelBalanceSatoshies.Content = $"Balance: {Token.Wallet.GetBalance()}";
+      LabelBalanceSatoshies.Content = $"Balance: {Token.Wallet.Balance}";
 
       HeaderTipAtLastUpdate = Token.HeaderTip;
 
