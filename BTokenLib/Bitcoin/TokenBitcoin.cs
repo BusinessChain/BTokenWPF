@@ -102,58 +102,9 @@ namespace BTokenLib
     }
 
     public override void CreateImageDatabase(string pathDirectory)
-    {
-      string pathimageWallet = Path.Combine(
-         pathDirectory,
-         "ImageWallet");
-
-      using (var fileImageWallet =
-        new FileStream(
-          pathimageWallet,
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
-      {
-        foreach (TXOutputWallet tXOutput in Wallet.OutputsValue)
-        {
-          fileImageWallet.Write(tXOutput.TXID, 0, tXOutput.TXID.Length);
-
-          byte[] outputIndex = BitConverter.GetBytes(tXOutput.Index);
-
-          fileImageWallet.Write(outputIndex, 0, outputIndex.Length);
-
-          byte[] value = BitConverter.GetBytes(tXOutput.Value);
-
-          fileImageWallet.Write(value, 0, value.Length);
-        }
-      }
-    }
+    { }
 
     public override void LoadImageDatabase(string path)
-    {
-      string pathFile = Path.Combine(
-        path, "ImageWallet");
-
-      int index = 0;
-
-      byte[] buffer = File.ReadAllBytes(pathFile);
-
-      while (index < buffer.Length)
-      {
-        var tXOutput = new TXOutputWallet();
-
-        tXOutput.TXID = new byte[32];
-        Array.Copy(buffer, index, tXOutput.TXID, 0, 32);
-        index += 32;
-
-        tXOutput.Index = BitConverter.ToInt32(buffer, index);
-        index += 4;
-
-        tXOutput.Value = BitConverter.ToInt64(buffer, index);
-        index += 8;
-
-        Wallet.AddOutput(tXOutput);
-      }
-    }
+    { }
   }
 }

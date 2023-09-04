@@ -209,7 +209,7 @@ namespace BTokenLib
       block.Buffer = block.Header.Buffer.Concat(
         VarInt.GetBytes(block.TXs.Count)).ToArray();
 
-      block.TXs.ForEach(t => 
+      block.TXs.ForEach(t =>
       { block.Buffer = block.Buffer.Concat(t.TXRaw).ToArray(); });
 
       block.Header.CountBytesBlock = block.Buffer.Length;
@@ -220,7 +220,7 @@ namespace BTokenLib
       tokenAnchor.Serialize(TokenParent, SHA256Miner);
 
       if (tokenAnchor.ValueChange > 0)
-        TokenParent.Wallet.AddOutput(
+        TokenParent.Wallet.AddOutputUnconfirmed(
           new TXOutputWallet
           {
             TXID = tokenAnchor.TX.Hash,

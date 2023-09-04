@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Policy;
 using Org.BouncyCastle.Crypto.Digests;
-using static BTokenLib.TokenBToken;
 
 
 namespace BTokenLib
@@ -59,33 +57,86 @@ namespace BTokenLib
 
     public void LoadImage(string path)
     {
-      byte[] bytesImageWallet = File.ReadAllBytes(
-        Path.Combine(path, "wallet"));
+      byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
+        Path.Combine(path, "walletHistoryTransactions"));
 
       SHA256 sHA256 = SHA256.Create();
 
       int index = 0;
 
-      while (index < bytesImageWallet.Length)
+      while (index < fileWalletHistoryTransactions.Length)
         HistoryTransactions.Add(
           Block.ParseTX(
-            bytesImageWallet, 
+            fileWalletHistoryTransactions, 
             ref index, 
             sHA256));
+
+      LoadOutputs(OutputsValue, Path.Combine(path, "OutputsValue"));
+      LoadOutputs(OutputsValueUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
+      LoadOutputs(OutputsValueUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
+    }
+
+    static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
+    {
+      int index = 0;
+
+      byte[] buffer = File.ReadAllBytes(fileName);
+
+      while (index < buffer.Length)
+      {
+        var tXOutput = new TXOutputWallet();
+
+        tXOutput.TXID = new byte[32];
+        Array.Copy(buffer, index, tXOutput.TXID, 0, 32);
+        index += 32;
+
+        tXOutput.Index = BitConverter.ToInt32(buffer, index);
+        index += 4;
+
+        tXOutput.Value = BitConverter.ToInt64(buffer, index);
+        index += 8;
+
+        outputs.Add(tXOutput);
+      }
     }
 
     public void CreateImage(string path)
     {
-      using (FileStream fileImageWallet = new(
-          Path.Combine(path, "wallet"),
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
+      using (FileStream fileWalletHistoryTransactions = new(
+        Path.Combine(path, "walletHistoryTransactions"),
+        FileMode.Create,
+        FileAccess.Write,
+        FileShare.None))
       {
         foreach(TX tX in HistoryTransactions)
         {
           byte[] txRaw = tX.TXRaw.ToArray();
-          fileImageWallet.Write(txRaw, 0, txRaw.Length);
+          fileWalletHistoryTransactions.Write(txRaw, 0, txRaw.Length);
+        }
+      }
+
+      StoreOutputs(OutputsValue, Path.Combine(path, "OutputsValue"));
+      StoreOutputs(OutputsValueUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
+      StoreOutputs(OutputsValueUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
+    }
+
+    static void StoreOutputs(List<TXOutputWallet> outputs, string fileName)
+    {
+      using (FileStream file = new(
+        fileName,
+        FileMode.Create,
+        FileAccess.Write,
+        FileShare.None))
+      {
+        foreach (TXOutputWallet tXOutput in outputs)
+        {
+          file.Write(tXOutput.TXID, 0, tXOutput.TXID.Length);
+
+          byte[] outputIndex = BitConverter.GetBytes(tXOutput.Index);
+          file.Write(outputIndex, 0, outputIndex.Length);
+
+          byte[] value = BitConverter.GetBytes(tXOutput.Value);
+          file.Write(value, 0, value.Length);
         }
       }
     }
@@ -103,6 +154,8 @@ namespace BTokenLib
                 Index = tX.TXOutputs.IndexOf(tXOutput),
                 Value = tXOutput.Value
               });
+
+            OutputsValueUnconfirmed.RemoveAll(o => o.TXID.IsEqual(tX.Hash));
 
             $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
 
@@ -122,7 +175,11 @@ namespace BTokenLib
             o.TXID.IsEqual(tXInput.TXIDOutput) &&
             o.Index == tXInput.OutputIndex);
 
-          if(tXOutputWallet != null)
+          OutputsValueUnconfirmedSpent.RemoveAll(o =>
+            o.TXID.IsEqual(tXInput.TXIDOutput) &&
+            o.Index == tXInput.OutputIndex);
+
+          if (tXOutputWallet != null)
           {
             OutputsValue.Remove(tXOutputWallet);
             AddTXToHistory(tX);
@@ -208,9 +265,9 @@ namespace BTokenLib
       tX.TXInputs.ForEach(i => OutputsValueUnconfirmedSpent.RemoveAll(t => t.TXID.Equals(i.TXIDOutput)));
     }
 
-    public void AddOutput(TXOutputWallet output)
+    public void AddOutputUnconfirmed(TXOutputWallet output)
     {
-      OutputsValue.Add(output);
+      OutputsValueUnconfirmed.Add(output);
     }
 
     public bool TryGetOutput(

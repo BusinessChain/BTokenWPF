@@ -85,7 +85,7 @@ namespace BTokenWPF
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
-      foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsValueDesc)
+      foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsValue)
         ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 
