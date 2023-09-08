@@ -163,14 +163,12 @@ namespace BTokenLib
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.IDToken = ID_BTOKEN;
 
-      while (
-        tokenAnchor.Inputs.Count < VarInt.PREFIX_UINT16 - 1 &&
-        TokenParent.Wallet.TryGetOutput(
-          feePerInput,
-          out TXOutputWallet output))
+      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(feePerInput, VarInt.PREFIX_UINT16 - 1);
+
+      foreach (TXOutputWallet tXOutputWallet in outputs)
       {
-        tokenAnchor.Inputs.Add(output);
-        valueAccrued += output.Value;
+        tokenAnchor.Inputs.Add(tXOutputWallet);
+        valueAccrued += tXOutputWallet.Value;
 
         feeAccrued += feePerInput;
       }

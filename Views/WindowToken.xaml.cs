@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using BTokenLib;
 using BTokenWPF.Views;
 
@@ -75,17 +74,15 @@ namespace BTokenWPF
     Header HeaderTipAtLastUpdate;
     void UpdateTextBoxWallet()
     {
-      if (HeaderTipAtLastUpdate == Token.HeaderTip)
-        return;
-
       LabelBalanceSatoshies.Content = $"Balance: {Token.Wallet.Balance}";
+      LabelBalanceSatoshiesUnconfirmed.Content = $"({Token.Wallet.BalanceUnconfirmed})";
 
       HeaderTipAtLastUpdate = Token.HeaderTip;
 
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
-      foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsValue)
+      foreach (TXOutputWallet tXOutputWallet in Token.Wallet.Outputs)
         ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 
