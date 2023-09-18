@@ -297,13 +297,13 @@ namespace BTokenLib
       BalanceUnconfirmed += output.Value;
     }
 
-    public List<TXOutputWallet> GetOutputs(long fee, int countMax)
+    public List<TXOutputWallet> GetOutputs(long fee)
     {
       List<TXOutputWallet> outputsValueNotSpent = 
         Outputs.Where(o => o.Value > fee)
         .Concat(OutputsUnconfirmed.Where(o => o.Value > fee))
         .Except(OutputsUnconfirmedSpent)
-        .Take(countMax).ToList();
+        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
 
       OutputsUnconfirmedSpent.AddRange(outputsValueNotSpent);
 
@@ -334,5 +334,6 @@ namespace BTokenLib
       Balance = 0;
       BalanceUnconfirmed = 0;
     }
+
   }
 }

@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  partial class TokenBToken
+  partial class Token
   {
     public class TokenAnchor
     {
@@ -76,13 +76,13 @@ namespace BTokenLib
       }
 
 
-      public void Serialize(Token tokenParent, SHA256 sHA256)
+      public void Serialize(Token tokenParent, SHA256 sHA256, byte[] dataAnchorToken)
       {
         List<byte> tXRaw = new();
         long feeTX = 0;
 
         tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
-        tXRaw.Add((byte)Inputs.Count);
+        tXRaw.AddRange(VarInt.GetBytes(Inputs.Count));
 
         int indexFirstInput = tXRaw.Count;
 
@@ -95,9 +95,6 @@ namespace BTokenLib
 
           feeTX += Inputs[i].Value;
         }
-
-        byte[] dataAnchorToken = IDToken.Concat(HashBlockReferenced)
-          .Concat(HashBlockPreviousReferenced).ToArray();
 
         tXRaw.Add((byte)(ValueChange > 0 ? 2 : 1));
         tXRaw.AddRange(BitConverter.GetBytes((ulong)0));

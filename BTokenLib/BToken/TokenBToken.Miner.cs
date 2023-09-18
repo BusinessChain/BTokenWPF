@@ -19,8 +19,6 @@ namespace BTokenLib
     const int LENGTH_DATA_TX_SCAFFOLD = 10;
     const int LENGTH_DATA_P2PKH_OUTPUT = 34;
 
-    readonly byte[] ID_BTOKEN = { 0x01, 0x00 };
-
     string PathBlocksMinedUnconfirmed;
     List<BlockBToken> BlocksMined = new();
 
@@ -141,16 +139,13 @@ namespace BTokenLib
 
       $"RBF {countTokensAnchorUnconfirmed} anchorTokens".Log(this, LogFile, LogEntryNotifier);
 
-      while (countTokensAnchorUnconfirmed-- > 0)
-        if (TryMineAnchorToken(out TokenAnchor tokenAnchor))
-          TokensAnchorUnconfirmed.Add(tokenAnchor);
-        else
-          break;
+      while (countTokensAnchorUnconfirmed-- > 0 && TryMineAnchorToken(out TokenAnchor tokenAnchor))
+        TokensAnchorUnconfirmed.Add(tokenAnchor);
 
       TokenParent.BroadcastTX(TokensAnchorUnconfirmed.Select(t => t.TX).ToList());
     }
 
-    bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
+    public bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
     {
       long feeAccrued = (long)(FeeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
       long feeAnchorToken = (long)(FeeSatoshiPerByte * LENGTH_DATA_ANCHOR_TOKEN);
@@ -161,9 +156,9 @@ namespace BTokenLib
 
       tokenAnchor = new();
       tokenAnchor.NumberSequence = NumberSequence;
-      tokenAnchor.IDToken = ID_BTOKEN;
+      tokenAnchor.IDToken = IDToken;
 
-      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(feePerInput, VarInt.PREFIX_UINT16 - 1);
+      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(feePerInput);
 
       foreach (TXOutputWallet tXOutputWallet in outputs)
       {
@@ -215,7 +210,11 @@ namespace BTokenLib
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.ValueChange = valueAccrued - feeAccrued - feeOutputChange;
-      tokenAnchor.Serialize(TokenParent, SHA256Miner);
+
+      byte[] dataAnchorToken = IDToken.Concat(block.Header.Hash)
+        .Concat(block.Header.HashPrevious).ToArray();
+
+      tokenAnchor.Serialize(TokenParent, SHA256Miner, dataAnchorToken);
 
       if (tokenAnchor.ValueChange > 0)
         TokenParent.Wallet.AddOutputUnconfirmed(
@@ -255,12 +254,12 @@ namespace BTokenLib
 
       index += 1;
 
-      if (!ID_BTOKEN.IsEqual(tXOutput.Buffer, index))
+      if (!IDToken.IsEqual(tXOutput.Buffer, index))
         return;
 
-      index += ID_BTOKEN.Length;
+      index += IDToken.Length;
 
-      TokenAnchor tokenAnchor = new(tX, index, ID_BTOKEN);
+      TokenAnchor tokenAnchor = new(tX, index, IDToken);
 
       if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tX.Hash)) > 0)
         $"Detected self mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);

@@ -30,6 +30,8 @@ namespace BTokenLib
           logEntryNotifier,
           Wallet.TypeWallet.AccountType)
     {
+      IDToken = new byte[] { 0x01, 0x00 };
+
       TokenParent = new TokenBitcoin(logEntryNotifier);
       TokenParent.TokenChild = this;
 

@@ -42,6 +42,7 @@
                 <Label Name="LabelBalanceSatoshies"/>
                 <Label Name="LabelBalanceSatoshiesUnconfirmed" Foreground="Red"/>
             </StackPanel>
+            <Button Name="ButtonMakeTX" Content="Make TX" Click="ButtonMakeTX_Click"/>
             <ListBox Name="ListBoxWallet" FontSize="10"/>
 
             <!--<Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>

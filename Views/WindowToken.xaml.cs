@@ -125,7 +125,7 @@ namespace BTokenWPF
         }
     }
 
-    private void ListBoxBlockchain_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    void ListBoxBlockchain_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
       Header header = ((ListBoxItemHeader)ListBoxBlockchain.SelectedItem).Header;
 
@@ -140,6 +140,14 @@ namespace BTokenWPF
       }
 
       new DisplayHeaderWindow(header).Show();
+    }
+
+    void ButtonMakeTX_Click(object sender, RoutedEventArgs e)
+    {
+      Token.TryMineAnchorToken(
+        out Token.TokenAnchor tokenAnchor,
+        new byte[0],
+        0);
     }
   }
 }

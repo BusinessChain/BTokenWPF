@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -465,6 +466,69 @@ namespace BTokenLib
     public abstract void CreateImageDatabase(string path);
 
     public abstract Block CreateBlock();
+
+
+    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
+    const int LENGTH_DATA_P2PKH_INPUT = 180;
+    const int LENGTH_DATA_TX_SCAFFOLD = 10;
+    const int LENGTH_DATA_P2PKH_OUTPUT = 34;
+    double FeeSatoshiPerByte;
+
+    long BlockRewardInitial = 200000000000000;
+    int PeriodHalveningBlockReward = 105000;
+
+    int CountTXsPerBlockMax = 5;
+
+    SHA256 SHA256Miner = SHA256.Create();
+    protected byte[] IDToken;
+
+    public bool TryMineAnchorToken(
+      out TokenAnchor tokenAnchor, 
+      byte[] dataAnchorToken,
+      int numberSequence)
+    {
+      long feeAccrued = (long)(FeeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
+      long feeAnchorToken = (long)(FeeSatoshiPerByte * LENGTH_DATA_ANCHOR_TOKEN);
+      long feePerInput = (long)(FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT);
+      long feeOutputChange = (long)(FeeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
+
+      long valueAccrued = 0;
+
+      tokenAnchor = new();
+      tokenAnchor.NumberSequence = numberSequence;
+      tokenAnchor.IDToken = IDToken;
+
+      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(feePerInput);
+
+      foreach (TXOutputWallet tXOutputWallet in outputs)
+      {
+        tokenAnchor.Inputs.Add(tXOutputWallet);
+        valueAccrued += tXOutputWallet.Value;
+
+        feeAccrued += feePerInput;
+      }
+
+      feeAccrued += feeAnchorToken;
+
+      if (valueAccrued < feeAccrued)
+        return false;
+
+      tokenAnchor.ValueChange = valueAccrued - feeAccrued - feeOutputChange;
+      tokenAnchor.Serialize(TokenParent, SHA256Miner, dataAnchorToken);
+
+      if (tokenAnchor.ValueChange > 0)
+        TokenParent.Wallet.AddOutputUnconfirmed(
+          new TXOutputWallet
+          {
+            TXID = tokenAnchor.TX.Hash,
+            Index = 1,
+            Value = tokenAnchor.ValueChange
+          });
+
+      $"BToken miner successfully mined anchor Token {tokenAnchor.TX} with fee {tokenAnchor.TX.Fee}".Log(this, LogFile, LogEntryNotifier);
+
+      return true;
+    }
 
     protected TX CreateCoinbaseTX(Block block, int height, long blockReward)
     {
