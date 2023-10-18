@@ -144,10 +144,25 @@ namespace BTokenWPF
 
     void ButtonMakeTX_Click(object sender, RoutedEventArgs e)
     {
-      Token.TryMineAnchorToken(
-        out Token.TokenAnchor tokenAnchor,
-        new byte[0],
-        0);
+      try
+      {
+        string address = TextBoxAddress.Text;
+        long value = long.Parse(TextBoxValue.Text);
+        long fee = long.Parse(TextBoxFee.Text);
+
+        byte[] rawTX = Token.MakeTX(
+          address, 
+          value,
+          fee,
+          out byte[] tXID);
+
+        TextBoxRawTX.Text = rawTX.Reverse().ToArray().ToHexString();
+        TextBoxTXID.Text = tXID.ToHexString();
+      }
+      catch(Exception ex)
+      {
+        MessageBox.Show(ex.Message, "Exception", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
     }
   }
 }

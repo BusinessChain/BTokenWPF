@@ -15,7 +15,6 @@ namespace BTokenLib
     const double FACTOR_INCREMENT_FEE_PER_BYTE = 1.2;
 
     const int LENGTH_DATA_ANCHOR_TOKEN = 66;
-    const int LENGTH_DATA_P2PKH_INPUT = 180;
     const int LENGTH_DATA_TX_SCAFFOLD = 10;
     const int LENGTH_DATA_P2PKH_OUTPUT = 34;
 
@@ -24,8 +23,6 @@ namespace BTokenLib
 
     SHA256 SHA256Miner = SHA256.Create();
     Random RandomGeneratorMiner = new();
-    const double FEE_SATOSHI_PER_BYTE_INITIAL = 1.0;
-    double FeeSatoshiPerByte;
     int NumberSequence;
     List<TokenAnchor> TokensAnchorUnconfirmed = new();
 
@@ -34,8 +31,6 @@ namespace BTokenLib
 
     protected override async void RunMining()
     {
-      FeeSatoshiPerByte = FEE_SATOSHI_PER_BYTE_INITIAL; // TokenParent.FeePerByteAverage;
-
       $"Miners starts with fee per byte = {FeeSatoshiPerByte}".Log(this, LogFile, LogEntryNotifier);
 
       Header headerTipParent = null;
@@ -149,7 +144,6 @@ namespace BTokenLib
     {
       long feeAccrued = (long)(FeeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
       long feeAnchorToken = (long)(FeeSatoshiPerByte * LENGTH_DATA_ANCHOR_TOKEN);
-      long feePerInput = (long)(FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT);
       long feeOutputChange = (long)(FeeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
 
       long valueAccrued = 0;
@@ -158,16 +152,17 @@ namespace BTokenLib
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.IDToken = IDToken;
 
-      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(feePerInput);
+      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(
+        FeeSatoshiPerByte, 
+        out long feeOutputs);
 
       foreach (TXOutputWallet tXOutputWallet in outputs)
       {
         tokenAnchor.Inputs.Add(tXOutputWallet);
         valueAccrued += tXOutputWallet.Value;
-
-        feeAccrued += feePerInput;
       }
 
+      feeAccrued += feeOutputs;
       feeAccrued += feeAnchorToken;
 
       if (valueAccrued < feeAccrued)

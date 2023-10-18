@@ -42,7 +42,17 @@
                 <Label Name="LabelBalanceSatoshies"/>
                 <Label Name="LabelBalanceSatoshiesUnconfirmed" Foreground="Red"/>
             </StackPanel>
-            <Button Name="ButtonMakeTX" Content="Make TX" Click="ButtonMakeTX_Click"/>
+            <Label Name="LabelAddress" Content="Address"/>
+            <TextBox Name="TextBoxAddress"/>
+            <Label Name="LabelValue" Content="Value"/>
+            <TextBox Name="TextBoxValue"/>
+            <Label Name="LabelFee" Content="Fee"/>
+            <TextBox Name="TextBoxFee"/>
+            <Label Name="LabelTXID" Content="TXID"/>
+            <TextBox Name="TextBoxTXID"/>
+            <Label Name="LabelRawTX" Content="RawTX"/>
+            <TextBox Name="TextBoxRawTX"/>
+            <Button Name="ButtonMakeTX" Content="Make TX" Click="ButtonMakeTX_Click" Margin="0,5,0,5"/>
             <ListBox Name="ListBoxWallet" FontSize="10"/>
 
             <!--<Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>

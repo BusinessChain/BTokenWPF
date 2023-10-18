@@ -8,6 +8,74 @@ using Org.BouncyCastle.Crypto.Digests;
 
 namespace BTokenLib
 {
+  public class Base58
+  {
+    /// <summary>
+    /// Converts a base-58 string to a byte array, returning null if it wasn't valid.
+    /// </summary>
+    public static byte[] ToByteArray(string base58)
+    {
+      Org.BouncyCastle.Math.BigInteger bi2 = new Org.BouncyCastle.Math.BigInteger("0");
+      string b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+      foreach (char c in base58)
+      {
+        if (b58.IndexOf(c) != -1)
+        {
+          bi2 = bi2.Multiply(new Org.BouncyCastle.Math.BigInteger("58"));
+          bi2 = bi2.Add(new Org.BouncyCastle.Math.BigInteger(b58.IndexOf(c).ToString()));
+        }
+        else
+        {
+          return null;
+        }
+      }
+
+      byte[] bb = bi2.ToByteArrayUnsigned();
+
+      // interpret leading '1's as leading zero bytes
+      foreach (char c in base58)
+      {
+        if (c != '1') break;
+        byte[] bbb = new byte[bb.Length + 1];
+        Array.Copy(bb, 0, bbb, 1, bb.Length);
+        bb = bbb;
+      }
+
+      return bb;
+    }
+
+    public static string FromByteArray(byte[] ba)
+    {
+      Org.BouncyCastle.Math.BigInteger addrremain = new Org.BouncyCastle.Math.BigInteger(1, ba);
+
+      Org.BouncyCastle.Math.BigInteger big0 = new Org.BouncyCastle.Math.BigInteger("0");
+      Org.BouncyCastle.Math.BigInteger big58 = new Org.BouncyCastle.Math.BigInteger("58");
+
+      string b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+      string rv = "";
+
+      while (addrremain.CompareTo(big0) > 0)
+      {
+        int d = Convert.ToInt32(addrremain.Mod(big58).ToString());
+        addrremain = addrremain.Divide(big58);
+        rv = b58.Substring(d, 1) + rv;
+      }
+
+      // handle leading zeroes
+      foreach (byte b in ba)
+      {
+        if (b != 0) break;
+        rv = "1" + rv;
+
+      }
+      return rv;
+    }
+
+  }
+
+
   public partial class Wallet
   {
     public enum TypeWallet
@@ -18,6 +86,7 @@ namespace BTokenLib
 
     TypeWallet Type;
 
+    public const int LENGTH_DATA_P2PKH_INPUT = 180;
     const int LENGTH_P2PKH = 25;
     byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
@@ -55,6 +124,134 @@ namespace BTokenLib
         .Concat(PublicKeyHash160)
         .Concat(POSTFIX_P2PKH).ToArray();
     }
+
+
+    public byte[] CreateTX(string address, long value, long fee, out byte[] tXID)
+    {
+      byte[] pubKeyHash160 = Base58CheckToByteArray(address);
+
+      byte[] pubScript = PREFIX_P2PKH
+        .Concat(pubKeyHash160)
+        .Concat(POSTFIX_P2PKH).ToArray();
+
+      List<byte> tXRaw = new();
+      long feeTX = 0;
+
+      //List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
+
+      List<TXOutputWallet> inputs = new()
+      {
+        new TXOutputWallet()
+        {
+          TXID = "411f91c568bb42ca7ebea15b8ea85158d1b9f697019eabe9bf3680abd14cf10e".ToBinary(),
+          Value = 100000,
+          Index = 0
+        }
+      };
+
+      long valueChange = inputs.Sum(i => i.Value) - value - fee;
+
+      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
+      tXRaw.AddRange(VarInt.GetBytes(inputs.Count));
+
+      int indexFirstInput = tXRaw.Count;
+
+      for (int i = 0; i < inputs.Count; i += 1)
+      {
+        tXRaw.AddRange(inputs[i].TXID);
+        tXRaw.AddRange(BitConverter.GetBytes(inputs[i].Index));
+        tXRaw.Add(0x00); // length empty script
+        tXRaw.AddRange(BitConverter.GetBytes((int)0)); // sequence
+
+        feeTX += inputs[i].Value;
+      }
+
+      tXRaw.Add((byte)(valueChange > 0 ? 2 : 1));
+
+      tXRaw.AddRange(BitConverter.GetBytes(value));
+      tXRaw.Add((byte)pubScript.Length);
+      tXRaw.AddRange(pubScript);
+
+      if (valueChange > 0)
+      {
+        tXRaw.AddRange(BitConverter.GetBytes(valueChange));
+        tXRaw.Add((byte)PublicScript.Length);
+        tXRaw.AddRange(PublicScript);
+
+        feeTX -= valueChange;
+      }
+
+      tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
+      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
+
+      List<List<byte>> signaturesPerInput = new();
+
+      for (int i = 0; i < inputs.Count; i += 1)
+      {
+        List<byte> tXRawSign = tXRaw.ToList();
+        int indexRawSign = indexFirstInput + 36 * (i + 1) + 5 * i;
+
+        tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
+        tXRawSign.InsertRange(indexRawSign, PublicScript);
+
+        signaturesPerInput.Add(GetScriptSignature(tXRawSign.ToArray()));
+      }
+
+      for (int i = inputs.Count - 1; i >= 0; i -= 1)
+      {
+        int indexSign = indexFirstInput + 36 * (i + 1) + 5 * i;
+
+        tXRaw[indexSign++] = (byte)signaturesPerInput[i].Count;
+
+        tXRaw.InsertRange(
+          indexSign,
+          signaturesPerInput[i]);
+      }
+
+      tXRaw.RemoveRange(tXRaw.Count - 4, 4);
+
+
+      tXID = SHA256.ComputeHash(
+       SHA256.ComputeHash(tXRaw.ToArray()));
+
+      return tXRaw.ToArray();
+    }
+
+
+    public static bool IsValidAddress(string Address)
+    {
+      byte[] hex = Base58CheckToByteArray(Address);
+      if (hex == null || hex.Length != 21)
+        return false;
+      else
+        return true;
+    }
+
+    public static byte[] Base58CheckToByteArray(string base58)
+    {
+
+      byte[] bb = Base58.ToByteArray(base58);
+
+      if (bb == null || bb.Length < 4) 
+        return null;
+
+      Sha256Digest bcsha256a = new Sha256Digest();
+      bcsha256a.BlockUpdate(bb, 0, bb.Length - 4);
+
+      byte[] checksum = new byte[32];
+      bcsha256a.DoFinal(checksum, 0);
+      bcsha256a.BlockUpdate(checksum, 0, 32);
+      bcsha256a.DoFinal(checksum, 0);
+
+      for (int i = 0; i < 4; i++)
+        if (checksum[i] != bb[bb.Length - 4 + i]) 
+          return null;
+
+      byte[] rv = new byte[bb.Length - 5];
+      Array.Copy(bb, 1, rv, 0, bb.Length - 5);
+      return rv;
+    }
+
 
     public void LoadImage(string path)
     {
@@ -297,8 +494,10 @@ namespace BTokenLib
       BalanceUnconfirmed += output.Value;
     }
 
-    public List<TXOutputWallet> GetOutputs(long fee)
+    public List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)
     {
+      long fee = (long)feeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
+
       List<TXOutputWallet> outputsValueNotSpent = 
         Outputs.Where(o => o.Value > fee)
         .Concat(OutputsUnconfirmed.Where(o => o.Value > fee))
@@ -309,6 +508,7 @@ namespace BTokenLib
 
       outputsValueNotSpent.ForEach(o => BalanceUnconfirmed -= o.Value);
 
+      feeOutputs = fee * outputsValueNotSpent.Count;
       return outputsValueNotSpent;
     }
     
