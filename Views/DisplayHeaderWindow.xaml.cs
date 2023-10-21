@@ -6,10 +6,12 @@ namespace BTokenWPF
 {
   public partial class DisplayHeaderWindow : Window
   {
+    Token Token;
     public Header Header;
 
-    public DisplayHeaderWindow(Header header)
+    public DisplayHeaderWindow(Header header, Token token)
     {
+      Token = token;
       Header = header;
 
       InitializeComponent();
@@ -47,6 +49,38 @@ namespace BTokenWPF
         $"{header.CountBytesBlocksAccumulated}\n" +
         $"{DateTimeOffset.FromUnixTimeSeconds(header.UnixTimeSeconds)}\n" +
         $"{header.Nonce}\n";
+
+      if (Token.TryGetBlockBytes(Header.Hash, out byte[] buffer))
+      {
+        Block block = Token.CreateBlock();
+        block.Buffer = buffer;
+
+        block.Parse();
+
+        foreach(TX tX in  block.TXs)
+        {
+          ListBoxTXs.Items.Add(new ListBoxItemTX(tX));
+        }
+      }
+      else
+        MessageBox.Show("Block not found in archive, no transaction data shown.");
+    }
+
+    void ListBoxTXs_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      TX tX = ((ListBoxItemTX)ListBoxTXs.SelectedItem).TX;
+
+      foreach (Window w in Application.Current.Windows)
+      {
+        DisplayTXWindow windowDisplayTX = w as DisplayTXWindow;
+        if (windowDisplayTX != null && windowDisplayTX.TX == tX)
+        {
+          windowDisplayTX.Activate();
+          return;
+        }
+      }
+
+      new DisplayTXWindow(tX).Show();
     }
   }
 }

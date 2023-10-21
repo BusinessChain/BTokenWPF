@@ -5,15 +5,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d"
-        Title="DisplayHeaderWindow" Height="300" Width="700">
-    
-    <Grid HorizontalAlignment="Center" Margin="10" Width="650">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="30*"/>
-            <ColumnDefinition Width="70*"/>
-        </Grid.ColumnDefinitions>
+        Title="DisplayHeaderWindow" Width="700">
 
-        <TextBox Name="TextBoxHeaderLabels" IsReadOnly="True" Grid.Column="0" FontWeight="Bold" TextAlignment="Right"/>
-        <TextBox Name="TextBoxHeaderValues" IsReadOnly="True" Grid.Column="1" TextAlignment="Left"/>
-    </Grid>
+    <StackPanel>
+        <Grid HorizontalAlignment="Center" Margin="10" Width="650">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="30*"/>
+                <ColumnDefinition Width="70*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox Name="TextBoxHeaderLabels" IsReadOnly="True" Grid.Column="0" FontWeight="Bold" TextAlignment="Right"/>
+            <TextBox Name="TextBoxHeaderValues" IsReadOnly="True" Grid.Column="1" TextAlignment="Left"/>
+        </Grid>
+
+        <ListBox Name="ListBoxTXs" FontSize="10" MouseDoubleClick="ListBoxTXs_MouseDoubleClick"/>
+    </StackPanel>
+
 </Window>

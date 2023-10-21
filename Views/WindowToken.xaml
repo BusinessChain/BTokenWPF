@@ -19,8 +19,7 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
 
-        <Label Name="LabelToken" Grid.Row="0" Grid.Column="1" 
-                 HorizontalAlignment="Center" FontWeight="ExtraBold" FontSize="20"/>
+        <Label Name="LabelToken" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" FontWeight="ExtraBold" FontSize="20"/>
 
         <Label Content="Network" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
 
@@ -64,6 +63,5 @@
         <ListBox Name="ListBoxBlockchain" 
                  FontSize="10" MouseDoubleClick="ListBoxBlockchain_MouseDoubleClick" 
                  Grid.Row="2" Grid.Column="2"/>
-        
     </Grid>
 </Window>

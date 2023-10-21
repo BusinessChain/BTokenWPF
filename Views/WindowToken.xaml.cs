@@ -139,7 +139,7 @@ namespace BTokenWPF
         }
       }
 
-      new DisplayHeaderWindow(header).Show();
+      new DisplayHeaderWindow(header, Token).Show();
     }
 
     void ButtonMakeTX_Click(object sender, RoutedEventArgs e)
@@ -149,15 +149,16 @@ namespace BTokenWPF
         string address = TextBoxAddress.Text;
         long value = long.Parse(TextBoxValue.Text);
         long fee = long.Parse(TextBoxFee.Text);
-
-        byte[] rawTX = Token.MakeTX(
+                
+        TX tX = Token.MakeTX(
           address, 
           value,
-          fee,
-          out byte[] tXID);
+          fee);
 
-        TextBoxRawTX.Text = rawTX.Reverse().ToArray().ToHexString();
-        TextBoxTXID.Text = tXID.ToHexString();
+        TextBoxRawTX.Text = tX.TXRaw.ToArray().Reverse().ToArray().ToHexString();
+        TextBoxTXID.Text = tX.Hash.ToHexString();
+
+        Token.BroadcastTX(tX);
       }
       catch(Exception ex)
       {

@@ -126,7 +126,7 @@ namespace BTokenLib
     }
 
 
-    public byte[] CreateTX(string address, long value, long fee, out byte[] tXID)
+    public TX CreateTX(string address, long value, long fee)
     {
       byte[] pubKeyHash160 = Base58CheckToByteArray(address);
 
@@ -137,17 +137,17 @@ namespace BTokenLib
       List<byte> tXRaw = new();
       long feeTX = 0;
 
-      //List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
+      List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
 
-      List<TXOutputWallet> inputs = new()
-      {
-        new TXOutputWallet()
-        {
-          TXID = "411f91c568bb42ca7ebea15b8ea85158d1b9f697019eabe9bf3680abd14cf10e".ToBinary(),
-          Value = 100000,
-          Index = 0
-        }
-      };
+      //List<TXOutputWallet> inputs = new()
+      //{
+      //  new TXOutputWallet()
+      //  {
+      //    TXID = "a428331dc182ea3110fb7daecd5c499f580f21a9d72daf54735d9fe70212ad35".ToBinary(),
+      //    Value = 96000,
+      //    Index = 0
+      //  }
+      //};
 
       long valueChange = inputs.Sum(i => i.Value) - value - fee;
 
@@ -210,11 +210,27 @@ namespace BTokenLib
 
       tXRaw.RemoveRange(tXRaw.Count - 4, 4);
 
+      int index = 0;
 
-      tXID = SHA256.ComputeHash(
-       SHA256.ComputeHash(tXRaw.ToArray()));
+      TX tX = Block.ParseTX(
+        tXRaw.ToArray(),
+        ref index,
+        SHA256);
 
-      return tXRaw.ToArray();
+      if (valueChange > 0)
+        AddOutputUnconfirmed(
+          new TXOutputWallet
+          {
+            TXID = tX.Hash,
+            Index = 1,
+            Value = valueChange
+          });
+
+      tX.TXRaw = tXRaw;
+
+      tX.Fee = feeTX;
+
+      return tX;
     }
 
 

@@ -509,15 +509,12 @@ namespace BTokenLib
       return tX;
     }
 
-    public byte[] MakeTX(string address, long value, long fee, out byte[] tXID)
+    public TX MakeTX(string address, long value, long fee)
     {
-      byte[] rawTX = Wallet.CreateTX(
+      return Wallet.CreateTX(
         address,
         value,
-        fee, 
-        out tXID);
-
-      return rawTX;
+        fee);
     }
 
     public bool IsMining;
