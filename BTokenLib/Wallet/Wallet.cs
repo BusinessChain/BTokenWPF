@@ -139,17 +139,17 @@ namespace BTokenLib
       List<byte> tXRaw = new();
       long feeTX = 0;
 
-      //List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
+      List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
 
-      List<TXOutputWallet> inputs = new()
-      {
-        new TXOutputWallet()
-        {
-          TXID = "64f07568c00a215730b3323dc998be8d723d57a87e0a8ffd2a4c66081511f5e0".ToBinary(),
-          Value = 87000,
-          Index = 0
-        }
-      };
+      //List<TXOutputWallet> inputs = new()
+      //{
+      //  new TXOutputWallet()
+      //  {
+      //    TXID = "64f07568c00a215730b3323dc998be8d723d57a87e0a8ffd2a4c66081511f5e0".ToBinary(),
+      //    Value = 87000,
+      //    Index = 0
+      //  }
+      //};
 
       long valueChange = inputs.Sum(i => i.Value) - value - fee;
 
