@@ -38,8 +38,13 @@
         <Label Content="Wallet" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
         <StackPanel Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center">
             <StackPanel Orientation="Horizontal">
-                <Label Name="LabelBalanceSatoshies"/>
-                <Label Name="LabelBalanceSatoshiesUnconfirmed" Foreground="Red"/>
+                <Label Name="LabelAccount" Content="Account:" FontWeight="Bold"/>
+                <TextBox Name="TextBoxAccount" BorderThickness="0" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label Name="LabelBalanceSatoshies" Content="Balance:" FontWeight= "Bold"/>
+                <TextBox Name="TextBoxBalanceSatoshies" BorderThickness="0" VerticalAlignment="Center"/>
+                <TextBox Name="TextBoxBalanceSatoshiesUnconfirmed" BorderThickness="0" Foreground="Red" VerticalAlignment="Center"/>
             </StackPanel>
             <Label Name="LabelAddress" Content="Address"/>
             <TextBox Name="TextBoxAddress"/>

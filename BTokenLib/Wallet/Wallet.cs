@@ -99,6 +99,7 @@ namespace BTokenLib
     string PrivKeyDec;
     byte[] PublicKey;
     byte[] PublicKeyHash160 = new byte[20];
+    public string AddressAccount;
     public byte[] PublicScript;
 
     public List<TXOutputWallet> Outputs = new();
@@ -120,15 +121,16 @@ namespace BTokenLib
 
       PublicKeyHash160 = ComputeHash160Pubkey(PublicKey);
 
+      AddressAccount = PubKeyHashToBase58Check(PublicKeyHash160);
+
       PublicScript = PREFIX_P2PKH
         .Concat(PublicKeyHash160)
         .Concat(POSTFIX_P2PKH).ToArray();
     }
 
-
     public TX CreateTX(string address, long value, long fee)
     {
-      byte[] pubKeyHash160 = Base58CheckToByteArray(address);
+      byte[] pubKeyHash160 = Base58CheckToPubKeyHash(address);
 
       byte[] pubScript = PREFIX_P2PKH
         .Concat(pubKeyHash160)
@@ -137,17 +139,17 @@ namespace BTokenLib
       List<byte> tXRaw = new();
       long feeTX = 0;
 
-      List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
+      //List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
 
-      //List<TXOutputWallet> inputs = new()
-      //{
-      //  new TXOutputWallet()
-      //  {
-      //    TXID = "a428331dc182ea3110fb7daecd5c499f580f21a9d72daf54735d9fe70212ad35".ToBinary(),
-      //    Value = 96000,
-      //    Index = 0
-      //  }
-      //};
+      List<TXOutputWallet> inputs = new()
+      {
+        new TXOutputWallet()
+        {
+          TXID = "64f07568c00a215730b3323dc998be8d723d57a87e0a8ffd2a4c66081511f5e0".ToBinary(),
+          Value = 87000,
+          Index = 0
+        }
+      };
 
       long valueChange = inputs.Sum(i => i.Value) - value - fee;
 
@@ -233,25 +235,26 @@ namespace BTokenLib
       return tX;
     }
 
-
-    public static bool IsValidAddress(string Address)
+    public static string PubKeyHashToBase58Check(byte[] pubKeyArray)
     {
-      byte[] hex = Base58CheckToByteArray(Address);
-      if (hex == null || hex.Length != 21)
-        return false;
-      else
-        return true;
+      List<byte> pubKey = pubKeyArray.ToList();
+      pubKey.Insert(0, 0x00);
+
+      SHA256 sHA256 = SHA256.Create();
+
+      byte[] checksum = sHA256.ComputeHash(
+        sHA256.ComputeHash(pubKey.ToArray()));
+
+      pubKey.AddRange(checksum.Take(4));
+
+      return Base58.FromByteArray(pubKey.ToArray());
     }
 
-    public static byte[] Base58CheckToByteArray(string base58)
+    public static byte[] Base58CheckToPubKeyHash(string base58)
     {
-
       byte[] bb = Base58.ToByteArray(base58);
 
-      if (bb == null || bb.Length < 4) 
-        return null;
-
-      Sha256Digest bcsha256a = new Sha256Digest();
+      Sha256Digest bcsha256a = new();
       bcsha256a.BlockUpdate(bb, 0, bb.Length - 4);
 
       byte[] checksum = new byte[32];
@@ -260,8 +263,8 @@ namespace BTokenLib
       bcsha256a.DoFinal(checksum, 0);
 
       for (int i = 0; i < 4; i++)
-        if (checksum[i] != bb[bb.Length - 4 + i]) 
-          return null;
+        if (checksum[i] != bb[bb.Length - 4 + i])
+          throw new Exception($"Invalid checksum in address {base58}.");
 
       byte[] rv = new byte[bb.Length - 5];
       Array.Copy(bb, 1, rv, 0, bb.Length - 5);

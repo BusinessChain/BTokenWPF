@@ -18,6 +18,7 @@ namespace BTokenWPF
 
       Token = token;
       LabelToken.Content = token.GetName().Substring("Token".Count());
+      TextBoxAccount.Text = token.Wallet.AddressAccount;
 
       UpdateControlsWindowToken();
     }
@@ -74,8 +75,8 @@ namespace BTokenWPF
     Header HeaderTipAtLastUpdate;
     void UpdateTextBoxWallet()
     {
-      LabelBalanceSatoshies.Content = $"Balance: {Token.Wallet.Balance}";
-      LabelBalanceSatoshiesUnconfirmed.Content = $"({Token.Wallet.BalanceUnconfirmed})";
+      TextBoxBalanceSatoshies.Text = Token.Wallet.Balance.ToString();
+      TextBoxBalanceSatoshiesUnconfirmed.Text = $"({Token.Wallet.BalanceUnconfirmed})";
 
       HeaderTipAtLastUpdate = Token.HeaderTip;
 
