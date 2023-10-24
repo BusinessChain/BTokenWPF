@@ -147,7 +147,7 @@ namespace BTokenWPF
     {
       try
       {
-        string address = "184Z6YZ6qt6wbpyuKXKsyDTeXX5yNuYwWk";// TextBoxAddress.Text;
+        string address = TextBoxAddress.Text;
         long value = long.Parse(TextBoxValue.Text);
         long fee = long.Parse(TextBoxFee.Text);
                 
