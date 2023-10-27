@@ -72,13 +72,10 @@ namespace BTokenWPF
         ListBoxPeers.Items.Add(new ListBoxItemPeer(peer));
     }
 
-    Header HeaderTipAtLastUpdate;
     void UpdateTextBoxWallet()
     {
       TextBoxBalanceSatoshies.Text = Token.Wallet.Balance.ToString();
       TextBoxBalanceSatoshiesUnconfirmed.Text = $"({Token.Wallet.BalanceUnconfirmed})";
-
-      HeaderTipAtLastUpdate = Token.HeaderTip;
 
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());

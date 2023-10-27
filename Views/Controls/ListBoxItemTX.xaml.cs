@@ -14,7 +14,6 @@ namespace BTokenWPF
       InitializeComponent();
 
       LabelTXHash.Content = tX.Hash.ToHexString();
-      LabelTXRaw.Content = tX.TXRaw.ToArray().ToHexString();
 
       LabelCountInputs.Content = $"Number of Inputs: {tX.TXInputs.Count}";
       LabelCountOutputs.Content = $"Number of Outputs: {tX.TXOutputs.Count}";

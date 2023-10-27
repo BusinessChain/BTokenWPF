@@ -7,8 +7,13 @@
         mc:Ignorable="d"
         Title="DisplayHeaderWindow" Width="700">
 
-    <StackPanel>
-        <Grid HorizontalAlignment="Center" Margin="10" Width="650">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        
+        <Grid Grid.Row="0" HorizontalAlignment="Center" Margin="10" Width="650">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="30*"/>
                 <ColumnDefinition Width="70*"/>
@@ -18,7 +23,7 @@
             <TextBox Name="TextBoxHeaderValues" IsReadOnly="True" Grid.Column="1" TextAlignment="Left"/>
         </Grid>
 
-        <ListBox Name="ListBoxTXs" FontSize="10" MouseDoubleClick="ListBoxTXs_MouseDoubleClick"/>
-    </StackPanel>
+        <ListBox Name="ListBoxTXs" Grid.Row="1" FontSize="10" MouseDoubleClick="ListBoxTXs_MouseDoubleClick"/>
+    </Grid>
 
 </Window>

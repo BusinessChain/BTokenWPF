@@ -7,20 +7,13 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition/>
-            <RowDefinition/>
-        </Grid.RowDefinitions>
-
-        <StackPanel Grid.Row="0">
+        <StackPanel Background="LightCoral">
             <Label Name="LabelTXHash"/>
-            <Label Name="LabelTXRaw"/>
-        </StackPanel>
-
-        <StackPanel Orientation="Horizontal" Grid.Row="1">
-            <Label Name="LabelCountInputs"/>
-            <Label Name="LabelCountOutputs"/>
-            <Label Name="LabelFee"/>
+            <StackPanel Orientation="Horizontal">
+                <Label Name="LabelCountInputs"/>
+                <Label Name="LabelCountOutputs"/>
+                <Label Name="LabelFee"/>
+            </StackPanel>
         </StackPanel>
 
     </Grid>

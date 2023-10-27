@@ -271,7 +271,6 @@ namespace BTokenLib
       return rv;
     }
 
-
     public void LoadImage(string path)
     {
       byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
@@ -364,22 +363,25 @@ namespace BTokenLib
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
-            Outputs.Add(
-              new TXOutputWallet
-              {
-                TXID = tX.Hash,
-                Index = tX.TXOutputs.IndexOf(tXOutput),
-                Value = tXOutput.Value
-              });
+            if(Type == TypeWallet.UTXOType)
+            {
+              $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
+
+              Outputs.Add(
+                new TXOutputWallet
+                {
+                  TXID = tX.Hash,
+                  Index = tX.TXOutputs.IndexOf(tXOutput),
+                  Value = tXOutput.Value
+                });
+            }
 
             TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
-            if(outputValueUnconfirmed != null)
+            if (outputValueUnconfirmed != null)
             {
               BalanceUnconfirmed -= outputValueUnconfirmed.Value;
               OutputsUnconfirmed.Remove(outputValueUnconfirmed);
             }
-            
-            $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
 
             AddTXToHistory(tX);
 
@@ -448,15 +450,6 @@ namespace BTokenLib
 
       if (!POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
         return false;
-
-      byte[] scriptPubKey = new byte[LENGTH_P2PKH];
-
-      Array.Copy(
-        tXOutput.Buffer,
-        tXOutput.StartIndexScript,
-        scriptPubKey,
-        0,
-        LENGTH_P2PKH);
 
       return true;
     }

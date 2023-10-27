@@ -274,8 +274,6 @@ namespace BTokenLib
           LoadImageDatabase(pathImage);
           Wallet.LoadImage(pathImage);
 
-          // Make safety crosscheck with database to see if wallet balance is correct.
-
           if (HeaderTip.Height > heightMax)
             throw new ProtocolException(
               $"Image height of {GetName()} higher than desired height {heightMax}.");

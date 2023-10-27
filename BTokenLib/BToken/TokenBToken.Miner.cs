@@ -187,7 +187,8 @@ namespace BTokenLib
         HeaderPrevious = HeaderTip,
         Height = height,
         UnixTimeSeconds = (uint)DateTimeOffset.Now.ToUnixTimeSeconds(),
-        MerkleRoot = block.ComputeMerkleRoot()
+        MerkleRoot = block.ComputeMerkleRoot(),
+        CountTXs = block.TXs.Count
       };
 
       block.Header = header;
