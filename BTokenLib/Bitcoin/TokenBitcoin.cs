@@ -18,9 +18,10 @@ namespace BTokenLib
       : base(
           COMPORT_BITCOIN,
           flagEnableInboundConnections: true,
-          logEntryNotifier,
-          Wallet.TypeWallet.UTXOType)
-    { }
+          logEntryNotifier)
+    {
+      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"));
+    }
 
     public override Block CreateBlock()
     {

@@ -1,54 +1,25 @@
-﻿using System;
+﻿using Org.BouncyCastle.Crypto.Digests;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using Org.BouncyCastle.Crypto.Digests;
 
 
 namespace BTokenLib
 {
-  public partial class Wallet
+  public partial class WalletAccountModel : Wallet
   {
-    public const int LENGTH_DATA_P2PKH_INPUT = 180;
-    public const int LENGTH_P2PKH = 25;
-    public byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
-    public byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
-
-    Crypto Crypto = new();
-
-    protected SHA256 SHA256 = SHA256.Create();
-    readonly RipeMD160Digest RIPEMD160 = new();
-
-    protected string PrivKeyDec;
-    protected byte[] PublicKey;
-    protected byte[] PublicKeyHash160 = new byte[20];
-    public string AddressAccount;
-    public byte[] PublicScript;
-
     public List<TXOutputWallet> Outputs = new();
     public List<TXOutputWallet> OutputsUnconfirmed = new();
     public List<TXOutputWallet> OutputsUnconfirmedSpent = new();
-    public List<TX> HistoryTransactions = new();
 
-    public long Balance; 
-    public long BalanceUnconfirmed;
+    public int NonceAccount;
 
 
-    public Wallet(string privKeyDec)
-    {
-      PrivKeyDec = privKeyDec;
-
-      PublicKey = Crypto.GetPubKeyFromPrivKey(PrivKeyDec);
-
-      PublicKeyHash160 = ComputeHash160Pubkey(PublicKey);
-
-      AddressAccount = PubKeyHashToBase58Check(PublicKeyHash160);
-
-      PublicScript = PREFIX_P2PKH
-        .Concat(PublicKeyHash160)
-        .Concat(POSTFIX_P2PKH).ToArray();
-    }
+    public WalletAccountModel(string privKeyDec)
+      : base(privKeyDec)
+    { }
 
     public TX CreateTX(string address, long value, long fee)
     {
@@ -157,42 +128,6 @@ namespace BTokenLib
       return tX;
     }
 
-    public static string PubKeyHashToBase58Check(byte[] pubKeyArray)
-    {
-      List<byte> pubKey = pubKeyArray.ToList();
-      pubKey.Insert(0, 0x00);
-
-      SHA256 sHA256 = SHA256.Create();
-
-      byte[] checksum = sHA256.ComputeHash(
-        sHA256.ComputeHash(pubKey.ToArray()));
-
-      pubKey.AddRange(checksum.Take(4));
-
-      return pubKey.ToArray().ToBase58String();
-    }
-
-    public static byte[] Base58CheckToPubKeyHash(string base58)
-    {
-      byte[] bb = base58.Base58ToByteArray();
-
-      Sha256Digest bcsha256a = new();
-      bcsha256a.BlockUpdate(bb, 0, bb.Length - 4);
-
-      byte[] checksum = new byte[32];
-      bcsha256a.DoFinal(checksum, 0);
-      bcsha256a.BlockUpdate(checksum, 0, 32);
-      bcsha256a.DoFinal(checksum, 0);
-
-      for (int i = 0; i < 4; i++)
-        if (checksum[i] != bb[bb.Length - 4 + i])
-          throw new Exception($"Invalid checksum in address {base58}.");
-
-      byte[] rv = new byte[bb.Length - 5];
-      Array.Copy(bb, 1, rv, 0, bb.Length - 5);
-      return rv;
-    }
-
     public void LoadImage(string path)
     {
       byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
@@ -285,16 +220,6 @@ namespace BTokenLib
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
-            $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
-
-            Outputs.Add(
-              new TXOutputWallet
-              {
-                TXID = tX.Hash,
-                Index = tX.TXOutputs.IndexOf(tXOutput),
-                Value = tXOutput.Value
-              });
-
             TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
             if (outputValueUnconfirmed != null)
             {
@@ -323,31 +248,16 @@ namespace BTokenLib
             BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
           }
 
-          TXOutputWallet tXOutputWallet = Outputs.Find(o =>
-            o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
-
-          if (tXOutputWallet != null)
+          if (tXInput.TXIDOutput.IsEqual(PublicKeyHash160))
           {
-            Outputs.Remove(tXOutputWallet);
             AddTXToHistory(tX);
-            Balance -= tXOutputWallet.Value;
+            Balance -= (tX.TXOutputs.Sum(o => o.Value) + tX.Fee);
 
             $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
           }
         }
     }
-
-    public byte[] ComputeHash160Pubkey(byte[] publicKey)
-    {
-      byte[] publicKeyHash160 = new byte[20];
-
-      var hashPublicKey = SHA256.ComputeHash(publicKey);
-      RIPEMD160.BlockUpdate(hashPublicKey, 0, hashPublicKey.Length);
-      RIPEMD160.DoFinal(publicKeyHash160, 0);
-
-      return publicKeyHash160;
-    }
-
+       
     bool TryDetectTXOutputSpendable(TXOutput tXOutput)
     {
       if (tXOutput.LengthScript != LENGTH_P2PKH)
@@ -371,47 +281,20 @@ namespace BTokenLib
       return true;
     }
 
-    protected void AddTXToHistory(TX tX)
-    {
-      if (!HistoryTransactions.Any(t => t.Hash.IsEqual(tX.Hash)))
-        HistoryTransactions.Add(tX);
-    }
-
-    public List<byte> GetScriptSignature(byte[] tXRaw)
-    {
-      byte[] signature = Crypto.GetSignature(
-      PrivKeyDec,
-      tXRaw.ToArray());
-
-      List<byte> scriptSig = new();
-
-      scriptSig.Add((byte)(signature.Length + 1));
-      scriptSig.AddRange(signature);
-      scriptSig.Add(0x01);
-
-      scriptSig.Add((byte)PublicKey.Length);
-      scriptSig.AddRange(PublicKey);
-
-      return scriptSig;
-    }
-
-    public void AddOutputUnconfirmed(TXOutputWallet output)
-    {
-      OutputsUnconfirmed.Add(output);
-      BalanceUnconfirmed += output.Value;
-    }
-
     public List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)
     {
       long fee = (long)feeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
 
       List<TXOutputWallet> outputsValueNotSpent = new();
-
-      outputsValueNotSpent.AddRange(
-        Outputs.Where(o => o.Value > fee)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > fee))
-        .Except(OutputsUnconfirmedSpent)
-        .Take(VarInt.PREFIX_UINT16 - 1));
+      
+        if(Balance + BalanceUnconfirmed > fee)
+          outputsValueNotSpent.Add(
+            new TXOutputWallet()
+            {
+              TXID = PublicKeyHash160,
+              Value = Balance + BalanceUnconfirmed,
+              Index = NonceAccount++
+            });
 
       OutputsUnconfirmedSpent.AddRange(outputsValueNotSpent);
 
@@ -421,19 +304,6 @@ namespace BTokenLib
       return outputsValueNotSpent;
     }
     
-    public byte[] GetReceptionScript()
-    {
-      byte[] script = new byte[26];
-
-      script[0] = LENGTH_P2PKH;
-
-      PREFIX_P2PKH.CopyTo(script, 1);
-      PublicKeyHash160.CopyTo(script, 4);
-      POSTFIX_P2PKH.CopyTo(script, 24);
-
-      return script;
-    }
-
     public void Clear()
     {
       Outputs.Clear();
@@ -443,5 +313,6 @@ namespace BTokenLib
       Balance = 0;
       BalanceUnconfirmed = 0;
     }
+
   }
 }

@@ -103,7 +103,7 @@ namespace BTokenLib
         tXRaw.Add(LENGTH_DATA_ANCHOR_TOKEN);
         tXRaw.AddRange(dataAnchorToken);
 
-        Wallet wallet = tokenParent.Wallet;
+        WalletUTXOModel wallet = tokenParent.Wallet;
 
         if (ValueChange > 0)
         {

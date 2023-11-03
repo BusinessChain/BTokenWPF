@@ -49,6 +49,34 @@ namespace BTokenLib
       return ToHexString(list.ToArray());
     }
 
+    public static string ToBase58String(this byte[] ba)
+    {
+      Org.BouncyCastle.Math.BigInteger addrremain = new Org.BouncyCastle.Math.BigInteger(1, ba);
+
+      Org.BouncyCastle.Math.BigInteger big0 = new Org.BouncyCastle.Math.BigInteger("0");
+      Org.BouncyCastle.Math.BigInteger big58 = new Org.BouncyCastle.Math.BigInteger("58");
+
+      string b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+      string rv = "";
+
+      while (addrremain.CompareTo(big0) > 0)
+      {
+        int d = Convert.ToInt32(addrremain.Mod(big58).ToString());
+        addrremain = addrremain.Divide(big58);
+        rv = b58.Substring(d, 1) + rv;
+      }
+
+      // handle leading zeroes
+      foreach (byte b in ba)
+      {
+        if (b != 0) break;
+        rv = "1" + rv;
+
+      }
+      return rv;
+    }
+
     public static bool IsEqual(
       this byte[] arr1, 
       byte[] arr2, 

@@ -20,7 +20,7 @@ namespace BTokenLib
 
     protected BlockArchiver Archiver;
 
-    public Wallet Wallet;
+    public WalletUTXOModel Wallet;
 
     public TXPool TXPool;
 
@@ -52,7 +52,7 @@ namespace BTokenLib
       UInt16 port, 
       bool flagEnableInboundConnections,
       ILogEntryNotifier logEntryNotifier,
-      Wallet.TypeWallet typeWallet)
+      WalletUTXOModel.TypeWallet typeWallet)
     {
       LogEntryNotifier = logEntryNotifier;
 
@@ -69,8 +69,6 @@ namespace BTokenLib
       HeaderGenesis = CreateHeaderGenesis();
 
       Archiver = new(GetName());
-
-      Wallet = new(File.ReadAllText($"Wallet{GetName()}/wallet"), typeWallet);
 
       TXPool = new();
 
