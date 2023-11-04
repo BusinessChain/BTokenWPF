@@ -10,10 +10,6 @@ namespace BTokenLib
 {
   public partial class WalletAccountModel : Wallet
   {
-    public List<TXOutputWallet> Outputs = new();
-    public List<TXOutputWallet> OutputsUnconfirmed = new();
-    public List<TXOutputWallet> OutputsUnconfirmedSpent = new();
-
     public int NonceAccount;
 
 

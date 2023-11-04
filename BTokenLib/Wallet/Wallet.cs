@@ -26,9 +26,6 @@ namespace BTokenLib
     public string AddressAccount;
     public byte[] PublicScript;
 
-    public List<TXOutputWallet> Outputs = new();
-    public List<TXOutputWallet> OutputsUnconfirmed = new();
-    public List<TXOutputWallet> OutputsUnconfirmedSpent = new();
     public List<TX> HistoryTransactions = new();
 
     public long Balance; 
