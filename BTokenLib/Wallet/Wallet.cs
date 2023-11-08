@@ -28,6 +28,9 @@ namespace BTokenLib
 
     public List<TX> HistoryTransactions = new();
 
+    protected List<TXOutputWallet> OutputsUnconfirmed = new();
+    protected List<TXOutputWallet> OutputsUnconfirmedSpent = new();
+
     public long Balance; 
     public long BalanceUnconfirmed;
 
@@ -190,7 +193,7 @@ namespace BTokenLib
       return rv;
     }
 
-    public void LoadImage(string path)
+    public virtual void LoadImage(string path)
     {
       byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
         Path.Combine(path, "walletHistoryTransactions"));
@@ -206,12 +209,11 @@ namespace BTokenLib
             ref index, 
             sHA256));
 
-      LoadOutputs(Outputs, Path.Combine(path, "OutputsValue"));
       LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
       LoadOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
     }
 
-    static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
+    protected static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
     {
       int index = 0;
 
@@ -235,7 +237,7 @@ namespace BTokenLib
       }
     }
 
-    public void CreateImage(string path)
+    public virtual void CreateImage(string path)
     {
       using (FileStream fileWalletHistoryTransactions = new(
         Path.Combine(path, "walletHistoryTransactions"),
@@ -250,12 +252,11 @@ namespace BTokenLib
         }
       }
 
-      StoreOutputs(Outputs, Path.Combine(path, "OutputsValue"));
       StoreOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
       StoreOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
     }
 
-    static void StoreOutputs(List<TXOutputWallet> outputs, string fileName)
+    protected static void StoreOutputs(List<TXOutputWallet> outputs, string fileName)
     {
       using (FileStream file = new(
         fileName,

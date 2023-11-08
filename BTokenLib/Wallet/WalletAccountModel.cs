@@ -1,5 +1,4 @@
-﻿using Org.BouncyCastle.Crypto.Digests;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -123,93 +122,7 @@ namespace BTokenLib
 
       return tX;
     }
-
-    public void LoadImage(string path)
-    {
-      byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
-        Path.Combine(path, "walletHistoryTransactions"));
-
-      SHA256 sHA256 = SHA256.Create();
-
-      int index = 0;
-
-      while (index < fileWalletHistoryTransactions.Length)
-        HistoryTransactions.Add(
-          Block.ParseTX(
-            fileWalletHistoryTransactions, 
-            ref index, 
-            sHA256));
-
-      LoadOutputs(Outputs, Path.Combine(path, "OutputsValue"));
-      LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      LoadOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
-    }
-
-    static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
-    {
-      int index = 0;
-
-      byte[] buffer = File.ReadAllBytes(fileName);
-
-      while (index < buffer.Length)
-      {
-        var tXOutput = new TXOutputWallet();
-
-        tXOutput.TXID = new byte[32];
-        Array.Copy(buffer, index, tXOutput.TXID, 0, 32);
-        index += 32;
-
-        tXOutput.Index = BitConverter.ToInt32(buffer, index);
-        index += 4;
-
-        tXOutput.Value = BitConverter.ToInt64(buffer, index);
-        index += 8;
-
-        outputs.Add(tXOutput);
-      }
-    }
-
-    public void CreateImage(string path)
-    {
-      using (FileStream fileWalletHistoryTransactions = new(
-        Path.Combine(path, "walletHistoryTransactions"),
-        FileMode.Create,
-        FileAccess.Write,
-        FileShare.None))
-      {
-        foreach(TX tX in HistoryTransactions)
-        {
-          byte[] txRaw = tX.TXRaw.ToArray();
-          fileWalletHistoryTransactions.Write(txRaw, 0, txRaw.Length);
-        }
-      }
-
-      StoreOutputs(Outputs, Path.Combine(path, "OutputsValue"));
-      StoreOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      StoreOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
-    }
-
-    static void StoreOutputs(List<TXOutputWallet> outputs, string fileName)
-    {
-      using (FileStream file = new(
-        fileName,
-        FileMode.Create,
-        FileAccess.Write,
-        FileShare.None))
-      {
-        foreach (TXOutputWallet tXOutput in outputs)
-        {
-          file.Write(tXOutput.TXID, 0, tXOutput.TXID.Length);
-
-          byte[] outputIndex = BitConverter.GetBytes(tXOutput.Index);
-          file.Write(outputIndex, 0, outputIndex.Length);
-
-          byte[] value = BitConverter.GetBytes(tXOutput.Value);
-          file.Write(value, 0, value.Length);
-        }
-      }
-    }
-
+                
     public void InsertBlock(Block block, Token token)
     {
       foreach (TX tX in block.TXs)
