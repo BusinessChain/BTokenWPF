@@ -27,8 +27,7 @@ namespace BTokenLib
       : base(
           COMPORT_BTOKEN,
           flagEnableInboundConnections: true,
-          logEntryNotifier,
-          Wallet.TypeWallet.AccountType)
+          logEntryNotifier)
     {
       IDToken = new byte[] { 0x01, 0x00 };
 
@@ -44,6 +43,8 @@ namespace BTokenLib
 
       Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
       LoadMinedUnconfirmed();
+
+      Wallet = new WalletAccountModel(File.ReadAllText($"Wallet{GetName()}/wallet"));
     }
 
     void LoadMinedUnconfirmed()

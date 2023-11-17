@@ -17,7 +17,7 @@ namespace BTokenLib
       : base(privKeyDec)
     { }
 
-    public TX CreateTX(string address, long value, long fee)
+    public override TX CreateTX(string address, long value, long fee)
     {
       byte[] pubKeyHash160 = Base58CheckToPubKeyHash(address);
 
@@ -124,6 +124,26 @@ namespace BTokenLib
       return tX;
     }
 
+    List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)
+    {
+      long fee = (long)feeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
+
+      List<TXOutputWallet> outputsValueNotSpent = new();
+
+      outputsValueNotSpent.AddRange(
+        Outputs.Where(o => o.Value > fee)
+        .Concat(OutputsUnconfirmed.Where(o => o.Value > fee))
+        .Except(OutputsUnconfirmedSpent)
+        .Take(VarInt.PREFIX_UINT16 - 1));
+
+      OutputsUnconfirmedSpent.AddRange(outputsValueNotSpent);
+
+      outputsValueNotSpent.ForEach(o => BalanceUnconfirmed -= o.Value);
+
+      feeOutputs = fee * outputsValueNotSpent.Count;
+      return outputsValueNotSpent;
+    }
+
     public override void LoadImage(string path)
     {
       base.LoadImage(path);
@@ -138,13 +158,20 @@ namespace BTokenLib
       StoreOutputs(Outputs, Path.Combine(path, "OutputsValue"));
     }
 
-    public void InsertBlock(Block block, Token token)
+    public override void InsertBlock(Block block, Token token)
     {
       foreach (TX tX in block.TXs)
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
             $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
+
+            TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
+            if (outputValueUnconfirmed != null)
+            {
+              BalanceUnconfirmed -= outputValueUnconfirmed.Value;
+              OutputsUnconfirmed.Remove(outputValueUnconfirmed);
+            }
 
             Outputs.Add(
               new TXOutputWallet
@@ -153,13 +180,6 @@ namespace BTokenLib
                 Index = tX.TXOutputs.IndexOf(tXOutput),
                 Value = tXOutput.Value
               });
-
-            TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
-            if (outputValueUnconfirmed != null)
-            {
-              BalanceUnconfirmed -= outputValueUnconfirmed.Value;
-              OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-            }
 
             AddTXToHistory(tX);
 
@@ -187,37 +207,13 @@ namespace BTokenLib
 
           if (tXOutputWallet != null)
           {
+            Balance -= tXOutputWallet.Value;
             Outputs.Remove(tXOutputWallet);
             AddTXToHistory(tX);
-            Balance -= tXOutputWallet.Value;
 
             $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
           }
         }
-    }
-
-
-    bool TryDetectTXOutputSpendable(TXOutput tXOutput)
-    {
-      if (tXOutput.LengthScript != LENGTH_P2PKH)
-        return false;
-
-      int indexScript = tXOutput.StartIndexScript;
-
-      if (!PREFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      indexScript += 3;
-
-      if (!PublicKeyHash160.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      indexScript += 20;
-
-      if (!POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      return true;
     }
 
     public void ReverseTXUnconfirmed(TX tX)
@@ -241,35 +237,11 @@ namespace BTokenLib
         }
       }
     }
-
-    public List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)
-    {
-      long fee = (long)feeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
-
-      List<TXOutputWallet> outputsValueNotSpent = new();
-
-      outputsValueNotSpent.AddRange(
-        Outputs.Where(o => o.Value > fee)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > fee))
-        .Except(OutputsUnconfirmedSpent)
-        .Take(VarInt.PREFIX_UINT16 - 1));
-
-      OutputsUnconfirmedSpent.AddRange(outputsValueNotSpent);
-
-      outputsValueNotSpent.ForEach(o => BalanceUnconfirmed -= o.Value);
-
-      feeOutputs = fee * outputsValueNotSpent.Count;
-      return outputsValueNotSpent;
-    }
-    
-    public void Clear()
+        
+    public override void Clear()
     {
       Outputs.Clear();
-      OutputsUnconfirmed.Clear();
-      OutputsUnconfirmedSpent.Clear();
-
-      Balance = 0;
-      BalanceUnconfirmed = 0;
+      base.Clear();
     }
   }
 }

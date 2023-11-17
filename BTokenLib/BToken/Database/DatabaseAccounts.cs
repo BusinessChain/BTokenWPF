@@ -138,6 +138,11 @@ namespace BTokenLib
 
       for (int t = 1; t < tXs.Count; t++)
       {
+        if (tXs[t].TXInputs.Count > 1)
+          throw new ProtocolException(
+            $"In Account based database model, tXs must contain one input only." +
+            $"But tX {tXs[t]} contains {tXs[t].TXInputs.Count}.");
+
         byte[] iDAccount = tXs[t].TXInputs[0].TXIDOutput;
 
         int c = IndexCache;

@@ -152,7 +152,7 @@ namespace BTokenLib
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.IDToken = IDToken;
 
-      List<TXOutputWallet> outputs = TokenParent.Wallet.GetOutputs(
+      List<TXOutputWallet> outputs = TokenParent.Wallet.CreateTX(
         FeeSatoshiPerByte, 
         out long feeOutputs);
 

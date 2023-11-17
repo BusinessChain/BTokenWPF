@@ -20,7 +20,7 @@ namespace BTokenLib
 
     protected BlockArchiver Archiver;
 
-    public WalletUTXOModel Wallet;
+    public Wallet Wallet;
 
     public TXPool TXPool;
 
@@ -51,8 +51,7 @@ namespace BTokenLib
     public Token(
       UInt16 port, 
       bool flagEnableInboundConnections,
-      ILogEntryNotifier logEntryNotifier,
-      WalletUTXOModel.TypeWallet typeWallet)
+      ILogEntryNotifier logEntryNotifier)
     {
       LogEntryNotifier = logEntryNotifier;
 

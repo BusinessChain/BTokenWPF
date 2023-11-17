@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 
 
 namespace BTokenLib
@@ -16,7 +14,7 @@ namespace BTokenLib
       : base(privKeyDec)
     { }
 
-    public TX CreateTX(string address, long value, long fee)
+    public override TX CreateTX(string address, long value, long fee)
     {
       byte[] pubKeyHash160 = Base58CheckToPubKeyHash(address);
 
@@ -25,78 +23,41 @@ namespace BTokenLib
         .Concat(POSTFIX_P2PKH).ToArray();
 
       List<byte> tXRaw = new();
-      long feeTX = 0;
-
-      List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
-
-      //List<TXOutputWallet> inputs = new()
-      //{
-      //  new TXOutputWallet()
-      //  {
-      //    TXID = "64f07568c00a215730b3323dc998be8d723d57a87e0a8ffd2a4c66081511f5e0".ToBinary(),
-      //    Value = 87000,
-      //    Index = 0
-      //  }
-      //};
-
-      long valueChange = inputs.Sum(i => i.Value) - value - fee;
 
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
-      tXRaw.AddRange(VarInt.GetBytes(inputs.Count));
+      tXRaw.AddRange(VarInt.GetBytes(0x01));
 
       int indexFirstInput = tXRaw.Count;
 
-      for (int i = 0; i < inputs.Count; i += 1)
-      {
-        tXRaw.AddRange(inputs[i].TXID);
-        tXRaw.AddRange(BitConverter.GetBytes(inputs[i].Index));
-        tXRaw.Add(0x00); // length empty script
-        tXRaw.AddRange(BitConverter.GetBytes((int)0)); // sequence
+      tXRaw.AddRange(PublicKeyHash160);
+      tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tXRaw.Add(0x00); // length empty script
+      tXRaw.AddRange(BitConverter.GetBytes((int)0)); // sequence
 
-        feeTX += inputs[i].Value;
-      }
-
-      tXRaw.Add((byte)(valueChange > 0 ? 2 : 1));
+      tXRaw.Add(0x01);
 
       tXRaw.AddRange(BitConverter.GetBytes(value));
       tXRaw.Add((byte)pubScript.Length);
       tXRaw.AddRange(pubScript);
 
-      if (valueChange > 0)
-      {
-        tXRaw.AddRange(BitConverter.GetBytes(valueChange));
-        tXRaw.Add((byte)PublicScript.Length);
-        tXRaw.AddRange(PublicScript);
-
-        feeTX -= valueChange;
-      }
-
       tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
 
-      List<List<byte>> signaturesPerInput = new();
+      List<byte> tXRawSign = tXRaw.ToList();
+      int indexRawSign = indexFirstInput + 36;
 
-      for (int i = 0; i < inputs.Count; i += 1)
-      {
-        List<byte> tXRawSign = tXRaw.ToList();
-        int indexRawSign = indexFirstInput + 36 * (i + 1) + 5 * i;
+      tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
+      tXRawSign.InsertRange(indexRawSign, PublicScript);
 
-        tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
-        tXRawSign.InsertRange(indexRawSign, PublicScript);
+      List<byte> signaturePerInput = GetScriptSignature(tXRawSign.ToArray());
 
-        signaturesPerInput.Add(GetScriptSignature(tXRawSign.ToArray()));
-      }
+      int indexSign = indexFirstInput + 36;
 
-      for (int i = inputs.Count - 1; i >= 0; i -= 1)
-      {
-        int indexSign = indexFirstInput + 36 * (i + 1) + 5 * i;
+      tXRaw[indexSign++] = (byte)signaturePerInput.Count;
 
-        tXRaw[indexSign++] = (byte)signaturesPerInput[i].Count;
-
-        tXRaw.InsertRange(
-          indexSign,
-          signaturesPerInput[i]);
-      }
+      tXRaw.InsertRange(
+        indexSign,
+        signaturePerInput);
 
       tXRaw.RemoveRange(tXRaw.Count - 4, 4);
 
@@ -107,28 +68,21 @@ namespace BTokenLib
         ref index,
         SHA256);
 
-      if (valueChange > 0)
-        AddOutputUnconfirmed(
-          new TXOutputWallet
-          {
-            TXID = tX.Hash,
-            Index = 1,
-            Value = valueChange
-          });
-
       tX.TXRaw = tXRaw;
 
-      tX.Fee = feeTX;
+      tX.Fee = fee;
 
       return tX;
     }
-                
-    public void InsertBlock(Block block, Token token)
+
+    public override void InsertBlock(Block block, Token token)
     {
       foreach (TX tX in block.TXs)
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
+            $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
+
             TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
             if (outputValueUnconfirmed != null)
             {
@@ -157,71 +111,13 @@ namespace BTokenLib
             BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
           }
 
-          if (tXInput.TXIDOutput.IsEqual(PublicKeyHash160))
+          if (tXInput.TXIDOutput.IsEqual(PublicKeyHash160) && tXInput.OutputIndex == NonceAccount)
           {
+            Balance -= tX.TXOutputs.Sum(o => o.Value);
             AddTXToHistory(tX);
-            Balance -= (tX.TXOutputs.Sum(o => o.Value) + tX.Fee);
-
             $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
           }
         }
     }
-       
-    bool TryDetectTXOutputSpendable(TXOutput tXOutput)
-    {
-      if (tXOutput.LengthScript != LENGTH_P2PKH)
-        return false;
-
-      int indexScript = tXOutput.StartIndexScript;
-
-      if (!PREFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      indexScript += 3;
-
-      if (!PublicKeyHash160.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      indexScript += 20;
-
-      if (!POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      return true;
-    }
-
-    public List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)
-    {
-      long fee = (long)feeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
-
-      List<TXOutputWallet> outputsValueNotSpent = new();
-      
-        if(Balance + BalanceUnconfirmed > fee)
-          outputsValueNotSpent.Add(
-            new TXOutputWallet()
-            {
-              TXID = PublicKeyHash160,
-              Value = Balance + BalanceUnconfirmed,
-              Index = NonceAccount++
-            });
-
-      OutputsUnconfirmedSpent.AddRange(outputsValueNotSpent);
-
-      outputsValueNotSpent.ForEach(o => BalanceUnconfirmed -= o.Value);
-
-      feeOutputs = fee * outputsValueNotSpent.Count;
-      return outputsValueNotSpent;
-    }
-    
-    public void Clear()
-    {
-      Outputs.Clear();
-      OutputsUnconfirmed.Clear();
-      OutputsUnconfirmedSpent.Clear();
-
-      Balance = 0;
-      BalanceUnconfirmed = 0;
-    }
-
   }
 }
