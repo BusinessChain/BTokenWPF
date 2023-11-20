@@ -76,7 +76,7 @@ namespace BTokenLib
       }
 
 
-      public void Serialize(Token tokenParent, SHA256 sHA256, byte[] dataAnchorToken)
+      public void Serialize(Wallet wallet, SHA256 sHA256, byte[] dataAnchorToken)
       {
         List<byte> tXRaw = new();
         long feeTX = 0;
@@ -102,8 +102,6 @@ namespace BTokenLib
         tXRaw.Add(OP_RETURN);
         tXRaw.Add(LENGTH_DATA_ANCHOR_TOKEN);
         tXRaw.AddRange(dataAnchorToken);
-
-        WalletUTXOModel wallet = tokenParent.Wallet;
 
         if (ValueChange > 0)
         {

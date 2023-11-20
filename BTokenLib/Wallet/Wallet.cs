@@ -52,6 +52,11 @@ namespace BTokenLib
 
     public abstract TX CreateTX(string address, long value, long fee);
 
+    public abstract bool CreateDataTX(
+      double feeSatoshiPerByte, 
+      byte[] data,
+      out Token.TokenAnchor tokenAnchor);
+
     public static string PubKeyHashToBase58Check(byte[] pubKeyArray)
     {
       List<byte> pubKey = pubKeyArray.ToList();

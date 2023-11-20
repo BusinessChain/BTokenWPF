@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using Org.BouncyCastle.Crypto.Digests;
 
 
 namespace BTokenLib
@@ -122,6 +120,56 @@ namespace BTokenLib
       tX.Fee = feeTX;
 
       return tX;
+    }
+
+
+    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
+    const int LENGTH_DATA_TX_SCAFFOLD = 10;
+    const int LENGTH_DATA_P2PKH_OUTPUT = 34;
+
+    public override bool CreateDataTX(
+      double feeSatoshiPerByte, 
+      byte[] data,
+      out Token.TokenAnchor tokenAnchor)
+    {
+      long feeAccrued = (long)(feeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
+      long feeAnchorToken = (long)(feeSatoshiPerByte * data.Length);
+      long feeOutputChange = (long)(feeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
+
+      tokenAnchor = new();
+
+      List<TXOutputWallet> outputs = GetOutputs(
+        feeSatoshiPerByte,
+        out long feeOutputs);
+
+      feeAccrued += feeOutputs;
+      feeAccrued += feeAnchorToken;
+
+      long valueAccrued = 0;
+
+      foreach (TXOutputWallet tXOutputWallet in outputs)
+      {
+        tokenAnchor.Inputs.Add(tXOutputWallet);
+        valueAccrued += tXOutputWallet.Value;
+      }
+
+      if (valueAccrued < feeAccrued)
+        return false; // die outputs müssen wieder freigegeben werden.
+
+      tokenAnchor.ValueChange = valueAccrued - feeAccrued - feeOutputChange;
+
+      tokenAnchor.Serialize(this, SHA256, data);
+
+      if (tokenAnchor.ValueChange > 0)
+        AddOutputUnconfirmed(
+          new TXOutputWallet
+          {
+            TXID = tokenAnchor.TX.Hash,
+            Index = 1,
+            Value = tokenAnchor.ValueChange
+          });
+
+      return true;
     }
 
     List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)

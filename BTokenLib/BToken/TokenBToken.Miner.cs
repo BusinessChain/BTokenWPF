@@ -14,10 +14,6 @@ namespace BTokenLib
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE = 1.2;
 
-    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
-    const int LENGTH_DATA_TX_SCAFFOLD = 10;
-    const int LENGTH_DATA_P2PKH_OUTPUT = 34;
-
     string PathBlocksMinedUnconfirmed;
     List<BlockBToken> BlocksMined = new();
 
@@ -140,34 +136,8 @@ namespace BTokenLib
       TokenParent.BroadcastTX(TokensAnchorUnconfirmed.Select(t => t.TX).ToList());
     }
 
-    public bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
+    BlockBToken MinerBlock()
     {
-      long feeAccrued = (long)(FeeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
-      long feeAnchorToken = (long)(FeeSatoshiPerByte * LENGTH_DATA_ANCHOR_TOKEN);
-      long feeOutputChange = (long)(FeeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
-
-      long valueAccrued = 0;
-
-      tokenAnchor = new();
-      tokenAnchor.NumberSequence = NumberSequence;
-      tokenAnchor.IDToken = IDToken;
-
-      List<TXOutputWallet> outputs = TokenParent.Wallet.CreateTX(
-        FeeSatoshiPerByte, 
-        out long feeOutputs);
-
-      foreach (TXOutputWallet tXOutputWallet in outputs)
-      {
-        tokenAnchor.Inputs.Add(tXOutputWallet);
-        valueAccrued += tXOutputWallet.Value;
-      }
-
-      feeAccrued += feeOutputs;
-      feeAccrued += feeAnchorToken;
-
-      if (valueAccrued < feeAccrued)
-        return false;
-
       BlockBToken block = new();
 
       int height = HeaderTip.Height + 1;
@@ -203,24 +173,28 @@ namespace BTokenLib
 
       block.Header.CountBytesBlock = block.Buffer.Length;
 
-      tokenAnchor.HashBlockReferenced = block.Header.Hash;
-      tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
-      tokenAnchor.ValueChange = valueAccrued - feeAccrued - feeOutputChange;
+      return block;
+    }
+
+    public bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
+    {                  
+      BlockBToken block = MinerBlock();
 
       byte[] dataAnchorToken = IDToken.Concat(block.Header.Hash)
         .Concat(block.Header.HashPrevious).ToArray();
 
-      tokenAnchor.Serialize(TokenParent, SHA256Miner, dataAnchorToken);
+      if (!TokenParent.Wallet.CreateDataTX(
+        FeeSatoshiPerByte,
+        dataAnchorToken,
+        out tokenAnchor))
+      {
+        return false;
+      }
 
-      if (tokenAnchor.ValueChange > 0)
-        TokenParent.Wallet.AddOutputUnconfirmed(
-          new TXOutputWallet
-          {
-            TXID = tokenAnchor.TX.Hash,
-            Index = 1,
-            Value = tokenAnchor.ValueChange
-          });
-      
+      tokenAnchor.NumberSequence = NumberSequence;
+      tokenAnchor.HashBlockReferenced = block.Header.Hash;
+      tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
+            
       string pathFileBlock = Path.Combine(
         PathBlocksMinedUnconfirmed, 
         block.ToString());
