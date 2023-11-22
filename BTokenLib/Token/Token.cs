@@ -66,6 +66,9 @@ namespace BTokenLib
       PathImageOld = Path.Combine(PathRootToken, NameImageOld);
 
       HeaderGenesis = CreateHeaderGenesis();
+      HeaderTip = HeaderGenesis;
+
+      IndexingHeaderTip();
 
       Archiver = new(GetName());
 
@@ -73,8 +76,6 @@ namespace BTokenLib
 
       Port = port;
       Network = new(this, flagEnableInboundConnections);
-
-      Reset();
     }
 
     public void Start()

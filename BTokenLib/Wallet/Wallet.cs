@@ -242,7 +242,9 @@ namespace BTokenLib
       OutputsUnconfirmed.Add(output);
       BalanceUnconfirmed += output.Value;
     }
-    
+
+    public abstract void ReverseTXUnconfirmed(TX tX);
+
     public byte[] GetReceptionScript()
     {
       byte[] script = new byte[26];

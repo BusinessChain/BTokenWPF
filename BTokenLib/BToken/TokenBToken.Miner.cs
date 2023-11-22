@@ -9,6 +9,8 @@ namespace BTokenLib
 {
   partial class TokenBToken : Token
   {
+    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
+
     const int COUNT_TXS_PER_BLOCK_MAX = 5;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
@@ -207,6 +209,7 @@ namespace BTokenLib
 
       return true;
     }
+
 
     public override void DetectAnchorTokenInBlock(TX tX)
     {

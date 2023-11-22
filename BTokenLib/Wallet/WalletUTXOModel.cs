@@ -123,7 +123,6 @@ namespace BTokenLib
     }
 
 
-    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
     const int LENGTH_DATA_TX_SCAFFOLD = 10;
     const int LENGTH_DATA_P2PKH_OUTPUT = 34;
 
@@ -264,7 +263,7 @@ namespace BTokenLib
         }
     }
 
-    public void ReverseTXUnconfirmed(TX tX)
+    public override void ReverseTXUnconfirmed(TX tX)
     {
       TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
       if (outputValueUnconfirmed != null)

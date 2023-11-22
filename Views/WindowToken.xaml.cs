@@ -80,8 +80,9 @@ namespace BTokenWPF
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
-      foreach (TXOutputWallet tXOutputWallet in Token.Wallet.Outputs)
-        ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
+      if (Token.Wallet is WalletUTXOModel)
+        foreach (TXOutputWallet tXOutputWallet in ((WalletUTXOModel)Token.Wallet).Outputs)
+          ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 
     //int CountTXsPoolOld;

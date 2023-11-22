@@ -119,5 +119,18 @@ namespace BTokenLib
           }
         }
     }
+
+
+    public override bool CreateDataTX(
+      double feeSatoshiPerByte,
+      byte[] data,
+      out Token.TokenAnchor tokenAnchor)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override void ReverseTXUnconfirmed(TX tX)
+    {
+    }
   }
 }
