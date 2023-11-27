@@ -507,10 +507,10 @@ namespace BTokenLib
 
     public TX MakeTX(string address, long value, long fee)
     {
-      if (this is TokenBitcoin)
-        address = "184Z6YZ6qt6wbpyuKXKsyDTeXX5yNuYwWk";
-      else if (this is TokenBToken)
-        address = "1MaJjBpbqYSa1ui3cNPGwMvVqzg2mwKp9P";
+      //if (this is TokenBitcoin)
+      //  address = "184Z6YZ6qt6wbpyuKXKsyDTeXX5yNuYwWk";
+      //else if (this is TokenBToken)
+      //  address = "1MaJjBpbqYSa1ui3cNPGwMvVqzg2mwKp9P";
 
       return Wallet.CreateTX(
         address,

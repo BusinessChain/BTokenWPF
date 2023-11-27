@@ -32,8 +32,8 @@ namespace BTokenLib
       //{
       //  new TXOutputWallet()
       //  {
-      //    TXID = "64f07568c00a215730b3323dc998be8d723d57a87e0a8ffd2a4c66081511f5e0".ToBinary(),
-      //    Value = 87000,
+      //    TXID = "bcb81f7e7d843bcace5a794c0f36ed5abd4323087cabf9691db0aa36e4c9366b".ToBinary(),
+      //    Value = 82000,
       //    Index = 0
       //  }
       //};

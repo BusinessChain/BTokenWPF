@@ -129,7 +129,7 @@ namespace BTokenLib
         indexBuffer += 4; // Version
 
         if (buffer[indexBuffer] == 0x00)
-          throw new NotImplementedException("Segwit txs not implemented");
+          throw new NotImplementedException("Segwit is not implemented.");
 
         int countInputs = VarInt.GetInt32(
           buffer,

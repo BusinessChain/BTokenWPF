@@ -25,16 +25,14 @@ namespace BTokenLib
       List<byte> tXRaw = new();
 
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
-      tXRaw.AddRange(VarInt.GetBytes(0x01));
+      tXRaw.Add(0x01); // number of inputs
 
-      int indexFirstInput = tXRaw.Count;
-
-      tXRaw.AddRange(PublicKeyHash160);
+      tXRaw.AddRange(PublicKeyHash160.Concat(new byte[12])); // input TXID
       tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
       tXRaw.Add(0x00); // length empty script
       tXRaw.AddRange(BitConverter.GetBytes((int)0)); // sequence
 
-      tXRaw.Add(0x01);
+      tXRaw.Add(0x01); // number of outputs
 
       tXRaw.AddRange(BitConverter.GetBytes(value));
       tXRaw.Add((byte)pubScript.Length);
@@ -44,20 +42,17 @@ namespace BTokenLib
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
 
       List<byte> tXRawSign = tXRaw.ToList();
-      int indexRawSign = indexFirstInput + 36;
+      int indexSign = 41;
 
-      tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
-      tXRawSign.InsertRange(indexRawSign, PublicScript);
+      tXRawSign[indexSign++] = (byte)PublicScript.Length;
+      tXRawSign.InsertRange(indexSign, PublicScript);
 
       List<byte> signaturePerInput = GetScriptSignature(tXRawSign.ToArray());
 
-      int indexSign = indexFirstInput + 36;
+      indexSign = 41;
 
       tXRaw[indexSign++] = (byte)signaturePerInput.Count;
-
-      tXRaw.InsertRange(
-        indexSign,
-        signaturePerInput);
+      tXRaw.InsertRange(indexSign, signaturePerInput);
 
       tXRaw.RemoveRange(tXRaw.Count - 4, 4);
 

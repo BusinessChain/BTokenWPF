@@ -9,14 +9,11 @@ namespace BTokenLib
   class BlockBToken : Block
   {
     public BlockBToken()
-    {
-      Header = new HeaderBToken();
-    }
+    { }
 
     public BlockBToken(int sizeBuffer)
-    {
-      Buffer = new byte[sizeBuffer];
-    }
+      : base(sizeBuffer)
+    { }
 
 
     public void Parse(byte[] buffer)
