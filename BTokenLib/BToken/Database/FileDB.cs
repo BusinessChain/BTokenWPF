@@ -28,7 +28,7 @@ namespace BTokenLib
         Seek(0, SeekOrigin.End);
       }
 
-      public void SpendAccountInFileDB(byte[] iDAccount, TX tX)
+      public void SpendAccountInFileDB(TXBToken tX)
       {
         Position = 0;
 
@@ -36,7 +36,7 @@ namespace BTokenLib
         {
           int i = 0;
 
-          while (ReadByte() == iDAccount[i++])
+          while (ReadByte() == tX.IDAccount[i++])
             if (i == LENGTH_ID_ACCOUNT)
             {
               byte[] nonce = new byte[8];
@@ -47,7 +47,7 @@ namespace BTokenLib
 
               Account account = new()
               {
-                IDAccount = iDAccount,
+                IDAccount = tX.IDAccount,
                 Nonce = BitConverter.ToUInt64(nonce),
                 Value = BitConverter.ToInt64(value)
               };
@@ -76,7 +76,7 @@ namespace BTokenLib
         }
 
         throw new ProtocolException(
-          $"Account {iDAccount.ToHexString()} referenced by TX\n" +
+          $"Account {tX.IDAccount.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} not found in database.");
       }
 

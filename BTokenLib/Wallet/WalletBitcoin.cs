@@ -6,12 +6,12 @@ using System.Linq;
 
 namespace BTokenLib
 {
-  public partial class WalletUTXOModel : Wallet
+  public partial class WalletBitcoin : Wallet
   {
     public List<TXOutputWallet> Outputs = new();
 
 
-    public WalletUTXOModel(string privKeyDec)
+    public WalletBitcoin(string privKeyDec)
       : base(privKeyDec)
     { }
 

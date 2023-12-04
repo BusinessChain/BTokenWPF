@@ -134,26 +134,19 @@ namespace BTokenLib
 
     public void InsertBlock(Block block)
     {
-      List<TX> tXs = block.TXs;
-
-      for (int t = 1; t < tXs.Count; t++)
+      for (int t = 1; t < block.TXs.Count; t++)
       {
-        if (tXs[t].TXInputs.Count > 1)
-          throw new ProtocolException(
-            $"In Account based database model, tXs must contain one input only." +
-            $"But tX {tXs[t]} contains {tXs[t].TXInputs.Count}.");
-
-        byte[] iDAccount = tXs[t].TXInputs[0].TXIDOutput;
+        TXBToken tX = (TXBToken)block.TXs[t];
 
         int c = IndexCache;
         while (true)
         {
-          if (Caches[c].TryGetValue(iDAccount, out Account account))
+          if (Caches[c].TryGetValue(tX.IDAccount, out Account account))
           {
-            SpendAccount(tXs[t], account);
+            SpendAccount(tX, account);
 
             if (account.Value == 0)
-              Caches[c].Remove(iDAccount);
+              Caches[c].Remove(tX.IDAccount);
 
             break;
           }
@@ -162,15 +155,15 @@ namespace BTokenLib
 
           if (c == IndexCache)
           {
-            GetFileDB(iDAccount).SpendAccountInFileDB(iDAccount, tXs[t]);
+            GetFileDB(tX.IDAccount).SpendAccountInFileDB(tX);
             break;
           }
         }
 
-        InsertOutputs(tXs[t].TXOutputs, block.Header.Height);        
+        InsertOutputs(tX.TXOutputs, block.Header.Height);        
       }
       
-      InsertOutputs(tXs[0].TXOutputs, block.Header.Height);
+      InsertOutputs(block.TXs[0].TXOutputs, block.Header.Height);
 
       UpdateHashDatabase();
 
@@ -241,12 +234,12 @@ namespace BTokenLib
     }
 
     // Validate signature
-    static void SpendAccount(TX tX, Account accountInput)
+    static void SpendAccount(TXBToken tX, Account accountInput)
     {
       long valueSpend = tX.Fee;
       tX.TXOutputs.ForEach(o => valueSpend += o.Value);
             
-      if (accountInput.Nonce != ((TXBToken)tX).Nonce)
+      if (accountInput.Nonce != tX.Nonce)
         throw new ProtocolException(
           $"Account {accountInput.IDAccount.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} has unequal CountdownToReplay.");

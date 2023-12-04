@@ -9,6 +9,7 @@ namespace BTokenLib
 {
   class TXBToken : TX
   {
+    public byte[] IDAccount;
     public ulong Nonce;
   }
 }

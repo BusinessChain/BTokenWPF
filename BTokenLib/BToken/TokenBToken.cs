@@ -44,7 +44,7 @@ namespace BTokenLib
       Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
       LoadMinedUnconfirmed();
 
-      Wallet = new WalletAccountModel(File.ReadAllText($"Wallet{GetName()}/wallet"));
+      Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"));
     }
 
     void LoadMinedUnconfirmed()

@@ -20,7 +20,7 @@ namespace BTokenLib
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
-      Wallet = new WalletUTXOModel(File.ReadAllText($"Wallet{GetName()}/wallet"));
+      Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"));
     }
 
     public override Block CreateBlock()

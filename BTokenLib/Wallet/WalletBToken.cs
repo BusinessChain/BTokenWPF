@@ -5,12 +5,12 @@ using System.Linq;
 
 namespace BTokenLib
 {
-  public partial class WalletAccountModel : Wallet
+  public partial class WalletBToken : Wallet
   {
     public int NonceAccount;
 
 
-    public WalletAccountModel(string privKeyDec)
+    public WalletBToken(string privKeyDec)
       : base(privKeyDec)
     { }
 

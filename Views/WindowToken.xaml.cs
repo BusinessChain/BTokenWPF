@@ -80,8 +80,8 @@ namespace BTokenWPF
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
-      if (Token.Wallet is WalletUTXOModel)
-        foreach (TXOutputWallet tXOutputWallet in ((WalletUTXOModel)Token.Wallet).Outputs)
+      if (Token.Wallet is WalletBitcoin)
+        foreach (TXOutputWallet tXOutputWallet in ((WalletBitcoin)Token.Wallet).Outputs)
           ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 
