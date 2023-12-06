@@ -232,7 +232,7 @@ namespace BTokenLib
 
       index += IDToken.Length;
 
-      TokenAnchor tokenAnchor = new(tX, index, IDToken);
+      TokenAnchor tokenAnchor = new(tX, index, this);
 
       if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tX.Hash)) > 0)
         $"Detected self mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);

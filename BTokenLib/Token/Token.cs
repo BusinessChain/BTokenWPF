@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -494,7 +495,7 @@ namespace BTokenLib
 
       int indexTXRaw = 0;
 
-      TX tX = Block.ParseTX(
+      TX tX = ParseTX(
         tXRaw.ToArray(),
         ref indexTXRaw,
         block.SHA256);
@@ -504,6 +505,11 @@ namespace BTokenLib
 
       return tX;
     }
+
+    public abstract TX ParseTX(
+      byte[] buffer,
+      ref int indexBuffer,
+      SHA256 sHA256);
 
     public TX MakeTX(string address, long value, long fee)
     {

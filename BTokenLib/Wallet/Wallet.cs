@@ -104,7 +104,7 @@ namespace BTokenLib
 
       while (index < fileWalletHistoryTransactions.Length)
         HistoryTransactions.Add(
-          Block.ParseTX(
+          Token.ParseTX(
             fileWalletHistoryTransactions, 
             ref index, 
             sHA256));

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 
 namespace BTokenLib
 {
   public abstract class Block
   {
+    Token Token;
+
     const int HASH_BYTE_SIZE = 32;
 
     public Header Header;
@@ -25,11 +25,14 @@ namespace BTokenLib
     public long FeePerByte;
 
 
-    public Block()
-    { }
-
-    public Block(int sizeBuffer)
+    public Block(Token token)
     {
+      Token = token;
+    }
+
+    public Block(int sizeBuffer, Token token)
+    {
+      Token = token;
       Buffer = new byte[sizeBuffer];
     }
 
@@ -69,7 +72,7 @@ namespace BTokenLib
       
       if (tXCount == 1)
       {
-        TX tX = ParseTX(
+        TX tX = Token.ParseTX(
           Buffer,
           ref bufferIndex,
           SHA256);
@@ -83,7 +86,7 @@ namespace BTokenLib
         int tXsLengthMod2 = tXCount & 1;
         var merkleList = new byte[tXCount + tXsLengthMod2][];
 
-        TX tX = ParseTX(
+        TX tX = Token.ParseTX(
           Buffer,
           ref bufferIndex, 
           SHA256);
@@ -96,7 +99,7 @@ namespace BTokenLib
 
         for (int t = 1; t < tXCount; t += 1)
         {
-          tX = ParseTX(
+          tX = Token.ParseTX(
             Buffer,
             ref bufferIndex,
             SHA256);
@@ -114,63 +117,6 @@ namespace BTokenLib
 
       if (!hashMerkleRoot.IsEqual(ComputeMerkleRoot()))
         throw new ProtocolException("Payload hash not equal to merkle root.");
-    }
-
-    public TX ParseTX(
-      byte[] buffer,
-      ref int indexBuffer,
-      SHA256 sHA256)
-    {
-      TX tX;
-
-      if (this is BlockBitcoin)
-        tX = new TXBitcoin();
-      else
-        tX = new TXBToken();
-
-      try
-      {
-        int tXStartIndex = indexBuffer;
-
-        indexBuffer += 4; // Version
-
-        if (buffer[indexBuffer] == 0x00)
-          throw new NotImplementedException("Segwit is not implemented.");
-
-        int countInputs = VarInt.GetInt32(
-          buffer,
-          ref indexBuffer);
-
-        for (int i = 0; i < countInputs; i += 1)
-          tX.TXInputs.Add(new TXInput(buffer, ref indexBuffer));
-
-        int countTXOutputs = VarInt.GetInt32(
-          buffer,
-          ref indexBuffer);
-
-        for (int i = 0; i < countTXOutputs; i += 1)
-          tX.TXOutputs.Add(
-            new TXOutput(
-              buffer,
-              ref indexBuffer));
-
-        indexBuffer += 4; //BYTE_LENGTH_LOCK_TIME
-
-        tX.Hash = sHA256.ComputeHash(
-         sHA256.ComputeHash(
-           buffer,
-           tXStartIndex,
-           indexBuffer - tXStartIndex));
-
-        tX.TXIDShort = BitConverter.ToInt32(tX.Hash, 0);
-
-        return tX;
-      }
-      catch (ArgumentOutOfRangeException)
-      {
-        throw new ProtocolException(
-          "ArgumentOutOfRangeException thrown in ParseTX.");
-      }
     }
 
     public byte[] ComputeMerkleRoot()

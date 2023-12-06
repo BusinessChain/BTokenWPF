@@ -58,7 +58,7 @@ namespace BTokenLib
 
       int index = 0;
 
-      TX tX = Block.ParseTX(
+      TX tX = Token.ParseTX(
         tXRaw.ToArray(),
         ref index,
         SHA256);

@@ -11,7 +11,7 @@ namespace BTokenLib
   {
     public class TokenAnchor
     {
-      public byte[] IDToken;
+      Token Token;
 
       public List<TXOutputWallet> Inputs = new();
 
@@ -28,16 +28,17 @@ namespace BTokenLib
 
 
 
-      public TokenAnchor()
+      public TokenAnchor(Token token)
       {
+        Token = token;
         TX = new();
       }
 
-      public TokenAnchor(TX tX, int index, byte[] idToken)
+      public TokenAnchor(TX tX, int index, Token token)
       {
         TX = tX;
 
-        IDToken = idToken;
+        Token = token;
 
         Array.Copy(
           TX.TXOutputs[0].Buffer,
@@ -126,7 +127,7 @@ namespace BTokenLib
 
         int index = 0;
 
-        TX = Block.ParseTX(
+        TX = Token.ParseTX(
           tXRaw.ToArray(),
           ref index,
           sHA256);

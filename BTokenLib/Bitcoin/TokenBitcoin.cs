@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 
 
 namespace BTokenLib
@@ -26,6 +27,59 @@ namespace BTokenLib
     public override Block CreateBlock()
     {
       return new BlockBitcoin(SIZE_BUFFER_BLOCK);
+    }
+
+
+    public override TX ParseTX(
+      byte[] buffer,
+      ref int indexBuffer,
+      SHA256 sHA256)
+    {
+      TXBitcoin tX = new();
+
+      try
+      {
+        int tXStartIndex = indexBuffer;
+
+        indexBuffer += 4; // Version
+
+        if (buffer[indexBuffer] == 0x00)
+          throw new NotImplementedException("Segwit is not implemented.");
+
+        int countInputs = VarInt.GetInt32(
+          buffer,
+          ref indexBuffer);
+
+        for (int i = 0; i < countInputs; i += 1)
+          tX.TXInputs.Add(new TXInput(buffer, ref indexBuffer));
+
+        int countTXOutputs = VarInt.GetInt32(
+          buffer,
+          ref indexBuffer);
+
+        for (int i = 0; i < countTXOutputs; i += 1)
+          tX.TXOutputs.Add(
+            new TXOutput(
+              buffer,
+              ref indexBuffer));
+
+        indexBuffer += 4; //BYTE_LENGTH_LOCK_TIME
+
+        tX.Hash = sHA256.ComputeHash(
+         sHA256.ComputeHash(
+           buffer,
+           tXStartIndex,
+           indexBuffer - tXStartIndex));
+
+        tX.TXIDShort = BitConverter.ToInt32(tX.Hash, 0);
+
+        return tX;
+      }
+      catch (ArgumentOutOfRangeException)
+      {
+        throw new ProtocolException(
+          "ArgumentOutOfRangeException thrown in ParseTX.");
+      }
     }
 
     public override Header CreateHeaderGenesis()

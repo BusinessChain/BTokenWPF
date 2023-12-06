@@ -69,7 +69,7 @@ namespace BTokenLib
 
               int index = 0;
 
-              TX tX = Block.ParseTX(
+              TX tX = Token.ParseTX(
                 Payload,
                 ref index,
                 SHA256.Create());
