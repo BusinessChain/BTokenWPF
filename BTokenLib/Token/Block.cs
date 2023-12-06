@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 
@@ -69,9 +70,9 @@ namespace BTokenLib
       if (tXCount == 1)
       {
         TX tX = ParseTX(
-            Buffer,
-            ref bufferIndex,
-            SHA256);
+          Buffer,
+          ref bufferIndex,
+          SHA256);
 
         tX.IsCoinbase = true;
 
@@ -96,9 +97,9 @@ namespace BTokenLib
         for (int t = 1; t < tXCount; t += 1)
         {
           tX = ParseTX(
-          Buffer,
-          ref bufferIndex,
-          SHA256);
+            Buffer,
+            ref bufferIndex,
+            SHA256);
 
           TXs.Add(tX);
 
@@ -115,12 +116,17 @@ namespace BTokenLib
         throw new ProtocolException("Payload hash not equal to merkle root.");
     }
 
-    public static TX ParseTX(
+    public TX ParseTX(
       byte[] buffer,
       ref int indexBuffer,
       SHA256 sHA256)
     {
-      TX tX = new();
+      TX tX;
+
+      if (this is BlockBitcoin)
+        tX = new TXBitcoin();
+      else
+        tX = new TXBToken();
 
       try
       {

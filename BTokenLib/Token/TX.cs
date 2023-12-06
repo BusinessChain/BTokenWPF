@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace BTokenLib
 {
-  public class TX
+  public abstract class TX
   {
     public byte[] Hash;
 

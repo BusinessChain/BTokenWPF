@@ -58,24 +58,6 @@ namespace BTokenLib
         ValueChange = tX.TXOutputs[1].Value;
       }
 
-      public void GetInputPublicKey()
-      {
-        // Damit ich weiss an wen die BlockReward gehen soll
-        // Es ist die Adresse des Senders des AnkerTokens
-        byte[] scriptSig = TX.TXInputs[0].ScriptPubKey;
-
-        int startIndex = 0;
-        int lengthScript = scriptSig[startIndex++];
-        startIndex += lengthScript;
-
-        int lengthPubkey = scriptSig[startIndex++];
-        var publicKey = new byte[lengthPubkey];
-        Array.Copy(scriptSig, startIndex, publicKey, 0, lengthPubkey);
-
-        //var hashPublicKey = Wallet.ComputeHash160Pubkey(publicKey);
-      }
-
-
       public void Serialize(Wallet wallet, SHA256 sHA256, byte[] dataAnchorToken)
       {
         List<byte> tXRaw = new();
@@ -166,7 +148,6 @@ namespace BTokenLib
       {
         return
           $"Anchor token TX hash: {TX}\n" +
-          $"Number of inputs: {TX.TXInputs.Count}\n" +
           $"Fee: {TX.Fee}\n" +
           $"ValueChange: {ValueChange}\n" +
           $"Sequence number: {NumberSequence}\n" +
