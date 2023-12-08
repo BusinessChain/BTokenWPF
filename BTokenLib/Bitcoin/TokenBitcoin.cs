@@ -21,12 +21,12 @@ namespace BTokenLib
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
-      Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"));
+      Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
 
     public override Block CreateBlock()
     {
-      return new BlockBitcoin(SIZE_BUFFER_BLOCK);
+      return new BlockBitcoin(SIZE_BUFFER_BLOCK, this);
     }
 
 

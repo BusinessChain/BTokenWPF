@@ -44,7 +44,7 @@ namespace BTokenLib
       Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
       LoadMinedUnconfirmed();
 
-      Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"));
+      Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
 
     void LoadMinedUnconfirmed()
@@ -53,7 +53,7 @@ namespace BTokenLib
       {
         try
         {
-          BlockBToken block = new();
+          BlockBToken block = new(this);
           block.Parse(File.ReadAllBytes(pathFile));
           BlocksMined.Add(block);
 
@@ -158,7 +158,7 @@ namespace BTokenLib
 
     public override Block CreateBlock()
     {
-      return new BlockBToken(SIZE_BUFFER_BLOCK);
+      return new BlockBToken(SIZE_BUFFER_BLOCK, this);
     }
 
 

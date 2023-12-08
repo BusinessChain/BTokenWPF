@@ -11,8 +11,8 @@ namespace BTokenLib
     public List<TXOutputWallet> Outputs = new();
 
 
-    public WalletBitcoin(string privKeyDec)
-      : base(privKeyDec)
+    public WalletBitcoin(string privKeyDec, Token token)
+      : base(privKeyDec, token)
     { }
 
     public override TX CreateTX(string address, long value, long fee)

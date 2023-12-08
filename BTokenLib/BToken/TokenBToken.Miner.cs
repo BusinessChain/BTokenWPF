@@ -140,7 +140,7 @@ namespace BTokenLib
 
     BlockBToken MinerBlock()
     {
-      BlockBToken block = new();
+      BlockBToken block = new(this);
 
       int height = HeaderTip.Height + 1;
 

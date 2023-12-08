@@ -27,13 +27,6 @@ namespace BTokenLib
       public TX TX;
 
 
-
-      public TokenAnchor(Token token)
-      {
-        Token = token;
-        TX = new();
-      }
-
       public TokenAnchor(TX tX, int index, Token token)
       {
         TX = tX;

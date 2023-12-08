@@ -10,11 +10,12 @@ namespace BTokenLib
     const int NUMBER_OF_BLOCKS_HALFING_CYCLE = 210000;
 
 
-    public BlockBitcoin()
+    public BlockBitcoin(Token token) 
+      : base(token)
     { }
 
-    public BlockBitcoin(int sizeBuffer)
-      : base(sizeBuffer)
+    public BlockBitcoin(int sizeBuffer, Token token)
+      : base(sizeBuffer, token)
     { }
 
     public override HeaderBitcoin ParseHeader(

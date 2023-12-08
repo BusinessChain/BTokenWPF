@@ -8,11 +8,11 @@ namespace BTokenLib
 {
   class BlockBToken : Block
   {
-    public BlockBToken()
+    public BlockBToken(Token token) : base(token)
     { }
 
-    public BlockBToken(int sizeBuffer)
-      : base(sizeBuffer)
+    public BlockBToken(int sizeBuffer, Token token)
+      : base(sizeBuffer, token)
     { }
 
 

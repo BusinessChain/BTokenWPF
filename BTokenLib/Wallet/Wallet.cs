@@ -10,6 +10,8 @@ namespace BTokenLib
 {
   public abstract class Wallet
   {
+    protected Token Token;
+
     public const int LENGTH_DATA_P2PKH_INPUT = 180;
     public const int LENGTH_P2PKH = 25;
     public byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
@@ -35,7 +37,7 @@ namespace BTokenLib
     public long BalanceUnconfirmed;
 
 
-    public Wallet(string privKeyDec)
+    public Wallet(string privKeyDec, Token token)
     {
       PrivKeyDec = privKeyDec;
 

@@ -10,8 +10,8 @@ namespace BTokenLib
     public int NonceAccount;
 
 
-    public WalletBToken(string privKeyDec)
-      : base(privKeyDec)
+    public WalletBToken(string privKeyDec, Token token)
+      : base(privKeyDec, token)
     { }
 
     public override TX CreateTX(string address, long value, long fee)
