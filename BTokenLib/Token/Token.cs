@@ -23,8 +23,6 @@ namespace BTokenLib
 
     public Wallet Wallet;
 
-    public TXPool TXPool;
-
     public Network Network;
     public UInt16 Port;
 
@@ -72,8 +70,6 @@ namespace BTokenLib
       IndexingHeaderTip();
 
       Archiver = new(GetName());
-
-      TXPool = new();
 
       Port = port;
       Network = new(this, flagEnableInboundConnections);
@@ -394,14 +390,12 @@ namespace BTokenLib
       InsertInDatabase(block);
       AppendHeaderToTip(block.Header);
 
-      Wallet.InsertBlock(block, this);
+      Wallet.InsertBlock(block);
 
       FeeSatoshiPerByte =
         ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerByte + block.FeePerByte) /
         ORDER_AVERAGEING_FEEPERBYTE;
-
-      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
-            
+                  
       Archiver.ArchiveBlock(block);
 
       if (TokenChild != null)

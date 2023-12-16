@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BTokenLib
 {
-  class TXBitcoin : TX
+  public class TXBitcoin : TX
   {
 
     public List<TXInput> TXInputs = new();

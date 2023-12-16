@@ -27,11 +27,15 @@ namespace BTokenLib
       public TX TX;
 
 
-      public TokenAnchor(TX tX, int index, Token token)
+      public TokenAnchor(Token token)
+      {
+        Token = token;
+      }
+
+      public TokenAnchor(TX tX, int index, Token token) 
+        : this(token)
       {
         TX = tX;
-
-        Token = token;
 
         Array.Copy(
           TX.TXOutputs[0].Buffer,

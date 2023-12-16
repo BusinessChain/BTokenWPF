@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Security.Cryptography;
+using BTokenWPF;
 
 namespace BTokenLib
 {
@@ -43,6 +44,8 @@ namespace BTokenLib
 
       Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
       LoadMinedUnconfirmed();
+
+      TXPool = new PoolTXBToken();
 
       Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
@@ -105,6 +108,8 @@ namespace BTokenLib
         throw new ProtocolException(
           $"Output value of Coinbase TX {block.TXs[0]}\n" +
           $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
+
+      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
 
     public override void InsertDB(
@@ -164,54 +169,24 @@ namespace BTokenLib
 
     public override TX ParseTX(
       byte[] buffer,
-      ref int indexBuffer,
+      ref int index,
       SHA256 sHA256)
     {
       TXBToken tX = new();
 
-      try
-      {
-        int tXStartIndex = indexBuffer;
+      Array.Copy(buffer, index, tX.IDAccount, 0, 20);
+      index += 20;
 
-        indexBuffer += 4; // Version
+      tX.Nonce = BitConverter.ToUInt64(buffer, index);
+      index += 8;
 
-        if (buffer[indexBuffer] == 0x00)
-          throw new NotImplementedException("Segwit is not implemented.");
+      tX.LengthScript = VarInt.GetInt32(
+        buffer,
+        ref index);
 
-        int countInputs = VarInt.GetInt32(
-          buffer,
-          ref indexBuffer);
+      tX.ScriptPubKey = buffer.Skip(index).Take(tX.LengthScript).ToArray();
 
-        for (int i = 0; i < countInputs; i += 1)
-          tX.TXInputs.Add(new TXInput(buffer, ref indexBuffer));
-
-        int countTXOutputs = VarInt.GetInt32(
-          buffer,
-          ref indexBuffer);
-
-        for (int i = 0; i < countTXOutputs; i += 1)
-          tX.TXOutputs.Add(
-            new TXOutput(
-              buffer,
-              ref indexBuffer));
-
-        indexBuffer += 4; //BYTE_LENGTH_LOCK_TIME
-
-        tX.Hash = sHA256.ComputeHash(
-         sHA256.ComputeHash(
-           buffer,
-           tXStartIndex,
-           indexBuffer - tXStartIndex));
-
-        tX.TXIDShort = BitConverter.ToInt32(tX.Hash, 0);
-
-        return tX;
-      }
-      catch (ArgumentOutOfRangeException)
-      {
-        throw new ProtocolException(
-          "ArgumentOutOfRangeException thrown in ParseTX.");
-      }
+      return tX;
     }
 
     byte[] GetGenesisBlockBytes()

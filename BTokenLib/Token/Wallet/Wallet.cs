@@ -179,7 +179,7 @@ namespace BTokenLib
       }
     }
 
-    public abstract void InsertBlock(Block block, Token token);
+    public abstract void InsertBlock(Block block);
 
     public byte[] ComputeHash160Pubkey(byte[] publicKey)
     {

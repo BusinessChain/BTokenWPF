@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 
 namespace BTokenLib
 {
-  class TXBToken : TX
+  public class TXBToken : TX
   {
-    public byte[] IDAccount;
+    public byte[] IDAccount = new byte[32];
     public ulong Nonce;
+    public int LengthScript;
+    public byte[] ScriptPubKey;
   }
 }

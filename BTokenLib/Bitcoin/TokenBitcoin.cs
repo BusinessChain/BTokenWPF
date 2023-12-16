@@ -1,7 +1,9 @@
-﻿using System;
+﻿using BTokenWPF;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
+using System.Linq;
 
 
 namespace BTokenLib
@@ -21,6 +23,8 @@ namespace BTokenLib
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
+      TXPool = new PoolTXBitcoin();
+
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
 
@@ -28,7 +32,6 @@ namespace BTokenLib
     {
       return new BlockBitcoin(SIZE_BUFFER_BLOCK, this);
     }
-
 
     public override TX ParseTX(
       byte[] buffer,
@@ -118,6 +121,8 @@ namespace BTokenLib
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value == 0)
             TokenChild.DetectAnchorTokenInBlock(tX);
+
+      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
 
     public override List<string> GetSeedAddresses()

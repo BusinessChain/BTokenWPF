@@ -7,7 +7,7 @@ namespace BTokenLib
 {
   public partial class WalletBToken : Wallet
   {
-    public int NonceAccount;
+    public ulong NonceAccount;
 
 
     public WalletBToken(string privKeyDec, Token token)
@@ -70,15 +70,17 @@ namespace BTokenLib
       return tX;
     }
 
-    public override void InsertBlock(Block block, Token token)
+    public override void InsertBlock(Block block)
     {
       foreach (TX tX in block.TXs)
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
-            $"AddOutput to wallet {token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, token.LogFile, token.LogEntryNotifier);
+            $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-            TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
+            TXOutputWallet outputValueUnconfirmed = 
+              OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
+
             if (outputValueUnconfirmed != null)
             {
               BalanceUnconfirmed -= outputValueUnconfirmed.Value;
@@ -89,30 +91,20 @@ namespace BTokenLib
 
             Balance += tXOutput.Value;
 
-            $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
+            $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
           }
 
-      foreach (TX tX in block.TXs)
-        foreach (TXInput tXInput in tX.TXInputs)
+      foreach (TXBToken tX in block.TXs)
+      {
+        $"Try spend from {Token} wallet: {tX.IDAccount.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+        if (tX.IDAccount.IsEqual(PublicKeyHash160) && tX.Nonce == NonceAccount)
         {
-          $"Try spend input in wallet {token} refing output: {tXInput.TXIDOutput.ToHexString()}, index {tXInput.OutputIndex}".Log(this, token.LogFile, token.LogEntryNotifier);
-
-          TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
-            .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
-
-          if (outputValueUnconfirmedSpent != null)
-          {
-            OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
-            BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
-          }
-
-          if (tXInput.TXIDOutput.IsEqual(PublicKeyHash160) && tXInput.OutputIndex == NonceAccount)
-          {
-            Balance -= tX.TXOutputs.Sum(o => o.Value);
-            AddTXToHistory(tX);
-            $"Balance of wallet {token}: {Balance}".Log(this, token.LogFile, token.LogEntryNotifier);
-          }
+          Balance -= tX.TXOutputs.Sum(o => o.Value);
+          AddTXToHistory(tX);
+          $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
+      }
     }
 
 

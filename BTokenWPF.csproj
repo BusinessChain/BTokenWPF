@@ -18,6 +18,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="BTokenLib\Bitcoin\UTXO\**" />
+    <EmbeddedResource Remove="BTokenLib\Bitcoin\UTXO\**" />
+    <None Remove="BTokenLib\Bitcoin\UTXO\**" />
+    <Page Remove="BTokenLib\Bitcoin\UTXO\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BouncyCastle.NetCore" Version="1.9.0" />
   </ItemGroup>
 

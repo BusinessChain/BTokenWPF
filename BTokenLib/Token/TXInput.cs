@@ -20,8 +20,6 @@ namespace BTokenLib
     public int TXIDOutputShort;
     public int OutputIndex;
 
-    public byte[] ScriptPubKey;
-
     public uint Sequence;
 
 
