@@ -19,7 +19,12 @@ namespace BTokenWPF
     {
     }
 
-    public bool TryAddTX(TX tX)
+    public bool TryAddTXPool(TX tX)
+    {
+
+    }
+
+    public List<TX> GetTXs(out int countTXsPool, int countMax = int.MaxValue)
     {
 
     }

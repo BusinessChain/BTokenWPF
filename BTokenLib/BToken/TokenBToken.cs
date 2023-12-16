@@ -22,7 +22,8 @@ namespace BTokenLib
     const UInt16 COMPORT_BTOKEN = 8777;
 
     DatabaseAccounts DatabaseAccounts = new();
- 
+    PoolTXBToken TXPool = new();
+
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier)
       : base(
@@ -44,8 +45,6 @@ namespace BTokenLib
 
       Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
       LoadMinedUnconfirmed();
-
-      TXPool = new PoolTXBToken();
 
       Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }

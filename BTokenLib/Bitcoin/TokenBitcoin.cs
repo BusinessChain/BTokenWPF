@@ -15,6 +15,8 @@ namespace BTokenLib
     // work with config files instead.
     const UInt16 COMPORT_BITCOIN = 8333;
 
+    PoolTXBitcoin TXPool = new();
+
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -23,8 +25,6 @@ namespace BTokenLib
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
-      TXPool = new PoolTXBitcoin();
-
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
 

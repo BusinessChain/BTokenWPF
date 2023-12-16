@@ -78,8 +78,8 @@ namespace BTokenLib
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              if (!Token.TXPool.TryGetTX(tX.Hash, out TX tXInPool))
-                Token.TXPool.TryAddTX(tX);
+              if(!Token.TryAddTXPool(tX))
+                $"Could not add {tX} to tX pool.".Log(this, LogFiles, Token.LogEntryNotifier);
             }
             else if (Command == "dataDB")
             {
@@ -320,7 +320,7 @@ namespace BTokenLib
               InvMessage invMessage = new(Payload);
 
               List<Inventory> inventoriesRequest = invMessage.Inventories.Where(
-                i => i.IsTX() && !Token.TXPool.TryGetTX(i.Hash, out TX tXInPool)).ToList();
+                i => i.IsTX() && !Token.TryGetFromTXPool(i.Hash, out TX tXInPool)).ToList();
 
               if (inventoriesRequest.Count > 0)
                 SendMessage(new GetDataMessage(inventoriesRequest));
@@ -334,7 +334,7 @@ namespace BTokenLib
               foreach (Inventory inventory in getDataMessage.Inventories)
                 if (inventory.Type == InventoryType.MSG_TX)
                 {
-                  if (Token.TXPool.TryGetTX(inventory.Hash, out TX tXInPool))
+                  if (Token.TryGetFromTXPool(inventory.Hash, out TX tXInPool))
                     await SendMessage(new TXMessage(tXInPool.TXRaw.ToArray()));
                   else
                     await SendMessage(new NotFoundMessage(

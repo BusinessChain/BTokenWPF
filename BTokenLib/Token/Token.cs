@@ -407,6 +407,10 @@ namespace BTokenLib
         CreateImage();
     }
 
+    public abstract bool TryAddTXPool(TX tX);
+
+    public abstract bool TryGetFromTXPool(byte[] hashTx, out TX tx);
+
     public void CreateImage()
     {
       PathImage.TryMoveDirectoryTo(PathImageOld);
