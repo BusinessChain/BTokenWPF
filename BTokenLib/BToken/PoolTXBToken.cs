@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BTokenWPF
 {
@@ -19,7 +18,7 @@ namespace BTokenWPF
     {
     }
 
-    public bool TryAddTXPool(TX tX)
+    public bool TryAddTX(TX tX)
     {
 
     }

@@ -243,5 +243,19 @@ namespace BTokenLib
         COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX <
         h.HeaderTip.Height - h.HeaderRoot.Height);
     }
+
+    public override bool TryAddTXPool(TX tX)
+    {
+      return TXPool.TryAddTX(tX);
+    }
+
+    public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)
+    {
+      bool flagSuccess = TXPool.TryGetTX(hashTX, out TXBToken tXBToken);
+
+      tX = tXBToken;
+
+      return flagSuccess;
+    }
   }
 }

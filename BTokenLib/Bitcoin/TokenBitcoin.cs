@@ -166,5 +166,20 @@ namespace BTokenLib
 
     public override void LoadImageDatabase(string path)
     { }
+
+
+    public override bool TryAddTXPool(TX tX)
+    {
+      return TXPool.TryAddTX(tX);
+    }
+
+    public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)
+    {
+      bool flagSuccess = TXPool.TryGetTX(hashTX, out TXBitcoin tXBitcoin);
+
+      tX = tXBitcoin;
+
+      return flagSuccess;
+    }
   }
 }

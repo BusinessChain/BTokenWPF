@@ -15,7 +15,11 @@ namespace BTokenWPF
 
       LabelTXHash.Content = tX.Hash.ToHexString();
 
-      LabelCountInputs.Content = $"Number of Inputs: {tX.TXInputs.Count}";
+      if(tX is TXBitcoin)
+      {
+        TXBitcoin tXBitcoin = (TXBitcoin)tX;
+        LabelCountInputs.Content = $"Number of Inputs: {tXBitcoin.TXInputs.Count}";
+      }
       LabelCountOutputs.Content = $"Number of Outputs: {tX.TXOutputs.Count}";
       LabelFee.Content = $"Fee: {tX.Fee}";
     }

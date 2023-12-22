@@ -409,7 +409,7 @@ namespace BTokenLib
 
     public abstract bool TryAddTXPool(TX tX);
 
-    public abstract bool TryGetFromTXPool(byte[] hashTx, out TX tx);
+    public abstract bool TryGetFromTXPool(byte[] hashTX, out TX tX);
 
     public void CreateImage()
     {
@@ -591,13 +591,13 @@ namespace BTokenLib
 
     public void BroadcastTX(TX tX)
     {
-      TXPool.TryAddTX(tX);
+      TryAddTXPool(tX);
       Network.AdvertizeTX(tX);
     }
 
     public void BroadcastTX(List<TX> tXs)
     {
-      tXs.ForEach(tX => TXPool.TryAddTX(tX));
+      tXs.ForEach(tX => TryAddTXPool(tX));
       Network.AdvertizeTXs(tXs);
     }
 
