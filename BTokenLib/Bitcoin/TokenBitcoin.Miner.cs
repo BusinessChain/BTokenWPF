@@ -85,7 +85,7 @@ namespace BTokenLib
 
       uint seed = (uint)(indexThread * uint.MaxValue / NumberOfProcesses);
 
-      BlockBitcoin block = new();
+      BlockBitcoin block = new(this);
 
       int height = HeaderTip.Height + 1;
 

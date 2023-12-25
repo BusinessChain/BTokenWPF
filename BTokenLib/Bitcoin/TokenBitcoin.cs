@@ -170,7 +170,7 @@ namespace BTokenLib
 
     public override bool TryAddTXPool(TX tX)
     {
-      return TXPool.TryAddTX(tX);
+      return TXPool.TryAddTX((TXBitcoin)tX);
     }
 
     public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)

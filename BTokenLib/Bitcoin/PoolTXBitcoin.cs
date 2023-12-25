@@ -37,10 +37,8 @@ namespace BTokenWPF
     }
 
 
-    public bool TryAddTX(TX tXAbstract)
+    public bool TryAddTX(TXBitcoin tX)
     {
-      TXBitcoin tX = (TXBitcoin)tXAbstract;
-
       bool flagRemoveTXInPoolBeingRBFed = false;
       TX tXInPoolBeingRBFed = null;
 
@@ -55,7 +53,7 @@ namespace BTokenWPF
                 {
                   Debug.WriteLine(
                     $"Output {tXInput.TXIDOutput.ToHexString()} / {tXInput.OutputIndex} referenced by tX {tX} " +
-                    $"already spent by tX {tupelInputsInPool.tX}.");
+                    $"already referenced by tX {tupelInputsInPool.tX}.");
 
                   if (
                     FLAG_ENABLE_RBF &&

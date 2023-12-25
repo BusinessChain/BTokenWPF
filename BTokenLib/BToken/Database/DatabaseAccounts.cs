@@ -177,6 +177,11 @@ namespace BTokenLib
       //    $"height {block.Header.Height}.");
     }
 
+    public bool CheckTXValid(TXBToken tX)
+    {
+
+    }
+
     void UpdateHashDatabase()
     {
       for (int i = 0; i < COUNT_CACHES; i += 1)

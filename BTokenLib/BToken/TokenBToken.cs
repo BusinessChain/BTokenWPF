@@ -246,7 +246,12 @@ namespace BTokenLib
 
     public override bool TryAddTXPool(TX tX)
     {
-      return TXPool.TryAddTX(tX);
+      TXBToken tXBToken = (TXBToken)tX;
+
+      if (TXPool.TryAddTX(tXBToken))
+        return true;
+
+      return DatabaseAccounts.CheckTXValid(tXBToken);
     }
 
     public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)

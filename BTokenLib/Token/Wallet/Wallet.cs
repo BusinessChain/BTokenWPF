@@ -39,6 +39,8 @@ namespace BTokenLib
 
     public Wallet(string privKeyDec, Token token)
     {
+      Token = token;
+
       PrivKeyDec = privKeyDec;
 
       PublicKey = Crypto.GetPubKeyFromPrivKey(PrivKeyDec);
