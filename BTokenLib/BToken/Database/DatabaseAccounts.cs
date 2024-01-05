@@ -179,6 +179,9 @@ namespace BTokenLib
 
     public bool CheckTXValid(TXBToken tX)
     {
+      // Nebst der Signatur auch der Betrag und die Sequenznummer überprüfen und in DB-Werte in der TXBToken abgespeichern.
+      // Beim Betrag wird überprüft dass er nicht überschritten wird, und bei der Sequenznummer ob sie nicht kleiner ist.
+
 
     }
 

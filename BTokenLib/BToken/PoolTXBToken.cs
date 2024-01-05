@@ -24,8 +24,19 @@ namespace BTokenWPF
     public bool TryAddTX(TXBToken tX)
     {
       // falls ungültig dann exception werfen. 
-      // Return false falls noch überprüfung DB erforderlich. 
-      // bei einer Verkettung wurde die Parent TX ja schon von der DB überprüft.
+
+      // wenn eine TX in den Pool kommt, wurde sie schon von der DB überprüft. Dort wurde nebst
+      // der Signatur auch der Betrag und die Sequenznummer überprüft und in DB-Werte in der TXBToken abgespeichert.
+      // Beim Betrag wird überprüft dass er nicht überschritten wird, und bei der Sequenznummer ob sie nicht
+      // kleiner ist.
+
+      // Existieren im Pool bereits TXs die denselben Account referenzieren, muss geprüft werden 
+      // ob die neue TX sich per Sequenznummer eingliedert, sowie Gesamtbetrag den Betrag in der 
+      // DB nicht überschreitet.
+
+      // Die TXs im Pool müssen also per Account indexiert werden. Eine Indexierung per TX-Hash ist allenfalls
+      // nicht nötig wenn Peers TXs nur über AccountID anfordern können.
+
 
       bool flagRemoveTXInPoolBeingRBFed = false;
       TX tXInPoolBeingRBFed = null;

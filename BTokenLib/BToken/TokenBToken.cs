@@ -248,10 +248,11 @@ namespace BTokenLib
     {
       TXBToken tXBToken = (TXBToken)tX;
 
-      if (TXPool.TryAddTX(tXBToken))
-        return true;
+      if (DatabaseAccounts.CheckTXValid(tXBToken))
+        if (TXPool.TryAddTX(tXBToken))
+          return true;
 
-      return DatabaseAccounts.CheckTXValid(tXBToken);
+      return false;
     }
 
     public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)
