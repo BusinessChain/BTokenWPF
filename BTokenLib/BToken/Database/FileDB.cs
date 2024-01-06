@@ -52,7 +52,7 @@ namespace BTokenLib
                 Value = BitConverter.ToInt64(value)
               };
 
-              SpendAccount(tX, account);
+                            DatabaseAccounts.SpendAccount(tX, account);
 
               if (account.Value > 0)
               {

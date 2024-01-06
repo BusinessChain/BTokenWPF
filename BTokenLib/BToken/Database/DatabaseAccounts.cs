@@ -132,33 +132,36 @@ namespace BTokenLib
           $"Invalid prefix {bufferDB[index]} in serialized DB data.");
     }
 
+    bool TryGetCache(byte[] iDAccount, out CacheDatabaseAccounts cache)
+    {
+      cache = null;
+      int c = IndexCache;
+
+      while (true)
+      {
+        if (Caches[c].ContainsKey(iDAccount))
+        {
+          cache = Caches[c];
+          return true;
+        }
+
+        c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
+
+        if (c == IndexCache)
+          return false;
+      }
+    }
+
     public void InsertBlock(Block block)
     {
       for (int t = 1; t < block.TXs.Count; t++)
       {
         TXBToken tX = (TXBToken)block.TXs[t];
 
-        int c = IndexCache;
-        while (true)
-        {
-          if (Caches[c].TryGetValue(tX.IDAccount, out Account account))
-          {
-            SpendAccount(tX, account);
-
-            if (account.Value == 0)
-              Caches[c].Remove(tX.IDAccount);
-
-            break;
-          }
-
-          c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
-
-          if (c == IndexCache)
-          {
-            GetFileDB(tX.IDAccount).SpendAccountInFileDB(tX);
-            break;
-          }
-        }
+        if(TryGetCache(tX.IDAccount, out CacheDatabaseAccounts cache))
+          cache.SpendAccountInCache(tX);
+        else
+          GetFileDB(tX.IDAccount).SpendAccountInFileDB(tX);
 
         InsertOutputs(tX.TXOutputs, block.Header.Height);        
       }
@@ -179,10 +182,14 @@ namespace BTokenLib
 
     public bool CheckTXValid(TXBToken tX)
     {
-      // Nebst der Signatur auch der Betrag und die Sequenznummer überprüfen und in DB-Werte in der TXBToken abgespeichern.
+      // Die Signatur wird schon beim parsen geprüft.
+      // Den Betrag und die Sequenznummer überprüfen und DB-Werte in der TXBToken abgespeichern.
       // Beim Betrag wird überprüft dass er nicht überschritten wird, und bei der Sequenznummer ob sie nicht kleiner ist.
 
-
+      if (TryGetCache(tX.IDAccount, out CacheDatabaseAccounts cache))
+        cache.CheckTXValid(tX);
+      else
+        GetFileDB(tX.IDAccount).CheckTXValid(tX);
     }
 
     void UpdateHashDatabase()
@@ -242,23 +249,23 @@ namespace BTokenLib
     }
 
     // Validate signature
-    static void SpendAccount(TXBToken tX, Account accountInput)
+    static void SpendAccount(TXBToken tX, Account account)
     {
       long valueSpend = tX.Fee;
       tX.TXOutputs.ForEach(o => valueSpend += o.Value);
             
-      if (accountInput.Nonce != tX.Nonce)
+      if (account.Nonce != tX.Nonce)
         throw new ProtocolException(
-          $"Account {accountInput.IDAccount.ToHexString()} referenced by TX\n" +
+          $"Account {account.IDAccount.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} has unequal CountdownToReplay.");
 
-      if (accountInput.Value < valueSpend)
+      if (account.Value < valueSpend)
         throw new ProtocolException(
-          $"Account {accountInput.IDAccount.ToHexString()} referenced by TX\n" +
+          $"Account {account.IDAccount.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} does not have enough fund.");
 
-      accountInput.Nonce += 1;
-      accountInput.Value -= valueSpend;
+      account.Nonce += 1;
+      account.Value -= valueSpend;
     }
 
     void InsertOutputs(List<TXOutput> tXOutputs, int blockHeight)

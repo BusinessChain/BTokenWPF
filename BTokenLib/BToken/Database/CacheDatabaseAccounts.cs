@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.BouncyCastle.X509;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -12,9 +13,20 @@ namespace BTokenLib
       public byte[] Hash;
       SHA256 SHA256 = SHA256.Create();
 
-
-      public CacheDatabaseAccounts() : base(new EqualityComparerByteArray())
+      public CacheDatabaseAccounts() 
+        : base(new EqualityComparerByteArray())
       { }
+
+
+      public void SpendAccountInCache(TXBToken tX)
+      {
+        TryGetValue(tX.IDAccount, out Account account);
+
+        SpendAccount(tX, account);
+
+        if (account.Value == 0)
+          Remove(tX.IDAccount);
+      }
 
       public void UpdateHash()
       {
