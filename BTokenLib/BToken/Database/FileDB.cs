@@ -28,15 +28,21 @@ namespace BTokenLib
         Seek(0, SeekOrigin.End);
       }
 
-      public void SpendAccountInFileDB(TXBToken tX)
+      public bool CheckTXValid(TXBToken tX)
       {
-        Position = 0;
+        if (TryGetAccount(tX.IDAccount, out Account account))
+          return account.CheckTXValid(tX);
 
+        return false;
+      }
+
+      bool TryGetAccount(byte[] iDAccount, out Account account)
+      {
         while (Position < Length)
         {
           int i = 0;
 
-          while (ReadByte() == tX.IDAccount[i++])
+          while (ReadByte() == iDAccount[i++])
             if (i == LENGTH_ID_ACCOUNT)
             {
               byte[] nonce = new byte[8];
@@ -45,34 +51,45 @@ namespace BTokenLib
               byte[] value = new byte[8];
               Read(value);
 
-              Account account = new()
+              account = new()
               {
-                IDAccount = tX.IDAccount,
+                IDAccount = iDAccount,
                 Nonce = BitConverter.ToUInt64(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 
-                            DatabaseAccounts.SpendAccount(tX, account);
-
-              if (account.Value > 0)
-              {
-                Position -= LENGTH_NONCE + LENGTH_VALUE;
-                Write(BitConverter.GetBytes(account.Nonce));
-                Write(BitConverter.GetBytes(account.Value));
-              }
-              else
-              {
-                Position -= LENGTH_RECORD_DB;
-                Write(new byte[LENGTH_RECORD_DB]);
-
-                CountRecordsNullyfied += 1;
-              }
-
-              FlagHashOutdated = true;
-              return;
+              return true;
             }
 
-          Position += LENGTH_RECORD_DB - Position % LENGTH_RECORD_DB;
+          Position += LENGTH_RECORD_DB - Position % LENGTH_RECORD_DB; // Set the position to the beginning of next record
+        }
+
+        account = null;
+        return false;
+      }
+
+      public void SpendAccountInFileDB(TXBToken tX)
+      {
+        if(TryGetAccount(tX.IDAccount, out Account account))
+        {
+          SpendAccount(tX, account);
+
+          if (account.Value > 0)
+          {
+            Position -= LENGTH_NONCE + LENGTH_VALUE;
+            Write(BitConverter.GetBytes(account.Nonce));
+            Write(BitConverter.GetBytes(account.Value));
+          }
+          else
+          {
+            Position -= LENGTH_RECORD_DB;
+            Write(new byte[LENGTH_RECORD_DB]);
+
+            CountRecordsNullyfied += 1;
+          }
+
+          FlagHashOutdated = true;
+          return;
         }
 
         throw new ProtocolException(

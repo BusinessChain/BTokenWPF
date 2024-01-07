@@ -182,14 +182,16 @@ namespace BTokenLib
 
     public bool CheckTXValid(TXBToken tX)
     {
-      // Die Signatur wird schon beim parsen geprüft.
-      // Den Betrag und die Sequenznummer überprüfen und DB-Werte in der TXBToken abgespeichern.
-      // Beim Betrag wird überprüft dass er nicht überschritten wird, und bei der Sequenznummer ob sie nicht kleiner ist.
-
       if (TryGetCache(tX.IDAccount, out CacheDatabaseAccounts cache))
-        cache.CheckTXValid(tX);
-      else
-        GetFileDB(tX.IDAccount).CheckTXValid(tX);
+      {
+        cache.TryGetValue(tX.IDAccount, out Account account);
+
+        account.CheckTXValid(tX);
+
+        return true;
+      }
+
+      return GetFileDB(tX.IDAccount).CheckTXValid(tX);
     }
 
     void UpdateHashDatabase()
