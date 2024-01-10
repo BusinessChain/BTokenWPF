@@ -13,5 +13,11 @@ namespace BTokenLib
     public ulong Nonce;
     public int LengthScript;
     public byte[] ScriptPubKey;
+
+    public ulong NonceInDB;
+
+    public long Value;
+    public long ValueInDB;
   }
 }
+

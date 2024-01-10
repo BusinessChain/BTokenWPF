@@ -15,10 +15,12 @@
       if (Value < tX.Value)
         throw new ProtocolException($"Value {Value} on account {this}" +
           $"is lower than value {tX.Value} of tX {tX}.");
+      tX.ValueInDB = Value;
 
       if (Nonce < tX.Nonce)
         throw new ProtocolException($"Nonce {Nonce} on account {this}" +
           $"is lower than value {tX.Nonce} of tX {tX}.");
+      tX.NonceInDB = Nonce;
 
       return true;
     }
