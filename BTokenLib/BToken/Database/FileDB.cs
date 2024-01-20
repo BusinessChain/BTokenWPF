@@ -30,7 +30,7 @@ namespace BTokenLib
 
       public bool CheckTXValid(TXBToken tX)
       {
-        if (TryGetAccount(tX.IDAccount, out Account account))
+        if (TryGetAccount(tX.IDAccountSource, out Account account))
           return account.CheckTXValid(tX);
 
         return false;
@@ -70,7 +70,7 @@ namespace BTokenLib
 
       public void SpendAccountInFileDB(TXBToken tX)
       {
-        if(TryGetAccount(tX.IDAccount, out Account account))
+        if(TryGetAccount(tX.IDAccountSource, out Account account))
         {
           SpendAccount(tX, account);
 
@@ -93,7 +93,7 @@ namespace BTokenLib
         }
 
         throw new ProtocolException(
-          $"Account {tX.IDAccount.ToHexString()} referenced by TX\n" +
+          $"Account {tX.IDAccountSource.ToHexString()} referenced by TX\n" +
           $"{tX.Hash.ToHexString()} not found in database.");
       }
 

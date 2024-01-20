@@ -96,9 +96,9 @@ namespace BTokenLib
 
       foreach (TXBToken tX in block.TXs)
       {
-        $"Try spend from {Token} wallet: {tX.IDAccount.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-        if (tX.IDAccount.IsEqual(PublicKeyHash160) && tX.Nonce == NonceAccount)
+        if (tX.IDAccountSource.IsEqual(PublicKeyHash160) && tX.Nonce == NonceAccount)
         {
           Balance -= tX.TXOutputs.Sum(o => o.Value);
           AddTXToHistory(tX);

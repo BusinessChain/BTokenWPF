@@ -20,12 +20,12 @@ namespace BTokenLib
 
       public void SpendAccountInCache(TXBToken tX)
       {
-        TryGetValue(tX.IDAccount, out Account account);
+        TryGetValue(tX.IDAccountSource, out Account account);
 
         SpendAccount(tX, account);
 
         if (account.Value == 0)
-          Remove(tX.IDAccount);
+          Remove(tX.IDAccountSource);
       }
 
       public void UpdateHash()

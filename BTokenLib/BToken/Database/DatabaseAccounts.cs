@@ -158,10 +158,10 @@ namespace BTokenLib
       {
         TXBToken tX = (TXBToken)block.TXs[t];
 
-        if(TryGetCache(tX.IDAccount, out CacheDatabaseAccounts cache))
+        if(TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
           cache.SpendAccountInCache(tX);
         else
-          GetFileDB(tX.IDAccount).SpendAccountInFileDB(tX);
+          GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
 
         InsertOutputs(tX.TXOutputs, block.Header.Height);        
       }
@@ -182,16 +182,16 @@ namespace BTokenLib
 
     public bool CheckTXValid(TXBToken tX)
     {
-      if (TryGetCache(tX.IDAccount, out CacheDatabaseAccounts cache))
+      if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
       {
-        cache.TryGetValue(tX.IDAccount, out Account account);
+        cache.TryGetValue(tX.IDAccountSource, out Account account);
 
         account.CheckTXValid(tX);
 
         return true;
       }
 
-      return GetFileDB(tX.IDAccount).CheckTXValid(tX);
+      return GetFileDB(tX.IDAccountSource).CheckTXValid(tX);
     }
 
     void UpdateHashDatabase()

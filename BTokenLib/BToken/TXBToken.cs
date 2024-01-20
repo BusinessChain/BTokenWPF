@@ -9,7 +9,7 @@ namespace BTokenLib
 {
   public class TXBToken : TX
   {
-    public byte[] IDAccount = new byte[32];
+    public byte[] IDAccountSource = new byte[32];
     public ulong Nonce;
     public int LengthScript;
     public byte[] ScriptPubKey;

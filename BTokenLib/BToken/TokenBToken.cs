@@ -173,7 +173,7 @@ namespace BTokenLib
     {
       TXBToken tX = new();
 
-      Array.Copy(buffer, index, tX.IDAccount, 0, 20);
+      Array.Copy(buffer, index, tX.IDAccountSource, 0, 20);
       index += 20;
 
       tX.Nonce = BitConverter.ToUInt64(buffer, index);

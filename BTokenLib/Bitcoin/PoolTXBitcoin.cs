@@ -35,7 +35,6 @@ namespace BTokenWPF
         return TXPoolDict.Count;
     }
 
-
     public bool TryAddTX(TXBitcoin tX)
     {
       bool flagRemoveTXInPoolBeingRBFed = false;
@@ -90,8 +89,7 @@ namespace BTokenWPF
       }
     }
 
-
-    public List<TX> GetTXs(out int countTXsPool, int countMax = int.MaxValue)
+    public List<TX> GetTXs(out int countTXsPool, int countMax)
     {
       lock (LOCK_TXsPool)
       {
