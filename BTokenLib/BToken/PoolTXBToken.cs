@@ -10,6 +10,7 @@ namespace BTokenWPF
   {
     class TXBundle
     {
+      public byte[] IDAccountSource;
       public long FeeAveragePerTX;
       public List<TXBToken> TXs = new();
     }
@@ -22,11 +23,33 @@ namespace BTokenWPF
     Dictionary<byte[], List<TXBToken>> TXsByIDAccount =
       new(new EqualityComparerByteArray());
 
-    List<(byte[] IDAccountSource, TXBundle tXBundle)> TXBundlesSortedByFee = new();
+    List<TXBundle> TXBundlesSortedByFee = new();
 
 
     public void RemoveTXs(IEnumerable<byte[]> hashesTX)
-    { }
+    {
+      foreach (byte[] hashTX in hashesTX)
+      {
+        if (!TXsByHash.Remove(hashTX, out TXBToken tX))
+          continue;
+
+        TXsByIDAccount.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXs);
+        tXs.RemoveAt(0);
+
+        if (tXs.Count == 0)
+          TXsByIDAccount.Remove(tX.IDAccountSource);
+      }
+    }
+
+    void InsertTXBundle(TXBundle tXBundle)
+    {
+      int indexInsert = TXBundlesSortedByFee.FindIndex(b => b.FeeAveragePerTX < tXBundle.FeeAveragePerTX);
+
+      if (indexInsert == -1)
+        indexInsert = TXBundlesSortedByFee.Count;
+
+      TXBundlesSortedByFee.Insert(indexInsert, tXBundle);
+    }
 
     public bool TryAddTX(TXBToken tX)
     {
@@ -38,15 +61,38 @@ namespace BTokenWPF
             || tXsInPool.Sum(t => t.Value) + tX.Value > tX.ValueInDB)
             return false;
 
-          foreach((byte[] IDAccountSource, TXBundle tXBundle) item in TXBundlesSortedByFee)
+          int i = 0;
+          while(true)
           {
-            if (!tX.IDAccountSource.Equals(item.IDAccountSource))
-              continue;
+            TXBundle tXBundle = TXBundlesSortedByFee[i];
 
-            TXBToken tXLastBundle = item.tXBundle.TXs.Last();
-            if (tXLastBundle.Nonce + 1 == tX.Nonce)
+            if (!tX.IDAccountSource.Equals(tXBundle.IDAccountSource) ||
+              tX.Nonce > tXBundle.TXs.Last().Nonce + 1)
             {
-              if(tX.Fee > item.tXBundle.FeeAveragePerTX)
+              i += 1;
+              continue;
+            }
+
+            if (tX.Fee < tXBundle.FeeAveragePerTX)
+              InsertTXBundle(new()
+              {
+                IDAccountSource = tX.IDAccountSource,
+                FeeAveragePerTX = tX.Fee,
+                TXs = new List<TXBToken> { tX }
+              });
+            else
+            {
+              tXBundle.TXs.Add(tX);
+
+              if (tX.Fee > tXBundle.FeeAveragePerTX)
+              {
+                tXBundle.FeeAveragePerTX = tXBundle.TXs.Sum(t => t.Fee) / tXBundle.TXs.Count;
+                TXBundlesSortedByFee.RemoveAt(i);
+
+                InsertTXBundle(tXBundle);
+              }
+
+              break;
             }
           }
 
@@ -59,18 +105,12 @@ namespace BTokenWPF
 
           TXsByIDAccount.Add(tX.IDAccountSource, new List<TXBToken> { tX });
 
-          int indexInsert = TXBundlesSortedByFee.FindIndex(b => b.tXBundle.FeeAveragePerTX < tX.Fee);
-
-          if (indexInsert == -1)
-            indexInsert = TXBundlesSortedByFee.Count;
-
-          TXBundle tXBundle = new()
+          InsertTXBundle(new()
           {
+            IDAccountSource = tX.IDAccountSource,
             FeeAveragePerTX = tX.Fee,
             TXs = new List<TXBToken> { tX }
-          };
-
-          TXBundlesSortedByFee.Insert(indexInsert, (tX.IDAccountSource, tXBundle));
+          });
         }
 
         TXsByHash.Add(tX.Hash, tX);
@@ -79,22 +119,30 @@ namespace BTokenWPF
       }
     }
 
-    public List<TX> GetTXs(out int countTXsPool, int countMax)
+    public List<TXBToken> GetTXs(int countMax)
     {
-      countTXsPool = 0;
-      return TXsSortedByFee; // es dürfen keine nonces übersprungen werden.
+      List<TXBToken> tXs = new();
+
+      int i = 0;
+      while (i < TXBundlesSortedByFee.Count)
+      {
+        TXBundle tXBundle = TXBundlesSortedByFee[i];
+
+        if (tXs.Count + tXBundle.TXs.Count > countMax)
+          break;
+
+        tXs.AddRange(tXBundle.TXs);
+
+        i += 1;
+      }
+      
+      return tXs;
     }
 
     public bool TryGetTX(byte[] hashTX, out TXBToken tX)
     {
       lock (LOCK_TXsPool)
         return TXsByHash.TryGetValue(hashTX, out tX);
-    }
-
-    public int GetCountTXs()
-    {
-      lock (LOCK_TXsPool)
-        return TXsByHash.Count;
     }
   }
 }

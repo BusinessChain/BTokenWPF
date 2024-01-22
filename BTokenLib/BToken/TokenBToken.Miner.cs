@@ -150,8 +150,7 @@ namespace BTokenLib
       TX tXCoinbase = CreateCoinbaseTX(block, height, blockReward);
 
       block.TXs.Add(tXCoinbase);
-      block.TXs.AddRange(
-        TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
+      block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX));
 
       HeaderBToken header = new()
       {

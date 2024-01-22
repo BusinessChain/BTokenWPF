@@ -98,7 +98,7 @@ namespace BTokenLib
 
       if (bufferDB[index++] == 0x00)
       {
-        FileDB fileDB = new FileDB(
+        FileDB fileDB = new(
           Path.Combine(
             PathRootDB,
             bufferDB[index].ToString()));
