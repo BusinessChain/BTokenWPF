@@ -38,6 +38,18 @@ namespace BTokenWPF
 
         if (tXs.Count == 0)
           TXsByIDAccount.Remove(tX.IDAccountSource);
+
+        int indexBundle = TXBundlesSortedByFee.FindIndex(b => b.IDAccountSource.Equals(tX.IDAccountSource));
+        TXBundle tXBundle = TXBundlesSortedByFee[indexBundle];
+        TXBundlesSortedByFee.RemoveAt(indexBundle);
+
+        tXBundle.TXs.RemoveAt(0);
+
+        if (tXBundle.TXs.Count > 0)
+        {
+          tXBundle.FeeAveragePerTX = tXBundle.TXs.Sum(t => t.Fee) / tXBundle.TXs.Count;
+          InsertTXBundle(tXBundle);
+        }
       }
     }
 
