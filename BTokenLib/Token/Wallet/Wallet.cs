@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+
+// Remove this
 using Org.BouncyCastle.Crypto.Digests;
 
 
@@ -17,10 +19,7 @@ namespace BTokenLib
     public byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     public byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
-    Crypto Crypto = new();
-
     protected SHA256 SHA256 = SHA256.Create();
-    readonly RipeMD160Digest RIPEMD160 = new();
 
     protected string PrivKeyDec;
     protected byte[] PublicKey;
@@ -45,7 +44,7 @@ namespace BTokenLib
 
       PublicKey = Crypto.GetPubKeyFromPrivKey(PrivKeyDec);
 
-      PublicKeyHash160 = ComputeHash160Pubkey(PublicKey);
+      PublicKeyHash160 = Crypto.ComputeHash160Pubkey(PublicKey, SHA256);
 
       AddressAccount = PubKeyHashToBase58Check(PublicKeyHash160);
 
@@ -59,22 +58,7 @@ namespace BTokenLib
     public abstract bool CreateDataTX(
       double feeSatoshiPerByte, 
       byte[] data,
-      out Token.TokenAnchor tokenAnchor);
-
-    public static string PubKeyHashToBase58Check(byte[] pubKeyArray)
-    {
-      List<byte> pubKey = pubKeyArray.ToList();
-      pubKey.Insert(0, 0x00);
-
-      SHA256 sHA256 = SHA256.Create();
-
-      byte[] checksum = sHA256.ComputeHash(
-        sHA256.ComputeHash(pubKey.ToArray()));
-
-      pubKey.AddRange(checksum.Take(4));
-
-      return pubKey.ToArray().ToBase58String();
-    }
+      out Token.TokenAnchor tokenAnchor);       
 
     public static byte[] Base58CheckToPubKeyHash(string base58)
     {
@@ -97,6 +81,19 @@ namespace BTokenLib
       return rv;
     }
 
+    public string PubKeyHashToBase58Check(byte[] pubKeyArray)
+    {
+      List<byte> pubKey = pubKeyArray.ToList();
+      pubKey.Insert(0, 0x00);
+
+      byte[] checksum = SHA256.ComputeHash(
+        SHA256.ComputeHash(pubKey.ToArray()));
+
+      pubKey.AddRange(checksum.Take(4));
+
+      return pubKey.ToArray().ToBase58String();
+    }
+       
     public virtual void LoadImage(string path)
     {
       byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
@@ -183,17 +180,6 @@ namespace BTokenLib
 
     public abstract void InsertBlock(Block block);
 
-    public byte[] ComputeHash160Pubkey(byte[] publicKey)
-    {
-      byte[] publicKeyHash160 = new byte[20];
-
-      var hashPublicKey = SHA256.ComputeHash(publicKey);
-      RIPEMD160.BlockUpdate(hashPublicKey, 0, hashPublicKey.Length);
-      RIPEMD160.DoFinal(publicKeyHash160, 0);
-
-      return publicKeyHash160;
-    }
-
     protected bool TryDetectTXOutputSpendable(TXOutput tXOutput)
     {
       if (tXOutput.LengthScript != LENGTH_P2PKH)
@@ -227,7 +213,8 @@ namespace BTokenLib
     {
       byte[] signature = Crypto.GetSignature(
       PrivKeyDec,
-      tXRaw.ToArray());
+      tXRaw.ToArray(),
+      SHA256);
 
       List<byte> scriptSig = new();
 

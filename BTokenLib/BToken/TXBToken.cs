@@ -11,8 +11,9 @@ namespace BTokenLib
   {
     public byte[] IDAccountSource = new byte[32];
     public ulong Nonce;
-    public int LengthScript;
-    public byte[] ScriptPubKey;
+    public int LengthSig;
+    public byte[] PubKeyCompressed;
+    public byte[] Signature;
 
     public ulong NonceInDB;
 

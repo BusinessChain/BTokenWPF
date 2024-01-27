@@ -250,21 +250,22 @@ namespace BTokenLib
       return false;
     }
 
-    // Validate signature
     static void SpendAccount(TXBToken tX, Account account)
-    {
+    {            
+      if (account.Nonce != tX.Nonce)
+        throw new ProtocolException($"Account {account} referenced by TX {tX} has unequal Nonce.");
+
       long valueSpend = tX.Fee;
       tX.TXOutputs.ForEach(o => valueSpend += o.Value);
-            
-      if (account.Nonce != tX.Nonce)
-        throw new ProtocolException(
-          $"Account {account.IDAccount.ToHexString()} referenced by TX\n" +
-          $"{tX.Hash.ToHexString()} has unequal CountdownToReplay.");
 
       if (account.Value < valueSpend)
-        throw new ProtocolException(
-          $"Account {account.IDAccount.ToHexString()} referenced by TX\n" +
-          $"{tX.Hash.ToHexString()} does not have enough fund.");
+        throw new ProtocolException($"Account {account} referenced by TX {tX} does not have enough fund.");
+
+      if(!Crypto.VerifySignature(
+        tX.TXRaw.Skip(tX.LengthSig).ToArray(), 
+        tX.PubKeyCompressed, 
+        tX.Signature))
+        throw new ProtocolException($"TX {tX} contains invalid signature.");
 
       account.Nonce += 1;
       account.Value -= valueSpend;

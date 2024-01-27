@@ -173,17 +173,23 @@ namespace BTokenLib
     {
       TXBToken tX = new();
 
-      Array.Copy(buffer, index, tX.IDAccountSource, 0, 20);
-      index += 20;
+      tX.LengthSig = buffer[index++];
+      Array.Copy(buffer, index, tX.Signature, 0, tX.LengthSig);
+      index += tX.LengthSig;
+
+      int lengthPubKey = buffer[index++];
+      Array.Copy(buffer, index, tX.PubKeyCompressed, 0, lengthPubKey);
+      index += lengthPubKey;
 
       tX.Nonce = BitConverter.ToUInt64(buffer, index);
       index += 8;
 
-      tX.LengthScript = VarInt.GetInt32(
-        buffer,
-        ref index);
+      int countOutputs = buffer[index++];
 
-      tX.ScriptPubKey = buffer.Skip(index).Take(tX.LengthScript).ToArray();
+      for(int i = 0; i < countOutputs; i += 1)
+      {
+
+      }
 
       return tX;
     }

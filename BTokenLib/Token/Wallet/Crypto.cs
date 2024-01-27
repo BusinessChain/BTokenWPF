@@ -1,30 +1,33 @@
 ﻿using System;
+
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
-using System.Security.Cryptography;
+using Org.BouncyCastle.Crypto.Digests;
+using Org.BouncyCastle.Math;
 
+using System.Security.Cryptography;
+using Org.BouncyCastle.Asn1.X9;
 
 namespace BTokenLib
 {
-  public class Crypto
-  {
-    SHA256 SHA256 = SHA256.Create();
-       
-    bool VerifySignature(
+  public static class Crypto
+  {       
+    public static bool VerifySignature(
       byte[] message,
       byte[] publicKey,
       byte[] signature)
     {
-      var curve = SecNamedCurves.GetByName("secp256k1");
-      var domain = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H);
+      X9ECParameters curve = SecNamedCurves.GetByName("secp256k1");
 
-      var q = curve.Curve.DecodePoint(publicKey);
+      // Experimentiere mit komprimiertem pubkey.
+      //Org.BouncyCastle.Math.EC.ECPoint bla = curve.Curve.DecodePoint(publicKey);
+      //bla.get
 
-      var keyParameters = new ECPublicKeyParameters(
-        q,
-        domain);
+      ECPublicKeyParameters keyParameters = new(
+        curve.Curve.DecodePoint(publicKey),
+        new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H));
 
       ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
 
@@ -34,29 +37,31 @@ namespace BTokenLib
       return signer.VerifySignature(signature);
     }
 
-    public byte[] GetSignature(
+    //static ECDomainParameters SPEC = ECNamedCurveTable.getParameterSpec("secp256k1");
+
+    //static byte[] compressedToUncompressed(byte[] compKey)
+    //{
+    //  ECPoint point = SPEC.getCurve().decodePoint(compKey);
+    //  byte[] x = point.getXCoord().getEncoded();
+    //  byte[] y = point.getYCoord().getEncoded();
+    //  // concat 0x04, x, and y, make sure x and y has 32-bytes:
+    //  return concat(new byte[] { 0x04 }, x, y);
+    //}
+
+    public static byte[] GetSignature(
       string privateKey, 
-      byte[] message)
-    {
+      byte[] message,
+      SHA256 sHA256)
+    {      
+      message = sHA256.ComputeHash(message, 0, message.Length);
+
       var curve = SecNamedCurves.GetByName("secp256k1");
 
-      var domain = new ECDomainParameters(
-        curve.Curve, 
-        curve.G, 
-        curve.N, 
-        curve.H);
-      
-      message = SHA256.ComputeHash(
-        message,
-        0,
-        message.Length);
+      ECPrivateKeyParameters keyParameters = new(
+        new BigInteger(privateKey),
+        new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H));
 
-      ISigner signer = SignerUtilities
-        .GetSigner("SHA-256withECDSA");
-      
-      var keyParameters = new ECPrivateKeyParameters(
-        new Org.BouncyCastle.Math.BigInteger(privateKey),
-        domain);
+      ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
 
       while (true)
       {
@@ -65,25 +70,14 @@ namespace BTokenLib
 
         byte[] signature = signer.GenerateSignature();
 
-        if (IsSValueTooHigh(signature))
-        {
+        if (signature[signature[3] + 5] > 32)
           continue;
-        }
 
         return signature;
       }
     }
 
-    bool IsSValueTooHigh(byte[] signature)
-    {
-      int lengthR = signature[3];
-      int lengthSValue = signature[3 + lengthR + 2];
-
-      return lengthSValue > 32;
-    }
-
-    public byte[] GetPubKeyFromPrivKey(
-      string privKey)
+    public static byte[] GetPubKeyFromPrivKey(string privKey)
     {
       var curve = SecNamedCurves.GetByName("secp256k1");
 
@@ -98,6 +92,19 @@ namespace BTokenLib
 
       var publicKey = new ECPublicKeyParameters(q, domain);
       return publicKey.Q.GetEncoded();
+    }
+
+    public static byte[] ComputeHash160Pubkey(byte[] publicKey, SHA256 sHA256)
+    {
+      byte[] publicKeyHash160 = new byte[20];
+
+      var hashPublicKey = sHA256.ComputeHash(publicKey);
+
+      RipeMD160Digest RIPEMD160 = new();
+      RIPEMD160.BlockUpdate(hashPublicKey, 0, hashPublicKey.Length);
+      RIPEMD160.DoFinal(publicKeyHash160, 0);
+
+      return publicKeyHash160;
     }
   }
 }
