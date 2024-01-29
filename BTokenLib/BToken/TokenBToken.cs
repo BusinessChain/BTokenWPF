@@ -98,7 +98,7 @@ namespace BTokenLib
       DatabaseAccounts.InsertBlock(block);
 
       long outputValueTXCoinbase = 0;
-      block.TXs[0].TXOutputs.ForEach(o => outputValueTXCoinbase += o.Value);
+      ((TXBToken)block.TXs[0]).Outputs.ForEach(o => outputValueTXCoinbase += o.Value);
 
       long blockReward = BLOCK_REWARD_INITIAL >>
         block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
@@ -165,7 +165,6 @@ namespace BTokenLib
       return new BlockBToken(SIZE_BUFFER_BLOCK, this);
     }
 
-
     public override TX ParseTX(
       byte[] buffer,
       ref int index,
@@ -177,18 +176,43 @@ namespace BTokenLib
       Array.Copy(buffer, index, tX.Signature, 0, tX.LengthSig);
       index += tX.LengthSig;
 
+      int startIndexMessage = index;
+
       int lengthPubKey = buffer[index++];
       Array.Copy(buffer, index, tX.PubKeyCompressed, 0, lengthPubKey);
       index += lengthPubKey;
 
+      if (!Crypto.VerifySignature(
+        buffer,
+        startIndexMessage,
+        tX.PubKeyCompressed,
+        tX.Signature))
+        throw new ProtocolException($"TX {tX} contains invalid signature.");
+
+      tX.IDAccountSource = Crypto.ComputeHash160(tX.PubKeyCompressed, sHA256);
+
       tX.Nonce = BitConverter.ToUInt64(buffer, index);
       index += 8;
+
+      tX.Fee = BitConverter.ToInt64(buffer, index);
+      index += 8;
+
+      tX.Value += tX.Fee;
 
       int countOutputs = buffer[index++];
 
       for(int i = 0; i < countOutputs; i += 1)
       {
+        byte[] iDAccount = new byte[TXBToken.LENGTH_IDACCOUNT];
+        Array.Copy(buffer, index, iDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
+        index += TXBToken.LENGTH_IDACCOUNT;
 
+        long value = BitConverter.ToInt64(buffer, index);
+        index += 8;
+
+        tX.Outputs.Add((iDAccount, value));
+
+        tX.Value += value;
       }
 
       return tX;

@@ -163,10 +163,10 @@ namespace BTokenLib
         else
           GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
 
-        InsertOutputs(tX.TXOutputs, block.Header.Height);        
+        InsertOutputs(tX.Outputs, block.Header.Height);        
       }
-      
-      InsertOutputs(block.TXs[0].TXOutputs, block.Header.Height);
+
+      InsertOutputs(((TXBToken)block.TXs[0]).Outputs, block.Header.Height);
 
       UpdateHashDatabase();
 
@@ -255,31 +255,21 @@ namespace BTokenLib
       if (account.Nonce != tX.Nonce)
         throw new ProtocolException($"Account {account} referenced by TX {tX} has unequal Nonce.");
 
-      long valueSpend = tX.Fee;
-      tX.TXOutputs.ForEach(o => valueSpend += o.Value);
-
-      if (account.Value < valueSpend)
+      if (account.Value < tX.Value)
         throw new ProtocolException($"Account {account} referenced by TX {tX} does not have enough fund.");
 
-      if(!Crypto.VerifySignature(
-        tX.TXRaw.Skip(tX.LengthSig).ToArray(), 
-        tX.PubKeyCompressed, 
-        tX.Signature))
-        throw new ProtocolException($"TX {tX} contains invalid signature.");
-
       account.Nonce += 1;
-      account.Value -= valueSpend;
+      account.Value -= tX.Value;
     }
 
-    void InsertOutputs(List<TXOutput> tXOutputs, int blockHeight)
+    void InsertOutputs(
+      List<(byte[] IDAccount, long Value)> outputs, 
+      int blockHeight)
     {
-      for (int i = 0; i < tXOutputs.Count; i++)
+      for (int i = 0; i < outputs.Count; i++)
       {
-        byte[] iDAccount = tXOutputs[i].Buffer
-          .Skip(tXOutputs[i].StartIndexScript)
-          .Take(LENGTH_ID_ACCOUNT).ToArray();
-
-        long outputValueTX = tXOutputs[i].Value;
+        byte[] iDAccount = outputs[i].IDAccount;
+        long outputValueTX = outputs[i].Value;
 
         int c = IndexCache;
 

@@ -9,13 +9,15 @@ using Org.BouncyCastle.Math;
 
 using System.Security.Cryptography;
 using Org.BouncyCastle.Asn1.X9;
+using System.Linq;
 
 namespace BTokenLib
 {
   public static class Crypto
   {       
     public static bool VerifySignature(
-      byte[] message,
+      byte[] buffer,
+      int startIndex,
       byte[] publicKey,
       byte[] signature)
     {
@@ -32,7 +34,7 @@ namespace BTokenLib
       ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
 
       signer.Init(false, keyParameters);
-      signer.BlockUpdate(message, 0, message.Length);
+      signer.BlockUpdate(buffer, startIndex, buffer.Length - startIndex);
 
       return signer.VerifySignature(signature);
     }
@@ -94,11 +96,11 @@ namespace BTokenLib
       return publicKey.Q.GetEncoded();
     }
 
-    public static byte[] ComputeHash160Pubkey(byte[] publicKey, SHA256 sHA256)
+    public static byte[] ComputeHash160(byte[] data, SHA256 sHA256)
     {
       byte[] publicKeyHash160 = new byte[20];
 
-      var hashPublicKey = sHA256.ComputeHash(publicKey);
+      var hashPublicKey = sHA256.ComputeHash(data);
 
       RipeMD160Digest RIPEMD160 = new();
       RIPEMD160.BlockUpdate(hashPublicKey, 0, hashPublicKey.Length);

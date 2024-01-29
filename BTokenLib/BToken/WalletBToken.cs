@@ -72,7 +72,7 @@ namespace BTokenLib
 
     public override void InsertBlock(Block block)
     {
-      foreach (TX tX in block.TXs)
+      foreach (TXBToken tX in block.TXs)
         foreach (TXOutput tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {

@@ -14,8 +14,6 @@ namespace BTokenLib
 
     public bool IsCoinbase;
 
-    public List<TXOutput> TXOutputs = new();
-
     public long Fee;
 
 

@@ -44,7 +44,7 @@ namespace BTokenLib
 
       PublicKey = Crypto.GetPubKeyFromPrivKey(PrivKeyDec);
 
-      PublicKeyHash160 = Crypto.ComputeHash160Pubkey(PublicKey, SHA256);
+      PublicKeyHash160 = Crypto.ComputeHash160(PublicKey, SHA256);
 
       AddressAccount = PubKeyHashToBase58Check(PublicKeyHash160);
 
