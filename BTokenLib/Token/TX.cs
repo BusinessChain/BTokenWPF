@@ -10,11 +10,11 @@ namespace BTokenLib
 
     public List<byte> TXRaw = new();
 
-    public int TXIDShort;
-
     public bool IsCoinbase;
 
     public long Fee;
+
+    public List<TXOutput> TXOutputs = new();
 
 
     public string GetStringTXRaw()

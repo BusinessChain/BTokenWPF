@@ -154,19 +154,18 @@ namespace BTokenLib
 
     public void InsertBlock(Block block)
     {
-      for (int t = 1; t < block.TXs.Count; t++)
+      InsertOutputs(block.TXs[0].TXOutputs, block.Header.Height);
+
+      foreach(TXBToken tX in block.TXs)
       {
-        TXBToken tX = (TXBToken)block.TXs[t];
+        if (!tX.IsCoinbase)
+          if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
+            cache.SpendAccountInCache(tX);
+          else
+            GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
 
-        if(TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
-          cache.SpendAccountInCache(tX);
-        else
-          GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
-
-        InsertOutputs(tX.Outputs, block.Header.Height);        
+        InsertOutputs(tX.TXOutputs, block.Header.Height);        
       }
-
-      InsertOutputs(((TXBToken)block.TXs[0]).Outputs, block.Header.Height);
 
       UpdateHashDatabase();
 
@@ -263,7 +262,7 @@ namespace BTokenLib
     }
 
     void InsertOutputs(
-      List<(byte[] IDAccount, long Value)> outputs, 
+      List<TXOutput> outputs, 
       int blockHeight)
     {
       for (int i = 0; i < outputs.Count; i++)

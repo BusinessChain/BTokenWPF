@@ -74,8 +74,6 @@ namespace BTokenLib
            tXStartIndex,
            indexBuffer - tXStartIndex));
 
-        tX.TXIDShort = BitConverter.ToInt32(tX.Hash, 0);
-
         return tX;
       }
       catch (ArgumentOutOfRangeException)
@@ -118,9 +116,7 @@ namespace BTokenLib
     protected override void InsertInDatabase(Block block)
     {
       foreach (TX tX in block.TXs)
-        foreach (TXOutput tXOutput in tX.TXOutputs)
-          if (tXOutput.Value == 0)
-            TokenChild.DetectAnchorTokenInBlock(tX);
+        TokenChild.DetectAnchorTokenInBlock(tX);
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }

@@ -98,7 +98,7 @@ namespace BTokenLib
       DatabaseAccounts.InsertBlock(block);
 
       long outputValueTXCoinbase = 0;
-      ((TXBToken)block.TXs[0]).Outputs.ForEach(o => outputValueTXCoinbase += o.Value);
+      block.TXs[0].TXOutputs.ForEach(o => outputValueTXCoinbase += o.Value);
 
       long blockReward = BLOCK_REWARD_INITIAL >>
         block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
@@ -210,7 +210,7 @@ namespace BTokenLib
         long value = BitConverter.ToInt64(buffer, index);
         index += 8;
 
-        tX.Outputs.Add((iDAccount, value));
+        tX.TXOutputs.Add((iDAccount, value));
 
         tX.Value += value;
       }

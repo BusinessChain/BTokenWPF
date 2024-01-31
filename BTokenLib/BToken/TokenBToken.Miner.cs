@@ -209,36 +209,36 @@ namespace BTokenLib
       return true;
     }
 
-
     public override void DetectAnchorTokenInBlock(TX tX)
     {
-      TXOutput tXOutput = tX.TXOutputs[0];
+      foreach(TXOutput tXOutput in tX.TXOutputs)
+      {
+        int index = tXOutput.StartIndexScript;
 
-      int index = tXOutput.StartIndexScript;
+        if (tXOutput.Buffer[index] != 0x6A)
+          return;
 
-      if (tXOutput.Buffer[index] != 0x6A)
-        return;
+        index += 1;
 
-      index += 1;
+        if (tXOutput.Buffer[index] != LENGTH_DATA_ANCHOR_TOKEN)
+          return;
 
-      if (tXOutput.Buffer[index] != LENGTH_DATA_ANCHOR_TOKEN)
-        return;
+        index += 1;
 
-      index += 1;
+        if (!IDToken.IsEqual(tXOutput.Buffer, index))
+          return;
 
-      if (!IDToken.IsEqual(tXOutput.Buffer, index))
-        return;
+        index += IDToken.Length;
 
-      index += IDToken.Length;
+        TokenAnchor tokenAnchor = new(tX, index, this);
 
-      TokenAnchor tokenAnchor = new(tX, index, this);
+        if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tX.Hash)) > 0)
+          $"Detected self mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
+        else
+          $"Detected foreign mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
 
-      if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tX.Hash)) > 0)
-        $"Detected self mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-      else
-        $"Detected foreign mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-
-      TokensAnchorDetectedInBlock.Add(tokenAnchor);
+        TokensAnchorDetectedInBlock.Add(tokenAnchor);
+      }      
     }
 
     public override void SignalParentBlockInsertion(

@@ -22,8 +22,6 @@ namespace BTokenLib
 
     public long Value;
     public long ValueInDB;
-
-    public List<(byte[] IDAccount, long Value)> Outputs = new();
   }
 }
 
