@@ -73,7 +73,7 @@ namespace BTokenLib
     public override void InsertBlock(Block block)
     {
       foreach (TXBToken tX in block.TXs)
-        foreach (TXOutput tXOutput in tX.TXOutputs)
+        foreach (TXOutputBToken tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
             $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
@@ -100,7 +100,7 @@ namespace BTokenLib
 
         if (tX.IDAccountSource.IsEqual(PublicKeyHash160) && tX.Nonce == NonceAccount)
         {
-          Balance -= tX.TXOutputs.Sum(o => o.Value);
+          Balance -= tX.TXOutputs.Sum(o => ((TXOutputBToken)o).Value);
           AddTXToHistory(tX);
           $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
         }

@@ -116,7 +116,7 @@ namespace BTokenLib
     protected override void InsertInDatabase(Block block)
     {
       foreach (TX tX in block.TXs)
-        TokenChild.DetectAnchorTokenInBlock(tX);
+        TokenChild.DetectAnchorToken(tX);
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }

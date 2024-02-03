@@ -154,7 +154,6 @@ namespace BTokenLib
 
       text += $"\nPrint blocks {GetName()}.\n";
 
-
       Block block = CreateBlock();
       int i = 1;
 
@@ -561,7 +560,7 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void DetectAnchorTokenInBlock(TX tX)
+    public virtual void DetectAnchorToken(TX tX)
     { throw new NotImplementedException(); }
 
     public virtual void SignalParentBlockInsertion(

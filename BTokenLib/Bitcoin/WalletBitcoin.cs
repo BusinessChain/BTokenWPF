@@ -208,7 +208,7 @@ namespace BTokenLib
     public override void InsertBlock(Block block)
     {
       foreach (TXBitcoin tX in block.TXs)
-        foreach (TXOutput tXOutput in tX.TXOutputs)
+        foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
           if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
           {
             $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);

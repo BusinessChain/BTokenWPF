@@ -95,18 +95,31 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
-      DatabaseAccounts.InsertBlock(block);
+      foreach (TXBToken tX in block.TXs)
+      {
+        if (tX.IsCoinbase)
+        {
+          long outputValueTXCoinbase = 0;
 
-      long outputValueTXCoinbase = 0;
-      block.TXs[0].TXOutputs.ForEach(o => outputValueTXCoinbase += o.Value);
+          foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+            outputValueTXCoinbase += tXOutput.Value;
 
-      long blockReward = BLOCK_REWARD_INITIAL >>
-        block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+          long blockReward = BLOCK_REWARD_INITIAL >>
+            block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
 
-      if (blockReward + block.Fee != outputValueTXCoinbase)
-        throw new ProtocolException(
-          $"Output value of Coinbase TX {block.TXs[0]}\n" +
-          $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
+          if (blockReward + block.Fee != outputValueTXCoinbase)
+            throw new ProtocolException(
+              $"Output value of Coinbase TX {block.TXs[0]}\n" +
+              $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
+        }
+        else
+          DatabaseAccounts.SpendInput(tX);
+
+        foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+          DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+      }
+
+      DatabaseAccounts.UpdateHashDatabase();
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
@@ -203,16 +216,11 @@ namespace BTokenLib
 
       for(int i = 0; i < countOutputs; i += 1)
       {
-        byte[] iDAccount = new byte[TXBToken.LENGTH_IDACCOUNT];
-        Array.Copy(buffer, index, iDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
-        index += TXBToken.LENGTH_IDACCOUNT;
+        TXOutputBToken tXOutput = new(buffer, index);
 
-        long value = BitConverter.ToInt64(buffer, index);
-        index += 8;
-
-        tX.TXOutputs.Add((iDAccount, value));
-
-        tX.Value += value;
+        tX.TXOutputs.Add(tXOutput);
+        
+        tX.Value += tXOutput.Value;
       }
 
       return tX;

@@ -152,33 +152,6 @@ namespace BTokenLib
       }
     }
 
-    public void InsertBlock(Block block)
-    {
-      InsertOutputs(block.TXs[0].TXOutputs, block.Header.Height);
-
-      foreach(TXBToken tX in block.TXs)
-      {
-        if (!tX.IsCoinbase)
-          if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
-            cache.SpendAccountInCache(tX);
-          else
-            GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
-
-        InsertOutputs(tX.TXOutputs, block.Header.Height);        
-      }
-
-      UpdateHashDatabase();
-
-      // Statt den aktuellen DB Hash, könnte auch der diesem Block vorangehende DB Hash
-      // aufgeführt werden. Dies hätte beim Mining der vorteil, dass das Inserten des 
-      // gemineden Block nicht durchgespielt werden müsste.
-
-      //if(!Hash.IsEqual(((HeaderBToken)block.Header).HashDatabase))
-      //  throw new ProtocolException(
-      //    $"Hash database not equal as given in header {block},\n" +
-      //    $"height {block.Header.Height}.");
-    }
-
     public bool CheckTXValid(TXBToken tX)
     {
       if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
@@ -193,7 +166,7 @@ namespace BTokenLib
       return GetFileDB(tX.IDAccountSource).CheckTXValid(tX);
     }
 
-    void UpdateHashDatabase()
+    public void UpdateHashDatabase()
     {
       for (int i = 0; i < COUNT_CACHES; i += 1)
       {
@@ -261,52 +234,55 @@ namespace BTokenLib
       account.Value -= tX.Value;
     }
 
-    void InsertOutputs(
-      List<TXOutput> outputs, 
-      int blockHeight)
+    public void SpendInput(TXBToken tX)
     {
-      for (int i = 0; i < outputs.Count; i++)
+      if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
+        cache.SpendAccountInCache(tX);
+      else
+        GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
+    }
+
+    public void InsertOutput(TXOutputBToken output, int blockHeight)
+    {
+      byte[] iDAccount = output.IDAccount;
+      long outputValueTX = output.Value;
+
+      int c = IndexCache;
+
+      while (true)
       {
-        byte[] iDAccount = outputs[i].IDAccount;
-        long outputValueTX = outputs[i].Value;
-
-        int c = IndexCache;
-
-        while (true)
+        if (Caches[c].TryGetValue(
+          iDAccount,
+          out Account account))
         {
-          if (Caches[c].TryGetValue(
-            iDAccount,
-            out Account account))
+          account.Value += outputValueTX;
+
+          if (c != IndexCache)
           {
-            account.Value += outputValueTX;
-
-            if (c != IndexCache)
-            {
-              Caches[c].Remove(iDAccount);
-              AddToCacheIndexed(iDAccount, account);
-            }
-
-            break;
-          }
-
-          c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
-
-          if (c == IndexCache)
-          {
-            if (GetFileDB(iDAccount).TryFetchAccount(iDAccount, out account))
-              account.Value += outputValueTX;
-            else
-              account = new Account
-              {
-                Nonce = (ulong)blockHeight << 32,
-                Value = outputValueTX,
-                IDAccount = iDAccount
-              };
-
+            Caches[c].Remove(iDAccount);
             AddToCacheIndexed(iDAccount, account);
-
-            break;
           }
+
+          break;
+        }
+
+        c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
+
+        if (c == IndexCache)
+        {
+          if (GetFileDB(iDAccount).TryFetchAccount(iDAccount, out account))
+            account.Value += outputValueTX;
+          else
+            account = new Account
+            {
+              Nonce = (ulong)blockHeight << 32,
+              Value = outputValueTX,
+              IDAccount = iDAccount
+            };
+
+          AddToCacheIndexed(iDAccount, account);
+
+          break;
         }
       }
     }

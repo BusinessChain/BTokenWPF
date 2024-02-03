@@ -209,7 +209,7 @@ namespace BTokenLib
       return true;
     }
 
-    public override void DetectAnchorTokenInBlock(TX tX)
+    public override void DetectAnchorToken(TX tX)
     {
       foreach(TXOutput tXOutput in tX.TXOutputs)
       {
