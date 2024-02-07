@@ -11,8 +11,6 @@ namespace BTokenLib
   {
     public class TokenAnchor
     {
-      Token Token;
-
       public List<TXOutputWallet> Inputs = new();
 
       public int NumberSequence;
@@ -24,37 +22,11 @@ namespace BTokenLib
 
       byte OP_RETURN = 0x6A;
 
-      public TX TX;
+      public byte[] Hash;
 
 
-      public TokenAnchor(Token token)
-      {
-        Token = token;
-      }
-
-      public TokenAnchor(TX tX, int index, Token token) 
-        : this(token)
-      {
-        TX = tX;
-
-        Array.Copy(
-          TX.TXOutputs[0].Buffer,
-          index,
-          HashBlockReferenced,
-          0,
-          HashBlockReferenced.Length);
-
-        index += 32;
-
-        Array.Copy(
-          TX.TXOutputs[0].Buffer,
-          index,
-          HashBlockPreviousReferenced,
-          0,
-          HashBlockPreviousReferenced.Length);
-
-        ValueChange = tX.TXOutputs[1].Value;
-      }
+      public TokenAnchor()
+      { }
 
       public void Serialize(Wallet wallet, SHA256 sHA256, byte[] dataAnchorToken)
       {
@@ -124,6 +96,7 @@ namespace BTokenLib
 
         int index = 0;
 
+        // übergib das AT dem Token welches dann selber serialisiert.
         TX = Token.ParseTX(
           tXRaw.ToArray(),
           ref index,
@@ -139,19 +112,9 @@ namespace BTokenLib
 
       public override string ToString()
       {
-        return TX.ToString();
+        return HashBlockReferenced.ToHexString();
       }
 
-      public string GetDescription()
-      {
-        return
-          $"Anchor token TX hash: {TX}\n" +
-          $"Fee: {TX.Fee}\n" +
-          $"ValueChange: {ValueChange}\n" +
-          $"Sequence number: {NumberSequence}\n" +
-          $"Referenced BToken block hash: {HashBlockReferenced.ToHexString()}" +
-          $"Referenced BToken previous block hash: {HashBlockPreviousReferenced.ToHexString()}";
-      }
     }
   }
 }

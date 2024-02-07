@@ -24,6 +24,8 @@ namespace BTokenLib
         .ToHexString();
     }
 
+    public abstract string Print();
+
     public override string ToString()
     {
       return Hash.ToHexString();

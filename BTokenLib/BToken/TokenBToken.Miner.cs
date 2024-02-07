@@ -9,8 +9,6 @@ namespace BTokenLib
 {
   partial class TokenBToken : Token
   {
-    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
-
     const int COUNT_TXS_PER_BLOCK_MAX = 5;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
@@ -181,8 +179,10 @@ namespace BTokenLib
     {                  
       BlockBToken block = MinerBlock();
 
-      byte[] dataAnchorToken = IDToken.Concat(block.Header.Hash)
+      byte[] dataAnchorToken = new byte[] { IDToken }.Concat(block.Header.Hash)
         .Concat(block.Header.HashPrevious).ToArray();
+
+      // the only purpose of the wallet should be to sign data
 
       if (!TokenParent.Wallet.CreateDataTX(
         FeeSatoshiPerByte,
@@ -207,38 +207,6 @@ namespace BTokenLib
       $"BToken miner successfully mined anchor Token {tokenAnchor.TX} with fee {tokenAnchor.TX.Fee}".Log(this, LogFile, LogEntryNotifier);
 
       return true;
-    }
-
-    public override void DetectAnchorToken(TX tX)
-    {
-      foreach(TXOutput tXOutput in tX.TXOutputs)
-      {
-        int index = tXOutput.StartIndexScript;
-
-        if (tXOutput.Buffer[index] != 0x6A)
-          return;
-
-        index += 1;
-
-        if (tXOutput.Buffer[index] != LENGTH_DATA_ANCHOR_TOKEN)
-          return;
-
-        index += 1;
-
-        if (!IDToken.IsEqual(tXOutput.Buffer, index))
-          return;
-
-        index += IDToken.Length;
-
-        TokenAnchor tokenAnchor = new(tX, index, this);
-
-        if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tX.Hash)) > 0)
-          $"Detected self mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-        else
-          $"Detected foreign mined anchor token {tX} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-
-        TokensAnchorDetectedInBlock.Add(tokenAnchor);
-      }      
     }
 
     public override void SignalParentBlockInsertion(
@@ -281,6 +249,16 @@ namespace BTokenLib
           $" with height {headerAnchor.Height} to BToken:\n" +
           $"Exception message: {ex.Message}").Log(this, LogFile, LogEntryNotifier);
       }
+    }
+
+    public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
+    {
+      if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.Hash)) > 0)
+        $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
+      else
+        $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
+
+      TokensAnchorDetectedInBlock.Add(tokenAnchor);
     }
 
     byte[] GetHashBlockChild(byte[] hashHeaderAnchor)

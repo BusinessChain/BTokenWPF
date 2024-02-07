@@ -43,6 +43,9 @@ namespace BTokenLib
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
     public double FeeSatoshiPerByte = 1.0;
 
+    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
+    protected byte IDToken;
+
     bool IsLocked;
     static object LOCK_Token = new();
 
@@ -165,20 +168,8 @@ namespace BTokenLib
         text += $"{i} -> {block.Header}\n";
 
         if(TokenChild != null)
-        {
-          List<TX> tXs = block.TXs;
-
-          foreach (TX tX in tXs)
-            foreach (TXOutput tXOutput in tX.TXOutputs)
-              if (tXOutput.Value == 0)
-              {
-                text += $"\t{tX}\t";
-
-                int index = tXOutput.StartIndexScript + 4;
-
-                text += $"\t{tXOutput.Buffer.Skip(index).Take(32).ToArray().ToHexString()}\n";
-              }
-        }
+          foreach (TX tX in block.TXs)
+            text += tX.Print();
 
         i++;
       }
@@ -460,10 +451,6 @@ namespace BTokenLib
 
     public abstract Block CreateBlock();
 
-
-    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
-    protected byte[] IDToken;
-
     protected TX CreateCoinbaseTX(Block block, int height, long blockReward)
     {
       List<byte> tXRaw = new();
@@ -552,15 +539,13 @@ namespace BTokenLib
       return false;
     }
 
-    public virtual void InsertDB(
-      byte[] bufferDB,
-      int lengthDataInBuffer)
+    public virtual void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
     { throw new NotImplementedException(); }
 
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void DetectAnchorToken(TX tX)
+    public virtual void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
     { throw new NotImplementedException(); }
 
     public virtual void SignalParentBlockInsertion(

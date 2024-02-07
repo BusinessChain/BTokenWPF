@@ -31,7 +31,7 @@ namespace BTokenLib
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
-      IDToken = new byte[] { 0x01, 0x00 };
+      IDToken = 0x01;
 
       TokenParent = new TokenBitcoin(logEntryNotifier);
       TokenParent.TokenChild = this;

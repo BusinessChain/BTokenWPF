@@ -17,6 +17,8 @@ namespace BTokenLib
 
     PoolTXBitcoin TXPool = new();
 
+    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
+
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -62,7 +64,7 @@ namespace BTokenLib
 
         for (int i = 0; i < countTXOutputs; i += 1)
           tX.TXOutputs.Add(
-            new TXOutput(
+            new TXOutputBitcoin(
               buffer,
               ref indexBuffer));
 
@@ -116,7 +118,44 @@ namespace BTokenLib
     protected override void InsertInDatabase(Block block)
     {
       foreach (TX tX in block.TXs)
-        TokenChild.DetectAnchorToken(tX);
+        foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
+        {
+          int index = tXOutput.StartIndexScript;
+
+          if (tXOutput.Buffer[index] != 0x6A)
+            return;
+
+          index += 1;
+
+          if (tXOutput.Buffer[index] != LENGTH_DATA_ANCHOR_TOKEN)
+            return;
+
+          index += 1;
+
+          byte iDToken = tXOutput.Buffer[index];
+
+          index += 1;
+
+          TokenAnchor tokenAnchor = new();
+
+          Array.Copy(
+            tXOutput.Buffer,
+            index,
+            tokenAnchor.HashBlockReferenced,
+            0,
+            tokenAnchor.HashBlockReferenced.Length);
+
+          index += 32;
+
+          Array.Copy(
+            tXOutput.Buffer,
+            index,
+            tokenAnchor.HashBlockPreviousReferenced,
+            0,
+            tokenAnchor.HashBlockPreviousReferenced.Length);
+
+          TokenChild.SignalAnchorTokenDetected(tokenAnchor);
+        }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
