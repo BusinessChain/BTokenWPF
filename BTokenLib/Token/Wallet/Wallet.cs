@@ -55,7 +55,7 @@ namespace BTokenLib
 
     public abstract TX CreateTX(string address, long value, long fee);
 
-    public abstract bool CreateDataTX(
+    public abstract bool CreateTXData(
       double feeSatoshiPerByte, 
       byte[] data,
       out Token.TokenAnchor tokenAnchor);       

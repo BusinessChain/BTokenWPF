@@ -136,7 +136,7 @@ namespace BTokenLib
 
           index += 1;
 
-          TokenAnchor tokenAnchor = new();
+          TokenAnchor tokenAnchor = new(tX);
 
           Array.Copy(
             tXOutput.Buffer,
@@ -155,6 +155,8 @@ namespace BTokenLib
             tokenAnchor.HashBlockPreviousReferenced.Length);
 
           TokenChild.SignalAnchorTokenDetected(tokenAnchor);
+
+          break; // Only one Anchor token per TX allowed
         }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));

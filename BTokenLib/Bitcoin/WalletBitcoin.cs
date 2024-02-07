@@ -126,7 +126,7 @@ namespace BTokenLib
     const int LENGTH_DATA_TX_SCAFFOLD = 10;
     const int LENGTH_DATA_P2PKH_OUTPUT = 34;
 
-    public override bool CreateDataTX(
+    public override bool CreateTXData(
       double feeSatoshiPerByte, 
       byte[] data,
       out Token.TokenAnchor tokenAnchor)
@@ -135,7 +135,7 @@ namespace BTokenLib
       long feeAnchorToken = (long)(feeSatoshiPerByte * data.Length);
       long feeOutputChange = (long)(feeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
 
-      tokenAnchor = new(Token);
+      tokenAnchor = new();
 
       List<TXOutputWallet> outputs = GetOutputs(
         feeSatoshiPerByte,

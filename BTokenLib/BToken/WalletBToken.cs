@@ -108,7 +108,7 @@ namespace BTokenLib
     }
 
 
-    public override bool CreateDataTX(
+    public override bool CreateTXData(
       double feeSatoshiPerByte,
       byte[] data,
       out Token.TokenAnchor tokenAnchor)

@@ -22,11 +22,13 @@ namespace BTokenLib
 
       byte OP_RETURN = 0x6A;
 
-      public byte[] Hash;
+      public TX TX;
 
 
-      public TokenAnchor()
-      { }
+      public TokenAnchor(TX tX)
+      {
+        TX = tX;
+      }
 
       public void Serialize(Wallet wallet, SHA256 sHA256, byte[] dataAnchorToken)
       {
@@ -112,7 +114,7 @@ namespace BTokenLib
 
       public override string ToString()
       {
-        return HashBlockReferenced.ToHexString();
+        return TX.Hash.ToHexString();
       }
 
     }

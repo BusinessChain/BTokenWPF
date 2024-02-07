@@ -122,7 +122,7 @@ namespace BTokenLib
 
         File.Delete(Path.Combine(
           PathBlocksMinedUnconfirmed,
-          tokenAnchor.HashBlockReferenced.ToHexString()));
+          tokenAnchor.TX.Hash.ToHexString()));
       }
 
       int countTokensAnchorUnconfirmed = TokensAnchorUnconfirmed.Count;
@@ -184,7 +184,7 @@ namespace BTokenLib
 
       // the only purpose of the wallet should be to sign data
 
-      if (!TokenParent.Wallet.CreateDataTX(
+      if (!TokenParent.Wallet.CreateTXData(
         FeeSatoshiPerByte,
         dataAnchorToken,
         out tokenAnchor))
@@ -204,7 +204,7 @@ namespace BTokenLib
 
       BlocksMined.Add(block);
 
-      $"BToken miner successfully mined anchor Token {tokenAnchor.TX} with fee {tokenAnchor.TX.Fee}".Log(this, LogFile, LogEntryNotifier);
+      $"BToken miner successfully mined anchor Token {tokenAnchor}.".Log(this, LogFile, LogEntryNotifier);
 
       return true;
     }
@@ -253,7 +253,7 @@ namespace BTokenLib
 
     public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
     {
-      if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.Hash)) > 0)
+      if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.TX.Hash)) > 0)
         $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
       else
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
@@ -281,7 +281,7 @@ namespace BTokenLib
         }
       });
 
-      ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
+      ($"The winning anchor token is {tokenAnchorWinner} referencing block " +
         $"{tokenAnchorWinner.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
 
       return tokenAnchorWinner.HashBlockReferenced;
