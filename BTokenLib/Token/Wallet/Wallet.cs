@@ -14,7 +14,6 @@ namespace BTokenLib
   {
     protected Token Token;
 
-    public const int LENGTH_DATA_P2PKH_INPUT = 180;
     public const int LENGTH_P2PKH = 25;
     public byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     public byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
@@ -55,10 +54,7 @@ namespace BTokenLib
 
     public abstract TX CreateTX(string address, long value, long fee);
 
-    public abstract bool CreateTXData(
-      double feeSatoshiPerByte, 
-      byte[] data,
-      out Token.TokenAnchor tokenAnchor);       
+    public abstract bool CreateTXData(byte[] data, out TX tX);
 
     public static byte[] Base58CheckToPubKeyHash(string base58)
     {

@@ -25,6 +25,9 @@ namespace BTokenLib
       public TX TX;
 
 
+      public TokenAnchor()
+      { }
+
       public TokenAnchor(TX tX)
       {
         TX = tX;

@@ -8,6 +8,10 @@ namespace BTokenLib
 {
   public partial class WalletBitcoin : Wallet
   {
+    const int LENGTH_DATA_TX_SCAFFOLD = 10;
+    const int LENGTH_DATA_P2PKH_OUTPUT = 34;
+    const int LENGTH_DATA_P2PKH_INPUT = 180;
+
     public List<TXOutputWallet> Outputs = new();
 
 
@@ -26,7 +30,7 @@ namespace BTokenLib
       List<byte> tXRaw = new();
       long feeTX = 0;
 
-      List<TXOutputWallet> inputs = GetOutputs(value, out long feeOutputs);
+      List<TXOutputWallet> inputs = GetOutputs();
 
       //List<TXOutputWallet> inputs = new()
       //{
@@ -122,26 +126,17 @@ namespace BTokenLib
       return tX;
     }
 
-
-    const int LENGTH_DATA_TX_SCAFFOLD = 10;
-    const int LENGTH_DATA_P2PKH_OUTPUT = 34;
-
-    public override bool CreateTXData(
-      double feeSatoshiPerByte, 
-      byte[] data,
-      out Token.TokenAnchor tokenAnchor)
+    public override bool CreateTXData(byte[] data, out TX tX)
     {
-      long feeAccrued = (long)(feeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
-      long feeAnchorToken = (long)(feeSatoshiPerByte * data.Length);
-      long feeOutputChange = (long)(feeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
+      long feeAccrued = (long)(Token.FeeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
+      long feeAnchorToken = (long)(Token.FeeSatoshiPerByte * data.Length);
+      long feeOutputChange = (long)(Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
 
-      tokenAnchor = new();
+      tX = new TXBitcoin();
 
-      List<TXOutputWallet> outputs = GetOutputs(
-        feeSatoshiPerByte,
-        out long feeOutputs);
+      List<TXOutputWallet> outputs = GetOutputs();
 
-      feeAccrued += feeOutputs;
+      feeAccrued += (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT * outputs.Count;
       feeAccrued += feeAnchorToken;
 
       long valueAccrued = 0;
@@ -171,15 +166,15 @@ namespace BTokenLib
       return true;
     }
 
-    List<TXOutputWallet> GetOutputs(double feeSatoshiPerByte, out long feeOutputs)
+    List<TXOutputWallet> GetOutputs()
     {
-      long fee = (long)feeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
+      long feePerTXOutput = (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
 
       List<TXOutputWallet> outputsValueNotSpent = new();
 
       outputsValueNotSpent.AddRange(
-        Outputs.Where(o => o.Value > fee)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > fee))
+        Outputs.Where(o => o.Value > feePerTXOutput)
+        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXOutput))
         .Except(OutputsUnconfirmedSpent)
         .Take(VarInt.PREFIX_UINT16 - 1));
 
@@ -187,7 +182,6 @@ namespace BTokenLib
 
       outputsValueNotSpent.ForEach(o => BalanceUnconfirmed -= o.Value);
 
-      feeOutputs = fee * outputsValueNotSpent.Count;
       return outputsValueNotSpent;
     }
 

@@ -91,7 +91,7 @@ namespace BTokenLib
 
               TokensAnchorUnconfirmed.Add(tokenAnchor);
 
-              TokenParent.BroadcastTX(tokenAnchor.TX);
+              TokenParent.BroadcastAnchorToken(tokenAnchor);
 
               $"{TokensAnchorUnconfirmed.Count} mined unconfirmed anchor tokens referencing block {tokenAnchor.HashBlockReferenced.ToHexString()}.".Log(this, LogFile, LogEntryNotifier);
 
@@ -179,18 +179,7 @@ namespace BTokenLib
     {                  
       BlockBToken block = MinerBlock();
 
-      byte[] dataAnchorToken = new byte[] { IDToken }.Concat(block.Header.Hash)
-        .Concat(block.Header.HashPrevious).ToArray();
-
-      // the only purpose of the wallet should be to sign data
-
-      if (!TokenParent.Wallet.CreateTXData(
-        FeeSatoshiPerByte,
-        dataAnchorToken,
-        out tokenAnchor))
-      {
-        return false;
-      }
+      tokenAnchor = new();
 
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.HashBlockReferenced = block.Header.Hash;

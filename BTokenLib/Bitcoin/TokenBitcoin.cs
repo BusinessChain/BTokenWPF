@@ -85,6 +85,15 @@ namespace BTokenLib
       }
     }
 
+
+    public override void BroadcastAnchorToken(TokenAnchor tokenAnchor)
+    {
+      byte[] data = ;
+
+      if(Wallet.CreateTXData(data, out TX tX))
+        BroadcastTX(tX);
+    }
+
     public override Header CreateHeaderGenesis()
     {
       //HeaderBitcoin header = new(

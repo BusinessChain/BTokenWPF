@@ -573,6 +573,9 @@ namespace BTokenLib
       out byte[] dataDB)
     { throw new NotImplementedException(); }
 
+
+    public abstract void BroadcastAnchorToken(TokenAnchor tokenAnchor);
+
     public void BroadcastTX(TX tX)
     {
       TryAddTXPool(tX);
