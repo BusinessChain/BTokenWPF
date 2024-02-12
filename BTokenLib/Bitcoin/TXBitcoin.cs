@@ -9,7 +9,7 @@ namespace BTokenLib
 {
   public class TXBitcoin : TX
   {
-    public List<TXInput> TXInputs = new();
+    public List<TXInput> Inputs = new();
 
 
     public override string Print()

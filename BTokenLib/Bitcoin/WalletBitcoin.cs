@@ -12,7 +12,7 @@ namespace BTokenLib
     const int LENGTH_DATA_P2PKH_OUTPUT = 34;
     const int LENGTH_DATA_P2PKH_INPUT = 180;
 
-    public List<TXOutputWallet> Outputs = new();
+    public List<TXOutputWallet> OutputsSpendable = new();
 
 
     public WalletBitcoin(string privKeyDec, Token token)
@@ -30,7 +30,7 @@ namespace BTokenLib
       List<byte> tXRaw = new();
       long feeTX = 0;
 
-      List<TXOutputWallet> inputs = GetOutputs();
+      List<TXOutputWallet> inputs = GetOutputsSpendable();
 
       //List<TXOutputWallet> inputs = new()
       //{
@@ -126,29 +126,41 @@ namespace BTokenLib
       return tX;
     }
 
-    public override bool CreateTXData(byte[] data, out TX tX)
+    public override bool CreateTXData(byte[] data, long fee, out TX tX)
     {
+      TXBitcoin tXBitcoin = new();
+      tX = tXBitcoin;
+
       long feeAccrued = (long)(Token.FeeSatoshiPerByte * LENGTH_DATA_TX_SCAFFOLD);
-      long feeAnchorToken = (long)(Token.FeeSatoshiPerByte * data.Length);
+      long feeData = (long)(Token.FeeSatoshiPerByte * data.Length);
+      long feeInput = (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
       long feeOutputChange = (long)(Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
-
-      tX = new TXBitcoin();
-
-      List<TXOutputWallet> outputs = GetOutputs();
-
-      feeAccrued += (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT * outputs.Count;
-      feeAccrued += feeAnchorToken;
 
       long valueAccrued = 0;
 
-      foreach (TXOutputWallet tXOutputWallet in outputs)
+      List<TXOutputWallet> outputsSpendable = GetOutputsSpendable();
+
+      long valueChange = outputsSpendable.Sum(i => i.Value) - fee;
+
+      feeAccrued += feeInput * outputsSpendable.Count;
+      feeAccrued += feeData;
+
+      foreach (TXOutputWallet tXOutputWallet in outputsSpendable)
       {
-        tokenAnchor.Inputs.Add(tXOutputWallet);
+        TXInput tXInput = new()
+        {
+          TXIDOutput = tXOutputWallet.TXID,
+          OutputIndex = tXOutputWallet.Index
+        };
+
+        tXBitcoin.Inputs.Add(tXInput);
         valueAccrued += tXOutputWallet.Value;
       }
 
       if (valueAccrued < feeAccrued)
-        return false; // die outputs müssen wieder freigegeben werden.
+      {
+        return false; // die outputs müssen wieder freigegeben werden!!
+      }
 
       tokenAnchor.ValueChange = valueAccrued - feeAccrued - feeOutputChange;
 
@@ -166,37 +178,37 @@ namespace BTokenLib
       return true;
     }
 
-    List<TXOutputWallet> GetOutputs()
+    List<TXOutputWallet> GetOutputsSpendable()
     {
       long feePerTXOutput = (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
 
-      List<TXOutputWallet> outputsValueNotSpent = new();
+      List<TXOutputWallet> outputsValueNotSpendable = new();
 
-      outputsValueNotSpent.AddRange(
-        Outputs.Where(o => o.Value > feePerTXOutput)
+      outputsValueNotSpendable.AddRange(
+        OutputsSpendable.Where(o => o.Value > feePerTXOutput)
         .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXOutput))
         .Except(OutputsUnconfirmedSpent)
         .Take(VarInt.PREFIX_UINT16 - 1));
 
-      OutputsUnconfirmedSpent.AddRange(outputsValueNotSpent);
+      OutputsUnconfirmedSpent.AddRange(outputsValueNotSpendable);
 
-      outputsValueNotSpent.ForEach(o => BalanceUnconfirmed -= o.Value);
+      outputsValueNotSpendable.ForEach(o => BalanceUnconfirmed -= o.Value);
 
-      return outputsValueNotSpent;
+      return outputsValueNotSpendable;
     }
 
     public override void LoadImage(string path)
     {
       base.LoadImage(path);
 
-      LoadOutputs(Outputs, Path.Combine(path, "OutputsValue"));
+      LoadOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
     }
 
     public override void CreateImage(string path)
     {
       base.CreateImage(path);
 
-      StoreOutputs(Outputs, Path.Combine(path, "OutputsValue"));
+      StoreOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
     }
 
     public override void InsertBlock(Block block)
@@ -214,7 +226,7 @@ namespace BTokenLib
               OutputsUnconfirmed.Remove(outputValueUnconfirmed);
             }
 
-            Outputs.Add(
+            OutputsSpendable.Add(
               new TXOutputWallet
               {
                 TXID = tX.Hash,
@@ -230,7 +242,7 @@ namespace BTokenLib
           }
 
       foreach (TXBitcoin tX in block.TXs)
-        foreach (TXInput tXInput in tX.TXInputs)
+        foreach (TXInput tXInput in tX.Inputs)
         {
           $"Try spend input in wallet {Token} refing output: {tXInput.TXIDOutput.ToHexString()}, index {tXInput.OutputIndex}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
@@ -243,13 +255,13 @@ namespace BTokenLib
             BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
           }
 
-          TXOutputWallet tXOutputWallet = Outputs.Find(o =>
+          TXOutputWallet tXOutputWallet = OutputsSpendable.Find(o =>
             o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
           if (tXOutputWallet != null)
           {
             Balance -= tXOutputWallet.Value;
-            Outputs.Remove(tXOutputWallet);
+            OutputsSpendable.Remove(tXOutputWallet);
             AddTXToHistory(tX);
 
             $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
@@ -270,7 +282,7 @@ namespace BTokenLib
         BalanceUnconfirmed -= outputValueUnconfirmed.Value;
       }
 
-      foreach(TXInput tXInput in tXBitcoin.TXInputs)
+      foreach(TXInput tXInput in tXBitcoin.Inputs)
       {
         TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
           .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput));
@@ -285,7 +297,7 @@ namespace BTokenLib
         
     public override void Clear()
     {
-      Outputs.Clear();
+      OutputsSpendable.Clear();
       base.Clear();
     }
   }

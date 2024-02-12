@@ -18,7 +18,7 @@ namespace BTokenWPF
       if(tX is TXBitcoin)
       {
         TXBitcoin tXBitcoin = (TXBitcoin)tX;
-        LabelCountInputs.Content = $"Number of Inputs: {tXBitcoin.TXInputs.Count}";
+        LabelCountInputs.Content = $"Number of Inputs: {tXBitcoin.Inputs.Count}";
       }
       LabelCountOutputs.Content = $"Number of Outputs: {tX.TXOutputs.Count}";
       LabelFee.Content = $"Fee: {tX.Fee}";

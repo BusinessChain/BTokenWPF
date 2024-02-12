@@ -13,6 +13,7 @@ namespace BTokenLib
     {
       public List<TXOutputWallet> Inputs = new();
 
+      public byte IDToken;
       public int NumberSequence;
 
       public byte[] HashBlockReferenced = new byte[32];

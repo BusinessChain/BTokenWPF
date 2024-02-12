@@ -81,7 +81,7 @@ namespace BTokenWPF
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
       if (Token.Wallet is WalletBitcoin)
-        foreach (TXOutputWallet tXOutputWallet in ((WalletBitcoin)Token.Wallet).Outputs)
+        foreach (TXOutputWallet tXOutputWallet in ((WalletBitcoin)Token.Wallet).OutputsSpendable)
           ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 

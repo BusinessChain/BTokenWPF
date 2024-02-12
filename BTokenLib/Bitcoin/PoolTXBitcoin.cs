@@ -44,7 +44,7 @@ namespace BTokenWPF
       {
         lock (LOCK_TXsPool)
         {
-          foreach (TXInput tXInput in tX.TXInputs)
+          foreach (TXInput tXInput in tX.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInput, TXBitcoin)> inputsInPool))
               foreach ((TXInput input, TX tX) tupelInputsInPool in inputsInPool)
                 if (tupelInputsInPool.input.OutputIndex == tXInput.OutputIndex)
@@ -73,7 +73,7 @@ namespace BTokenWPF
 
           TXPoolDict.Add(tX.Hash, tX);
 
-          foreach (TXInput tXInput in tX.TXInputs)
+          foreach (TXInput tXInput in tX.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInput input, TXBitcoin)> inputsInPool))
               inputsInPool.Add((tXInput, tX));
             else
@@ -124,7 +124,7 @@ namespace BTokenWPF
       {
         List<(TXInput input, TXBitcoin)> tupelInputs = null;
 
-        foreach (TXInput tXInput in tX.TXInputs)
+        foreach (TXInput tXInput in tX.Inputs)
           if (InputsPool.TryGetValue(tXInput.TXIDOutput, out tupelInputs))
           {
             tupelInputs.RemoveAll(t => t.input.OutputIndex == tXInput.OutputIndex);
@@ -150,7 +150,7 @@ namespace BTokenWPF
 
       foreach (TXBitcoin tXBranch in tXsBranch)
       {
-        foreach (TXInput input in tXBranch.TXInputs)
+        foreach (TXInput input in tXBranch.Inputs)
         {
           if (TXsGet.Count >= CountMaxTXsGet)
             return;
@@ -165,7 +165,7 @@ namespace BTokenWPF
 
     void TraceTXToLeaf(List<TXBitcoin> tXsBranch)
     {
-      foreach (TXInput input in tXsBranch[0].TXInputs)
+      foreach (TXInput input in tXsBranch[0].Inputs)
         if (TXPoolDict.TryGetValue(input.TXIDOutput, out TXBitcoin tXInPool) &&
             !TXsGet.Contains(tXInPool))
         {

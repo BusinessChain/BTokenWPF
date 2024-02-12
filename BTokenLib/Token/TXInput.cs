@@ -17,12 +17,13 @@ namespace BTokenLib
     public int LengthScript;
 
     public byte[] TXIDOutput;
-    public int TXIDOutputShort;
     public int OutputIndex;
 
     public uint Sequence;
 
 
+    public TXInput()
+    { }
 
     public TXInput(byte[] buffer, ref int index)
     {
@@ -34,10 +35,6 @@ namespace BTokenLib
         TXIDOutput,
         0,
         HASH_BYTE_SIZE);
-
-      TXIDOutputShort = BitConverter.ToInt32(
-        buffer,
-        index);
 
       index += HASH_BYTE_SIZE;
 

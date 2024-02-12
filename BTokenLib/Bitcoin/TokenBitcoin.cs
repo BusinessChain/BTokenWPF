@@ -56,7 +56,7 @@ namespace BTokenLib
           ref indexBuffer);
 
         for (int i = 0; i < countInputs; i += 1)
-          tX.TXInputs.Add(new TXInput(buffer, ref indexBuffer));
+          tX.Inputs.Add(new TXInput(buffer, ref indexBuffer));
 
         int countTXOutputs = VarInt.GetInt32(
           buffer,
@@ -88,9 +88,11 @@ namespace BTokenLib
 
     public override void BroadcastAnchorToken(TokenAnchor tokenAnchor)
     {
-      byte[] data = ;
+      byte[] dataAnchorToken = new byte[] { tokenAnchor.IDToken }
+      .Concat(tokenAnchor.HashBlockReferenced)
+      .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 
-      if(Wallet.CreateTXData(data, out TX tX))
+      if (Wallet.CreateTXData(dataAnchorToken, out TX tX))
         BroadcastTX(tX);
     }
 
@@ -141,11 +143,11 @@ namespace BTokenLib
 
           index += 1;
 
-          byte iDToken = tXOutput.Buffer[index];
+          TokenAnchor tokenAnchor = new(tX);
+
+          tokenAnchor.IDToken = tXOutput.Buffer[index];
 
           index += 1;
-
-          TokenAnchor tokenAnchor = new(tX);
 
           Array.Copy(
             tXOutput.Buffer,
