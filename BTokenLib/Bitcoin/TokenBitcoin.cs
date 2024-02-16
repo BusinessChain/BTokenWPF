@@ -92,7 +92,7 @@ namespace BTokenLib
       .Concat(tokenAnchor.HashBlockReferenced)
       .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 
-      if (Wallet.CreateTXData(dataAnchorToken, out TX tX))
+      if (Wallet.CreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
         BroadcastTX(tX);
     }
 
@@ -143,7 +143,10 @@ namespace BTokenLib
 
           index += 1;
 
-          TokenAnchor tokenAnchor = new(tX);
+          TokenAnchor tokenAnchor = new()
+          {
+            TX = tX
+          };
 
           tokenAnchor.IDToken = tXOutput.Buffer[index];
 

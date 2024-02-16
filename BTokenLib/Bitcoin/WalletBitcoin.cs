@@ -12,6 +12,8 @@ namespace BTokenLib
     const int LENGTH_DATA_P2PKH_OUTPUT = 34;
     const int LENGTH_DATA_P2PKH_INPUT = 180;
 
+    byte OP_RETURN = 0x6A;
+
     public List<TXOutputWallet> OutputsSpendable = new();
 
 
@@ -126,7 +128,7 @@ namespace BTokenLib
       return tX;
     }
 
-    public override bool CreateTXData(byte[] data, long fee, out TX tX)
+    public override bool CreateTXData(byte[] data, int sequence, out TX tX)
     {
       TXBitcoin tXBitcoin = new();
       tX = tXBitcoin;
@@ -140,8 +142,6 @@ namespace BTokenLib
 
       List<TXOutputWallet> outputsSpendable = GetOutputsSpendable();
 
-      long valueChange = outputsSpendable.Sum(i => i.Value) - fee;
-
       feeAccrued += feeInput * outputsSpendable.Count;
       feeAccrued += feeData;
 
@@ -150,7 +150,8 @@ namespace BTokenLib
         TXInput tXInput = new()
         {
           TXIDOutput = tXOutputWallet.TXID,
-          OutputIndex = tXOutputWallet.Index
+          OutputIndex = tXOutputWallet.Index,
+          Sequence = sequence
         };
 
         tXBitcoin.Inputs.Add(tXInput);
@@ -162,17 +163,45 @@ namespace BTokenLib
         return false; // die outputs müssen wieder freigegeben werden!!
       }
 
-      tokenAnchor.ValueChange = valueAccrued - feeAccrued - feeOutputChange;
+      TXOutput outputData = new();
+      tXBitcoin.TXOutputs.Add(outputData);
 
-      tokenAnchor.Serialize(this, SHA256, data);
+      List<byte> outputDataScript = new();
+      outputDataScript.AddRange(BitConverter.GetBytes(outputData.Value));
+      outputDataScript.AddRange(VarInt.GetBytes(data.Length + 2));
+      outputDataScript.Add(OP_RETURN);
+      outputDataScript.Add((byte)data.Length);
+      outputDataScript.AddRange(data);
 
-      if (tokenAnchor.ValueChange > 0)
+      outputData.Buffer = outputDataScript.ToArray();
+      outputData.LengthScript = outputDataScript.Count;
+
+      long valueChange = valueAccrued - feeAccrued - feeOutputChange;
+
+      if (valueChange > 0)
+      {
+        TXOutput outputChange = new();
+        List<byte> outputScript = new();
+
+        outputChange.Value = valueChange;
+
+        outputScript.AddRange(BitConverter.GetBytes(valueChange));
+        outputScript.Add((byte)PublicScript.Length);
+        outputScript.AddRange(PublicScript);
+
+        outputChange.Buffer = outputScript.ToArray();
+        outputChange.LengthScript = outputScript.Count;
+      }
+
+      tXBitcoin.Serialize();
+
+      if (valueChange > 0)
         AddOutputUnconfirmed(
           new TXOutputWallet
           {
-            TXID = tokenAnchor.TX.Hash,
+            TXID = tXBitcoin.Hash,
             Index = 1,
-            Value = tokenAnchor.ValueChange
+            Value = valueChange
           });
 
       return true;

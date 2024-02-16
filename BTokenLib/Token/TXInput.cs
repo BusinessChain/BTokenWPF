@@ -19,7 +19,7 @@ namespace BTokenLib
     public byte[] TXIDOutput;
     public int OutputIndex;
 
-    public uint Sequence;
+    public int Sequence;
 
 
     public TXInput()
@@ -52,7 +52,7 @@ namespace BTokenLib
 
       index += LengthScript;
 
-      Sequence = BitConverter.ToUInt32(
+      Sequence = BitConverter.ToInt32(
         buffer,
         index);
 
