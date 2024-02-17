@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 
 namespace BTokenLib
@@ -31,8 +31,6 @@ namespace BTokenLib
 
     void Serialize(Wallet wallet, SHA256 sHA256, byte[] dataAnchorToken)
     {
-      long feeTX = 0;
-
       TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
       TXRaw.AddRange(VarInt.GetBytes(Inputs.Count));
 
@@ -81,12 +79,8 @@ namespace BTokenLib
 
       TXRaw.RemoveRange(TXRaw.Count - 4, 4);
 
-      int index = 0;
-
       Hash = sHA256.ComputeHash(
        sHA256.ComputeHash(TXRaw.ToArray()));
-
-      Fee = feeTX;
     }
   }
 }

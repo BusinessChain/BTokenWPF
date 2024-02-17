@@ -128,7 +128,7 @@ namespace BTokenLib
       return tX;
     }
 
-    public override bool CreateTXData(byte[] data, int sequence, out TX tX)
+    public override bool TryCreateTXData(byte[] data, int sequence, out TX tX)
     {
       TXBitcoin tXBitcoin = new();
       tX = tXBitcoin;
@@ -138,29 +138,15 @@ namespace BTokenLib
       long feeInput = (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
       long feeOutputChange = (long)(Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_OUTPUT);
 
-      long valueAccrued = 0;
-
-      List<TXOutputWallet> outputsSpendable = GetOutputsSpendable();
+      tXBitcoin.TXRaw = CreateTXInputScaffold(sequence, out long valueInput);
 
       feeAccrued += feeInput * outputsSpendable.Count;
       feeAccrued += feeData;
 
-      foreach (TXOutputWallet tXOutputWallet in outputsSpendable)
-      {
-        TXInput tXInput = new()
-        {
-          TXIDOutput = tXOutputWallet.TXID,
-          OutputIndex = tXOutputWallet.Index,
-          Sequence = sequence
-        };
-
-        tXBitcoin.Inputs.Add(tXInput);
-        valueAccrued += tXOutputWallet.Value;
-      }
-
-      if (valueAccrued < feeAccrued)
-      {
+      if (valueInput < feeAccrued)
+      {        
         return false; // die outputs müssen wieder freigegeben werden!!
+        // Besser ist die outputs erst endgültig als bezogen zu erachten, wenn die ganze TX gemacht ist.
       }
 
       TXOutput outputData = new();
@@ -176,7 +162,7 @@ namespace BTokenLib
       outputData.Buffer = outputDataScript.ToArray();
       outputData.LengthScript = outputDataScript.Count;
 
-      long valueChange = valueAccrued - feeAccrued - feeOutputChange;
+      long valueChange = valueInput - feeAccrued - feeOutputChange;
 
       if (valueChange > 0)
       {
@@ -193,6 +179,8 @@ namespace BTokenLib
         outputChange.LengthScript = outputScript.Count;
       }
 
+      tXBitcoin.Fee = feeAccrued;
+
       tXBitcoin.Serialize();
 
       if (valueChange > 0)
@@ -205,6 +193,36 @@ namespace BTokenLib
           });
 
       return true;
+    }
+
+    List<byte> CreateTXInputScaffold(int sequece, out long value)
+    {
+      long feePerTXOutput = (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
+      value = 0;
+
+      List<TXOutputWallet> outputsSpendable =
+        OutputsSpendable.Where(o => o.Value > feePerTXOutput)
+        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXOutput))
+        .Except(OutputsUnconfirmedSpent)
+        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
+
+      OutputsUnconfirmedSpent.AddRange(outputsSpendable);
+
+      List<byte> tXInputScaffold = new();
+      tXInputScaffold.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
+      tXInputScaffold.AddRange(VarInt.GetBytes(outputsSpendable.Count));
+
+      foreach (TXOutputWallet tXOutputWallet in outputsSpendable)
+      {
+        value += tXOutputWallet.Value;
+
+        tXInputScaffold.AddRange(tXOutputWallet.TXID);
+        tXInputScaffold.AddRange(BitConverter.GetBytes(tXOutputWallet.Index));
+        tXInputScaffold.Add(0x00); // length empty script
+        tXInputScaffold.AddRange(BitConverter.GetBytes(sequece));
+      }
+
+      return tXInputScaffold;
     }
 
     List<TXOutputWallet> GetOutputsSpendable()

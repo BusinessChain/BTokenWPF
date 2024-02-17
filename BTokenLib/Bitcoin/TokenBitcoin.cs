@@ -92,7 +92,7 @@ namespace BTokenLib
       .Concat(tokenAnchor.HashBlockReferenced)
       .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 
-      if (Wallet.CreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
+      if (Wallet.TryCreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
         BroadcastTX(tX);
     }
 

@@ -54,7 +54,7 @@ namespace BTokenLib
 
     public abstract TX CreateTX(string address, long value, long fee);
 
-    public abstract bool CreateTXData(byte[] data, int sequence, out TX tX);
+    public abstract bool TryCreateTXData(byte[] data, int sequence, out TX tX);
 
     public static byte[] Base58CheckToPubKeyHash(string base58)
     {
