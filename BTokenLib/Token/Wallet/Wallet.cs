@@ -52,7 +52,7 @@ namespace BTokenLib
         .Concat(POSTFIX_P2PKH).ToArray();
     }
 
-    public abstract TX CreateTX(string address, long value, long fee);
+    public abstract bool TryCreateTX(string address, long value, double feePerByte, out TX tX);
 
     public abstract bool TryCreateTXData(byte[] data, int sequence, out TX tX);
 

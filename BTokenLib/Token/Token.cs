@@ -495,17 +495,18 @@ namespace BTokenLib
       ref int indexBuffer,
       SHA256 sHA256);
 
-    public TX MakeTX(string address, long value, long fee)
+    public bool MakeTX(string address, long value, double feePerByte, out TX tX)
     {
       //if (this is TokenBitcoin)
       //  address = "184Z6YZ6qt6wbpyuKXKsyDTeXX5yNuYwWk";
       //else if (this is TokenBToken)
       //  address = "1MaJjBpbqYSa1ui3cNPGwMvVqzg2mwKp9P";
 
-      return Wallet.CreateTX(
+      return Wallet.TryCreateTX(
         address,
         value,
-        fee);
+        feePerByte,
+        out tX);
     }
 
     public bool IsMining;

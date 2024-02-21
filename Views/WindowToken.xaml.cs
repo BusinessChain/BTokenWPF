@@ -148,11 +148,17 @@ namespace BTokenWPF
         string address = TextBoxAddress.Text;
         long value = long.Parse(TextBoxValue.Text);
         long fee = long.Parse(TextBoxFee.Text);
-                
-        TX tX = Token.MakeTX(
-          address, 
-          value,
-          fee);
+
+        if (!Token.MakeTX(address, value, fee, out TX tX))
+        {
+          MessageBox.Show(
+            "Could not create tX. Possibly not enough fund.", 
+            "Error", 
+            MessageBoxButton.OK, 
+            MessageBoxImage.Error);
+
+          return;
+        }
 
         TextBoxRawTX.Text = tX.TXRaw.ToArray().Reverse().ToArray().ToHexString();
         TextBoxTXID.Text = tX.Hash.ToHexString();
