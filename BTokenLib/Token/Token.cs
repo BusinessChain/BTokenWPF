@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Security.Cryptography;
+using System.Linq;
 
 namespace BTokenLib
 {
@@ -33,17 +33,12 @@ namespace BTokenLib
 
     string PathImage;
     string PathImageOld;
-
     string PathRootToken;
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
-
-    protected int CountBytesDataTokenBasis = 120;
-
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
     public double FeeSatoshiPerByte = 1.0;
 
-    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
     protected byte IDToken;
 
     bool IsLocked;
@@ -574,9 +569,6 @@ namespace BTokenLib
       out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-
-    public abstract void BroadcastAnchorToken(TokenAnchor tokenAnchor);
-
     public void BroadcastTX(TX tX)
     {
       TryAddTXPool(tX);
@@ -587,6 +579,16 @@ namespace BTokenLib
     {
       tXs.ForEach(tX => TryAddTXPool(tX));
       Network.AdvertizeTXs(tXs);
+    }
+
+    public void BroadcastAnchorToken(TokenAnchor tokenAnchor)
+    {
+      byte[] dataAnchorToken = new byte[] { tokenAnchor.IDToken }
+      .Concat(tokenAnchor.HashBlockReferenced)
+      .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
+
+      if (Wallet.TryCreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
+        BroadcastTX(tX);
     }
 
     public List<Header> GetLocator()

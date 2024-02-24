@@ -8,9 +8,10 @@ namespace BTokenLib
 {
   public partial class WalletBitcoin : Wallet
   {
-    const int LENGTH_DATA_TX_SCAFFOLD = 10;
-    const int LENGTH_DATA_P2PKH_OUTPUT = 34;
-    const int LENGTH_DATA_P2PKH_INPUT = 180;
+    public byte[] PublicScript;
+
+    const int LENGTH_P2PKH_OUTPUT = 34;
+    const int LENGTH_P2PKH_INPUT = 180;
 
     byte OP_RETURN = 0x6A;
 
@@ -19,7 +20,11 @@ namespace BTokenLib
 
     public WalletBitcoin(string privKeyDec, Token token)
       : base(privKeyDec, token)
-    { }
+    {
+      PublicScript = PREFIX_P2PKH
+        .Concat(PublicKeyHash160)
+        .Concat(POSTFIX_P2PKH).ToArray();
+    }
 
     public override bool TryCreateTX(
       string addressOutput, 
@@ -27,17 +32,11 @@ namespace BTokenLib
       double feePerByte, 
       out TX tX)
     {
-      byte[] pubKeyHash160 = Base58CheckToPubKeyHash(addressOutput);
-
-      byte[] pubScript = PREFIX_P2PKH
-        .Concat(pubKeyHash160)
-        .Concat(POSTFIX_P2PKH).ToArray();
-
       tX = new TXBitcoin();
 
       if (!TryCreateTXInputScaffold(
         sequence : 0,
-        valueNettoMinimum: (long)(LENGTH_DATA_P2PKH_OUTPUT * feePerByte),
+        valueNettoMinimum: (long)(LENGTH_P2PKH_OUTPUT * feePerByte),
         feePerByte,
         out long valueInput,
         out long feeTXInputScaffold,
@@ -47,8 +46,8 @@ namespace BTokenLib
       }
 
       long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_DATA_P2PKH_OUTPUT * feePerByte)
-        + (long)(LENGTH_DATA_P2PKH_OUTPUT * feePerByte);
+        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
+        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
 
       if (valueInput - feeTX > 0)
       {
@@ -84,6 +83,12 @@ namespace BTokenLib
       //  }
       //};
 
+      byte[] pubKeyHash160 = Base58CheckToPubKeyHash(addressOutput);
+
+      byte[] pubScript = PREFIX_P2PKH
+        .Concat(pubKeyHash160)
+        .Concat(POSTFIX_P2PKH).ToArray();
+
       tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
       tX.TXRaw.Add((byte)pubScript.Length);
       tX.TXRaw.AddRange(pubScript);
@@ -115,7 +120,7 @@ namespace BTokenLib
       }
 
       long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_DATA_P2PKH_OUTPUT * Token.FeeSatoshiPerByte)
+        + (long)(LENGTH_P2PKH_OUTPUT * Token.FeeSatoshiPerByte)
         + (long)(data.Length * Token.FeeSatoshiPerByte);
 
       if(valueInput - feeTX > 0)
@@ -200,7 +205,7 @@ namespace BTokenLib
       ref List<byte> tXInputScaffold)
     {
       tXInputScaffold = new();
-      long feePerTXInput = (long)(feePerByte * LENGTH_DATA_P2PKH_INPUT);
+      long feePerTXInput = (long)(feePerByte * LENGTH_P2PKH_INPUT);
 
       List<TXOutputWallet> outputsSpendable =
         OutputsSpendable.Where(o => o.Value > feePerTXInput)
@@ -232,7 +237,7 @@ namespace BTokenLib
 
     List<TXOutputWallet> GetOutputsSpendable()
     {
-      long feePerTXOutput = (long)Token.FeeSatoshiPerByte * LENGTH_DATA_P2PKH_INPUT;
+      long feePerTXOutput = (long)Token.FeeSatoshiPerByte * LENGTH_P2PKH_INPUT;
 
       List<TXOutputWallet> outputsValueNotSpendable = new();
 

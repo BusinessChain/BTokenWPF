@@ -24,7 +24,6 @@ namespace BTokenLib
     protected byte[] PublicKey;
     protected byte[] PublicKeyHash160 = new byte[20];
     public string AddressAccount;
-    public byte[] PublicScript;
 
     public List<TX> HistoryTransactions = new();
 
@@ -46,10 +45,6 @@ namespace BTokenLib
       PublicKeyHash160 = Crypto.ComputeHash160(PublicKey, SHA256);
 
       AddressAccount = PubKeyHashToBase58Check(PublicKeyHash160);
-
-      PublicScript = PREFIX_P2PKH
-        .Concat(PublicKeyHash160)
-        .Concat(POSTFIX_P2PKH).ToArray();
     }
 
     public abstract bool TryCreateTX(string address, long value, double feePerByte, out TX tX);

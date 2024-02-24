@@ -7,6 +7,7 @@ namespace BTokenLib
 {
   public partial class WalletBToken : Wallet
   {
+    const int LENGTH_P2PKH_TX = 120;
     public ulong NonceAccount;
 
 
@@ -14,60 +15,65 @@ namespace BTokenLib
       : base(privKeyDec, token)
     { }
 
-    public override TX CreateTX(string address, long value, long fee)
+    public override bool TryCreateTX(
+      string addressOutput,
+      long valueOutput,
+      double feePerByte,
+      out TX tX)
     {
-      byte[] pubKeyHash160 = Base58CheckToPubKeyHash(address);
+      tX = new TXBToken();
 
-      byte[] pubScript = PREFIX_P2PKH
-        .Concat(pubKeyHash160)
-        .Concat(POSTFIX_P2PKH).ToArray();
+      tX.Fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      List<byte> tXRaw = new();
+      if (BalanceUnconfirmed < valueOutput + tX.Fee)
+        return false;
 
-      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
-      tXRaw.Add(0x01); // number of inputs
+      tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // token ; config
 
-      tXRaw.AddRange(PublicKeyHash160.Concat(new byte[12])); // input TXID
-      tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
-      tXRaw.Add(0x00); // length empty script
-      tXRaw.AddRange(BitConverter.GetBytes((int)0)); // sequence
+      tX.TXRaw.AddRange(PublicKey);
+      tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tX.TXRaw.AddRange(BitConverter.GetBytes(tX.Fee));
 
-      tXRaw.Add(0x01); // number of outputs
+      tX.TXRaw.Add(0x01);
+            
+      tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
+      tX.TXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
 
-      tXRaw.AddRange(BitConverter.GetBytes(value));
-      tXRaw.Add((byte)pubScript.Length);
-      tXRaw.AddRange(pubScript);
+      List<byte> signature = GetScriptSignature(tX.TXRaw.ToArray());
+      tX.TXRaw.AddRange(signature);
 
-      tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
-      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
+      tX.Hash = SHA256.ComputeHash(
+       SHA256.ComputeHash(tX.TXRaw.ToArray()));
 
-      List<byte> tXRawSign = tXRaw.ToList();
-      int indexSign = 41;
+      return true;
+    }
 
-      tXRawSign[indexSign++] = (byte)PublicScript.Length;
-      tXRawSign.InsertRange(indexSign, PublicScript);
+    public override bool TryCreateTXData(byte[] data, int sequence, out TX tX)
+    {
+      tX = new TXBToken();
 
-      List<byte> signaturePerInput = GetScriptSignature(tXRawSign.ToArray());
+      tX.Fee = (long)(Token.FeeSatoshiPerByte * LENGTH_P2PKH_TX);
 
-      indexSign = 41;
+      if (BalanceUnconfirmed < tX.Fee)
+        return false;
 
-      tXRaw[indexSign++] = (byte)signaturePerInput.Count;
-      tXRaw.InsertRange(indexSign, signaturePerInput);
+      tX.TXRaw.AddRange(new byte[] { 0x02, 0x00, 0x00, 0x00 }); // token ; config
 
-      tXRaw.RemoveRange(tXRaw.Count - 4, 4);
+      tX.TXRaw.AddRange(PublicKey);
+      tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tX.TXRaw.AddRange(BitConverter.GetBytes(tX.Fee));
 
-      int index = 0;
+      tX.TXRaw.Add(0x01);
+      tX.TXRaw.AddRange(VarInt.GetBytes(data.Length));
+      tX.TXRaw.AddRange(data);
 
-      TX tX = Token.ParseTX(
-        tXRaw.ToArray(),
-        ref index,
-        SHA256);
+      List<byte> signature = GetScriptSignature(tX.TXRaw.ToArray());
+      tX.TXRaw.AddRange(signature);
 
-      tX.TXRaw = tXRaw;
+      tX.Hash = SHA256.ComputeHash(
+       SHA256.ComputeHash(tX.TXRaw.ToArray()));
 
-      tX.Fee = fee;
-
-      return tX;
+      return true;
     }
 
     public override void InsertBlock(Block block)
@@ -106,9 +112,6 @@ namespace BTokenLib
         }
       }
     }
-
-    public override bool CreateTXData(byte[] data, out TX tX)
-    { throw new NotImplementedException(); }
 
     public override void ReverseTXUnconfirmed(TX tX)
     {

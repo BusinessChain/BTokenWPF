@@ -85,17 +85,6 @@ namespace BTokenLib
       }
     }
 
-
-    public override void BroadcastAnchorToken(TokenAnchor tokenAnchor)
-    {
-      byte[] dataAnchorToken = new byte[] { tokenAnchor.IDToken }
-      .Concat(tokenAnchor.HashBlockReferenced)
-      .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
-
-      if (Wallet.TryCreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
-        BroadcastTX(tX);
-    }
-
     public override Header CreateHeaderGenesis()
     {
       //HeaderBitcoin header = new(

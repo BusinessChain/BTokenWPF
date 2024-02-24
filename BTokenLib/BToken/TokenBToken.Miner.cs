@@ -20,8 +20,8 @@ namespace BTokenLib
     SHA256 SHA256Miner = SHA256.Create();
     Random RandomGeneratorMiner = new();
     int NumberSequence;
-    List<TokenAnchor> TokensAnchorUnconfirmed = new();
 
+    List<TokenAnchor> TokensAnchorUnconfirmed = new();
     List<TokenAnchor> TokensAnchorDetectedInBlock = new();
 
 
