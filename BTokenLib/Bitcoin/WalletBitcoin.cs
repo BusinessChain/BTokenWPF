@@ -49,11 +49,13 @@ namespace BTokenLib
         + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
         + (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
 
-      if (valueInput - feeTX > 0)
+      long valueChange = valueInput - valueOutput - feeTX;
+
+      if (valueChange > 0)
       {
         tX.TXRaw.Add(0x02);
 
-        tX.TXRaw.AddRange(BitConverter.GetBytes(valueInput - feeTX));
+        tX.TXRaw.AddRange(BitConverter.GetBytes(valueChange));
         tX.TXRaw.Add((byte)PublicScript.Length);
         tX.TXRaw.AddRange(PublicScript);
 
@@ -62,26 +64,16 @@ namespace BTokenLib
           {
             TXID = tX.Hash,
             Index = 1,
-            Value = valueInput - feeTX
+            Value = valueChange
           });
 
-        tX.Fee = feeTX;
+        tX.Fee = valueInput - valueOutput - valueChange;
       }
       else
       {
         tX.TXRaw.Add(0x01);
         tX.Fee = valueInput - valueOutput;
       }
-
-      //List<TXOutputWallet> inputs = new()
-      //{
-      //  new TXOutputWallet()
-      //  {
-      //    TXID = "bcb81f7e7d843bcace5a794c0f36ed5abd4323087cabf9691db0aa36e4c9366b".ToBinary(),
-      //    Value = 82000,
-      //    Index = 0
-      //  }
-      //};
 
       byte[] pubKeyHash160 = Base58CheckToPubKeyHash(addressOutput);
 
@@ -207,11 +199,21 @@ namespace BTokenLib
       tXInputScaffold = new();
       long feePerTXInput = (long)(feePerByte * LENGTH_P2PKH_INPUT);
 
-      List<TXOutputWallet> outputsSpendable =
-        OutputsSpendable.Where(o => o.Value > feePerTXInput)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
-        .Except(OutputsUnconfirmedSpent)
-        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
+      List<TXOutputWallet> outputsSpendable = new()
+      {
+        new TXOutputWallet()
+        {
+          TXID = "058b32e3ac89a2a7b586820fc0755eba13fbce9e824d364420a0fd71e7f55ad5".ToBinary(),
+          Value = 8056,
+          Index = 0
+        }
+      };
+
+      //OutputsSpendable.Where(o => o.Value > feePerTXInput)
+      //.Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
+      //.Except(OutputsUnconfirmedSpent)
+      //.Take(VarInt.PREFIX_UINT16 - 1).ToList();
+        
 
       value = outputsSpendable.Sum(o => o.Value);
       feeTXInputScaffold = feePerTXInput * outputsSpendable.Count;
@@ -235,25 +237,6 @@ namespace BTokenLib
       return true;
     }
 
-    List<TXOutputWallet> GetOutputsSpendable()
-    {
-      long feePerTXOutput = (long)Token.FeeSatoshiPerByte * LENGTH_P2PKH_INPUT;
-
-      List<TXOutputWallet> outputsValueNotSpendable = new();
-
-      outputsValueNotSpendable.AddRange(
-        OutputsSpendable.Where(o => o.Value > feePerTXOutput)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXOutput))
-        .Except(OutputsUnconfirmedSpent)
-        .Take(VarInt.PREFIX_UINT16 - 1));
-
-      OutputsUnconfirmedSpent.AddRange(outputsValueNotSpendable);
-
-      outputsValueNotSpendable.ForEach(o => BalanceUnconfirmed -= o.Value);
-
-      return outputsValueNotSpendable;
-    }
-
     public override void LoadImage(string path)
     {
       base.LoadImage(path);
@@ -272,7 +255,7 @@ namespace BTokenLib
     {
       foreach (TXBitcoin tX in block.TXs)
         foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
-          if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
+          if (TryDetectTXOutputSpendable(tXOutput))
           {
             $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 

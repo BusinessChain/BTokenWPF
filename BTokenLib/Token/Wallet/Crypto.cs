@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Crypto;
@@ -18,17 +19,13 @@ namespace BTokenLib
     public static bool VerifySignature(
       byte[] buffer,
       int startIndex,
-      byte[] publicKey,
+      byte[] pubKeyX,
       byte[] signature)
     {
       X9ECParameters curve = SecNamedCurves.GetByName("secp256k1");
 
-      // Experimentiere mit komprimiertem pubkey.
-      //Org.BouncyCastle.Math.EC.ECPoint bla = curve.Curve.DecodePoint(publicKey);
-      //bla.get
-
       ECPublicKeyParameters keyParameters = new(
-        curve.Curve.DecodePoint(publicKey),
+        curve.Curve.DecodePoint(pubKeyX),
         new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H));
 
       ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
@@ -38,17 +35,6 @@ namespace BTokenLib
 
       return signer.VerifySignature(signature);
     }
-
-    //static ECDomainParameters SPEC = ECNamedCurveTable.getParameterSpec("secp256k1");
-
-    //static byte[] compressedToUncompressed(byte[] compKey)
-    //{
-    //  ECPoint point = SPEC.getCurve().decodePoint(compKey);
-    //  byte[] x = point.getXCoord().getEncoded();
-    //  byte[] y = point.getYCoord().getEncoded();
-    //  // concat 0x04, x, and y, make sure x and y has 32-bytes:
-    //  return concat(new byte[] { 0x04 }, x, y);
-    //}
 
     public static byte[] GetSignature(
       string privateKey, 
@@ -79,7 +65,7 @@ namespace BTokenLib
       }
     }
 
-    public static byte[] GetPubKeyFromPrivKey(string privKey)
+    public static byte[] GetPubKeyFromPrivKey(string privKey, bool compressed = true)
     {
       var curve = SecNamedCurves.GetByName("secp256k1");
 
@@ -93,7 +79,20 @@ namespace BTokenLib
       var q = domain.G.Multiply(d);
 
       var publicKey = new ECPublicKeyParameters(q, domain);
-      return publicKey.Q.GetEncoded();
+
+      if (!compressed)
+        return publicKey.Q.GetEncoded();
+
+      List<byte> pubKeyX = publicKey.Q.XCoord.GetEncoded().ToList();
+
+      byte lasbByteY = publicKey.Q.YCoord.GetEncoded().Last();
+
+      if ((lasbByteY & 0x01) == 0x00)
+        pubKeyX.Insert(0, 0x02);
+      else
+        pubKeyX.Insert(0, 0x03);
+
+      return pubKeyX.ToArray();
     }
 
     public static byte[] ComputeHash160(byte[] data, SHA256 sHA256)

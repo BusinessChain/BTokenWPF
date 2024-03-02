@@ -147,7 +147,7 @@ namespace BTokenWPF
       {
         string address = TextBoxAddress.Text;
         long value = long.Parse(TextBoxValue.Text);
-        long fee = long.Parse(TextBoxFee.Text);
+        double fee = double.Parse(TextBoxFee.Text);
 
         if (!Token.MakeTX(address, value, fee, out TX tX))
         {
@@ -161,7 +161,7 @@ namespace BTokenWPF
         }
 
         TextBoxRawTX.Text = tX.TXRaw.ToArray().Reverse().ToArray().ToHexString();
-        TextBoxTXID.Text = tX.Hash.ToHexString();
+        TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
 
         Token.BroadcastTX(tX);
       }

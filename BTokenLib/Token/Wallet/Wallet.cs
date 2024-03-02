@@ -173,6 +173,9 @@ namespace BTokenLib
 
     protected bool TryDetectTXOutputSpendable(TXOutput tXOutput)
     {
+      if (tXOutput.Value < 0)
+        return false;
+
       if (tXOutput.LengthScript != LENGTH_P2PKH)
         return false;
 
