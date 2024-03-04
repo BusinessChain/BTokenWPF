@@ -203,25 +203,6 @@ namespace BTokenLib
         HistoryTransactions.Add(tX);
     }
 
-    public List<byte> GetScriptSignature(byte[] tXRaw)
-    {
-      byte[] signature = Crypto.GetSignature(
-      PrivKeyDec,
-      tXRaw.ToArray(),
-      SHA256);
-
-      List<byte> scriptSig = new();
-
-      scriptSig.Add((byte)(signature.Length + 1));
-      scriptSig.AddRange(signature);
-      scriptSig.Add(0x01);
-
-      scriptSig.Add((byte)PublicKey.Length);
-      scriptSig.AddRange(PublicKey);
-
-      return scriptSig;
-    }
-
     public void AddOutputUnconfirmed(TXOutputWallet output)
     {
       OutputsUnconfirmed.Add(output);

@@ -185,26 +185,17 @@ namespace BTokenLib
     {
       TXBToken tX = new();
 
-      tX.LengthSig = buffer[index++];
-      Array.Copy(buffer, index, tX.Signature, 0, tX.LengthSig);
-      index += tX.LengthSig;
-
       int startIndexMessage = index;
 
-      int lengthPubKey = buffer[index++];
-      Array.Copy(buffer, index, tX.PubKeyCompressed, 0, lengthPubKey);
-      index += lengthPubKey;
+      tX.Token = BitConverter.ToUInt32(buffer, index);
+      index += 4;
 
-      if (!Crypto.VerifySignature(
-        buffer,
-        startIndexMessage,
-        tX.PubKeyCompressed,
-        tX.Signature))
-        throw new ProtocolException($"TX {tX} contains invalid signature.");
+      Array.Copy(buffer, index, tX.PubKeyCompressed, 0, TXBToken.LENGTH_PUBKEYCOMPRESSED);
+      index += TXBToken.LENGTH_PUBKEYCOMPRESSED;
 
       tX.IDAccountSource = Crypto.ComputeHash160(tX.PubKeyCompressed, sHA256);
 
-      tX.Nonce = BitConverter.ToUInt64(buffer, index);
+      tX.Nonce = BitConverter.ToInt64(buffer, index);
       index += 8;
 
       tX.Fee = BitConverter.ToInt64(buffer, index);
@@ -212,16 +203,28 @@ namespace BTokenLib
 
       tX.Value += tX.Fee;
 
-      int countOutputs = buffer[index++];
+      int countOutputs = VarInt.GetInt32(buffer, ref index);
 
       for(int i = 0; i < countOutputs; i += 1)
       {
         TXOutputBToken tXOutput = new(buffer, index);
-
         tX.TXOutputs.Add(tXOutput);
-        
+
         tX.Value += tXOutput.Value;
       }
+
+      int lengthSig = buffer[index++];
+      tX.Signature = new byte[lengthSig];
+      Array.Copy(buffer, index, tX.Signature, 0, lengthSig);
+      index += lengthSig;
+
+      if (!Crypto.VerifySignature(
+        buffer,
+        startIndexMessage,
+        index - startIndexMessage,
+        tX.PubKeyCompressed,
+        tX.Signature))
+        throw new ProtocolException($"TX {tX} contains invalid signature.");
 
       return tX;
     }

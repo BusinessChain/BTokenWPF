@@ -170,8 +170,21 @@ namespace BTokenLib
         tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
         tXRawSign.InsertRange(indexRawSign, PublicScript);
 
-        signaturesPerInput.Add(
-          GetScriptSignature(tXRawSign.ToArray()));
+        byte[] signature = Crypto.GetSignature(
+        PrivKeyDec,
+        tXRawSign.ToArray(),
+        SHA256);
+
+        List<byte> scriptSig = new();
+
+        scriptSig.Add((byte)(signature.Length + 1));
+        scriptSig.AddRange(signature);
+        scriptSig.Add(0x01);
+
+        scriptSig.Add((byte)PublicKey.Length);
+        scriptSig.AddRange(PublicKey);
+
+        signaturesPerInput.Add(scriptSig);
       }
 
       for (int i = countInputs - 1; i >= 0; i -= 1)

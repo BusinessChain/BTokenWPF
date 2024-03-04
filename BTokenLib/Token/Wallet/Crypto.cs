@@ -17,8 +17,9 @@ namespace BTokenLib
   public static class Crypto
   {       
     public static bool VerifySignature(
-      byte[] buffer,
-      int startIndex,
+      byte[] message,
+      int startIndexMessage,
+      int lengthMessage,
       byte[] pubKeyX,
       byte[] signature)
     {
@@ -31,7 +32,7 @@ namespace BTokenLib
       ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
 
       signer.Init(false, keyParameters);
-      signer.BlockUpdate(buffer, startIndex, buffer.Length - startIndex);
+      signer.BlockUpdate(message, startIndexMessage, lengthMessage);
 
       return signer.VerifySignature(signature);
     }

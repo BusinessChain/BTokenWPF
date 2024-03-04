@@ -55,7 +55,7 @@ namespace BTokenLib
             Account record = new()
             {
               IDAccount = bytesRecord.Take(LENGTH_ID_ACCOUNT).ToArray(),
-              Nonce = BitConverter.ToUInt64(bytesRecord, LENGTH_ID_ACCOUNT),
+              Nonce = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT),
               Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + LENGTH_NONCE)
             };
 
@@ -115,7 +115,7 @@ namespace BTokenLib
         {
           Account recordDB = new();
 
-          recordDB.Nonce = BitConverter.ToUInt64(bufferDB, index);
+          recordDB.Nonce = BitConverter.ToInt64(bufferDB, index);
           index += 8;
 
           recordDB.Value = BitConverter.ToUInt32(bufferDB, index);
@@ -275,7 +275,7 @@ namespace BTokenLib
           else
             account = new Account
             {
-              Nonce = (ulong)blockHeight << 32,
+              Nonce = (long)blockHeight << 32,
               Value = outputValueTX,
               IDAccount = iDAccount
             };

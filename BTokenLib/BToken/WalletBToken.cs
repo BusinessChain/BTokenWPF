@@ -8,7 +8,7 @@ namespace BTokenLib
   public partial class WalletBToken : Wallet
   {
     const int LENGTH_P2PKH_TX = 120;
-    public ulong NonceAccount;
+    public long NonceAccount;
 
 
     public WalletBToken(string privKeyDec, Token token)
@@ -34,12 +34,17 @@ namespace BTokenLib
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
       tX.TXRaw.AddRange(BitConverter.GetBytes(tX.Fee));
 
-      tX.TXRaw.Add(0x01);
+      tX.TXRaw.Add(0x01); // count outputs
             
       tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
       tX.TXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
+      
+      byte[] signature = Crypto.GetSignature(
+        PrivKeyDec,
+        tX.TXRaw.ToArray(),
+        SHA256);
 
-      List<byte> signature = GetScriptSignature(tX.TXRaw.ToArray());
+      tX.TXRaw.Add((byte)(signature.Length + 1));
       tX.TXRaw.AddRange(signature);
 
       tX.Hash = SHA256.ComputeHash(
@@ -67,7 +72,12 @@ namespace BTokenLib
       tX.TXRaw.AddRange(VarInt.GetBytes(data.Length));
       tX.TXRaw.AddRange(data);
 
-      List<byte> signature = GetScriptSignature(tX.TXRaw.ToArray());
+      byte[] signature = Crypto.GetSignature(
+        PrivKeyDec,
+        tX.TXRaw.ToArray(),
+        SHA256);
+
+      tX.TXRaw.Add((byte)(signature.Length + 1));
       tX.TXRaw.AddRange(signature);
 
       tX.Hash = SHA256.ComputeHash(

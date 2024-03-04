@@ -9,7 +9,10 @@ namespace BTokenLib
 {
   public class TXBToken : TX
   {
-    public byte[] PubKeyCompressed;
+    public uint Token;
+
+    public const int LENGTH_PUBKEYCOMPRESSED = 33;
+    public byte[] PubKeyCompressed = new byte[LENGTH_PUBKEYCOMPRESSED];
 
     public const int LENGTH_IDACCOUNT = 20;
     public byte[] IDAccountSource = new byte[LENGTH_IDACCOUNT];
@@ -17,8 +20,8 @@ namespace BTokenLib
     public int LengthSig;
     public byte[] Signature;
 
-    public ulong Nonce;
-    public ulong NonceInDB;
+    public long Nonce;
+    public long NonceInDB;
 
     public long Value;
     public long ValueInDB;
