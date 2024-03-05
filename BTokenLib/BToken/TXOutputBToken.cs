@@ -14,30 +14,31 @@ namespace BTokenLib
 
     public enum TypesToken
     {
-      ValueTransfer = 0x00
+      ValueTransfer = 0x00,
+      Data = 0x01
     }
 
-    public TXOutputBToken(byte[] buffer, int startIndex)
+    public TXOutputBToken(byte[] buffer, ref int index)
     {
       Buffer = buffer; 
-      StartIndexScript = startIndex;
+      StartIndexScript = index;
 
-      Type = (TypesToken)buffer[startIndex];
+      Type = (TypesToken)buffer[index++];
 
       if (Type == TypesToken.ValueTransfer)
       {
-        Value = BitConverter.ToInt64(buffer, startIndex);
+        Value = BitConverter.ToInt64(buffer, index);
 
-        startIndex += 8;
+        index += 8;
 
         IDAccount = new byte[TXBToken.LENGTH_IDACCOUNT];
 
-        Array.Copy(
-          buffer,
-          startIndex,
-          IDAccount,
-          startIndex,
-          TXBToken.LENGTH_IDACCOUNT);
+        Array.Copy(buffer, index, IDAccount, index, TXBToken.LENGTH_IDACCOUNT);
+        index += TXBToken.LENGTH_IDACCOUNT;
+      }
+      else if (Type == TypesToken.Data)
+      {
+
       }
     }
   }

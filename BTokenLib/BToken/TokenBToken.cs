@@ -207,7 +207,7 @@ namespace BTokenLib
 
       for(int i = 0; i < countOutputs; i += 1)
       {
-        TXOutputBToken tXOutput = new(buffer, index);
+        TXOutputBToken tXOutput = new(buffer, ref index);
         tX.TXOutputs.Add(tXOutput);
 
         tX.Value += tXOutput.Value;

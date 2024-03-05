@@ -35,7 +35,8 @@ namespace BTokenLib
       tX.TXRaw.AddRange(BitConverter.GetBytes(tX.Fee));
 
       tX.TXRaw.Add(0x01); // count outputs
-            
+
+      tX.TXRaw.Add((byte)TXOutputBToken.TypesToken.ValueTransfer);
       tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
       tX.TXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
       
