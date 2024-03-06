@@ -6,17 +6,21 @@ using System.Text;
 
 namespace BTokenLib
 {
-  public class TXOutputBToken : TXOutput
+  public class TXOutputBToken
   {
-    public byte[] IDAccount;
-    public TypesToken Type;
-
-
     public enum TypesToken
     {
       ValueTransfer = 0x00,
       Data = 0x01
     }
+
+    public TypesToken Type;
+
+    public byte[] IDAccount;
+
+    public long Value;
+
+
 
     public TXOutputBToken(byte[] buffer, ref int index)
     {

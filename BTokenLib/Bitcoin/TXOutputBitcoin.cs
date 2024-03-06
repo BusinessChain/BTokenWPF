@@ -6,21 +6,47 @@ using System.Text;
 
 namespace BTokenLib
 {
-  public class TXOutputBitcoin : TXOutput
+  public class TXOutputBitcoin
   {
+    public enum TypesToken
+    {
+      ValueTransfer = 0x00,
+      AnchorToken = 0x01,
+      NotSupported
+    }
+
+    public TypesToken Type;
+
+    public byte[] PublicKeyHash160 = new byte[20];
+    public long Value;
+
     public TXOutputBitcoin(
       byte[] buffer,
       ref int index)
     {
-      Buffer = buffer;
-
       Value = BitConverter.ToInt64(buffer, index);
       index += 8;
 
-      LengthScript = VarInt.GetInt32(Buffer, ref index);
+      int lengthScript = VarInt.GetInt32(buffer, ref index);
+      
+      if (lengthScript == WalletBitcoin.LENGTH_P2PKH && 
+        WalletBitcoin.PREFIX_P2PKH.IsEqual(buffer, index))
+      {
+        index += WalletBitcoin.PREFIX_P2PKH.Length;
 
-      StartIndexScript = index;
-      index += LengthScript;
+        Array.Copy(buffer, index, PublicKeyHash160, 0, PublicKeyHash160.Length);
+
+        index += PublicKeyHash160.Length;
+
+        if (!WalletBitcoin.POSTFIX_P2PKH.IsEqual(buffer, index))
+          Type = TypesToken.NotSupported;
+        else
+          Type = TypesToken.ValueTransfer;
+
+        index += 2;
+      }
+
+      index += lengthScript;
     }
   }
 }

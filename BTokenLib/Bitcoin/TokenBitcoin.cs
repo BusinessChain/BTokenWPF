@@ -63,10 +63,7 @@ namespace BTokenLib
           ref indexBuffer);
 
         for (int i = 0; i < countTXOutputs; i += 1)
-          tX.TXOutputs.Add(
-            new TXOutputBitcoin(
-              buffer,
-              ref indexBuffer));
+          tX.TXOutputs.Add(new TXOutputBitcoin(buffer, ref indexBuffer));
 
         indexBuffer += 4; //BYTE_LENGTH_LOCK_TIME
 
@@ -117,9 +114,12 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
-      foreach (TX tX in block.TXs)
+      foreach (TXBitcoin tX in block.TXs)
         foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
         {
+          if (tXOutput.Type != TXOutputBitcoin.TypesToken.AnchorToken)
+            continue;
+
           int index = tXOutput.StartIndexScript;
 
           if (tXOutput.Buffer[index] != 0x6A)

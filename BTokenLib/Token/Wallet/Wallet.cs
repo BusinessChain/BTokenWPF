@@ -14,10 +14,6 @@ namespace BTokenLib
   {
     protected Token Token;
 
-    public const int LENGTH_P2PKH = 25;
-    public byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
-    public byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
-
     protected SHA256 SHA256 = SHA256.Create();
 
     protected string PrivKeyDec;
@@ -170,32 +166,6 @@ namespace BTokenLib
     }
 
     public abstract void InsertBlock(Block block);
-
-    protected bool TryDetectTXOutputSpendable(TXOutput tXOutput)
-    {
-      if (tXOutput.Value < 0)
-        return false;
-
-      if (tXOutput.LengthScript != LENGTH_P2PKH)
-        return false;
-
-      int indexScript = tXOutput.StartIndexScript;
-
-      if (!PREFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      indexScript += 3;
-
-      if (!PublicKeyHash160.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      indexScript += 20;
-
-      if (!POSTFIX_P2PKH.IsEqual(tXOutput.Buffer, indexScript))
-        return false;
-
-      return true;
-    }
 
     protected void AddTXToHistory(TX tX)
     {

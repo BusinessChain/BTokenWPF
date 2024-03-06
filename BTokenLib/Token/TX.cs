@@ -14,8 +14,6 @@ namespace BTokenLib
 
     public long Fee;
 
-    public List<TXOutput> TXOutputs = new();
-
 
     public string GetStringTXRaw()
     {

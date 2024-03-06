@@ -13,6 +13,10 @@ namespace BTokenLib
     const int LENGTH_P2PKH_OUTPUT = 34;
     const int LENGTH_P2PKH_INPUT = 180;
 
+    public const int LENGTH_P2PKH = 25;
+    public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
+    public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
+
     byte OP_RETURN = 0x6A;
 
     public List<TXOutputWallet> OutputsSpendable = new();
@@ -268,7 +272,8 @@ namespace BTokenLib
     {
       foreach (TXBitcoin tX in block.TXs)
         foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
-          if (TryDetectTXOutputSpendable(tXOutput))
+          if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer && 
+            tXOutput.PublicKeyHash160.IsEqual(PublicKeyHash160))
           {
             $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 

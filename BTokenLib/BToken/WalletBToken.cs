@@ -91,7 +91,7 @@ namespace BTokenLib
     {
       foreach (TXBToken tX in block.TXs)
         foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-          if (tXOutput.Value > 0 && TryDetectTXOutputSpendable(tXOutput))
+          if (tXOutput.Type == TXOutputBToken.TypesToken.ValueTransfer)
           {
             $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
