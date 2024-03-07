@@ -39,7 +39,8 @@ namespace BTokenLib
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
     public double FeeSatoshiPerByte = 1.0;
 
-    protected byte IDToken;
+    static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77, 0x87, 0x77 };
+    protected byte[] IDToken;
 
     bool IsLocked;
     static object LOCK_Token = new();
@@ -48,8 +49,11 @@ namespace BTokenLib
     public Token(
       UInt16 port, 
       bool flagEnableInboundConnections,
-      ILogEntryNotifier logEntryNotifier)
+      ILogEntryNotifier logEntryNotifier,
+      byte[] BTokenSerialNumber)
     {
+      IDToken = IDENTIFIER_BTOKEN_PROTOCOL.Concat(BTokenSerialNumber).ToArray();
+
       LogEntryNotifier = logEntryNotifier;
 
       PathRootToken = GetName();
@@ -583,7 +587,7 @@ namespace BTokenLib
 
     public void BroadcastAnchorToken(TokenAnchor tokenAnchor)
     {
-      byte[] dataAnchorToken = new byte[] { tokenAnchor.IDToken }
+      byte[] dataAnchorToken = tokenAnchor.IDToken
       .Concat(tokenAnchor.HashBlockReferenced)
       .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 

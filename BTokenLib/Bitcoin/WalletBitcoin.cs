@@ -13,11 +13,14 @@ namespace BTokenLib
     const int LENGTH_P2PKH_OUTPUT = 34;
     const int LENGTH_P2PKH_INPUT = 180;
 
-    public const int LENGTH_P2PKH = 25;
-    public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
+    const byte LENGTH_P2PKH_TOKEN = 66;
+    public static byte[] PREFIX_P2PKH = new byte[] { LENGTH_P2PKH_TOKEN, 0x76, 0xA9, 0x14 };
     public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
-    byte OP_RETURN = 0x6A;
+    const byte LENGTH_DATA_ANCHOR_TOKEN = 66;
+    const byte OP_RETURN = 0x6A;
+    public static byte[] PREFIX_OP_RETURN_DATA = new byte[] { LENGTH_DATA_ANCHOR_TOKEN, OP_RETURN, tokenID};
+
 
     public List<TXOutputWallet> OutputsSpendable = new();
 

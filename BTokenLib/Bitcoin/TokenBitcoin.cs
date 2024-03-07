@@ -17,8 +17,6 @@ namespace BTokenLib
 
     PoolTXBitcoin TXPool = new();
 
-    const int LENGTH_DATA_ANCHOR_TOKEN = 66;
-
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -122,7 +120,7 @@ namespace BTokenLib
 
           int index = tXOutput.StartIndexScript;
 
-          if (tXOutput.Buffer[index] != 0x6A)
+          if (tXOutput.Buffer[index] != WalletBitcoin.PREFIX_OP_RETURN_DATA)
             return;
 
           index += 1;
@@ -159,7 +157,8 @@ namespace BTokenLib
 
           TokenChild.SignalAnchorTokenDetected(tokenAnchor);
 
-          break; // Only one Anchor token per TX allowed
+          break; // Only one Anchor token per TX allowed because standard relay rules only allow one
+          // According to Bitcoin Wiki -> Script -> Flow Control -> OP_Return description
         }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));

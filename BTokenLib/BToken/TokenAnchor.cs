@@ -11,7 +11,7 @@ namespace BTokenLib
   {
     public class TokenAnchor
     {
-      public byte IDToken;
+      public byte[] IDToken;
       public int NumberSequence;
 
       public byte[] HashBlockReferenced = new byte[32];
@@ -23,7 +23,6 @@ namespace BTokenLib
       {
         return TX.Hash.ToHexString();
       }
-
     }
   }
 }

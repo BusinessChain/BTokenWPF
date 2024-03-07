@@ -29,9 +29,10 @@ namespace BTokenLib
       : base(
           COMPORT_BTOKEN,
           flagEnableInboundConnections: true,
-          logEntryNotifier)
+          logEntryNotifier,
+          tokenID: 0x)
     {
-      IDToken = 0x01;
+      IDToken = new byte[4] { 0x87, 0x77, 0x00, 0x00 };
 
       TokenParent = new TokenBitcoin(logEntryNotifier);
       TokenParent.TokenChild = this;

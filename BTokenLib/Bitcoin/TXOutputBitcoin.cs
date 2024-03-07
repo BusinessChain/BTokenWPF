@@ -29,8 +29,7 @@ namespace BTokenLib
 
       int lengthScript = VarInt.GetInt32(buffer, ref index);
       
-      if (lengthScript == WalletBitcoin.LENGTH_P2PKH && 
-        WalletBitcoin.PREFIX_P2PKH.IsEqual(buffer, index))
+      if (WalletBitcoin.PREFIX_P2PKH.IsEqual(buffer, index))
       {
         index += WalletBitcoin.PREFIX_P2PKH.Length;
 
@@ -44,6 +43,10 @@ namespace BTokenLib
           Type = TypesToken.ValueTransfer;
 
         index += 2;
+      }
+      else if()
+      {
+
       }
 
       index += lengthScript;

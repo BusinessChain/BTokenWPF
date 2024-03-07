@@ -184,6 +184,7 @@ namespace BTokenLib
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
+      tokenAnchor.IDToken = IDToken;
             
       string pathFileBlock = Path.Combine(
         PathBlocksMinedUnconfirmed, 
