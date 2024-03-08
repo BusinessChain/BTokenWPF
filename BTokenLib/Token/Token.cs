@@ -39,8 +39,8 @@ namespace BTokenLib
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
     public double FeeSatoshiPerByte = 1.0;
 
-    static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77, 0x87, 0x77 };
-    protected byte[] IDToken;
+    static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77 };
+    public byte[] SerialNumberToken;
 
     bool IsLocked;
     static object LOCK_Token = new();
@@ -52,8 +52,6 @@ namespace BTokenLib
       ILogEntryNotifier logEntryNotifier,
       byte[] BTokenSerialNumber)
     {
-      IDToken = IDENTIFIER_BTOKEN_PROTOCOL.Concat(BTokenSerialNumber).ToArray();
-
       LogEntryNotifier = logEntryNotifier;
 
       PathRootToken = GetName();

@@ -10,9 +10,9 @@ namespace BTokenLib
   {
     public enum TypesToken
     {
-      ValueTransfer = 0x00,
-      AnchorToken = 0x01,
-      NotSupported
+      NotSupported = 0x00,
+      ValueTransfer = 0x01,
+      AnchorToken = 0x02,
     }
 
     public TypesToken Type;
@@ -20,16 +20,22 @@ namespace BTokenLib
     public byte[] PublicKeyHash160 = new byte[20];
     public long Value;
 
+    public TokenAnchor TokenAnchor;
+
     public TXOutputBitcoin(
       byte[] buffer,
       ref int index)
     {
+      Type = TypesToken.NotSupported;
+
       Value = BitConverter.ToInt64(buffer, index);
       index += 8;
 
       int lengthScript = VarInt.GetInt32(buffer, ref index);
-      
-      if (WalletBitcoin.PREFIX_P2PKH.IsEqual(buffer, index))
+      int indexEndOfScript = index + lengthScript;
+
+      if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_P2PKH &&
+        WalletBitcoin.PREFIX_P2PKH.IsEqual(buffer, index))
       {
         index += WalletBitcoin.PREFIX_P2PKH.Length;
 
@@ -37,19 +43,46 @@ namespace BTokenLib
 
         index += PublicKeyHash160.Length;
 
-        if (!WalletBitcoin.POSTFIX_P2PKH.IsEqual(buffer, index))
-          Type = TypesToken.NotSupported;
-        else
+        if (WalletBitcoin.POSTFIX_P2PKH.IsEqual(buffer, index))
           Type = TypesToken.ValueTransfer;
 
         index += 2;
       }
-      else if()
+      else if(lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
+        WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsEqual(buffer, index))
       {
+        index += WalletBitcoin.PREFIX_ANCHOR_TOKEN.Length;
 
+        TokenAnchor = new();
+
+        Array.Copy(buffer, index, TokenAnchor.SerialNumber, 0, TokenAnchor.SerialNumber.Length);
+        index += TokenAnchor.SerialNumber.Length;
+
+        Array.Copy(
+          buffer,
+          index,
+          TokenAnchor.HashBlockReferenced,
+          0,
+          TokenAnchor.HashBlockReferenced.Length);
+
+        index += 32;
+
+        Array.Copy(
+          buffer,
+          index,
+          TokenAnchor.HashBlockPreviousReferenced,
+          0,
+          TokenAnchor.HashBlockPreviousReferenced.Length);
+
+        index += TokenAnchor.HashBlockPreviousReferenced.Length;
+
+        Type = TypesToken.AnchorToken;
       }
+      else
+        Type = TypesToken.NotSupported;
 
-      index += lengthScript;
+      if (index != indexEndOfScript)
+        Type = TypesToken.NotSupported;
     }
   }
 }

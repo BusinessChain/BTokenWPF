@@ -7,22 +7,19 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  partial class Token
+  public class TokenAnchor
   {
-    public class TokenAnchor
+    public byte[] SerialNumber = new byte[2];
+    public int NumberSequence;
+
+    public byte[] HashBlockReferenced = new byte[32];
+    public byte[] HashBlockPreviousReferenced = new byte[32];
+
+    public TX TX;
+
+    public override string ToString()
     {
-      public byte[] IDToken;
-      public int NumberSequence;
-
-      public byte[] HashBlockReferenced = new byte[32];
-      public byte[] HashBlockPreviousReferenced = new byte[32];
-
-      public TX TX;
-      
-      public override string ToString()
-      {
-        return TX.Hash.ToHexString();
-      }
+      return TX.Hash.ToHexString();
     }
   }
 }

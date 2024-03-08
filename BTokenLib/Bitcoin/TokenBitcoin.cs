@@ -23,7 +23,8 @@ namespace BTokenLib
       : base(
           COMPORT_BITCOIN,
           flagEnableInboundConnections: true,
-          logEntryNotifier)
+          logEntryNotifier,
+          BitConverter.GetBytes(COMPORT_BITCOIN))
     {
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
@@ -118,44 +119,8 @@ namespace BTokenLib
           if (tXOutput.Type != TXOutputBitcoin.TypesToken.AnchorToken)
             continue;
 
-          int index = tXOutput.StartIndexScript;
-
-          if (tXOutput.Buffer[index] != WalletBitcoin.PREFIX_OP_RETURN_DATA)
-            return;
-
-          index += 1;
-
-          if (tXOutput.Buffer[index] != LENGTH_DATA_ANCHOR_TOKEN)
-            return;
-
-          index += 1;
-
-          TokenAnchor tokenAnchor = new()
-          {
-            TX = tX
-          };
-
-          tokenAnchor.IDToken = tXOutput.Buffer[index];
-
-          index += 1;
-
-          Array.Copy(
-            tXOutput.Buffer,
-            index,
-            tokenAnchor.HashBlockReferenced,
-            0,
-            tokenAnchor.HashBlockReferenced.Length);
-
-          index += 32;
-
-          Array.Copy(
-            tXOutput.Buffer,
-            index,
-            tokenAnchor.HashBlockPreviousReferenced,
-            0,
-            tokenAnchor.HashBlockPreviousReferenced.Length);
-
-          TokenChild.SignalAnchorTokenDetected(tokenAnchor);
+          if (tXOutput.TokenAnchor.SerialNumber.IsEqual(TokenChild.SerialNumberToken))
+            TokenChild.SignalAnchorTokenDetected(tXOutput.TokenAnchor);
 
           break; // Only one Anchor token per TX allowed because standard relay rules only allow one
           // According to Bitcoin Wiki -> Script -> Flow Control -> OP_Return description
