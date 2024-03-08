@@ -119,7 +119,7 @@ namespace BTokenLib
           if (tXOutput.Type != TXOutputBitcoin.TypesToken.AnchorToken)
             continue;
 
-          if (tXOutput.TokenAnchor.SerialNumber.IsEqual(TokenChild.SerialNumberToken))
+          if (tXOutput.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
             TokenChild.SignalAnchorTokenDetected(tXOutput.TokenAnchor);
 
           break; // Only one Anchor token per TX allowed because standard relay rules only allow one

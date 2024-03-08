@@ -55,8 +55,8 @@ namespace BTokenLib
 
         TokenAnchor = new();
 
-        Array.Copy(buffer, index, TokenAnchor.SerialNumber, 0, TokenAnchor.SerialNumber.Length);
-        index += TokenAnchor.SerialNumber.Length;
+        Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.IDToken.Length);
+        index += TokenAnchor.IDToken.Length;
 
         Array.Copy(
           buffer,

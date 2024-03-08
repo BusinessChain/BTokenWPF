@@ -54,7 +54,7 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                Nonce = BitConverter.ToUInt64(nonce),
+                Nonce = BitConverter.ToInt64(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 
@@ -118,7 +118,7 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                Nonce = BitConverter.ToUInt64(nonce),
+                Nonce = BitConverter.ToInt64(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 

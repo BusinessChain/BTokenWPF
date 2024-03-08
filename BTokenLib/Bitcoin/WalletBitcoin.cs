@@ -19,9 +19,8 @@ namespace BTokenLib
 
     public const byte LENGTH_SCRIPT_ANCHOR_TOKEN = 69;
     public const byte OP_RETURN = 0x6A;
-    public static byte[] ID_BTOKEN = new byte[2] { 0x87, 0x77 };
     public static byte[] PREFIX_ANCHOR_TOKEN = 
-      new byte[] { OP_RETURN, ID_BTOKEN[0], ID_BTOKEN[1] };
+      new byte[] { OP_RETURN }.Concat(Token.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 
     public List<TXOutputWallet> OutputsSpendable = new();
 
@@ -83,10 +82,8 @@ namespace BTokenLib
         tX.Fee = valueInput - valueOutput;
       }
 
-      byte[] pubKeyHash160 = Base58CheckToPubKeyHash(addressOutput);
-
       byte[] pubScript = PREFIX_P2PKH
-        .Concat(pubKeyHash160)
+        .Concat(Base58CheckToPubKeyHash(addressOutput))
         .Concat(POSTFIX_P2PKH).ToArray();
 
       tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
@@ -102,6 +99,41 @@ namespace BTokenLib
        SHA256.ComputeHash(tX.TXRaw.ToArray()));
 
       return true;
+    }
+
+    public override TX CreateCoinbaseTX(int height, long blockReward)
+    {
+      TXBitcoin tX = new();
+
+      tX.TXRaw.AddRange(new byte[4] { 0x01, 0x00, 0x00, 0x00 }); // version
+
+      tX.TXRaw.Add(0x01); // #TxIn
+
+      tX.TXRaw.AddRange(new byte[32]); // TxOutHash
+
+      tX.TXRaw.AddRange("FFFFFFFF".ToBinary()); // TxOutIndex
+
+      List<byte> blockHeight = VarInt.GetBytes(height); // Script coinbase
+      tX.TXRaw.Add((byte)blockHeight.Count);
+      tX.TXRaw.AddRange(blockHeight);
+
+      tX.TXRaw.AddRange("FFFFFFFF".ToBinary()); // sequence
+
+      tX.TXRaw.Add(0x01); // #TxOut
+
+      tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
+
+      tX.TXRaw.Add((byte)PublicScript.Length);
+      tX.TXRaw.AddRange(PublicScript);
+
+      tX.TXRaw.AddRange(new byte[4]);
+
+      tX.Hash = SHA256.ComputeHash(
+       SHA256.ComputeHash(tX.TXRaw.ToArray()));
+
+      tX.IsCoinbase = true;
+
+      return tX;
     }
 
     public override bool TryCreateTXData(byte[] data, int sequence, out TX tX)

@@ -24,9 +24,6 @@ namespace BTokenLib
 
     public TXOutputBToken(byte[] buffer, ref int index)
     {
-      Buffer = buffer; 
-      StartIndexScript = index;
-
       Type = (TypesToken)buffer[index++];
 
       if (Type == TypesToken.ValueTransfer)

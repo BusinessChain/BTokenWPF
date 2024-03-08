@@ -145,7 +145,7 @@ namespace BTokenLib
       long blockReward = BLOCK_REWARD_INITIAL >>
         height / PERIOD_HALVENING_BLOCK_REWARD;
 
-      TX tXCoinbase = CreateCoinbaseTX(block, height, blockReward);
+      TX tXCoinbase = Wallet.CreateCoinbaseTX(height, blockReward);
 
       block.TXs.Add(tXCoinbase);
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX));
@@ -184,7 +184,7 @@ namespace BTokenLib
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
-      tokenAnchor.SerialNumber = SerialNumberToken;
+      tokenAnchor.IDToken = IDToken;
             
       string pathFileBlock = Path.Combine(
         PathBlocksMinedUnconfirmed, 

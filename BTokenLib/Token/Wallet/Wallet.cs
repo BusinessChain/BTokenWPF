@@ -181,18 +181,8 @@ namespace BTokenLib
 
     public abstract void ReverseTXUnconfirmed(TX tX);
 
-    public byte[] GetReceptionScript()
-    {
-      byte[] script = new byte[26];
 
-      script[0] = LENGTH_P2PKH;
-
-      PREFIX_P2PKH.CopyTo(script, 1);
-      PublicKeyHash160.CopyTo(script, 4);
-      POSTFIX_P2PKH.CopyTo(script, 24);
-
-      return script;
-    }
+    public abstract TX CreateCoinbaseTX(int height, long blockReward);
 
     public virtual void Clear()
     {

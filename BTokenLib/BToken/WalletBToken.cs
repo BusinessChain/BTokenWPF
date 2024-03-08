@@ -7,13 +7,48 @@ namespace BTokenLib
 {
   public partial class WalletBToken : Wallet
   {
-    const int LENGTH_P2PKH_TX = 120;
+    public enum TypesToken
+    {
+      Coinbase = 0,
+      ValueTransfer = 1,
+      Data = 2
+    }
+
+    static int LENGTH_P2PKH_TX = 120;
     public long NonceAccount;
 
 
     public WalletBToken(string privKeyDec, Token token)
       : base(privKeyDec, token)
     { }
+
+
+    public override TX CreateCoinbaseTX(int height, long blockReward)
+    {
+      TXBToken tX = new();
+
+      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TypesToken.Coinbase)); // token ; config
+
+      tX.TXRaw.Add(0x01); // count outputs
+
+      tX.TXRaw.Add((byte)TXOutputBToken.TypesToken.ValueTransfer);
+      tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
+      tX.TXRaw.AddRange(PublicKeyHash160);
+
+      byte[] signature = Crypto.GetSignature(
+        PrivKeyDec,
+        tX.TXRaw.ToArray(),
+        SHA256);
+
+      tX.TXRaw.Add((byte)(signature.Length + 1));
+      tX.TXRaw.AddRange(signature);
+
+      tX.Hash = SHA256.ComputeHash(
+       SHA256.ComputeHash(tX.TXRaw.ToArray()));
+
+      return tX;
+    }
+
 
     public override bool TryCreateTX(
       string addressOutput,
@@ -28,7 +63,7 @@ namespace BTokenLib
       if (BalanceUnconfirmed < valueOutput + tX.Fee)
         return false;
 
-      tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // token ; config
+      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TypesToken.ValueTransfer)); // token ; config
 
       tX.TXRaw.AddRange(PublicKey);
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
@@ -63,7 +98,7 @@ namespace BTokenLib
       if (BalanceUnconfirmed < tX.Fee)
         return false;
 
-      tX.TXRaw.AddRange(new byte[] { 0x02, 0x00, 0x00, 0x00 }); // token ; config
+      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TypesToken.Data)); // token ; config
 
       tX.TXRaw.AddRange(PublicKey);
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));

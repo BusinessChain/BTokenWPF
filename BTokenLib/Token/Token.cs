@@ -39,8 +39,8 @@ namespace BTokenLib
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
     public double FeeSatoshiPerByte = 1.0;
 
-    static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77 };
-    public byte[] SerialNumberToken;
+    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77 };
+    public byte[] IDToken;
 
     bool IsLocked;
     static object LOCK_Token = new();
@@ -447,45 +447,6 @@ namespace BTokenLib
     public abstract void CreateImageDatabase(string path);
 
     public abstract Block CreateBlock();
-
-    protected TX CreateCoinbaseTX(Block block, int height, long blockReward)
-    {
-      List<byte> tXRaw = new();
-
-      tXRaw.AddRange(new byte[4] { 0x01, 0x00, 0x00, 0x00 }); // version
-
-      tXRaw.Add(0x01); // #TxIn
-
-      tXRaw.AddRange(new byte[32]); // TxOutHash
-
-      tXRaw.AddRange("FFFFFFFF".ToBinary()); // TxOutIndex
-
-      List<byte> blockHeight = VarInt.GetBytes(height); // Script coinbase
-      tXRaw.Add((byte)blockHeight.Count);
-      tXRaw.AddRange(blockHeight);
-
-      tXRaw.AddRange("FFFFFFFF".ToBinary()); // sequence
-
-      tXRaw.Add(0x01); // #TxOut
-
-      tXRaw.AddRange(BitConverter.GetBytes(blockReward));
-
-      tXRaw.AddRange(Wallet.GetReceptionScript());
-
-      tXRaw.AddRange(new byte[4]);
-
-      int indexTXRaw = 0;
-
-      TX tX = ParseTX(
-        tXRaw.ToArray(),
-        ref indexTXRaw,
-        block.SHA256);
-
-      tX.IsCoinbase = true;
-      tX.TXRaw = tXRaw;
-
-      return tX;
-    }
 
     public abstract TX ParseTX(
       byte[] buffer,
