@@ -11,7 +11,8 @@ namespace BTokenLib
     {
       Coinbase = 0,
       ValueTransfer = 1,
-      Data = 2
+      AnchorToken = 2,
+      Data = 3
     }
 
     static int LENGTH_P2PKH_TX = 120;

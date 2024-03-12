@@ -148,7 +148,7 @@ namespace BTokenLib
       TX tXCoinbase = Wallet.CreateCoinbaseTX(height, blockReward);
 
       block.TXs.Add(tXCoinbase);
-      block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX));
+      block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX)); // should be bytes per block
 
       HeaderBToken header = new()
       {

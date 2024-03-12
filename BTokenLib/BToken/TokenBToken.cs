@@ -96,7 +96,7 @@ namespace BTokenLib
     {
       foreach (TXBToken tX in block.TXs)
       {
-        if (tX.IsCoinbase)
+        if (tX.TypeToken == WalletBToken.TypesToken.Coinbase)
         {
           long outputValueTXCoinbase = 0;
 
@@ -182,48 +182,29 @@ namespace BTokenLib
       ref int index,
       SHA256 sHA256)
     {
-      TXBToken tX = new();
-
+      TXBToken tX;
       int startIndexMessage = index;
 
-      tX.Token = BitConverter.ToUInt32(buffer, index);
+      WalletBToken.TypesToken typeToken = (WalletBToken.TypesToken)BitConverter.ToUInt32(buffer, index);
       index += 4;
 
-      Array.Copy(buffer, index, tX.PubKeyCompressed, 0, TXBToken.LENGTH_PUBKEYCOMPRESSED);
-      index += TXBToken.LENGTH_PUBKEYCOMPRESSED;
-
-      tX.IDAccountSource = Crypto.ComputeHash160(tX.PubKeyCompressed, sHA256);
-
-      tX.Nonce = BitConverter.ToInt64(buffer, index);
-      index += 8;
-
-      tX.Fee = BitConverter.ToInt64(buffer, index);
-      index += 8;
-
-      tX.Value += tX.Fee;
-
-      int countOutputs = VarInt.GetInt32(buffer, ref index);
-
-      for(int i = 0; i < countOutputs; i += 1)
+      if(typeToken != WalletBToken.TypesToken.Coinbase)
       {
-        TXOutputBToken tXOutput = new(buffer, ref index);
-        tX.TXOutputs.Add(tXOutput);
-
-        tX.Value += tXOutput.Value;
+        tX = new TXBTokenCoinbase(buffer, ref index);
+      }
+      else if (typeToken == WalletBToken.TypesToken.ValueTransfer)
+      {
+        tX = new TXBTokenValueTransfer(buffer, startIndexMessage, ref index, sHA256);
+      }
+      else if (typeToken == WalletBToken.TypesToken.AnchorToken)
+      {
+        tX = new TXBTokenAnchorToken(buffer, startIndexMessage, ref index, sHA256);
+      }
+      else if (typeToken == WalletBToken.TypesToken.Data)
+      {
+        tX = new TXBTokenData(buffer, startIndexMessage, ref index, sHA256);
       }
 
-      int lengthSig = buffer[index++];
-      tX.Signature = new byte[lengthSig];
-      Array.Copy(buffer, index, tX.Signature, 0, lengthSig);
-      index += lengthSig;
-
-      if (!Crypto.VerifySignature(
-        buffer,
-        startIndexMessage,
-        index - startIndexMessage,
-        tX.PubKeyCompressed,
-        tX.Signature))
-        throw new ProtocolException($"TX {tX} contains invalid signature.");
 
       return tX;
     }

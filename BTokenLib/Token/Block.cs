@@ -77,8 +77,6 @@ namespace BTokenLib
           ref bufferIndex,
           SHA256);
 
-        tX.IsCoinbase = true;
-
         TXs.Add(tX);
       }
       else
@@ -90,8 +88,6 @@ namespace BTokenLib
           Buffer,
           ref bufferIndex, 
           SHA256);
-
-        tX.IsCoinbase = true;
 
         TXs.Add(tX);
 

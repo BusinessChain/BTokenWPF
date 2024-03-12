@@ -10,8 +10,6 @@ namespace BTokenLib
 
     public List<byte> TXRaw = new();
 
-    public bool IsCoinbase;
-
     public long Fee;
 
 

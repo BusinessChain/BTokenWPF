@@ -131,8 +131,6 @@ namespace BTokenLib
       tX.Hash = SHA256.ComputeHash(
        SHA256.ComputeHash(tX.TXRaw.ToArray()));
 
-      tX.IsCoinbase = true;
-
       return tX;
     }
 
