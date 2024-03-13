@@ -10,6 +10,8 @@ namespace BTokenLib
   {
     public List<TXOutputBToken> TXOutputs = new();
 
+    public TXBTokenCoinbase()
+    { }
 
     public TXBTokenCoinbase(byte[] buffer, ref int index)
     {

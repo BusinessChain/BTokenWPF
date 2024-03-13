@@ -63,9 +63,7 @@ namespace BTokenLib
     {
       TXs.Clear();
 
-      int tXCount = VarInt.GetInt32(
-        Buffer,
-        ref bufferIndex);
+      int tXCount = VarInt.GetInt32(Buffer, ref bufferIndex);
 
       if (tXCount == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
@@ -75,7 +73,8 @@ namespace BTokenLib
         TX tX = Token.ParseTX(
           Buffer,
           ref bufferIndex,
-          SHA256);
+          SHA256,
+          flagCoinbase: true);
 
         TXs.Add(tX);
       }
@@ -87,7 +86,8 @@ namespace BTokenLib
         TX tX = Token.ParseTX(
           Buffer,
           ref bufferIndex, 
-          SHA256);
+          SHA256,
+          flagCoinbase: true);
 
         TXs.Add(tX);
 
@@ -98,7 +98,8 @@ namespace BTokenLib
           tX = Token.ParseTX(
             Buffer,
             ref bufferIndex,
-            SHA256);
+            SHA256,
+            flagCoinbase: false);
 
           TXs.Add(tX);
 

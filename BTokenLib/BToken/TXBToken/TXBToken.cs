@@ -42,7 +42,7 @@ namespace BTokenLib
       Value += Fee;
     }
 
-    public void SignTX(byte[] buffer, int startIndexMessage, ref int index)
+    public void VerifySignatureTX(byte[] buffer, int startIndexMessage, ref int index)
     {
       int lengthSig = buffer[index++];
       Signature = new byte[lengthSig];

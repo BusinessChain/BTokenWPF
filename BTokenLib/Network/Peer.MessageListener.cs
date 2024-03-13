@@ -72,7 +72,8 @@ namespace BTokenLib
               TX tX = Token.ParseTX(
                 Payload,
                 ref index,
-                SHA256.Create());
+                SHA256.Create(),
+                flagCoinbase: false);
 
               tX.TXRaw = Payload.Take(index).ToList();
 

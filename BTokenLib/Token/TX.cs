@@ -12,6 +12,8 @@ namespace BTokenLib
 
     public long Fee;
 
+    public bool IsCoinbase; Muss gesetzt werden im parser.
+
 
     public string GetStringTXRaw()
     {

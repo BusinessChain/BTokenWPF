@@ -157,9 +157,7 @@ namespace BTokenLib
       if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
       {
         cache.TryGetValue(tX.IDAccountSource, out Account account);
-
         account.CheckTXValid(tX);
-
         return true;
       }
 

@@ -96,12 +96,16 @@ namespace BTokenLib
     {
       foreach (TXBToken tX in block.TXs)
       {
-        if (tX.TypeToken == WalletBToken.TypesToken.Coinbase)
+        if (tX is TXBTokenCoinbase)
         {
+          TXBTokenCoinbase tXCoinbase = tX as TXBTokenCoinbase;
           long outputValueTXCoinbase = 0;
 
-          foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+          {
             outputValueTXCoinbase += tXOutput.Value;
+            DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+          }
 
           long blockReward = BLOCK_REWARD_INITIAL >>
             block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
@@ -111,11 +115,17 @@ namespace BTokenLib
               $"Output value of Coinbase TX {block.TXs[0]}\n" +
               $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
         }
-        else
-          DatabaseAccounts.SpendInput(tX);
+        else if(tX is TXBTokenValueTransfer)
+        {
+          TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
 
-        foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-          DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+          DatabaseAccounts.SpendInput(tXTokenTransfer);
+
+          foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+            DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+
+          ((WalletBToken)Wallet).TXBTokenValueTransfer(tXTokenTransfer);
+        }
       }
 
       DatabaseAccounts.UpdateHashDatabase();
@@ -189,22 +199,15 @@ namespace BTokenLib
       index += 4;
 
       if(typeToken != WalletBToken.TypesToken.Coinbase)
-      {
         tX = new TXBTokenCoinbase(buffer, ref index);
-      }
       else if (typeToken == WalletBToken.TypesToken.ValueTransfer)
-      {
         tX = new TXBTokenValueTransfer(buffer, startIndexMessage, ref index, sHA256);
-      }
       else if (typeToken == WalletBToken.TypesToken.AnchorToken)
-      {
-        tX = new TXBTokenAnchorToken(buffer, startIndexMessage, ref index, sHA256);
-      }
+        tX = new TXBTokenAnchor(buffer, startIndexMessage, ref index, sHA256);
       else if (typeToken == WalletBToken.TypesToken.Data)
-      {
         tX = new TXBTokenData(buffer, startIndexMessage, ref index, sHA256);
-      }
-
+      else
+        throw new ProtocolException($"Unknown token type {typeToken}");
 
       return tX;
     }

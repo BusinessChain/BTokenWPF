@@ -11,6 +11,8 @@ namespace BTokenLib
   {
     public List<TXOutputBToken> TXOutputs = new();
 
+    public TXBTokenValueTransfer()
+    { }
 
     public TXBTokenValueTransfer(byte[] buffer, int startIndexMessage, ref int index, SHA256 sHA256)
     {
@@ -26,7 +28,7 @@ namespace BTokenLib
         Value += tXOutput.Value;
       }
 
-      SignTX(buffer, startIndexMessage, ref index);
+      VerifySignatureTX(buffer, startIndexMessage, ref index);
     }
   }
 }

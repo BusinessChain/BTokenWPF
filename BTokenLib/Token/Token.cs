@@ -448,6 +448,23 @@ namespace BTokenLib
 
     public abstract Block CreateBlock();
 
+    public TX ParseTX(
+      byte[] buffer,
+      ref int indexBuffer,
+      SHA256 sHA256,
+      bool flagCoinbase)
+    {
+      TX tX = ParseTX(buffer, ref indexBuffer, sHA256);
+
+      if (flagCoinbase && !tX.IsCoinbase)
+        throw new ProtocolException($"TX {tX} must be a coinbase transaction but is not.");
+
+      if (!flagCoinbase && tX.IsCoinbase)
+        throw new ProtocolException($"TX {tX} is a coinbase transaction but must not.");
+
+      return tX;
+    }
+
     public abstract TX ParseTX(
       byte[] buffer,
       ref int indexBuffer,
