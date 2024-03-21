@@ -94,26 +94,26 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
+      WalletBToken walletBToken = (WalletBToken)Wallet;
+
       foreach (TXBToken tX in block.TXs)
       {
         if (tX is TXBTokenCoinbase)
         {
           TXBTokenCoinbase tXCoinbase = tX as TXBTokenCoinbase;
-          long outputValueTXCoinbase = 0;
-
-          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
-          {
-            outputValueTXCoinbase += tXOutput.Value;
-            DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
-          }
 
           long blockReward = BLOCK_REWARD_INITIAL >>
             block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
 
-          if (blockReward + block.Fee != outputValueTXCoinbase)
+          if (blockReward + block.Fee != tXCoinbase.Value)
             throw new ProtocolException(
               $"Output value of Coinbase TX {block.TXs[0]}\n" +
               $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
+
+          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+            DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+
+          walletBToken.InsertTXBTokenCoinbase(tXCoinbase);
         }
         else if(tX is TXBTokenValueTransfer)
         {
@@ -124,8 +124,18 @@ namespace BTokenLib
           foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
             DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
 
-          ((WalletBToken)Wallet).TXBTokenValueTransfer(tXTokenTransfer);
+          walletBToken.InsertTXBTokenValueTransfer(tXTokenTransfer);
         }
+        else if(tX is TXBTokenAnchor)
+        {
+
+        }
+        else if(tX is TXBTokenData)
+        {
+
+        }
+        else
+          throw new ProtocolException($"Unknown token type {tX.GetType().Name}");
       }
 
       DatabaseAccounts.UpdateHashDatabase();

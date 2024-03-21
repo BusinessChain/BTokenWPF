@@ -54,6 +54,8 @@ namespace BTokenLib
           buffer,
           ref indexBuffer);
 
+        tX.IsCoinbase = countInputs == 0;
+
         for (int i = 0; i < countInputs; i += 1)
           tX.Inputs.Add(new TXInput(buffer, ref indexBuffer));
 
@@ -127,6 +129,11 @@ namespace BTokenLib
         }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
+
+      if (TokenChild != null)
+        TokenChild.SignalParentBlockInsertion(
+          block.Header,
+          out block.BlockChild);
     }
 
     public override List<string> GetSeedAddresses()

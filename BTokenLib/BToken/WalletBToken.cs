@@ -32,7 +32,6 @@ namespace BTokenLib
 
       tX.TXRaw.Add(0x01); // count outputs
 
-      tX.TXRaw.Add((byte)TXOutputBToken.TypesToken.ValueTransfer);
       tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
       tX.TXRaw.AddRange(PublicKeyHash160);
 
@@ -72,7 +71,6 @@ namespace BTokenLib
 
       tX.TXRaw.Add(0x01); // count outputs
 
-      tX.TXRaw.Add((byte)TXOutputBToken.TypesToken.ValueTransfer);
       tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
       tX.TXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
       
@@ -123,57 +121,45 @@ namespace BTokenLib
       return true;
     }
 
-    public void TXBTokenValueTransfer(TXBTokenValueTransfer tX)
+    public void InsertTXBTokenCoinbase(TXBTokenCoinbase tX)
     {
 
     }
-
-    public override void InsertBlock(Block block)
+    public void InsertTXBTokenValueTransfer(TXBTokenValueTransfer tX)
     {
-      foreach (TXBToken tX in block.TXs)
-      {
-        if (tX is TXBTokenCoinbase)
-          tX = new TXBTokenCoinbase(buffer, ref index);
-        else if (tX is TXBTokenValueTransfer)
-          tX = new TXBTokenValueTransfer(buffer, startIndexMessage, ref index, sHA256);
-        else if (tX is TXBTokenAnchor)
-          tX = new TXBTokenAnchor(buffer, startIndexMessage, ref index, sHA256);
-        else if (tX is TXBTokenData)
-          tX = new TXBTokenData(buffer, startIndexMessage, ref index, sHA256);
-        else
-          throw new ProtocolException($"Unknown token type {typeToken}");
-      }
-
       foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-        if (tXOutput.Type == TXOutputBToken.TypesToken.ValueTransfer)
+      {
+        if (!tXOutput.IDAccount.IsEqual(PublicKeyHash160))
+          continue;
+
+        $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+        TXOutputWallet outputValueUnconfirmed =
+          OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
+
+        if (outputValueUnconfirmed != null)
         {
-          $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-          TXOutputWallet outputValueUnconfirmed =
-            OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
-
-          if (outputValueUnconfirmed != null)
-          {
-            BalanceUnconfirmed -= outputValueUnconfirmed.Value;
-            OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-          }
-
-          AddTXToHistory(tX);
-
-          Balance += tXOutput.Value;
-
-          $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-          $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-          if (tX.IDAccountSource.IsEqual(PublicKeyHash160))
-          {
-            Balance -= tX.TXOutputs.Sum(o => ((TXOutputBToken)o).Value);
-            AddTXToHistory(tX);
-            $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-          }
+          BalanceUnconfirmed -= outputValueUnconfirmed.Value;
+          OutputsUnconfirmed.Remove(outputValueUnconfirmed);
         }
+
+        AddTXToHistory(tX);
+
+        Balance += tXOutput.Value;
+
+        $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+        if (tX.IDAccountSource.IsEqual(PublicKeyHash160))
+        {
+          Balance -= tX.TXOutputs.Sum(o => o.Value);
+          AddTXToHistory(tX);
+          $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        }
+      }
     }
+
 
     public override void ReverseTXUnconfirmed(TX tX)
     {

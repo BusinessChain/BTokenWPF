@@ -22,9 +22,7 @@ namespace BTokenLib
 
     public TokenAnchor TokenAnchor;
 
-    public TXOutputBitcoin(
-      byte[] buffer,
-      ref int index)
+    public TXOutputBitcoin(byte[] buffer, ref int index)
     {
       Type = TypesToken.NotSupported;
 
@@ -48,7 +46,7 @@ namespace BTokenLib
 
         index += 2;
       }
-      else if(lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
+      else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
         WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsEqual(buffer, index))
       {
         index += WalletBitcoin.PREFIX_ANCHOR_TOKEN.Length;

@@ -165,8 +165,6 @@ namespace BTokenLib
       }
     }
 
-    public abstract void InsertBlock(Block block);
-
     protected void AddTXToHistory(TX tX)
     {
       if (!HistoryTransactions.Any(t => t.Hash.IsEqual(tX.Hash)))

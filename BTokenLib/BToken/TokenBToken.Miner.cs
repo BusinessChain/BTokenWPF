@@ -112,31 +112,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    void RBFAnchorTokens()
-    {
-      TokensAnchorUnconfirmed.Reverse();
-
-      foreach (TokenAnchor tokenAnchor in TokensAnchorUnconfirmed)
-      {
-        TokenParent.Wallet.ReverseTXUnconfirmed(tokenAnchor.TX);
-
-        File.Delete(Path.Combine(
-          PathBlocksMinedUnconfirmed,
-          tokenAnchor.TX.Hash.ToHexString()));
-      }
-
-      int countTokensAnchorUnconfirmed = TokensAnchorUnconfirmed.Count;
-      TokensAnchorUnconfirmed.Clear();
-
-      $"RBF {countTokensAnchorUnconfirmed} anchorTokens".Log(this, LogFile, LogEntryNotifier);
-
-      while (countTokensAnchorUnconfirmed-- > 0 && TryMineAnchorToken(out TokenAnchor tokenAnchor))
-        TokensAnchorUnconfirmed.Add(tokenAnchor);
-
-      TokenParent.BroadcastTX(TokensAnchorUnconfirmed.Select(t => t.TX).ToList());
-    }
-
-    BlockBToken MinerBlock()
+    public bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
     {
       BlockBToken block = new(this);
 
@@ -172,13 +148,6 @@ namespace BTokenLib
 
       block.Header.CountBytesBlock = block.Buffer.Length;
 
-      return block;
-    }
-
-    public bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
-    {                  
-      BlockBToken block = MinerBlock();
-
       tokenAnchor = new();
 
       tokenAnchor.NumberSequence = NumberSequence;
@@ -197,6 +166,30 @@ namespace BTokenLib
       $"BToken miner successfully mined anchor Token {tokenAnchor}.".Log(this, LogFile, LogEntryNotifier);
 
       return true;
+    }
+
+    void RBFAnchorTokens()
+    {
+      TokensAnchorUnconfirmed.Reverse();
+
+      foreach (TokenAnchor tokenAnchor in TokensAnchorUnconfirmed)
+      {
+        TokenParent.Wallet.ReverseTXUnconfirmed(tokenAnchor.TX);
+
+        File.Delete(Path.Combine(
+          PathBlocksMinedUnconfirmed,
+          tokenAnchor.TX.Hash.ToHexString()));
+      }
+
+      int countTokensAnchorUnconfirmed = TokensAnchorUnconfirmed.Count;
+      TokensAnchorUnconfirmed.Clear();
+
+      $"RBF {countTokensAnchorUnconfirmed} anchorTokens".Log(this, LogFile, LogEntryNotifier);
+
+      while (countTokensAnchorUnconfirmed-- > 0 && TryMineAnchorToken(out TokenAnchor tokenAnchor))
+        TokensAnchorUnconfirmed.Add(tokenAnchor);
+
+      TokenParent.BroadcastTX(TokensAnchorUnconfirmed.Select(t => t.TX).ToList());
     }
 
     public override void SignalParentBlockInsertion(

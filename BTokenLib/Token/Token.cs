@@ -377,18 +377,11 @@ namespace BTokenLib
       InsertInDatabase(block);
       AppendHeaderToTip(block.Header);
 
-      Wallet.InsertBlock(block);
-
       FeeSatoshiPerByte =
         ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerByte + block.FeePerByte) /
         ORDER_AVERAGEING_FEEPERBYTE;
                   
       Archiver.ArchiveBlock(block);
-
-      if (TokenChild != null)
-        TokenChild.SignalParentBlockInsertion(
-          block.Header,
-          out block.BlockChild);
 
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
         CreateImage();
