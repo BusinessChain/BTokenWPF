@@ -514,11 +514,8 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
-    { throw new NotImplementedException(); }
-
     public virtual void SignalParentBlockInsertion(
-      Header header, out Block block)
+      Header header, List<TokenAnchor> tokensAnchor)
     { throw new NotImplementedException(); }
 
     public virtual void RevokeBlockInsertion()

@@ -194,9 +194,19 @@ namespace BTokenLib
 
     public override void SignalParentBlockInsertion(
       Header headerAnchor,
-      out Block block)
+      List<TokenAnchor> tokensAnchor)
     {
-      block = null;
+      foreach(TokenAnchor tokenAnchor in tokensAnchor)
+      {
+        if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.TX.Hash)) > 0)
+          $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
+        else
+          $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
+
+        TokensAnchorDetectedInBlock.Add(tokenAnchor);
+      }
+
+      Block block;
 
       try
       {
@@ -232,16 +242,6 @@ namespace BTokenLib
           $" with height {headerAnchor.Height} to BToken:\n" +
           $"Exception message: {ex.Message}").Log(this, LogFile, LogEntryNotifier);
       }
-    }
-
-    public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
-    {
-      if (TokensAnchorUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.TX.Hash)) > 0)
-        $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-      else
-        $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-
-      TokensAnchorDetectedInBlock.Add(tokenAnchor);
     }
 
     byte[] GetHashBlockChild(byte[] hashHeaderAnchor)

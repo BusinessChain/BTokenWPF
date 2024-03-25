@@ -115,25 +115,28 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
+      WalletBitcoin walletBitcoin = (WalletBitcoin)Wallet;
+
+      List<TokenAnchor> tokensAnchor = new();
+
       foreach (TXBitcoin tX in block.TXs)
         foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
         {
-          if (tXOutput.Type != TXOutputBitcoin.TypesToken.AnchorToken)
-            continue;
-
-          if (tXOutput.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
-            TokenChild.SignalAnchorTokenDetected(tXOutput.TokenAnchor);
-
-          break; // Only one Anchor token per TX allowed because standard relay rules only allow one
-          // According to Bitcoin Wiki -> Script -> Flow Control -> OP_Return description
+          if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
+          {
+            walletBitcoin.InsertTXBTokenValueTransfer(tXOutput);
+          }
+          else if (tXOutput.Type == TXOutputBitcoin.TypesToken.AnchorToken)
+            if (tXOutput.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
+            {
+              tokensAnchor.Add(tXOutput.TokenAnchor);
+            }
         }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
 
       if (TokenChild != null)
-        TokenChild.SignalParentBlockInsertion(
-          block.Header,
-          out block.BlockChild);
+        TokenChild.SignalParentBlockInsertion(block.Header, tokensAnchor);
     }
 
     public override List<string> GetSeedAddresses()

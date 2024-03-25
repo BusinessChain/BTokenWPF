@@ -49,7 +49,6 @@ namespace BTokenLib
       return tX;
     }
 
-
     public override bool TryCreateTX(
       string addressOutput,
       long valueOutput,
@@ -123,10 +122,29 @@ namespace BTokenLib
 
     public void InsertTXBTokenCoinbase(TXBTokenCoinbase tX)
     {
+      foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+      {
+        if (!tXOutput.IDAccount.IsEqual(PublicKeyHash160))
+          continue;
 
+        $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+          
+        AddTXToHistory(tX);
+
+        Balance += tXOutput.Value;
+      }
     }
+
     public void InsertTXBTokenValueTransfer(TXBTokenValueTransfer tX)
     {
+      if (tX.IDAccountSource.IsEqual(PublicKeyHash160))
+      {
+        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+        Balance -= tX.TXOutputs.Sum(o => o.Value);
+        AddTXToHistory(tX);
+      }
+
       foreach (TXOutputBToken tXOutput in tX.TXOutputs)
       {
         if (!tXOutput.IDAccount.IsEqual(PublicKeyHash160))
@@ -146,20 +164,10 @@ namespace BTokenLib
         AddTXToHistory(tX);
 
         Balance += tXOutput.Value;
-
-        $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-        if (tX.IDAccountSource.IsEqual(PublicKeyHash160))
-        {
-          Balance -= tX.TXOutputs.Sum(o => o.Value);
-          AddTXToHistory(tX);
-          $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-        }
       }
-    }
 
+      $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+    }
 
     public override void ReverseTXUnconfirmed(TX tX)
     {
