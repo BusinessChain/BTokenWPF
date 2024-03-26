@@ -117,26 +117,23 @@ namespace BTokenLib
     {
       WalletBitcoin walletBitcoin = (WalletBitcoin)Wallet;
 
-      List<TokenAnchor> tokensAnchor = new();
-
       foreach (TXBitcoin tX in block.TXs)
+      {
+        walletBitcoin.InsertTX(tX);
+
         foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
         {
-          if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
+          if (tXOutput.Type == TXOutputBitcoin.TypesToken.AnchorToken)
           {
-            walletBitcoin.InsertTXBTokenValueTransfer(tXOutput);
-          }
-          else if (tXOutput.Type == TXOutputBitcoin.TypesToken.AnchorToken)
             if (tXOutput.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
-            {
-              tokensAnchor.Add(tXOutput.TokenAnchor);
-            }
+              TokenChild.SignalAnchorTokenDetected(tXOutput.TokenAnchor);
+          }
         }
+      }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
 
-      if (TokenChild != null)
-        TokenChild.SignalParentBlockInsertion(block.Header, tokensAnchor);
+      TokenChild.SignalParentBlockInsertion(block.Header);
     }
 
     public override List<string> GetSeedAddresses()
