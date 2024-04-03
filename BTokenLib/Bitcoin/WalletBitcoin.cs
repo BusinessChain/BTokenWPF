@@ -359,8 +359,6 @@ namespace BTokenLib
           $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
       }
-
-
     }
 
     public override void ReverseTXUnconfirmed(TX tX)

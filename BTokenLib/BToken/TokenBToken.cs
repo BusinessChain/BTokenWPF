@@ -154,13 +154,7 @@ namespace BTokenLib
     { 
       DatabaseAccounts.Delete(); 
     }
-        
-    public override void RevokeBlockInsertion()
-    {
-      // TokensAnchorUnconfirmed should be restored
-      TokensAnchorDetectedInBlock.Clear();
-    }
-
+         
     public override List<byte[]> ParseHashesDB(
       byte[] buffer,
       int length,
@@ -205,10 +199,10 @@ namespace BTokenLib
       TXBToken tX;
       int startIndexMessage = index;
 
-      WalletBToken.TypesToken typeToken = (WalletBToken.TypesToken)BitConverter.ToUInt32(buffer, index);
+      var typeToken = (WalletBToken.TypesToken)BitConverter.ToUInt32(buffer, index);
       index += 4;
 
-      if(typeToken != WalletBToken.TypesToken.Coinbase)
+      if(typeToken == WalletBToken.TypesToken.Coinbase)
         tX = new TXBTokenCoinbase(buffer, ref index);
       else if (typeToken == WalletBToken.TypesToken.ValueTransfer)
         tX = new TXBTokenValueTransfer(buffer, startIndexMessage, ref index, sHA256);

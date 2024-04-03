@@ -387,6 +387,15 @@ namespace BTokenLib
         CreateImage();
     }
 
+    public void RBFAnchorTokens(
+      List<TokenAnchor> tokensAnchorRBF,
+      List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed)
+    {
+
+    }
+
+    protected abstract void InsertInDatabase(Block block);
+
     public abstract bool TryAddTXPool(TX tX);
 
     public abstract bool TryGetFromTXPool(byte[] hashTX, out TX tX);
@@ -528,8 +537,6 @@ namespace BTokenLib
       int length,
       Header headerTip)
     { throw new NotImplementedException(); }
-
-    protected abstract void InsertInDatabase(Block block);
 
     public string GetName()
     {

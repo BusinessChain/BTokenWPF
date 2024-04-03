@@ -179,7 +179,6 @@ namespace BTokenLib
 
     public abstract void ReverseTXUnconfirmed(TX tX);
 
-
     public abstract TX CreateCoinbaseTX(int height, long blockReward);
 
     public virtual void Clear()
