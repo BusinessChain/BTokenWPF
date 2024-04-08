@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     public enum TypesToken
     {
-      NotSupported = 0x00,
+      Unspecified = 0x00,
       ValueTransfer = 0x01,
       AnchorToken = 0x02,
     }
@@ -24,7 +24,7 @@ namespace BTokenLib
 
     public TXOutputBitcoin(byte[] buffer, ref int index)
     {
-      Type = TypesToken.NotSupported;
+      Type = TypesToken.Unspecified;
 
       Value = BitConverter.ToInt64(buffer, index);
       index += 8;
@@ -77,10 +77,13 @@ namespace BTokenLib
         Type = TypesToken.AnchorToken;
       }
       else
-        Type = TypesToken.NotSupported;
+        Type = TypesToken.Unspecified;
 
       if (index != indexEndOfScript)
-        Type = TypesToken.NotSupported;
+      {
+        Type = TypesToken.Unspecified;
+        index = indexEndOfScript;
+      }
     }
   }
 }

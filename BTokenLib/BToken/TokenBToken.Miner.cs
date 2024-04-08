@@ -46,9 +46,9 @@ namespace BTokenLib
             headerTipParent = TokenParent.HeaderTip;
           }
 
-          if(headerTipParent != TokenParent.HeaderTip)
+          if (headerTipParent != TokenParent.HeaderTip)
           {
-            timerMinerPause = TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS * 1000 
+            timerMinerPause = TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
             headerTipParent = TokenParent.HeaderTip;
@@ -61,14 +61,15 @@ namespace BTokenLib
             timerCreateNextToken -= 1;
 
           if (timerMinerPause == 0 && timerCreateNextToken == 0)
-            if (TryMineAnchorToken(out TokenAnchor tokenAnchor))
+          {
+            timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
+              / timeMinerLoopMilliseconds;
+
+            TokenAnchor tokenAnchor = MineAnchorToken();
+
+            if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
-              timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000 
-                / timeMinerLoopMilliseconds;
-
               TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
-
-              TokenParent.BroadcastAnchorToken(tokenAnchor);
 
               $"{TokensAnchorSelfMinedUnconfirmed.Count} mined unconfirmed anchor tokens referencing block {tokenAnchor.HashBlockReferenced.ToHexString()}.".Log(this, LogFile, LogEntryNotifier);
 
@@ -79,6 +80,9 @@ namespace BTokenLib
               // timeMSCreateNextAnchorToken / 2,
               // timeMSCreateNextAnchorToken * 3 / 2);
             }
+            else
+              IsMining = false;
+          }
 
           ReleaseLock();
         }
@@ -89,7 +93,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    public bool TryMineAnchorToken(out TokenAnchor tokenAnchor)
+    public TokenAnchor MineAnchorToken()
     {
       BlockBToken block = new(this);
 
@@ -125,7 +129,7 @@ namespace BTokenLib
 
       block.Header.CountBytesBlock = block.Buffer.Length;
 
-      tokenAnchor = new();
+      TokenAnchor tokenAnchor = new();
 
       tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
@@ -140,7 +144,7 @@ namespace BTokenLib
 
       $"BToken miner successfully mined anchor Token {tokenAnchor}.".Log(this, LogFile, LogEntryNotifier);
 
-      return true;
+      return tokenAnchor;
     }
 
     public override void SignalParentBlockInsertion(Header headerAnchor)
@@ -198,11 +202,11 @@ namespace BTokenLib
         List<TokenAnchor> tokensAnchorRBF = TokensAnchorSelfMinedUnconfirmed.ToList();
         TokensAnchorSelfMinedUnconfirmed.Clear();
 
-        int i = tokensAnchorRBF.Count;
-        while (i-- > 0 && TryMineAnchorToken(out TokenAnchor tokenAnchor))
-          TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
+        TokenAnchor tokenAnchor = MineAnchorToken();
 
-        TokenParent.RBFAnchorTokens(tokensAnchorRBF, TokensAnchorSelfMinedUnconfirmed);
+        TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
+
+        TokenParent.RBFAnchorTokens(tokensAnchorRBF, tokenAnchor);
       }
     }
 

@@ -29,10 +29,41 @@ namespace BTokenLib
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }
 
+    public override Header CreateHeaderGenesis()
+    {
+      //HeaderBitcoin header = new(
+      //   headerHash: "0000000000000000000230d9bb1db81e56916b0c2c7363231e75b82b24714482".ToBinary(),
+      //   version: 0x01,
+      //   hashPrevious: "00000000000000000008b5ffa0ae1b604dd27bf4af84602ea53f7920320a3c96".ToBinary(),
+      //   merkleRootHash: "ef303d1cf8090e1bcea36432eceea2bbc156e81108deff1616d9c6dee64ba7c7".ToBinary(),
+      //   unixTimeSeconds: 1653490985, // take timestamp from trezor.io explorer and convert to epoch time GMT
+      //   nBits: 386492960,
+      //   nonce: 578608666);
+
+      //header.Height = 737856; // Should be modulo 2016 so it calculates next target bits correctly.
+
+      HeaderBitcoin header = new HeaderBitcoin(
+         headerHash: "000000A13F15EC9FECECAB8EF438F8E16E729AC2AF816C3DBE7E27BAF110F66A".ToBinary(),
+         version: 0x01,
+         hashPrevious: "0000000000000000000000000000000000000000000000000000000000000000".ToBinary(),
+         merkleRootHash: "0000000000000000000000000000000000000000000000000000000000000000".ToBinary(),
+         unixTimeSeconds: 1667333891,
+         //nBits: 0x1d4fffff,
+         nBits: 0x1dffffff,
+         nonce: 1441757173);
+
+      header.Height = 0; // Should be modulo 2016 so it calculates next target bits correctly.
+
+      header.DifficultyAccumulated = header.Difficulty;
+
+      return header;
+    }
+
     public override Block CreateBlock()
     {
       return new BlockBitcoin(SIZE_BUFFER_BLOCK, this);
     }
+
 
     public override TX ParseTX(
       byte[] buffer,
@@ -59,12 +90,16 @@ namespace BTokenLib
         for (int i = 0; i < countInputs; i += 1)
           tX.Inputs.Add(new TXInput(buffer, ref indexBuffer));
 
-        int countTXOutputs = VarInt.GetInt32(
-          buffer,
-          ref indexBuffer);
+        int countTXOutputs = VarInt.GetInt32(buffer, ref indexBuffer);
 
         for (int i = 0; i < countTXOutputs; i += 1)
-          tX.TXOutputs.Add(new TXOutputBitcoin(buffer, ref indexBuffer));
+        {
+          TXOutputBitcoin tXOutputBitcoin = new(buffer, ref indexBuffer);
+          tX.TXOutputs.Add(tXOutputBitcoin);
+
+          if (i == 0 && tXOutputBitcoin.Type == TXOutputBitcoin.TypesToken.AnchorToken)
+            tX.TokenAnchor = tXOutputBitcoin.TokenAnchor;
+        }
 
         indexBuffer += 4; //BYTE_LENGTH_LOCK_TIME
 
@@ -83,36 +118,6 @@ namespace BTokenLib
       }
     }
 
-    public override Header CreateHeaderGenesis()
-    {
-      //HeaderBitcoin header = new(
-      //   headerHash: "0000000000000000000230d9bb1db81e56916b0c2c7363231e75b82b24714482".ToBinary(),
-      //   version: 0x01,
-      //   hashPrevious: "00000000000000000008b5ffa0ae1b604dd27bf4af84602ea53f7920320a3c96".ToBinary(),
-      //   merkleRootHash: "ef303d1cf8090e1bcea36432eceea2bbc156e81108deff1616d9c6dee64ba7c7".ToBinary(),
-      //   unixTimeSeconds: 1653490985, // take timestamp from trezor.io explorer and convert to epoch time GMT
-      //   nBits: 386492960,
-      //   nonce: 578608666);
-
-      //header.Height = 737856; // Should be modulo 2016 so it calculates next target bits correctly.
-
-      HeaderBitcoin header = new HeaderBitcoin(
-         headerHash: "000000A13F15EC9FECECAB8EF438F8E16E729AC2AF816C3DBE7E27BAF110F66A".ToBinary(),
-         version: 0x01,
-         hashPrevious: "0000000000000000000000000000000000000000000000000000000000000000".ToBinary(),
-         merkleRootHash: "0000000000000000000000000000000000000000000000000000000000000000".ToBinary(),
-         unixTimeSeconds: 1667333891,
-         //nBits: 0x1d4fffff,
-         nBits: 0x1dffffff,
-         nonce: 1441757173);
-
-      header.Height = 0; // Should be modulo 2016 so it calculates next target bits correctly.
-     
-      header.DifficultyAccumulated = header.Difficulty;
-
-      return header;
-    }
-
     protected override void InsertInDatabase(Block block)
     {
       WalletBitcoin walletBitcoin = (WalletBitcoin)Wallet;
@@ -121,14 +126,9 @@ namespace BTokenLib
       {
         walletBitcoin.InsertTX(tX);
 
-        foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
-        {
-          if (tXOutput.Type == TXOutputBitcoin.TypesToken.AnchorToken)
-          {
-            if (tXOutput.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
-              TokenChild.SignalAnchorTokenDetected(tXOutput.TokenAnchor);
-          }
-        }
+        if (tX.TokenAnchor != null)
+          if (tX.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
+            TokenChild.SignalAnchorTokenDetected(tX.TokenAnchor);
       }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
@@ -177,7 +177,6 @@ namespace BTokenLib
 
     public override void LoadImageDatabase(string path)
     { }
-
 
     public override bool TryAddTXPool(TX tX)
     {

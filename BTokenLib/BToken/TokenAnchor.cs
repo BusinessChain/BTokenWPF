@@ -16,10 +16,5 @@ namespace BTokenLib
     public byte[] HashBlockPreviousReferenced = new byte[32];
 
     public TX TX;
-
-    public override string ToString()
-    {
-      return TX.Hash.ToHexString();
-    }
   }
 }

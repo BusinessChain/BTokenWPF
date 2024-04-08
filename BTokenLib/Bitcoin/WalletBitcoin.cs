@@ -153,22 +153,11 @@ namespace BTokenLib
         + (long)(LENGTH_P2PKH_OUTPUT * Token.FeeSatoshiPerByte)
         + (long)(data.Length * Token.FeeSatoshiPerByte);
 
-      if(valueInput - feeTX > 0)
+      long valueChange = valueInput - feeTX;
+
+      if (valueChange > 0)
       {
-        tX.TXRaw.Add(0x02);
-
-        tX.TXRaw.AddRange(BitConverter.GetBytes(valueInput - feeTX));
-        tX.TXRaw.Add((byte)PublicScript.Length);
-        tX.TXRaw.AddRange(PublicScript);
-
-        AddOutputUnconfirmed(
-          new TXOutputWallet
-          {
-            TXID = tX.Hash,
-            Index = 1,
-            Value = valueInput - feeTX
-          }); 
-        
+        tX.TXRaw.Add(0x02);        
         tX.Fee = feeTX;
       }
       else
@@ -182,6 +171,21 @@ namespace BTokenLib
       tX.TXRaw.Add(OP_RETURN);
       tX.TXRaw.Add((byte)data.Length);
       tX.TXRaw.AddRange(data);
+
+      if (valueChange > 0)
+      {
+        tX.TXRaw.AddRange(BitConverter.GetBytes(valueChange));
+        tX.TXRaw.Add((byte)PublicScript.Length);
+        tX.TXRaw.AddRange(PublicScript);
+
+        AddOutputUnconfirmed(
+          new TXOutputWallet
+          {
+            TXID = tX.Hash,
+            Index = 1,
+            Value = valueChange
+          });
+      }
 
       tX.TXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
       tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash

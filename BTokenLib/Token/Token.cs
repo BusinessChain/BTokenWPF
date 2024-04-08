@@ -389,7 +389,7 @@ namespace BTokenLib
 
     public void RBFAnchorTokens(
       List<TokenAnchor> tokensAnchorRBF,
-      List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed)
+      TokenAnchor tokenAnchorNew)
     {
 
     }
@@ -560,14 +560,20 @@ namespace BTokenLib
       Network.AdvertizeTXs(tXs);
     }
 
-    public void BroadcastAnchorToken(TokenAnchor tokenAnchor)
+    public bool TryBroadcastAnchorToken(TokenAnchor tokenAnchor)
     {
       byte[] dataAnchorToken = tokenAnchor.IDToken
       .Concat(tokenAnchor.HashBlockReferenced)
       .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 
       if (Wallet.TryCreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
+      {
+        tokenAnchor.TX = tX;
         BroadcastTX(tX);
+        return true;
+      }
+
+      return false;
     }
 
     public List<Header> GetLocator()
