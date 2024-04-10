@@ -199,14 +199,8 @@ namespace BTokenLib
             PathBlocksMinedUnconfirmed,
             t.TX.Hash.ToHexString())));
 
-        List<TokenAnchor> tokensAnchorRBF = TokensAnchorSelfMinedUnconfirmed.ToList();
-        TokensAnchorSelfMinedUnconfirmed.Clear();
-
-        TokenAnchor tokenAnchor = MineAnchorToken();
-
-        TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
-
-        TokenParent.RBFAnchorTokens(tokensAnchorRBF, tokenAnchor);
+        TokenAnchor tokenAnchorNew = MineAnchorToken();
+        TokenParent.RBFAnchorTokens(TokensAnchorSelfMinedUnconfirmed, tokenAnchorNew);
       }
     }
 

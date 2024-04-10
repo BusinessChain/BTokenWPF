@@ -388,7 +388,7 @@ namespace BTokenLib
     }
 
     public void RBFAnchorTokens(
-      List<TokenAnchor> tokensAnchorRBF,
+      List<TokenAnchor> tokensAnchorRBF, // Refill this list with rbf'ed tokens
       TokenAnchor tokenAnchorNew)
     {
 
