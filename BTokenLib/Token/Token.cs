@@ -37,7 +37,7 @@ namespace BTokenLib
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
-    public double FeeSatoshiPerByte = 1.0;
+    public double FeeSatoshiPerBytePriorityHigh = 1.0;
 
     public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77 };
     public byte[] IDToken;
@@ -377,8 +377,8 @@ namespace BTokenLib
       InsertInDatabase(block);
       AppendHeaderToTip(block.Header);
 
-      FeeSatoshiPerByte =
-        ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerByte + block.FeePerByte) /
+      FeeSatoshiPerBytePriorityHigh =
+        ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerBytePriorityHigh + block.FeePerByte) /
         ORDER_AVERAGEING_FEEPERBYTE;
                   
       Archiver.ArchiveBlock(block);
@@ -387,12 +387,9 @@ namespace BTokenLib
         CreateImage();
     }
 
-    public void RBFAnchorTokens(
-      List<TokenAnchor> tokensAnchorRBF, // Refill this list with rbf'ed tokens
-      TokenAnchor tokenAnchorNew)
-    {
-
-    }
+    public abstract void RBFAnchorTokens(
+      ref List<TokenAnchor> tokensAnchorRBF,
+      TokenAnchor tokenAnchorNew);
 
     protected abstract void InsertInDatabase(Block block);
 
@@ -566,7 +563,11 @@ namespace BTokenLib
       .Concat(tokenAnchor.HashBlockReferenced)
       .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 
-      if (Wallet.TryCreateTXData(dataAnchorToken, tokenAnchor.NumberSequence, out TX tX))
+      if (Wallet.TryCreateTXData(
+        dataAnchorToken, 
+        tokenAnchor.NumberSequence, 
+        FeeSatoshiPerBytePriorityHigh,
+        out TX tX))
       {
         tokenAnchor.TX = tX;
         BroadcastTX(tX);

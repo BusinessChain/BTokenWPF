@@ -27,7 +27,7 @@ namespace BTokenLib
 
     protected override async void RunMining()
     {
-      $"Miners starts with fee per byte = {FeeSatoshiPerByte}".Log(this, LogFile, LogEntryNotifier);
+      $"Miner {this} starts.".Log(this, LogFile, LogEntryNotifier);
 
       Header headerTipParent = null;
       Header headerTip = null;
@@ -131,7 +131,6 @@ namespace BTokenLib
 
       TokenAnchor tokenAnchor = new();
 
-      tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
@@ -190,32 +189,23 @@ namespace BTokenLib
 
       if (TokensAnchorSelfMinedUnconfirmed.Count > 0)
       {
-        FeeSatoshiPerByte *= FACTOR_INCREMENT_FEE_PER_BYTE;
-        NumberSequence += 1;
-
-        $"RBF {TokensAnchorSelfMinedUnconfirmed.Count} anchorTokens".Log(this, LogFile, LogEntryNotifier);
+        $"RBF {TokensAnchorSelfMinedUnconfirmed.Count} anchor tokens.".Log(this, LogFile, LogEntryNotifier);
 
         TokensAnchorSelfMinedUnconfirmed.ForEach(t => File.Delete(Path.Combine(
             PathBlocksMinedUnconfirmed,
             t.TX.Hash.ToHexString())));
 
         TokenAnchor tokenAnchorNew = MineAnchorToken();
-        TokenParent.RBFAnchorTokens(TokensAnchorSelfMinedUnconfirmed, tokenAnchorNew);
+        tokenAnchorNew.NumberSequence = TokensAnchorSelfMinedUnconfirmed[0].NumberSequence += 1;
+        
+        TokenParent.RBFAnchorTokens(ref TokensAnchorSelfMinedUnconfirmed, tokenAnchorNew);
       }
     }
 
     public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
     {
       if (TokensAnchorSelfMinedUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.TX.Hash)) > 0)
-      {
         $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-
-        if (TokensAnchorSelfMinedUnconfirmed.Count == 0)
-        {
-          FeeSatoshiPerByte /= FACTOR_INCREMENT_FEE_PER_BYTE;
-          NumberSequence = 0;
-        }
-      }
       else
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
 

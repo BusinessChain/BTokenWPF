@@ -91,7 +91,7 @@ namespace BTokenLib
     {
       tX = new TXBTokenData();
 
-      tX.Fee = (long)(Token.FeeSatoshiPerByte * LENGTH_P2PKH_TX);
+      tX.Fee = (long)(Token.FeeSatoshiPerBytePriorityHigh * LENGTH_P2PKH_TX);
 
       if (BalanceUnconfirmed < tX.Fee)
         return false;

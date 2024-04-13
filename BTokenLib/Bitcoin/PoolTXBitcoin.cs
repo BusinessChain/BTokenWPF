@@ -110,33 +110,33 @@ namespace BTokenWPF
 
     public void RemoveTXs(IEnumerable<byte[]> hashesTX)
     {
-      lock (LOCK_TXsPool)
-        foreach (byte[] hashTX in hashesTX)
-          RemoveTXRecursive(hashTX);
+      foreach (byte[] hashTX in hashesTX)
+        RemoveTXRecursive(hashTX);
     }
 
     /// <summary>
     /// Removes a tX and all tXs that reference its outputs.
     /// </summary>
-    void RemoveTXRecursive(byte[] hashTX)
+    public void RemoveTXRecursive(byte[] hashTX)
     {
-      if (TXPoolDict.Remove(hashTX, out TXBitcoin tX))
-      {
-        List<(TXInput input, TXBitcoin)> tupelInputs = null;
+      lock (LOCK_TXsPool)
+        if (TXPoolDict.Remove(hashTX, out TXBitcoin tX))
+        {
+          List<(TXInput input, TXBitcoin)> tupelInputs = null;
 
-        foreach (TXInput tXInput in tX.Inputs)
-          if (InputsPool.TryGetValue(tXInput.TXIDOutput, out tupelInputs))
-          {
-            tupelInputs.RemoveAll(t => t.input.OutputIndex == tXInput.OutputIndex);
+          foreach (TXInput tXInput in tX.Inputs)
+            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out tupelInputs))
+            {
+              tupelInputs.RemoveAll(t => t.input.OutputIndex == tXInput.OutputIndex);
 
-            if (tupelInputs.Count == 0)
-              InputsPool.Remove(tXInput.TXIDOutput);
-          }
+              if (tupelInputs.Count == 0)
+                InputsPool.Remove(tXInput.TXIDOutput);
+            }
 
-        if (InputsPool.TryGetValue(hashTX, out tupelInputs))
-          foreach ((TXInput input, TXBitcoin tX) tupelInputInPool in tupelInputs.ToList())
-            RemoveTXRecursive(tupelInputInPool.tX.Hash);
-      }
+          if (InputsPool.TryGetValue(hashTX, out tupelInputs))
+            foreach ((TXInput input, TXBitcoin tX) tupelInputInPool in tupelInputs.ToList())
+              RemoveTXRecursive(tupelInputInPool.tX.Hash);
+        }
     }
 
     void ExtractBranch(TXBitcoin tXRoot)

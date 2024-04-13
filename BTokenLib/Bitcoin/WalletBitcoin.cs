@@ -93,7 +93,7 @@ namespace BTokenLib
       tX.TXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
       tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
 
-      SignRTX(tX);
+      SignTX(tX);
 
       tX.Hash = SHA256.ComputeHash(
        SHA256.ComputeHash(tX.TXRaw.ToArray()));
@@ -140,8 +140,8 @@ namespace BTokenLib
 
       if (!TryCreateTXInputScaffold(
         sequence,
-        (long)(data.Length * Token.FeeSatoshiPerByte),
-        Token.FeeSatoshiPerByte,
+        (long)(data.Length * Token.FeeSatoshiPerBytePriorityHigh),
+        Token.FeeSatoshiPerBytePriorityHigh,
         out long valueInput,
         out long feeTXInputScaffold,
         ref tX.TXRaw))
@@ -150,8 +150,8 @@ namespace BTokenLib
       }
 
       long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_P2PKH_OUTPUT * Token.FeeSatoshiPerByte)
-        + (long)(data.Length * Token.FeeSatoshiPerByte);
+        + (long)(LENGTH_P2PKH_OUTPUT * Token.FeeSatoshiPerBytePriorityHigh)
+        + (long)(data.Length * Token.FeeSatoshiPerBytePriorityHigh);
 
       long valueChange = valueInput - feeTX;
 
@@ -190,7 +190,7 @@ namespace BTokenLib
       tX.TXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
       tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
 
-      SignRTX(tX);
+      SignTX(tX);
 
       tX.Hash = SHA256.ComputeHash(
        SHA256.ComputeHash(tX.TXRaw.ToArray()));
@@ -198,7 +198,7 @@ namespace BTokenLib
       return true;
     }
 
-    void SignRTX(TX tX)
+    void SignTX(TX tX)
     {
       List<List<byte>> signaturesPerInput = new();
       int countInputs = tX.TXRaw[4];
@@ -254,21 +254,22 @@ namespace BTokenLib
       tXInputScaffold = new();
       long feePerTXInput = (long)(feePerByte * LENGTH_P2PKH_INPUT);
 
-      List<TXOutputWallet> outputsSpendable = new()
-      {
-        new TXOutputWallet()
-        {
-          TXID = "058b32e3ac89a2a7b586820fc0755eba13fbce9e824d364420a0fd71e7f55ad5".ToBinary(),
-          Value = 8056,
-          Index = 0
-        }
-      };
+      //List<TXOutputWallet> outputsSpendable = new()
+      //{
+      //  new TXOutputWallet()
+      //  {
+      //    TXID = "058b32e3ac89a2a7b586820fc0755eba13fbce9e824d364420a0fd71e7f55ad5".ToBinary(),
+      //    Value = 8056,
+      //    Index = 0
+      //  }
+      //};
 
-      //OutputsSpendable.Where(o => o.Value > feePerTXInput)
-      //.Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
-      //.Except(OutputsUnconfirmedSpent)
-      //.Take(VarInt.PREFIX_UINT16 - 1).ToList();
-        
+      List<TXOutputWallet> outputsSpendable = OutputsSpendable
+        .Where(o => o.Value > feePerTXInput)
+        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
+        .Except(OutputsUnconfirmedSpent)
+        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
+
 
       value = outputsSpendable.Sum(o => o.Value);
       feeTXInputScaffold = feePerTXInput * outputsSpendable.Count;
@@ -364,8 +365,8 @@ namespace BTokenLib
         }
       }
     }
-
-    public override void ReverseTXUnconfirmed(TX tX)
+        
+    public void ReverseTXUnconfirmed(List<TXBitcoin> tXAnchorTokens)
     {
       TXBitcoin tXBitcoin = (TXBitcoin)tX;
 

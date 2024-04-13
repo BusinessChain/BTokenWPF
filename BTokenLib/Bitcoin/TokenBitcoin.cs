@@ -18,7 +18,6 @@ namespace BTokenLib
     PoolTXBitcoin TXPool = new();
 
 
-
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(
           COMPORT_BITCOIN,
@@ -190,6 +189,55 @@ namespace BTokenLib
       tX = tXBitcoin;
 
       return flagSuccess;
+    }
+
+    public override void RBFAnchorTokens(
+      ref List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed, 
+      TokenAnchor tokenAnchorNew)
+    {
+      List<TXBitcoin> tXAnchorTokens = new();
+
+      foreach (TokenAnchor tokenAnchor in tokensAnchorSelfMinedUnconfirmed)
+      {
+        TXPool.TryGetTX(tokenAnchor.TX.Hash, out TXBitcoin tX);
+
+        if(tXAnchorTokens.Count == 0)
+          tXAnchorTokens.Add(tX);
+        else if (tX.Inputs.Count > 0)
+        {
+          if (tXAnchorTokens[0].Inputs.Count > 0)
+            throw new ProtocolException(
+              $"Only one anchorToken in RBF graph should have more than one input,\n" +
+              $"but there are {tXAnchorTokens[0]} and {tX}.");
+
+          tXAnchorTokens.Insert(0, tX);
+        }
+        else
+          for (int i = 0; i < tXAnchorTokens.Count; i += 1)
+            if (tXAnchorTokens[i].Hash.IsEqual(tX.Inputs[0].TXIDOutput))
+              tXAnchorTokens.Insert(i + 1, tX);
+      }
+
+      for (int i = 0; i < tXAnchorTokens.Count - 1; i += 1)
+        if (!tXAnchorTokens[i].Hash.IsEqual(tXAnchorTokens[i + 1].Inputs[0].TXIDOutput))
+          throw new ProtocolException(
+            $"RBF Anchor tokens do not build a coherent graph:" +
+            $"\nAnchor tX {tXAnchorTokens[i + 1]} does not reference {tXAnchorTokens[i]} but should.");
+
+      TXPool.RemoveTXRecursive(tXAnchorTokens[0].Hash);
+
+      ((WalletBitcoin)Wallet).ReverseTXUnconfirmed(tXAnchorTokens);
+
+      tokensAnchorSelfMinedUnconfirmed.Clear();
+      for (int i = 0; i < tXAnchorTokens.Count; i += 1)
+      {
+        TokenAnchor tokenAnchor = tokenAnchorNew.Copy();
+
+        if (TryBroadcastAnchorToken(tokenAnchorNew))
+          tokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
+        else
+          break;
+      }
     }
   }
 }

@@ -10,7 +10,7 @@ namespace BTokenLib
   public class TokenAnchor
   {
     public byte[] IDToken = new byte[2];
-    public int NumberSequence;
+    public int NumberSequence = 0;
 
     public byte[] HashBlockReferenced = new byte[32];
     public byte[] HashBlockPreviousReferenced = new byte[32];
