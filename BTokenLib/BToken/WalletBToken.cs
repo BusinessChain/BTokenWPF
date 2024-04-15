@@ -87,11 +87,11 @@ namespace BTokenLib
       return true;
     }
 
-    public override bool TryCreateTXData(byte[] data, int sequence, out TX tX)
+    public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
     {
       tX = new TXBTokenData();
 
-      tX.Fee = (long)(Token.FeeSatoshiPerBytePriorityHigh * LENGTH_P2PKH_TX);
+      tX.Fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
       if (BalanceUnconfirmed < tX.Fee)
         return false;
@@ -167,10 +167,6 @@ namespace BTokenLib
       }
 
       $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-    }
-
-    public override void ReverseTXUnconfirmed(TX tX)
-    {
     }
   }
 }

@@ -141,7 +141,7 @@ namespace BTokenLib
 
       BlocksMined.Add(block);
 
-      $"BToken miner successfully mined anchor Token {tokenAnchor}.".Log(this, LogFile, LogEntryNotifier);
+      $"BToken minSignalAnchorTokenDetecteder successfully mined anchor Token {tokenAnchor}.".Log(this, LogFile, LogEntryNotifier);
 
       return tokenAnchor;
     }
@@ -210,6 +210,13 @@ namespace BTokenLib
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
 
       TokensAnchorDetectedInBlock.Add(tokenAnchor);
+    }
+
+    public override void RBFAnchorTokens(
+      ref List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed,
+      TokenAnchor tokenAnchorTemplate)
+    {
+      throw new NotImplementedException();
     }
 
     byte[] GetHashBlockChildWinner(byte[] hashHeaderAnchor)

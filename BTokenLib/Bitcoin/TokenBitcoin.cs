@@ -131,8 +131,6 @@ namespace BTokenLib
       }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
-
-      TokenChild.SignalParentBlockInsertion(block.Header);
     }
 
     public override List<string> GetSeedAddresses()
@@ -193,7 +191,7 @@ namespace BTokenLib
 
     public override void RBFAnchorTokens(
       ref List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed, 
-      TokenAnchor tokenAnchorNew)
+      TokenAnchor tokenAnchorTemplate)
     {
       List<TXBitcoin> tXAnchorTokens = new();
 
@@ -226,14 +224,14 @@ namespace BTokenLib
 
       TXPool.RemoveTXRecursive(tXAnchorTokens[0].Hash);
 
-      ((WalletBitcoin)Wallet).ReverseTXUnconfirmed(tXAnchorTokens);
+      ((WalletBitcoin)Wallet).ReverseTXsUnconfirmed(tXAnchorTokens);
 
       tokensAnchorSelfMinedUnconfirmed.Clear();
       for (int i = 0; i < tXAnchorTokens.Count; i += 1)
       {
-        TokenAnchor tokenAnchor = tokenAnchorNew.Copy();
+        TokenAnchor tokenAnchor = tokenAnchorTemplate.Copy();
 
-        if (TryBroadcastAnchorToken(tokenAnchorNew))
+        if (TryBroadcastAnchorToken(tokenAnchor))
           tokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
         else
           break;

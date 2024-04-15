@@ -37,7 +37,7 @@ namespace BTokenLib
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
-    public double FeeSatoshiPerBytePriorityHigh = 1.0;
+    double FeeSatoshiPerBytePriorityHigh = 1.0;
 
     public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77 };
     public byte[] IDToken;
@@ -380,7 +380,9 @@ namespace BTokenLib
       FeeSatoshiPerBytePriorityHigh =
         ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerBytePriorityHigh + block.FeePerByte) /
         ORDER_AVERAGEING_FEEPERBYTE;
-                  
+
+      TokenChild.SignalParentBlockInsertion(block.Header);
+
       Archiver.ArchiveBlock(block);
 
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)

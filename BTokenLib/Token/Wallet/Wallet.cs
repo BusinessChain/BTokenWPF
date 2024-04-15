@@ -45,7 +45,7 @@ namespace BTokenLib
 
     public abstract bool TryCreateTX(string address, long value, double feePerByte, out TX tX);
 
-    public abstract bool TryCreateTXData(byte[] data, int sequence, out TX tX);
+    public abstract bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX);
 
     public static byte[] Base58CheckToPubKeyHash(string base58)
     {
@@ -176,8 +176,6 @@ namespace BTokenLib
       OutputsUnconfirmed.Add(output);
       BalanceUnconfirmed += output.Value;
     }
-
-    public abstract void ReverseTXUnconfirmed(TX tX);
 
     public abstract TX CreateCoinbaseTX(int height, long blockReward);
 

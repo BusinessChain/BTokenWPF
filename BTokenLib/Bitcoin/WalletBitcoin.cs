@@ -134,14 +134,14 @@ namespace BTokenLib
       return tX;
     }
 
-    public override bool TryCreateTXData(byte[] data, int sequence, out TX tX)
+    public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
     {
       tX = new TXBitcoin();
 
       if (!TryCreateTXInputScaffold(
         sequence,
-        (long)(data.Length * Token.FeeSatoshiPerBytePriorityHigh),
-        Token.FeeSatoshiPerBytePriorityHigh,
+        (long)(data.Length * feePerByte),
+        feePerByte,
         out long valueInput,
         out long feeTXInputScaffold,
         ref tX.TXRaw))
@@ -150,8 +150,8 @@ namespace BTokenLib
       }
 
       long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_P2PKH_OUTPUT * Token.FeeSatoshiPerBytePriorityHigh)
-        + (long)(data.Length * Token.FeeSatoshiPerBytePriorityHigh);
+        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
+        + (long)(data.Length * feePerByte);
 
       long valueChange = valueInput - feeTX;
 
@@ -366,28 +366,29 @@ namespace BTokenLib
       }
     }
         
-    public void ReverseTXUnconfirmed(List<TXBitcoin> tXAnchorTokens)
+    public void ReverseTXsUnconfirmed(List<TXBitcoin> tXs)
     {
-      TXBitcoin tXBitcoin = (TXBitcoin)tX;
-
-      TXOutputWallet outputValueUnconfirmed = 
-        OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
-
-      if (outputValueUnconfirmed != null)
+      for(int i = tXs.Count - 1; i > -1; i -= 1)
       {
-        OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-        BalanceUnconfirmed -= outputValueUnconfirmed.Value;
-      }
+        TXOutputWallet outputValueUnconfirmed =
+          OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tXs[i].Hash));
 
-      foreach(TXInput tXInput in tXBitcoin.Inputs)
-      {
-        TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
-          .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput));
-
-        if (outputValueUnconfirmedSpent != null)
+        if (outputValueUnconfirmed != null)
         {
-          OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
-          BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
+          OutputsUnconfirmed.Remove(outputValueUnconfirmed);
+          BalanceUnconfirmed -= outputValueUnconfirmed.Value;
+        }
+
+        foreach (TXInput tXInput in tXs[i].Inputs)
+        {
+          TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
+            .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput));
+
+          if (outputValueUnconfirmedSpent != null)
+          {
+            OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
+            BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
+          }
         }
       }
     }
