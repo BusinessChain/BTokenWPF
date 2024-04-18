@@ -11,10 +11,6 @@ namespace BTokenLib
     public BlockBToken(Token token) : base(token)
     { }
 
-    public BlockBToken(int sizeBuffer, Token token)
-      : base(sizeBuffer, token)
-    { }
-
 
     public void Parse(byte[] buffer)
     {

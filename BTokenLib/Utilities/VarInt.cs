@@ -19,7 +19,7 @@ namespace BTokenLib
     }
     public static List<byte> GetBytes(ulong value)
     {
-      List<byte> serializedValue = new List<byte>();
+      List<byte> serializedValue = new();
 
       byte prefix;
       int length;

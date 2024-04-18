@@ -449,27 +449,11 @@ namespace BTokenLib
 
     public abstract Block CreateBlock();
 
-    public TX ParseTX(
-      byte[] buffer,
-      ref int indexBuffer,
-      SHA256 sHA256,
-      bool flagCoinbase)
-    {
-      TX tX = ParseTX(buffer, ref indexBuffer, sHA256);
-
-      if (flagCoinbase && !tX.IsCoinbase)
-        throw new ProtocolException($"TX {tX} must be a coinbase transaction but is not.");
-
-      if (!flagCoinbase && tX.IsCoinbase)
-        throw new ProtocolException($"TX {tX} is a coinbase transaction but must not.");
-
-      return tX;
-    }
-
     public abstract TX ParseTX(
       byte[] buffer,
       ref int indexBuffer,
-      SHA256 sHA256);
+      SHA256 sHA256,
+      bool flagCoinbase);
 
     public bool MakeTX(string address, long value, double feePerByte, out TX tX)
     {
@@ -506,13 +490,13 @@ namespace BTokenLib
 
     abstract protected void RunMining();
 
-    public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
+    public bool TryGetBlockBytes(byte[] hash, out Block block)
     {
       if (TryGetHeader(hash, out Header header))
         if (Archiver.TryLoadBlockArchive(header.Height, out buffer))
           return true;
 
-      buffer = null;
+      block = null;
       return false;
     }
 

@@ -188,13 +188,14 @@ namespace BTokenLib
 
     public override Block CreateBlock()
     {
-      return new BlockBToken(SIZE_BUFFER_BLOCK, this);
+      return new BlockBToken(this);
     }
 
     public override TX ParseTX(
       byte[] buffer,
       ref int index,
-      SHA256 sHA256)
+      SHA256 sHA256,
+      bool flagCoinbase)
     {
       TXBToken tX;
       int startIndexMessage = index;

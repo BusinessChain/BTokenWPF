@@ -343,7 +343,7 @@ namespace BTokenLib
                 }
                 else if (inventory.Type == InventoryType.MSG_BLOCK)
                 {
-                  if (Token.TryGetBlockBytes(inventory.Hash, out byte[] buffer))
+                  if (Token.TryGetBlockBytes(inventory.Hash, out byte[] buffer)) // direkt den Stream verlangen
                   {
                     $"Send block {inventory}.".Log(this, LogFiles, Token.LogEntryNotifier);
                     await SendMessage(new MessageBlock(buffer));

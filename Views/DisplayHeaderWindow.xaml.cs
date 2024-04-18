@@ -50,18 +50,9 @@ namespace BTokenWPF
         $"{DateTimeOffset.FromUnixTimeSeconds(header.UnixTimeSeconds)}\n" +
         $"{header.Nonce}\n";
 
-      if (Token.TryGetBlockBytes(Header.Hash, out byte[] buffer))
-      {
-        Block block = Token.CreateBlock();
-        block.Buffer = buffer;
-
-        block.Parse();
-
-        foreach(TX tX in  block.TXs)
-        {
+      if (Token.TryGetBlockBytes(Header.Hash, out Block block))
+        foreach (TX tX in block.TXs)
           ListBoxTXs.Items.Add(new ListBoxItemTX(tX));
-        }
-      }
       else
         MessageBox.Show("Block not found in archive, no transaction data shown.");
     }

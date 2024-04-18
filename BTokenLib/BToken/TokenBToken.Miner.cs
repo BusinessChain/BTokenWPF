@@ -107,7 +107,7 @@ namespace BTokenLib
       block.TXs.Add(tXCoinbase);
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX)); // should be bytes per block
 
-      HeaderBToken header = new()
+      block.Header = new HeaderBToken()
       {
         HashPrevious = HeaderTip.Hash,
         HeaderPrevious = HeaderTip,
@@ -117,17 +117,7 @@ namespace BTokenLib
         CountTXs = block.TXs.Count
       };
 
-      block.Header = header;
-
-      header.ComputeHash(SHA256Miner);
-
-      block.Buffer = block.Header.Buffer.Concat(
-        VarInt.GetBytes(block.TXs.Count)).ToArray();
-
-      block.TXs.ForEach(t =>
-      { block.Buffer = block.Buffer.Concat(t.TXRaw).ToArray(); });
-
-      block.Header.CountBytesBlock = block.Buffer.Length;
+      block.Header.ComputeHash(SHA256Miner);
 
       TokenAnchor tokenAnchor = new();
 

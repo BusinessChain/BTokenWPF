@@ -1,6 +1,6 @@
-﻿using System;
+﻿using System.Linq;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -19,8 +19,6 @@ namespace BTokenLib
 
     public List<TX> TXs = new();
 
-    public byte[] Buffer;
-
     public long Fee;
     public long FeePerByte;
 
@@ -29,13 +27,6 @@ namespace BTokenLib
     {
       Token = token;
     }
-
-    public Block(int sizeBuffer, Token token)
-    {
-      Token = token;
-      Buffer = new byte[sizeBuffer];
-    }
-
 
     public void Parse()
     {
@@ -157,6 +148,16 @@ namespace BTokenLib
           merkleIndex += 1;
         }
       }
+    }
+
+    public void Serialize(Stream stream)
+    {
+      stream.Write(Header.Buffer, 0, Header.Buffer.Length);
+
+      byte[] countTXs = VarInt.GetBytes(TXs.Count).ToArray();
+      stream.Write(countTXs, 0, countTXs.Length);
+
+      TXs.ForEach(t => stream.Write(t.TXRaw.ToArray(), 0, t.TXRaw.Count));
     }
 
     public override string ToString()

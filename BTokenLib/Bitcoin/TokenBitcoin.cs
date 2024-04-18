@@ -60,14 +60,15 @@ namespace BTokenLib
 
     public override Block CreateBlock()
     {
-      return new BlockBitcoin(SIZE_BUFFER_BLOCK, this);
+      return new BlockBitcoin(this);
     }
 
 
     public override TX ParseTX(
       byte[] buffer,
       ref int indexBuffer,
-      SHA256 sHA256)
+      SHA256 sHA256,
+      bool flagCoinbase)
     {
       TXBitcoin tX = new();
 

@@ -13,7 +13,7 @@ namespace BTokenLib
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;
 
     const int COUNT_TXS_PER_BLOCK_MAX = 5;
-    int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);
+    int NumberOfProcesses = 1;// Math.Max(Environment.ProcessorCount - 1, 1);
 
 
     protected override void RunMining()
@@ -39,13 +39,6 @@ namespace BTokenLib
 
         if (!IsMining)
           return;
-
-        block.Buffer = block.Header.Buffer.Concat(
-          VarInt.GetBytes(block.TXs.Count)).ToArray();
-
-        block.TXs.ForEach(t => { block.Buffer = block.Buffer.Concat(t.TXRaw).ToArray(); });
-
-        block.Parse();
 
         while (!TryLock())
           Thread.Sleep(500);

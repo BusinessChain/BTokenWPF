@@ -101,9 +101,14 @@ namespace BTokenLib
       while (true)
         try
         {
-          File.WriteAllBytes(
-            pathFile,
-            block.Buffer.Take(block.Header.CountBytesBlock).ToArray());
+          using (FileStream fileStreamBlock = new(
+          pathFile,
+          FileMode.Create,
+          FileAccess.Write,
+          FileShare.None))
+          {
+            block.Serialize(fileStreamBlock);
+          }
 
           File.Delete(Path.Combine(
             PathBlockArchive,

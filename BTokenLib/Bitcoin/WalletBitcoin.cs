@@ -105,6 +105,8 @@ namespace BTokenLib
     {
       TXBitcoin tX = new();
 
+      tX.IsCoinbase = true;
+
       tX.TXRaw.AddRange(new byte[4] { 0x01, 0x00, 0x00, 0x00 }); // version
 
       tX.TXRaw.Add(0x01); // #TxIn

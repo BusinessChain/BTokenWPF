@@ -14,10 +14,6 @@ namespace BTokenLib
       : base(token)
     { }
 
-    public BlockBitcoin(int sizeBuffer, Token token)
-      : base(sizeBuffer, token)
-    { }
-
     public override HeaderBitcoin ParseHeader(
       byte[] buffer,
       ref int index)
