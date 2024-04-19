@@ -28,9 +28,7 @@ namespace BTokenLib
               if (!IsStateBlockSynchronization())
                 throw new ProtocolException($"Received unrequested block message.");
 
-              await ReadBytes(Block.Buffer, LengthDataPayload);
-
-              Block.Parse();
+              Block.Parse(NetworkStream);
 
               $"Received block {Block}".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -139,7 +137,7 @@ namespace BTokenLib
 
               int byteIndex = 0;
 
-              int countHeaders = VarInt.GetInt32(
+              int countHeaders = VarInt.GetInt(
                 Payload,
                 ref byteIndex);
 
@@ -231,7 +229,7 @@ namespace BTokenLib
 
               int startIndex = 4;
 
-              int headersCount = VarInt.GetInt32(Payload, ref startIndex);
+              int headersCount = VarInt.GetInt(Payload, ref startIndex);
 
               $"Received getHeaders with {headersCount} locator hashes."
                 .Log(this, LogFiles, Token.LogEntryNotifier);
@@ -394,9 +392,7 @@ namespace BTokenLib
             i = magicByte[0] == MagicBytes[0] ? 0 : -1;
         }
 
-        await ReadBytes(
-          MessageHeader,
-          MessageHeader.Length);
+        await ReadBytes(MessageHeader, MessageHeader.Length);
 
         LengthDataPayload = BitConverter.ToInt32(
           MessageHeader,

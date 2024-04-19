@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Diagnostics;
 
 namespace BTokenLib
@@ -18,7 +17,6 @@ namespace BTokenLib
 
     static readonly UInt256 DIFFICULTY_1_TARGET = new UInt256(
       "00000000FFFF0000000000000000000000000000000000000000000000000000".ToBinary());
-
 
 
     public HeaderBitcoin()

@@ -18,7 +18,7 @@ namespace BTokenLib
       {
         int startIndex = 0;
 
-        int addressesCount = VarInt.GetInt32(
+        int addressesCount = VarInt.GetInt(
           Payload,
           ref startIndex);
 

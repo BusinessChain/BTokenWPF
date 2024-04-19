@@ -13,7 +13,6 @@ namespace BTokenLib
   {
     const int HASH_BYTE_SIZE = 32;
 
-    public int StartIndexScript;
     public int LengthScript;
 
     public byte[] TXIDOutput;
@@ -44,11 +43,9 @@ namespace BTokenLib
 
       index += 4;
 
-      LengthScript = VarInt.GetInt32(
+      LengthScript = VarInt.GetInt(
         buffer,
         ref index);
-
-      StartIndexScript = index;
 
       index += LengthScript;
 

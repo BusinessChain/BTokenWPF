@@ -19,7 +19,7 @@ namespace BTokenLib
     {
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
-      Data = new byte[VarInt.GetInt32(buffer, ref index)];
+      Data = new byte[VarInt.GetInt(buffer, ref index)];
 
       Array.Copy(buffer, index, Data, 0, Data.Length);
 

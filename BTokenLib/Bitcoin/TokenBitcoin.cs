@@ -65,8 +65,7 @@ namespace BTokenLib
 
 
     public override TX ParseTX(
-      byte[] buffer,
-      ref int indexBuffer,
+      Stream stream,
       SHA256 sHA256,
       bool flagCoinbase)
     {
@@ -74,18 +73,14 @@ namespace BTokenLib
 
       try
       {
-        int tXStartIndex = indexBuffer;
+        long tXStartIndex = stream.Position;
 
-        indexBuffer += 4; // Version
+        stream.Position += 4; // Version
 
-        if (buffer[indexBuffer] == 0x00)
+        int countInputs = VarInt.GetInt(stream);
+
+        if (countInputs == 0x00)
           throw new NotImplementedException("Segwit is not implemented.");
-
-        int countInputs = VarInt.GetInt32(
-          buffer,
-          ref indexBuffer);
-
-        tX.IsCoinbase = countInputs == 0;
 
         for (int i = 0; i < countInputs; i += 1)
           tX.Inputs.Add(new TXInput(buffer, ref indexBuffer));

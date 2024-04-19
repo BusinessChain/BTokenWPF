@@ -36,7 +36,7 @@ namespace BTokenLib
       {
         int startIndex = 0;
 
-        int inventoryCount = VarInt.GetInt32(
+        int inventoryCount = VarInt.GetInt(
           Payload,
           ref startIndex);
 

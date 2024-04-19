@@ -28,42 +28,35 @@ namespace BTokenLib
       Token = token;
     }
 
-    public void Parse()
-    {
-      Parse(0);
-    }
 
-    public void Parse(int indexBuffer)
+    public void Parse(Stream stream)
     {
-      Header = ParseHeader(Buffer, ref indexBuffer);
+      Header = ParseHeader(stream);
 
-      ParseTXs(Header.MerkleRoot, ref indexBuffer);
+      ParseTXs(stream);
 
       Header.CountBytesBlock = indexBuffer;
       Header.CountTXs = TXs.Count;
       FeePerByte = Fee / Header.CountBytesBlock;
     }
 
-    public abstract Header ParseHeader(
-      byte[] buffer,
-      ref int index);
 
-    void ParseTXs(
-      byte[] hashMerkleRoot,
-      ref int bufferIndex)
+    public abstract Header ParseHeader(byte[] buffer, ref int index);
+
+    public abstract Header ParseHeader(Stream stream);
+
+
+    void ParseTXs(Stream stream)
     {
-      TXs.Clear();
-
-      int tXCount = VarInt.GetInt32(Buffer, ref bufferIndex);
+      int tXCount = VarInt.GetInt(stream);
 
       if (tXCount == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
-      
+
       if (tXCount == 1)
       {
         TX tX = Token.ParseTX(
-          Buffer,
-          ref bufferIndex,
+          stream,
           SHA256,
           flagCoinbase: true);
 
@@ -75,8 +68,7 @@ namespace BTokenLib
         var merkleList = new byte[tXCount + tXsLengthMod2][];
 
         TX tX = Token.ParseTX(
-          Buffer,
-          ref bufferIndex, 
+          stream,
           SHA256,
           flagCoinbase: true);
 
@@ -87,8 +79,7 @@ namespace BTokenLib
         for (int t = 1; t < tXCount; t += 1)
         {
           tX = Token.ParseTX(
-            Buffer,
-            ref bufferIndex,
+            stream,
             SHA256,
             flagCoinbase: false);
 
@@ -103,7 +94,7 @@ namespace BTokenLib
           merkleList[tXCount] = merkleList[tXCount - 1];
       }
 
-      if (!hashMerkleRoot.IsEqual(ComputeMerkleRoot()))
+      if (!Header.MerkleRoot.IsEqual(ComputeMerkleRoot()))
         throw new ProtocolException("Payload hash not equal to merkle root.");
     }
 

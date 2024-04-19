@@ -450,8 +450,7 @@ namespace BTokenLib
     public abstract Block CreateBlock();
 
     public abstract TX ParseTX(
-      byte[] buffer,
-      ref int indexBuffer,
+      Stream stream,
       SHA256 sHA256,
       bool flagCoinbase);
 

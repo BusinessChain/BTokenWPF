@@ -17,6 +17,7 @@ namespace BTokenLib
     {
       return GetBytes((ulong)value);
     }
+    
     public static List<byte> GetBytes(ulong value)
     {
       List<byte> serializedValue = new();
@@ -34,6 +35,7 @@ namespace BTokenLib
 
       return serializedValue;
     }
+    
     static void AssignPrefixAndLength(
       ulong value, 
       out byte prefix, 
@@ -60,64 +62,8 @@ namespace BTokenLib
         length = 9;
       }
     }
-    public static Int32 ParseVarInt32(byte[] buffer, ref int index)
-    {
-      byte[] value = new byte[4];
-      int prefix = buffer[index++];
-
-      if (prefix == PREFIX_UINT16)
-      {
-        Array.Copy(buffer, index, value, 0, 2);
-        index += 2;
-      }
-      else if (prefix == PREFIX_UINT32)
-      {
-        Array.Copy(buffer, index, value, 0, 4);
-        index += 4;
-      }
-      else if (prefix == PREFIX_UINT64)
-      {
-        throw new ArgumentException(string.Format(
-          "The VarInt in buffer at index {0} is not Int32 because it has prefix 0xFF which is Int64", index));
-      }
-      else
-      {
-        value[0] = (byte)prefix;
-      }
-
-      return BitConverter.ToInt32(value, 0);
-    }
-
-    public static UInt64 ParseVarInt(Stream stream, out int lengthVarInt)
-    {
-      byte[] value = new byte[8];
-      int prefix = stream.ReadByte();
-
-      if (prefix == PREFIX_UINT16)
-      {
-        stream.Read(value, 0, 2);
-        lengthVarInt = 3;
-      }
-      else if (prefix == PREFIX_UINT32)
-      {
-        stream.Read(value, 0, 4);
-        lengthVarInt = 5;
-      }
-      else if (prefix == PREFIX_UINT64)
-      {
-        stream.Read(value, 0, 8);
-        lengthVarInt = 9;
-      }
-      else
-      {
-        value[0] = (byte)prefix;
-        lengthVarInt = 1;
-      }
-
-      return BitConverter.ToUInt64(value, 0);
-    }
-    
-    public static int GetInt32(byte[] buffer, ref int startIndex)
+       
+    public static int GetInt(byte[] buffer, ref int startIndex)
     {
       int prefix = buffer[startIndex];
       startIndex++;
@@ -136,51 +82,25 @@ namespace BTokenLib
       return prefix;
     }
 
-    public static int GetInt32(Stream stream, byte[] buffer)
+    public static int GetInt(Stream stream)
     {
       int prefix = stream.ReadByte();
 
       if (prefix == PREFIX_UINT16)
       {
+        byte[] buffer = new byte[2];
         stream.Read(buffer, 0, 2);
         return BitConverter.ToUInt16(buffer, 0);
       }
 
       if (prefix == PREFIX_UINT32)
       {
+        byte[] buffer = new byte[4];
         stream.Read(buffer, 0, 4);
         return BitConverter.ToInt32(buffer, 0);
       }
 
       return prefix;
-    }
-
-    public static UInt64 GetUInt64(byte[] buffer, ref int startIndex)
-    {
-      byte prefix = buffer[startIndex];
-      startIndex++;
-      return ConvertBytesToLong(prefix, buffer, ref startIndex);
-    }
-
-    static UInt64 ConvertBytesToLong(UInt64 prefix, byte[] buffer, ref int startIndex)
-    {
-      try
-      {
-        if (prefix == PREFIX_UINT64)
-        {
-          prefix = BitConverter.ToUInt64(buffer, startIndex);
-          startIndex += 8;
-        }
-
-        return prefix;
-
-      }
-      catch (ArgumentException)
-      {
-        throw new ArgumentException(
-          $"VarInt prefix '{prefix}' inconsistent " +
-          $"with buffer length '{buffer.Length - startIndex}'.");
-      }
     }
   }
 }

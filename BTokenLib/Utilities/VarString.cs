@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     public static string GetString(byte[] buffer, ref int startIndex)
     {
-      int stringLength = VarInt.GetInt32(buffer, ref startIndex);
+      int stringLength = VarInt.GetInt(buffer, ref startIndex);
       string text = Encoding.ASCII.GetString(buffer, startIndex, stringLength);
 
       startIndex += stringLength;

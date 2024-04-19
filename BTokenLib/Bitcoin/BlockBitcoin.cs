@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Security.Cryptography;
 
 
@@ -13,6 +14,16 @@ namespace BTokenLib
     public BlockBitcoin(Token token) 
       : base(token)
     { }
+
+    public override HeaderBitcoin ParseHeader(Stream stream)
+    {
+      byte[] buffer = new byte[HeaderBitcoin.COUNT_HEADER_BYTES];
+      stream.Read(buffer, 0, buffer.Length);
+
+      int index = 0;
+
+      return ParseHeader(buffer, ref index);
+    }
 
     public override HeaderBitcoin ParseHeader(
       byte[] buffer,

@@ -29,7 +29,7 @@ namespace BTokenLib
       Value = BitConverter.ToInt64(buffer, index);
       index += 8;
 
-      int lengthScript = VarInt.GetInt32(buffer, ref index);
+      int lengthScript = VarInt.GetInt(buffer, ref index);
       int indexEndOfScript = index + lengthScript;
 
       if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_P2PKH &&
