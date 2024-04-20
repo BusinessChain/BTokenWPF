@@ -83,26 +83,29 @@ namespace BTokenLib
           throw new NotImplementedException("Segwit is not implemented.");
 
         for (int i = 0; i < countInputs; i += 1)
-          tX.Inputs.Add(new TXInput(buffer, ref indexBuffer));
+          tX.Inputs.Add(new TXInput(stream));
 
-        int countTXOutputs = VarInt.GetInt32(buffer, ref indexBuffer);
+        int countTXOutputs = VarInt.GetInt(stream);
 
         for (int i = 0; i < countTXOutputs; i += 1)
         {
-          TXOutputBitcoin tXOutputBitcoin = new(buffer, ref indexBuffer);
+          TXOutputBitcoin tXOutputBitcoin = new(stream);
           tX.TXOutputs.Add(tXOutputBitcoin);
 
           if (i == 0 && tXOutputBitcoin.Type == TXOutputBitcoin.TypesToken.AnchorToken)
             tX.TokenAnchor = tXOutputBitcoin.TokenAnchor;
         }
 
-        indexBuffer += 4; //BYTE_LENGTH_LOCK_TIME
+        stream.Position += 4; //BYTE_LENGTH_LOCK_TIME
+
+        long tXRawLength = stream.Position - tXStartIndex;
+
+        byte[] tXRaw = new byte[tXRawLength];
+        stream.Position = tXStartIndex;
+        stream.Read(tXRaw, 0, tXRaw.Length);
 
         tX.Hash = sHA256.ComputeHash(
-         sHA256.ComputeHash(
-           buffer,
-           tXStartIndex,
-           indexBuffer - tXStartIndex));
+         sHA256.ComputeHash(tXRaw, 0, tXRaw.Length));
 
         return tX;
       }

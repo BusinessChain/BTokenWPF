@@ -29,13 +29,46 @@ namespace BTokenLib
 
     public bool TryLoadBlockArchive(
       int blockHeight,
+      Block block)
+    {
+      string pathBlockArchive = Path.Combine(PathBlockArchive, blockHeight.ToString());
+
+      while (true)
+      {
+        try
+        {
+          using (FileStream fileStream = new(
+            pathBlockArchive,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None))
+          {
+            block.Parse(fileStream);
+          }
+
+          return true;
+        }
+        catch (FileNotFoundException)
+        {
+          return false;
+        }
+        catch (Exception ex)
+        {
+          Console.WriteLine($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+            $"Retry in 10 seconds.");
+
+          Thread.Sleep(10000);
+        }
+      }
+    }
+
+    public bool TryLoadBlockArchive(
+      int blockHeight,
       out byte[] buffer)
     {
       buffer = null;
 
-      string pathBlockArchive = Path.Combine(
-        PathBlockArchive,
-        blockHeight.ToString());
+      string pathBlockArchive = Path.Combine(PathBlockArchive, blockHeight.ToString());
 
       while (true)
       {

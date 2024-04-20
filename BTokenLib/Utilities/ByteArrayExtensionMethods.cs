@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Diagnostics;
+using System.IO;
 
 namespace BTokenLib
 {
@@ -77,10 +74,7 @@ namespace BTokenLib
       return rv;
     }
 
-    public static bool IsEqual(
-      this byte[] arr1, 
-      byte[] arr2, 
-      int startIndex2)
+    public static bool IsEqual(this byte[] arr1, byte[] arr2, int startIndex2)
     {
       for (int i = 0; i < arr1.Length; i += 1)
         if (arr1[i] != arr2[startIndex2 + i])
@@ -137,10 +131,7 @@ namespace BTokenLib
       return a1[i] > a2[i];
     }
 
-    public static void Increment(
-      this byte[] array,
-      int startIndex,
-      int length)
+    public static void Increment(this byte[] array, int startIndex, int length)
     {
       int offset = 0;
       int index;
@@ -158,7 +149,6 @@ namespace BTokenLib
       }
     }
     
-
     public static byte[] SubtractByteWise(this byte[] array1, byte[] array2)
     {
       byte[] difference = new byte[array1.Length];

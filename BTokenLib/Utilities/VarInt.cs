@@ -87,18 +87,10 @@ namespace BTokenLib
       int prefix = stream.ReadByte();
 
       if (prefix == PREFIX_UINT16)
-      {
-        byte[] buffer = new byte[2];
-        stream.Read(buffer, 0, 2);
-        return BitConverter.ToUInt16(buffer, 0);
-      }
+        return stream.ReadInt16();
 
       if (prefix == PREFIX_UINT32)
-      {
-        byte[] buffer = new byte[4];
-        stream.Read(buffer, 0, 4);
-        return BitConverter.ToInt32(buffer, 0);
-      }
+        return stream.ReadInt32();
 
       return prefix;
     }

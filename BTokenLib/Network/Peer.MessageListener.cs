@@ -63,17 +63,10 @@ namespace BTokenLib
             }
             else if (Command == "tx")
             {
-              await ReadBytes(Payload, LengthDataPayload);
-
-              int index = 0;
-
               TX tX = Token.ParseTX(
-                Payload,
-                ref index,
+                NetworkStream,
                 SHA256.Create(),
                 flagCoinbase: false);
-
-              tX.TXRaw = Payload.Take(index).ToList();
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -341,7 +334,7 @@ namespace BTokenLib
                 }
                 else if (inventory.Type == InventoryType.MSG_BLOCK)
                 {
-                  if (Token.TryGetBlockBytes(inventory.Hash, out byte[] buffer)) // direkt den Stream verlangen
+                  if (Token.TryGetBlockBytes(inventory.Hash, out byte[] buffer))
                   {
                     $"Send block {inventory}.".Log(this, LogFiles, Token.LogEntryNotifier);
                     await SendMessage(new MessageBlock(buffer));

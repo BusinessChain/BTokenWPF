@@ -154,14 +154,10 @@ namespace BTokenLib
 
       text += $"\nPrint blocks {GetName()}.\n";
 
-      Block block = CreateBlock();
       int i = 1;
 
-      while (Archiver.TryLoadBlockArchive(i, out byte[] buffer))
+      while (TryGetBlock(i, out Block block))
       {
-        block.Buffer = buffer;
-        block.Parse();
-
         text += $"{i} -> {block.Header}\n";
 
         if(TokenChild != null)
@@ -282,18 +278,14 @@ namespace BTokenLib
         }
       }
 
-      Block block = CreateBlock();
       int heightBlock = HeaderTip.Height + 1;
 
       while (
         heightBlock <= heightMax &&
-        Archiver.TryLoadBlockArchive(heightBlock, out byte[] buffer))
+        TryGetBlock(heightBlock, out Block block))
       {
         $"Pull block height {heightBlock} from Archiver of {GetName()}."
           .Log(this, LogFile, LogEntryNotifier);
-
-        block.Buffer = buffer;
-        block.Parse();
 
         try
         {
@@ -489,11 +481,22 @@ namespace BTokenLib
 
     abstract protected void RunMining();
 
-    public bool TryGetBlockBytes(byte[] hash, out Block block)
+    public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
     {
       if (TryGetHeader(hash, out Header header))
         if (Archiver.TryLoadBlockArchive(header.Height, out buffer))
           return true;
+
+      buffer = null;
+      return false;
+    }
+
+    public bool TryGetBlock(int heightHeader, out Block block)
+    {
+      block = CreateBlock();
+
+      if (Archiver.TryLoadBlockArchive(heightHeader, block))
+        return true;
 
       block = null;
       return false;
@@ -623,9 +626,7 @@ namespace BTokenLib
       IndexingHeaderTip();
     }
 
-    public bool TryGetHeader(
-      byte[] headerHash,
-      out Header header)
+    public bool TryGetHeader(byte[] headerHash, out Header header)
     {
       int key = BitConverter.ToInt32(headerHash, 0);
 
