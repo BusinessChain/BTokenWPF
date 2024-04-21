@@ -104,6 +104,8 @@ namespace BTokenLib
         stream.Position = tXStartIndex;
         stream.Read(tXRaw, 0, tXRaw.Length);
 
+        tX.TXRaw = tXRaw.ToList();
+
         tX.Hash = sHA256.ComputeHash(
          sHA256.ComputeHash(tXRaw, 0, tXRaw.Length));
 

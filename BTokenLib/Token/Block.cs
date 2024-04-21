@@ -35,7 +35,6 @@ namespace BTokenLib
 
       ParseTXs(stream);
 
-      Header.CountBytesBlock = indexBuffer;
       Header.CountTXs = TXs.Count;
       FeePerByte = Fee / Header.CountBytesBlock;
     }
@@ -86,6 +85,7 @@ namespace BTokenLib
           TXs.Add(tX);
 
           Fee += tX.Fee;
+          Header.CountBytesBlock += tX.TXRaw.Count;
 
           merkleList[t] = tX.Hash;
         }

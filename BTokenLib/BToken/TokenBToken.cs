@@ -192,13 +192,14 @@ namespace BTokenLib
     }
 
     public override TX ParseTX(
-      byte[] buffer,
-      ref int index,
+      Stream stream,
       SHA256 sHA256,
       bool flagCoinbase)
     {
       TXBToken tX;
-      int startIndexMessage = index;
+
+      byte[] buffer = null;
+      int index = 0;
 
       var typeToken = (WalletBToken.TypesToken)BitConverter.ToUInt32(buffer, index);
       index += 4;
@@ -206,11 +207,11 @@ namespace BTokenLib
       if(typeToken == WalletBToken.TypesToken.Coinbase)
         tX = new TXBTokenCoinbase(buffer, ref index);
       else if (typeToken == WalletBToken.TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(buffer, startIndexMessage, ref index, sHA256);
+        tX = new TXBTokenValueTransfer(buffer, 0, ref index, sHA256);
       else if (typeToken == WalletBToken.TypesToken.AnchorToken)
-        tX = new TXBTokenAnchor(buffer, startIndexMessage, ref index, sHA256);
+        tX = new TXBTokenAnchor(buffer, 0, ref index, sHA256);
       else if (typeToken == WalletBToken.TypesToken.Data)
-        tX = new TXBTokenData(buffer, startIndexMessage, ref index, sHA256);
+        tX = new TXBTokenData(buffer, 0, ref index, sHA256);
       else
         throw new ProtocolException($"Unknown token type {typeToken}");
 

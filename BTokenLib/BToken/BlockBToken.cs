@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
-
+using System.IO;
 
 namespace BTokenLib
 {
@@ -12,12 +12,16 @@ namespace BTokenLib
     { }
 
 
+    public override HeaderBitcoin ParseHeader(Stream stream)
+    {
+      throw new NotImplementedException();
+    }
+
     public void Parse(byte[] buffer)
     {
       int indexBuffer = 0;
       // parse Anchor Token
 
-      Parse(indexBuffer);
     }
 
     public override HeaderBToken ParseHeader(
