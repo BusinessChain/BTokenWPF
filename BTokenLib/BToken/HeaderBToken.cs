@@ -42,7 +42,7 @@ namespace BTokenLib
       Difficulty = 1;
     }
 
-    public override byte[] GetBytes()
+    public override byte[] Serialize()
     {
       HashPrevious.CopyTo(Buffer, 0);
 

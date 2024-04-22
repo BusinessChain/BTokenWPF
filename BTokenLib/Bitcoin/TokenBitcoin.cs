@@ -63,7 +63,6 @@ namespace BTokenLib
       return new BlockBitcoin(this);
     }
 
-
     public override TX ParseTX(
       Stream stream,
       SHA256 sHA256,

@@ -31,19 +31,21 @@ namespace BTokenLib
 
     public void Parse(Stream stream)
     {
+      long positionStreamStart = stream.Position;
+
       Header = ParseHeader(stream);
 
       ParseTXs(stream);
 
       Header.CountTXs = TXs.Count;
+      Header.CountBytesBlock = (int)(stream.Position - positionStreamStart);
+
       FeePerByte = Fee / Header.CountBytesBlock;
     }
-
 
     public abstract Header ParseHeader(byte[] buffer, ref int index);
 
     public abstract Header ParseHeader(Stream stream);
-
 
     void ParseTXs(Stream stream)
     {

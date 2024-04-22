@@ -205,7 +205,12 @@ namespace BTokenLib
       index += 4;
 
       if(typeToken == WalletBToken.TypesToken.Coinbase)
-        tX = new TXBTokenCoinbase(buffer, ref index);
+      {
+        if (flagCoinbase)
+          tX = new TXBTokenCoinbase(buffer, ref index);
+        else
+          throw new ProtocolException($"TX is of type coinbase but parser flag says it must not be coinbase.");
+      }
       else if (typeToken == WalletBToken.TypesToken.ValueTransfer)
         tX = new TXBTokenValueTransfer(buffer, 0, ref index, sHA256);
       else if (typeToken == WalletBToken.TypesToken.AnchorToken)

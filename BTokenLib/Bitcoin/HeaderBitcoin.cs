@@ -136,7 +136,7 @@ namespace BTokenLib
       return actualTimespan;
     }
 
-    public override byte[] GetBytes()
+    public override byte[] Serialize()
     {
       BitConverter.GetBytes(Version)
         .CopyTo(Buffer, 0);

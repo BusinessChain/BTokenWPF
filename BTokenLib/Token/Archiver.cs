@@ -27,14 +27,11 @@ namespace BTokenLib
       PathBlockArchive = PathBlockArchiveMain;
     }
 
-    public bool TryLoadBlockArchive(
-      int blockHeight,
-      Block block)
+    public bool TryLoadBlock(int blockHeight, Block block)
     {
       string pathBlockArchive = Path.Combine(PathBlockArchive, blockHeight.ToString());
 
       while (true)
-      {
         try
         {
           using (FileStream fileStream = new(
@@ -52,14 +49,22 @@ namespace BTokenLib
         {
           return false;
         }
+        catch (ProtocolException ex)
+        {
+          Console.WriteLine(
+            $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive.");
+
+          CleanAfterBlockHeight(blockHeight - 1);
+          return false;
+        }
         catch (Exception ex)
         {
-          Console.WriteLine($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+          Console.WriteLine(
+            $"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
             $"Retry in 10 seconds.");
 
           Thread.Sleep(10000);
         }
-      }
     }
 
     public bool TryLoadBlockArchive(

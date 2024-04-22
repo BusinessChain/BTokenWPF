@@ -53,7 +53,7 @@ namespace BTokenLib
       Nonce = nonce;
     }
 
-    public abstract byte[] GetBytes();
+    public abstract byte[] Serialize();
 
     public virtual void AppendToHeader(Header headerPrevious)
     {
@@ -91,7 +91,7 @@ namespace BTokenLib
 
     public void ComputeHash(SHA256 sHA256)
     {
-      Hash = sHA256.ComputeHash(sHA256.ComputeHash(GetBytes()));
+      Hash = sHA256.ComputeHash(sHA256.ComputeHash(Serialize()));
     }
 
    

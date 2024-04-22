@@ -241,7 +241,6 @@ namespace BTokenLib
       string pathImage = Path.Combine(GetName(), NameImage);
 
       while (true)
-      {
         try
         {
           ($"Load image of token {pathImage}" +
@@ -268,15 +267,14 @@ namespace BTokenLib
           try
           {
             Directory.Move(
-              Path.Combine(GetName(), NameImageOld), 
+              Path.Combine(GetName(), NameImageOld),
               pathImage);
           }
-          catch(DirectoryNotFoundException)
+          catch (DirectoryNotFoundException)
           {
             break;
           }
         }
-      }
 
       int heightBlock = HeaderTip.Height + 1;
 
@@ -416,7 +414,7 @@ namespace BTokenLib
 
         while (header != null)
         {
-          byte[] headerBytes = header.GetBytes();
+          byte[] headerBytes = header.Serialize();
 
           fileImageHeaderchain.Write(
             headerBytes, 0, headerBytes.Length);
@@ -495,7 +493,7 @@ namespace BTokenLib
     {
       block = CreateBlock();
 
-      if (Archiver.TryLoadBlockArchive(heightHeader, block))
+      if (Archiver.TryLoadBlock(heightHeader, block))
         return true;
 
       block = null;

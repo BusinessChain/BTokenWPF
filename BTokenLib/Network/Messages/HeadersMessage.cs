@@ -25,7 +25,7 @@ namespace BTokenLib
 
         foreach (Header header in Headers)
         {
-          payload.AddRange(header.GetBytes());
+          payload.AddRange(header.Serialize());
           payload.Add(0);
         }
 
