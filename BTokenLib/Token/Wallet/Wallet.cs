@@ -176,8 +176,6 @@ namespace BTokenLib
       BalanceUnconfirmed += output.Value;
     }
 
-    public abstract TX CreateCoinbaseTX(int height, long blockReward);
-
     public virtual void Clear()
     {
       OutputsUnconfirmed.Clear();

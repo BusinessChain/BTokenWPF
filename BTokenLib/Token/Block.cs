@@ -145,7 +145,8 @@ namespace BTokenLib
 
     public void Serialize(Stream stream)
     {
-      stream.Write(Header.Buffer, 0, Header.Buffer.Length);
+      byte[] bufferHeader = Header.Serialize();
+      stream.Write(bufferHeader, 0, bufferHeader.Length);
 
       byte[] countTXs = VarInt.GetBytes(TXs.Count).ToArray();
       stream.Write(countTXs, 0, countTXs.Length);

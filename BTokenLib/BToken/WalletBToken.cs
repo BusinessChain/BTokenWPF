@@ -24,7 +24,7 @@ namespace BTokenLib
     { }
 
 
-    public override TX CreateCoinbaseTX(int height, long blockReward)
+    public TX CreateCoinbaseTX(int height, long blockReward)
     {
       TXBTokenCoinbase tX = new();
 

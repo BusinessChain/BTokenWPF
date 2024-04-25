@@ -102,7 +102,7 @@ namespace BTokenLib
       long blockReward = BLOCK_REWARD_INITIAL >>
         height / PERIOD_HALVENING_BLOCK_REWARD;
 
-      TX tXCoinbase = Wallet.CreateCoinbaseTX(height, blockReward);
+      TX tXCoinbase = ((WalletBToken)Wallet).CreateCoinbaseTX(height, blockReward);
 
       block.TXs.Add(tXCoinbase);
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX)); // should be bytes per block

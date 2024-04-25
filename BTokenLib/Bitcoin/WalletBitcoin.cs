@@ -33,182 +33,16 @@ namespace BTokenLib
         .Concat(POSTFIX_P2PKH).ToArray();
     }
 
-    public override bool TryCreateTX(
-      string addressOutput, 
-      long valueOutput, 
-      double feePerByte, 
-      out TX tX)
-    {
-      tX = new TXBitcoin();
 
-      if (!TryCreateTXInputScaffold(
-        sequence : 0,
-        valueNettoMinimum: (long)(LENGTH_P2PKH_OUTPUT * feePerByte),
-        feePerByte,
-        out long valueInput,
-        out long feeTXInputScaffold,
-        ref tX.TXRaw))
-      {
-        return false;
-      }
-
-      long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
-        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
-
-      long valueChange = valueInput - valueOutput - feeTX;
-
-      if (valueChange > 0)
-      {
-        tX.TXRaw.Add(0x02);
-
-        tX.TXRaw.AddRange(BitConverter.GetBytes(valueChange));
-        tX.TXRaw.Add((byte)PublicScript.Length);
-        tX.TXRaw.AddRange(PublicScript);
-
-        AddOutputUnconfirmed(
-          new TXOutputWallet
-          {
-            TXID = tX.Hash,
-            Index = 1,
-            Value = valueChange
-          });
-
-        tX.Fee = valueInput - valueOutput - valueChange;
-      }
-      else
-      {
-        tX.TXRaw.Add(0x01);
-        tX.Fee = valueInput - valueOutput;
-      }
-
-      byte[] pubScript = PREFIX_P2PKH
-        .Concat(Base58CheckToPubKeyHash(addressOutput))
-        .Concat(POSTFIX_P2PKH).ToArray();
-
-      tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
-      tX.TXRaw.Add((byte)pubScript.Length);
-      tX.TXRaw.AddRange(pubScript);
-
-      tX.TXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
-      tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
-
-      SignTX(tX);
-
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
-
-      return true;
-    }
-
-    public override TX CreateCoinbaseTX(int height, long blockReward)
-    {
-      TXBitcoin tX = new();
-
-      tX.IsCoinbase = true;
-
-      tX.TXRaw.AddRange(new byte[4] { 0x01, 0x00, 0x00, 0x00 }); // version
-
-      tX.TXRaw.Add(0x01); // #TxIn
-
-      tX.TXRaw.AddRange(new byte[32]); // TxOutHash
-
-      tX.TXRaw.AddRange("FFFFFFFF".ToBinary()); // TxOutIndex
-
-      List<byte> blockHeight = VarInt.GetBytes(height); // Script coinbase
-      tX.TXRaw.Add((byte)blockHeight.Count);
-      tX.TXRaw.AddRange(blockHeight);
-
-      tX.TXRaw.AddRange("FFFFFFFF".ToBinary()); // sequence
-
-      tX.TXRaw.Add(0x01); // #TxOut
-
-      tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
-
-      tX.TXRaw.Add((byte)PublicScript.Length);
-      tX.TXRaw.AddRange(PublicScript);
-
-      tX.TXRaw.AddRange(new byte[4]);
-
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
-
-      return tX;
-    }
-
-    public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
-    {
-      tX = new TXBitcoin();
-
-      if (!TryCreateTXInputScaffold(
-        sequence,
-        (long)(data.Length * feePerByte),
-        feePerByte,
-        out long valueInput,
-        out long feeTXInputScaffold,
-        ref tX.TXRaw))
-      {
-        return false;
-      }
-
-      long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
-        + (long)(data.Length * feePerByte);
-
-      long valueChange = valueInput - feeTX;
-
-      if (valueChange > 0)
-      {
-        tX.TXRaw.Add(0x02);        
-        tX.Fee = feeTX;
-      }
-      else
-      {
-        tX.TXRaw.Add(0x01);
-        tX.Fee = valueInput;
-      }
-
-      tX.TXRaw.AddRange(BitConverter.GetBytes((long)0));
-      tX.TXRaw.AddRange(VarInt.GetBytes(data.Length + 2));
-      tX.TXRaw.Add(OP_RETURN);
-      tX.TXRaw.Add((byte)data.Length);
-      tX.TXRaw.AddRange(data);
-
-      if (valueChange > 0)
-      {
-        tX.TXRaw.AddRange(BitConverter.GetBytes(valueChange));
-        tX.TXRaw.Add((byte)PublicScript.Length);
-        tX.TXRaw.AddRange(PublicScript);
-
-        AddOutputUnconfirmed(
-          new TXOutputWallet
-          {
-            TXID = tX.Hash,
-            Index = 1,
-            Value = valueChange
-          });
-      }
-
-      tX.TXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
-      tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
-
-      SignTX(tX);
-
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
-
-      return true;
-    }
-
-    void SignTX(TX tX)
+    void SignTX(List<byte> tXRaw)
     {
       List<List<byte>> signaturesPerInput = new();
-      int countInputs = tX.TXRaw[4];
+      int countInputs = tXRaw[4];
       int indexFirstInput = 5;
 
       for (int i = 0; i < countInputs; i += 1)
       {
-        List<byte> tXRawSign = tX.TXRaw.ToList();
+        List<byte> tXRawSign = tXRaw.ToList();
         int indexRawSign = indexFirstInput + 36 * (i + 1) + 5 * i;
 
         tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
@@ -235,64 +69,14 @@ namespace BTokenLib
       {
         int indexSig = indexFirstInput + 36 * (i + 1) + 5 * i;
 
-        tX.TXRaw[indexSig++] = (byte)signaturesPerInput[i].Count;
+        tXRaw[indexSig++] = (byte)signaturesPerInput[i].Count;
 
-        tX.TXRaw.InsertRange(
+        tXRaw.InsertRange(
           indexSig,
           signaturesPerInput[i]);
       }
 
-      tX.TXRaw.RemoveRange(tX.TXRaw.Count - 4, 4);
-    }
-
-    bool TryCreateTXInputScaffold(
-      int sequence,
-      long valueNettoMinimum,
-      double feePerByte,
-      out long value, 
-      out long feeTXInputScaffold,
-      ref List<byte> tXInputScaffold)
-    {
-      tXInputScaffold = new();
-      long feePerTXInput = (long)(feePerByte * LENGTH_P2PKH_INPUT);
-
-      //List<TXOutputWallet> outputsSpendable = new()
-      //{
-      //  new TXOutputWallet()
-      //  {
-      //    TXID = "058b32e3ac89a2a7b586820fc0755eba13fbce9e824d364420a0fd71e7f55ad5".ToBinary(),
-      //    Value = 8056,
-      //    Index = 0
-      //  }
-      //};
-
-      List<TXOutputWallet> outputsSpendable = OutputsSpendable
-        .Where(o => o.Value > feePerTXInput)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
-        .Except(OutputsUnconfirmedSpent)
-        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
-
-
-      value = outputsSpendable.Sum(o => o.Value);
-      feeTXInputScaffold = feePerTXInput * outputsSpendable.Count;
-
-      if (value - feeTXInputScaffold < valueNettoMinimum)
-        return false;
-
-      OutputsUnconfirmedSpent.AddRange(outputsSpendable);
-
-      tXInputScaffold.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
-      tXInputScaffold.Add((byte)outputsSpendable.Count);
-
-      foreach (TXOutputWallet tXOutputWallet in outputsSpendable)
-      {
-        tXInputScaffold.AddRange(tXOutputWallet.TXID);
-        tXInputScaffold.AddRange(BitConverter.GetBytes(tXOutputWallet.Index));
-        tXInputScaffold.Add(0x00); // length empty script
-        tXInputScaffold.AddRange(BitConverter.GetBytes(sequence));
-      }
-
-      return true;
+      tXRaw.RemoveRange(tXRaw.Count - 4, 4);
     }
 
     public override void LoadImage(string path)

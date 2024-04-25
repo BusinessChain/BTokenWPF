@@ -19,6 +19,9 @@ namespace BTokenLib
     public int Sequence;
 
 
+    public TXInput()
+    { }
+
     public TXInput(Stream stream)
     {
       TXIDOutput = new byte[HASH_BYTE_SIZE];

@@ -19,8 +19,6 @@ namespace BTokenLib
 
     public HeaderBToken()
     {
-      Buffer = new byte[COUNT_HEADER_BYTES];
-
       Nonce = InitializerNonce++;
 
       Difficulty = 1;
@@ -38,25 +36,26 @@ namespace BTokenLib
         unixTimeSeconds,
         nonce)
     {
-      Buffer = new byte[COUNT_HEADER_BYTES];
       Difficulty = 1;
     }
 
     public override byte[] Serialize()
     {
-      HashPrevious.CopyTo(Buffer, 0);
+      byte[] buffer = new byte[COUNT_HEADER_BYTES];
 
-      MerkleRoot.CopyTo(Buffer, 32);
+      HashPrevious.CopyTo(buffer, 0);
 
-      HashDatabase.CopyTo(Buffer, 64);
+      MerkleRoot.CopyTo(buffer, 32);
+
+      HashDatabase.CopyTo(buffer, 64);
 
       BitConverter.GetBytes(UnixTimeSeconds)
-        .CopyTo(Buffer, 96);
+        .CopyTo(buffer, 96);
 
       BitConverter.GetBytes(Nonce)
-        .CopyTo(Buffer, 100);
+        .CopyTo(buffer, 100);
 
-      return Buffer;
+      return buffer;
     }
   }
 }

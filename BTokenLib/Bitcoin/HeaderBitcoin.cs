@@ -21,7 +21,6 @@ namespace BTokenLib
 
     public HeaderBitcoin()
     {
-      Buffer = new byte[COUNT_HEADER_BYTES];
     }
 
     public HeaderBitcoin(
@@ -39,8 +38,6 @@ namespace BTokenLib
         unixTimeSeconds,
         nonce)
     {
-      Buffer = new byte[COUNT_HEADER_BYTES];
-
       Version = version;
       NBits = nBits;
 
@@ -138,23 +135,25 @@ namespace BTokenLib
 
     public override byte[] Serialize()
     {
+      byte[] buffer = new byte[COUNT_HEADER_BYTES];
+
       BitConverter.GetBytes(Version)
-        .CopyTo(Buffer, 0);
+        .CopyTo(buffer, 0);
 
-      HashPrevious.CopyTo(Buffer, 4);
+      HashPrevious.CopyTo(buffer, 4);
 
-      MerkleRoot.CopyTo(Buffer, 36);
+      MerkleRoot.CopyTo(buffer, 36);
 
       BitConverter.GetBytes(UnixTimeSeconds)
-        .CopyTo(Buffer, 68);
+        .CopyTo(buffer, 68);
 
       BitConverter.GetBytes(NBits)
-        .CopyTo(Buffer, 72);
+        .CopyTo(buffer, 72);
 
       BitConverter.GetBytes(Nonce)
-        .CopyTo(Buffer, 76);
+        .CopyTo(buffer, 76);
 
-      return Buffer;
+      return buffer;
     }
 
     public void IncrementNonce(uint nonceSeed)
@@ -163,10 +162,6 @@ namespace BTokenLib
 
       if (Nonce == 0)
         Nonce = nonceSeed;
-
-      byte[] nonceArray = BitConverter.GetBytes(Nonce);
-
-      Array.Copy(nonceArray, 0, Buffer, 76, 4);
     }
   }
 }

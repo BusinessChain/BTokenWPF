@@ -3,7 +3,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
-
+using System.IO;
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
@@ -70,9 +71,7 @@ namespace BTokenLib
       }
     }
 
-    BlockBitcoin ComputePoW(
-      SHA256 sHA256,
-      int indexThread)
+    BlockBitcoin ComputePoW(SHA256 sHA256, int indexThread)
     {
     LABEL_StartPoW:
 
@@ -85,11 +84,8 @@ namespace BTokenLib
       long blockReward = BLOCK_REWARD_INITIAL >>
         height / PERIOD_HALVENING_BLOCK_REWARD;
 
-      TX tXCoinbase = Wallet.CreateCoinbaseTX(height, blockReward);
-
-      block.TXs.Add(tXCoinbase);
-      block.TXs.AddRange(
-        TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
+      block.TXs.Add(CreateCoinbaseTX(height, blockReward, sHA256));
+      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
 
       uint nBits = HeaderBitcoin.GetNextTarget((HeaderBitcoin)HeaderTip);
       double difficulty = HeaderBitcoin.ComputeDifficultyFromNBits(nBits);
@@ -126,6 +122,39 @@ namespace BTokenLib
       }
 
       return block;
+    }
+
+    public TX CreateCoinbaseTX(int height, long blockReward, SHA256 sHA256)
+    {
+      List<byte> tXRaw = new();
+
+      tXRaw.AddRange(new byte[4] { 0x01, 0x00, 0x00, 0x00 }); // version
+
+      tXRaw.Add(0x01); // #TxIn
+
+      tXRaw.AddRange(new byte[32]); // TxOutHash
+
+      tXRaw.AddRange("FFFFFFFF".ToBinary()); // TxOutIndex
+
+      List<byte> blockHeight = VarInt.GetBytes(height); // Script coinbase
+      tXRaw.Add((byte)blockHeight.Count);
+      tXRaw.AddRange(blockHeight);
+
+      tXRaw.AddRange("FFFFFFFF".ToBinary()); // sequence
+
+      tXRaw.Add(0x01); // #TxOut
+
+      tXRaw.AddRange(BitConverter.GetBytes(blockReward));
+
+      WalletBitcoin wallet = (WalletBitcoin)Wallet;
+      tXRaw.Add((byte)wallet.PublicScript.Length);
+      tXRaw.AddRange(wallet.PublicScript);
+
+      tXRaw.AddRange(new byte[4]);
+
+      MemoryStream stream = new(tXRaw.ToArray());
+
+      return ParseTX(stream, sHA256, flagCoinbase: true);
     }
   }
 }

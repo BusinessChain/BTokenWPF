@@ -7,8 +7,6 @@ namespace BTokenLib
 {
   public abstract class Header
   {
-    public byte[] Buffer;
-
     public byte[] Hash;
     public byte[] HashPrevious;
     public byte[] MerkleRoot;
@@ -91,7 +89,8 @@ namespace BTokenLib
 
     public void ComputeHash(SHA256 sHA256)
     {
-      Hash = sHA256.ComputeHash(sHA256.ComputeHash(Serialize()));
+      Hash = sHA256.ComputeHash(
+        sHA256.ComputeHash(Serialize()));
     }
 
    

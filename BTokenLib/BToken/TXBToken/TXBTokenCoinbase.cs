@@ -15,8 +15,6 @@ namespace BTokenLib
 
     public TXBTokenCoinbase(byte[] buffer, ref int index)
     {
-      IsCoinbase = true;
-
       int countOutputs = VarInt.GetInt(buffer, ref index);
 
       for (int i = 0; i < countOutputs; i += 1)

@@ -12,8 +12,6 @@ namespace BTokenLib
 
     public long Fee;
 
-    public bool IsCoinbase;
-
 
     public string GetStringTXRaw()
     {
