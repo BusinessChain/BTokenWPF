@@ -537,12 +537,6 @@ namespace BTokenLib
       Network.AdvertizeTX(tX);
     }
 
-    public void BroadcastTX(List<TX> tXs)
-    {
-      tXs.ForEach(tX => TryAddTXPool(tX));
-      Network.AdvertizeTXs(tXs);
-    }
-
     public bool TryBroadcastAnchorToken(TokenAnchor tokenAnchor)
     {
       byte[] dataAnchorToken = tokenAnchor.IDToken

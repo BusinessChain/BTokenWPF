@@ -10,8 +10,6 @@ namespace BTokenLib
 {
   partial class TokenBitcoin : Token
   {
-    const int SIZE_BUFFER_BLOCK = 0x400000;
-
     // work with config files instead.
     const UInt16 COMPORT_BITCOIN = 8333;
 
@@ -61,58 +59,6 @@ namespace BTokenLib
     public override Block CreateBlock()
     {
       return new BlockBitcoin(this);
-    }
-
-    public override TX ParseTX(
-      byte[] buffer,
-      SHA256 sHA256,
-      bool flagCoinbase)
-    {
-      TXBitcoin tX = new();
-
-      try
-      {
-        int index = 4; // Version
-
-        int countInputs = VarInt.GetInt(buffer, ref index);
-
-        if (countInputs == 0x00)
-          throw new NotImplementedException("Segwit is not implemented.");
-
-        for (int i = 0; i < countInputs; i += 1)
-          tX.Inputs.Add(new TXInput(stream));
-
-        int countTXOutputs = VarInt.GetInt(stream);
-
-        for (int i = 0; i < countTXOutputs; i += 1)
-        {
-          TXOutputBitcoin tXOutputBitcoin = new(stream);
-          tX.TXOutputs.Add(tXOutputBitcoin);
-
-          if (i == 0 && tXOutputBitcoin.Type == TXOutputBitcoin.TypesToken.AnchorToken)
-            tX.TokenAnchor = tXOutputBitcoin.TokenAnchor;
-        }
-
-        stream.Position += 4; //BYTE_LENGTH_LOCK_TIME
-
-        long tXRawLength = stream.Position - tXStartIndex;
-
-        byte[] tXRaw = new byte[tXRawLength];
-        stream.Position = tXStartIndex;
-        stream.Read(tXRaw, 0, tXRaw.Length);
-
-        tX.TXRaw = tXRaw.ToList();
-
-        tX.Hash = sHA256.ComputeHash(
-         sHA256.ComputeHash(tXRaw, 0, tXRaw.Length));
-
-        return tX;
-      }
-      catch (ArgumentOutOfRangeException)
-      {
-        throw new ProtocolException(
-          "ArgumentOutOfRangeException thrown in ParseTX.");
-      }
     }
 
     public override TX ParseTX(
@@ -168,189 +114,6 @@ namespace BTokenLib
           "ArgumentOutOfRangeException thrown in ParseTX.");
       }
     }
-
-    public override bool TryCreateTX(
-      string addressOutput,
-      long valueOutput,
-      double feePerByte,
-      out TX tX)
-    {
-      if (!TryCreateTXInputScaffold(
-        sequence: 0,
-        valueNettoMinimum: (long)(LENGTH_P2PKH_OUTPUT * feePerByte),
-        feePerByte,
-        out long valueInput,
-        out long feeTXInputScaffold,
-        out List<byte> tXRaw))
-      {
-        tX = null;
-        return false;
-      }
-
-      long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
-        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
-
-      long valueChange = valueInput - valueOutput - feeTX;
-
-      if (valueChange > 0)
-      {
-        tXRaw.Add(0x02);
-
-        tXRaw.AddRange(BitConverter.GetBytes(valueChange));
-        tXRaw.Add((byte)PublicScript.Length);
-        tXRaw.AddRange(PublicScript);
-
-        //AddOutputUnconfirmed(
-        //  new TXOutputWallet
-        //  {
-        //    TXID = tX.Hash,
-        //    Index = 1,
-        //    Value = valueChange
-        //  });
-
-        //tX.Fee = valueInput - valueOutput - valueChange;
-      }
-      else
-      {
-        tXRaw.Add(0x01);
-        //tX.Fee = valueInput - valueOutput;
-      }
-
-      byte[] pubScript = PREFIX_P2PKH
-        .Concat(Base58CheckToPubKeyHash(addressOutput))
-        .Concat(POSTFIX_P2PKH).ToArray();
-
-      tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
-      tXRaw.Add((byte)pubScript.Length);
-      tXRaw.AddRange(pubScript);
-
-      tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
-      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
-
-      SignTX(tXRaw);
-
-      MemoryStream stream = new(tXRaw.ToArray());
-
-      tX = Token.ParseTX(stream, SHA256, flagCoinbase: false);
-      return true;
-    }
-
-
-    bool TryCreateTXInputScaffold(
-      int sequence,
-      long valueNettoMinimum,
-      double feePerByte,
-      out long value,
-      out long feeTXInputScaffold,
-      out List<byte> tXRaw)
-    {
-      tXRaw = new();
-      long feePerTXInput = (long)(feePerByte * LENGTH_P2PKH_INPUT);
-
-      //List<TXOutputWallet> outputsSpendable = new()
-      //{
-      //  new TXOutputWallet()
-      //  {
-      //    TXID = "058b32e3ac89a2a7b586820fc0755eba13fbce9e824d364420a0fd71e7f55ad5".ToBinary(),
-      //    Value = 8056,
-      //    Index = 0
-      //  }
-      //};
-
-      List<TXOutputWallet> outputsSpendable = OutputsSpendable
-        .Where(o => o.Value > feePerTXInput)
-        .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
-        .Except(OutputsUnconfirmedSpent)
-        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
-
-
-      value = outputsSpendable.Sum(o => o.Value);
-      feeTXInputScaffold = feePerTXInput * outputsSpendable.Count;
-
-      if (value - feeTXInputScaffold < valueNettoMinimum)
-        return false;
-
-      OutputsUnconfirmedSpent.AddRange(outputsSpendable);
-
-      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
-      tXRaw.Add((byte)outputsSpendable.Count);
-
-      foreach (TXOutputWallet tXOutputWallet in outputsSpendable)
-      {
-        tXRaw.AddRange(tXOutputWallet.TXID);
-        tXRaw.AddRange(BitConverter.GetBytes(tXOutputWallet.Index));
-        tXRaw.Add(0x00); // length empty script
-        tXRaw.AddRange(BitConverter.GetBytes(sequence));
-      }
-
-      return true;
-    }
-
-    public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
-    {
-      tX = new TXBitcoin();
-
-      if (!TryCreateTXInputScaffold(
-        sequence,
-        (long)(data.Length * feePerByte),
-        feePerByte,
-        out long valueInput,
-        out long feeTXInputScaffold,
-        ref tX.TXRaw))
-      {
-        return false;
-      }
-
-      long feeTX = feeTXInputScaffold
-        + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
-        + (long)(data.Length * feePerByte);
-
-      long valueChange = valueInput - feeTX;
-
-      if (valueChange > 0)
-      {
-        tX.TXRaw.Add(0x02);
-        tX.Fee = feeTX;
-      }
-      else
-      {
-        tX.TXRaw.Add(0x01);
-        tX.Fee = valueInput;
-      }
-
-      tX.TXRaw.AddRange(BitConverter.GetBytes((long)0));
-      tX.TXRaw.AddRange(VarInt.GetBytes(data.Length + 2));
-      tX.TXRaw.Add(OP_RETURN);
-      tX.TXRaw.Add((byte)data.Length);
-      tX.TXRaw.AddRange(data);
-
-      if (valueChange > 0)
-      {
-        tX.TXRaw.AddRange(BitConverter.GetBytes(valueChange));
-        tX.TXRaw.Add((byte)PublicScript.Length);
-        tX.TXRaw.AddRange(PublicScript);
-
-        AddOutputUnconfirmed(
-          new TXOutputWallet
-          {
-            TXID = tX.Hash,
-            Index = 1,
-            Value = valueChange
-          });
-      }
-
-      tX.TXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
-      tX.TXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
-
-      SignTX(tX);
-
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
-
-      return true;
-    }
-
 
     protected override void InsertInDatabase(Block block)
     {
@@ -412,7 +175,13 @@ namespace BTokenLib
 
     public override bool TryAddTXPool(TX tX)
     {
-      return TXPool.TryAddTX((TXBitcoin)tX);
+      TXBitcoin tXBitcoin = (TXBitcoin)tX;
+
+      if (!TXPool.TryAddTX(tXBitcoin))
+        return false;
+
+      ((WalletBitcoin)Wallet).InsertTXUnconfirmed(tXBitcoin);
+      return true;
     }
 
     public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)

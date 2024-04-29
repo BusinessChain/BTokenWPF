@@ -50,7 +50,7 @@ namespace BTokenWPF
                 if (tupelInputsInPool.input.OutputIndex == tXInput.OutputIndex)
                 {
                   Debug.WriteLine(
-                    $"Output {tXInput.TXIDOutput.ToHexString()} / {tXInput.OutputIndex} referenced by tX {tX} " +
+                    $"Output {tXInput.TXIDOutput.ToHexString()} - {tXInput.OutputIndex} referenced by tX {tX} " +
                     $"already referenced by tX {tupelInputsInPool.tX}.");
 
                   if (

@@ -16,9 +16,9 @@ namespace BTokenLib
 
     protected SHA256 SHA256 = SHA256.Create();
 
-    protected string PrivKeyDec;
-    protected byte[] PublicKey;
-    protected byte[] PublicKeyHash160 = new byte[20];
+    public string PrivKeyDec;
+    public byte[] PublicKey;
+    public byte[] PublicKeyHash160 = new byte[20];
     public string AddressAccount;
 
     public List<TX> HistoryTransactions = new();
@@ -168,12 +168,6 @@ namespace BTokenLib
     {
       if (!HistoryTransactions.Any(t => t.Hash.IsEqual(tX.Hash)))
         HistoryTransactions.Add(tX);
-    }
-
-    public void AddOutputUnconfirmed(TXOutputWallet output)
-    {
-      OutputsUnconfirmed.Add(output);
-      BalanceUnconfirmed += output.Value;
     }
 
     public virtual void Clear()

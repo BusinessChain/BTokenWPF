@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
@@ -10,7 +9,7 @@ namespace BTokenLib
 {
   partial class TokenBitcoin : Token
   {
-    const long BLOCK_REWARD_INITIAL = 5000000000; // 50 BTK
+    const long BLOCK_REWARD_INITIAL = 5000000000;
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;
 
     const int COUNT_TXS_PER_BLOCK_MAX = 5;
