@@ -20,8 +20,7 @@ namespace BTokenLib
       : base(
           COMPORT_BITCOIN,
           flagEnableInboundConnections: true,
-          logEntryNotifier,
-          BitConverter.GetBytes(COMPORT_BITCOIN))
+          logEntryNotifier)
     {
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
     }

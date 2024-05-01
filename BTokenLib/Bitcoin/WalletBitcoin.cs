@@ -17,8 +17,11 @@ namespace BTokenLib
     public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
-    public const byte LENGTH_SCRIPT_ANCHOR_TOKEN = 69;
+    public const byte LENGTH_SCRIPT_ANCHOR_TOKEN = 68; // 1 (length) + 1 (opReturn) + 2 (tokenID) + 32 + 32
     public const byte OP_RETURN = 0x6A;
+
+    // einerseits muss identifiziert werden, dass es ein BToken Anker Token ist,
+    // anderseits muss das spezifische Token addressiert werden.
     public static byte[] PREFIX_ANCHOR_TOKEN = 
       new byte[] { OP_RETURN }.Concat(Token.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 

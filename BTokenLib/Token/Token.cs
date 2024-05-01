@@ -49,9 +49,10 @@ namespace BTokenLib
     public Token(
       UInt16 port, 
       bool flagEnableInboundConnections,
-      ILogEntryNotifier logEntryNotifier,
-      byte[] BTokenSerialNumber)
+      ILogEntryNotifier logEntryNotifier)
     {
+      IDToken = BitConverter.GetBytes(port);
+
       LogEntryNotifier = logEntryNotifier;
 
       PathRootToken = GetName();

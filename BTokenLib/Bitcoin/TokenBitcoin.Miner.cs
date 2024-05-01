@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BTokenLib
 {
@@ -78,13 +79,14 @@ namespace BTokenLib
 
       BlockBitcoin block = new(this);
 
+      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
+
       int height = HeaderTip.Height + 1;
 
-      long blockReward = BLOCK_REWARD_INITIAL >>
-        height / PERIOD_HALVENING_BLOCK_REWARD;
+      long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
+      blockReward += block.TXs.Sum(t => t.Fee);
 
-      block.TXs.Add(CreateCoinbaseTX(height, blockReward, sHA256));
-      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
+      block.TXs.Insert(0, CreateCoinbaseTX(height, blockReward, sHA256));
 
       uint nBits = HeaderBitcoin.GetNextTarget((HeaderBitcoin)HeaderTip);
       double difficulty = HeaderBitcoin.ComputeDifficultyFromNBits(nBits);

@@ -14,8 +14,6 @@ namespace BTokenLib
     const long BLOCK_REWARD_INITIAL = 200000000000000; // 200 BTK
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;
 
-    const int SIZE_BUFFER_BLOCK = 0x400000;
-
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
@@ -29,8 +27,7 @@ namespace BTokenLib
       : base(
           COMPORT_BTOKEN,
           flagEnableInboundConnections: true,
-          logEntryNotifier,
-          BTokenSerialNumber: BitConverter.GetBytes(COMPORT_BTOKEN))
+          logEntryNotifier)
     {
       TokenParent = new TokenBitcoin(logEntryNotifier);
       TokenParent.TokenChild = this;
