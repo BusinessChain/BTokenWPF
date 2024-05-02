@@ -24,11 +24,12 @@ namespace BTokenLib
 
     public Network(
       Token token,
+      UInt16 port,
       bool flagEnableInboundConnections)
     {
       Token = token;
 
-      Port = token.Port;
+      Port = port;
       EnableInboundConnections = flagEnableInboundConnections;
 
       string pathRoot = token.GetName();

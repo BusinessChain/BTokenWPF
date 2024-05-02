@@ -45,7 +45,7 @@ namespace BTokenLib
       {
         TokenAnchor = new();
 
-        stream.Read(TokenAnchor.IDToken, 0, TokenAnchor.IDToken.Length);
+        stream.Read(TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
 
         stream.Read(
           TokenAnchor.HashBlockReferenced, 

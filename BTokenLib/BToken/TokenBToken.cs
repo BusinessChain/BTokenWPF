@@ -17,15 +17,14 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    const UInt16 COMPORT_BTOKEN = 8777;
-
     DatabaseAccounts DatabaseAccounts = new();
     PoolTXBToken TXPool = new();
 
 
-    public TokenBToken(ILogEntryNotifier logEntryNotifier)
+    public TokenBToken(ILogEntryNotifier logEntryNotifier, byte[] iDToken, UInt16 port)
       : base(
-          COMPORT_BTOKEN,
+          port,
+          iDToken,
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {

@@ -16,8 +16,8 @@ namespace BTokenLib
     {
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
-      Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.IDToken.Length);
-      index += TokenAnchor.IDToken.Length;
+      Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
+      index += TokenAnchor.LENGTH_IDTOKEN;
 
       Array.Copy(
         buffer,

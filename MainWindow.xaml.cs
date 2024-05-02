@@ -17,7 +17,9 @@ namespace BTokenWPF
       {
         InitializeComponent();
 
-        BToken = new(this);
+        byte[] iDToken = new byte[4] { (byte)'B', (byte)'C', (byte)'S', (byte)'H' };
+
+        BToken = new(this, iDToken, port: 8777);
         BToken.Start();
 
         UpdateTextBoxStatus();

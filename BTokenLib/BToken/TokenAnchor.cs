@@ -8,7 +8,9 @@ namespace BTokenLib
 {
   public class TokenAnchor
   {
-    public byte[] IDToken = new byte[3];
+    public const int LENGTH_IDTOKEN = 4;
+    public byte[] IDToken = new byte[LENGTH_IDTOKEN];
+
     public int NumberSequence;
 
     public byte[] HashBlockReferenced = new byte[32];

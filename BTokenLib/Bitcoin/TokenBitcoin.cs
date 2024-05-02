@@ -10,7 +10,6 @@ namespace BTokenLib
 {
   partial class TokenBitcoin : Token
   {
-    // work with config files instead.
     const UInt16 COMPORT_BITCOIN = 8333;
 
     PoolTXBitcoin TXPool = new();
@@ -19,6 +18,7 @@ namespace BTokenLib
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(
           COMPORT_BITCOIN,
+          iDToken: new byte[TokenAnchor.LENGTH_IDTOKEN],
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
@@ -89,7 +89,7 @@ namespace BTokenLib
           tX.TXOutputs.Add(tXOutputBitcoin);
 
           if (i == 0 && tXOutputBitcoin.Type == TXOutputBitcoin.TypesToken.AnchorToken)
-            tX.TokenAnchor = tXOutputBitcoin.TokenAnchor;
+            tXOutputBitcoin.TokenAnchor.TX = tX;
         }
 
         stream.Position += 4; //BYTE_LENGTH_LOCK_TIME
@@ -122,9 +122,11 @@ namespace BTokenLib
       {
         walletBitcoin.InsertTX(tX);
 
-        if (tX.TokenAnchor != null)
-          if (tX.TokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
-            TokenChild.SignalAnchorTokenDetected(tX.TokenAnchor);
+        TokenAnchor tokenAnchor = tX.TXOutputs[0].TokenAnchor;
+
+        if (tokenAnchor != null)
+          if (tokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
+            TokenChild.SignalAnchorTokenDetected(tokenAnchor);
       }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));

@@ -24,7 +24,6 @@ namespace BTokenLib
     public Wallet Wallet;
 
     public Network Network;
-    public UInt16 Port;
 
     public StreamWriter LogFile;
 
@@ -39,7 +38,7 @@ namespace BTokenLib
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
     double FeeSatoshiPerBytePriorityHigh = 1.0;
 
-    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { 0x87, 0x77 };
+    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
     public byte[] IDToken;
 
     bool IsLocked;
@@ -47,12 +46,12 @@ namespace BTokenLib
 
 
     public Token(
-      UInt16 port, 
+      UInt16 port,
+      byte[] iDToken,
       bool flagEnableInboundConnections,
       ILogEntryNotifier logEntryNotifier)
     {
-      IDToken = BitConverter.GetBytes(port);
-
+      IDToken = iDToken;
       LogEntryNotifier = logEntryNotifier;
 
       PathRootToken = GetName();
@@ -72,8 +71,7 @@ namespace BTokenLib
 
       Archiver = new(GetName());
 
-      Port = port;
-      Network = new(this, flagEnableInboundConnections);
+      Network = new(this, port, flagEnableInboundConnections);
     }
 
     public void Start()
@@ -540,7 +538,8 @@ namespace BTokenLib
 
     public bool TryBroadcastAnchorToken(TokenAnchor tokenAnchor)
     {
-      byte[] dataAnchorToken = tokenAnchor.IDToken
+      byte[] dataAnchorToken = IDENTIFIER_BTOKEN_PROTOCOL
+      .Concat(tokenAnchor.IDToken)
       .Concat(tokenAnchor.HashBlockReferenced)
       .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
 

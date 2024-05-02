@@ -8,8 +8,6 @@ namespace BTokenLib
 {
   public class TXBitcoin : TX
   {
-    public TokenAnchor TokenAnchor;
-
     public List<TXInput> Inputs = new();
     public List<TXOutputBitcoin> TXOutputs = new();
 
