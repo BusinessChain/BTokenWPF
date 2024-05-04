@@ -15,7 +15,7 @@ namespace BTokenLib
     public TXBTokenData()
     { }
 
-    public TXBTokenData(byte[] buffer, int startIndexMessage, ref int index, SHA256 sHA256)
+    public TXBTokenData(byte[] buffer, ref int index, SHA256 sHA256)
     {
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
@@ -25,7 +25,7 @@ namespace BTokenLib
 
       index += Data.Length;
 
-      VerifySignatureTX(buffer, startIndexMessage, ref index);
+      VerifySignatureTX(buffer, ref index);
     }
   }
 }

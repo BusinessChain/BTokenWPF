@@ -104,7 +104,7 @@ namespace BTokenLib
       long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
       blockReward += block.TXs.Sum(t => t.Fee);
 
-      TX tXCoinbase = ((WalletBToken)Wallet).CreateCoinbaseTX(height, blockReward);
+      TXBTokenCoinbase tXCoinbase = new(blockReward, Wallet.PublicKeyHash160, SHA256Miner);
 
       block.TXs.Insert(0, tXCoinbase);
 

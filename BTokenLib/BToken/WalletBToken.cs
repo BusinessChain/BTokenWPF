@@ -1,53 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 
 namespace BTokenLib
 {
   public partial class WalletBToken : Wallet
   {
-    public enum TypesToken
-    {
-      Coinbase = 0,
-      ValueTransfer = 1,
-      AnchorToken = 2,
-      Data = 3
-    }
+    public TokenBToken Token;
 
     static int LENGTH_P2PKH_TX = 120;
     public long NonceAccount;
 
 
-    public WalletBToken(string privKeyDec, Token token)
-      : base(privKeyDec, token)
-    { }
-
-
-    public TX CreateCoinbaseTX(int height, long blockReward)
+    public WalletBToken(string privKeyDec, TokenBToken token)
+      : base(privKeyDec)
     {
-      TXBTokenCoinbase tX = new();
-
-      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TypesToken.Coinbase)); // token ; config
-
-      tX.TXRaw.Add(0x01); // count outputs
-
-      tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
-      tX.TXRaw.AddRange(PublicKeyHash160);
-
-      byte[] signature = Crypto.GetSignature(
-        PrivKeyDec,
-        tX.TXRaw.ToArray(),
-        SHA256);
-
-      tX.TXRaw.Add((byte)(signature.Length + 1));
-      tX.TXRaw.AddRange(signature);
-
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
-
-      return tX;
+      Token = token;
     }
+
 
     public override bool TryCreateTX(
       string addressOutput,
@@ -62,7 +34,7 @@ namespace BTokenLib
       if (BalanceUnconfirmed < valueOutput + tX.Fee)
         return false;
 
-      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TypesToken.ValueTransfer)); // token ; config
+      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TokenBToken.TypesToken.ValueTransfer)); // token ; config
 
       tX.TXRaw.AddRange(PublicKey);
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
@@ -84,6 +56,8 @@ namespace BTokenLib
       tX.Hash = SHA256.ComputeHash(
        SHA256.ComputeHash(tX.TXRaw.ToArray()));
 
+      tX = Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: false);
+
       return true;
     }
 
@@ -96,7 +70,7 @@ namespace BTokenLib
       if (BalanceUnconfirmed < tX.Fee)
         return false;
 
-      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TypesToken.Data)); // token ; config
+      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TokenBToken.TypesToken.Data)); // token ; config
 
       tX.TXRaw.AddRange(PublicKey);
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));

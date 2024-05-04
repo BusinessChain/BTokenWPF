@@ -16,9 +16,6 @@ namespace BTokenLib
     public const int LENGTH_IDACCOUNT = 20;
     public byte[] IDAccountSource = new byte[LENGTH_IDACCOUNT];
 
-    public int LengthSig;
-    public byte[] Signature;
-
     public long Nonce;
     public long NonceInDB;
 
@@ -42,19 +39,19 @@ namespace BTokenLib
       Value += Fee;
     }
 
-    public void VerifySignatureTX(byte[] buffer, int startIndexMessage, ref int index)
+    public void VerifySignatureTX(byte[] buffer, ref int index)
     {
       int lengthSig = buffer[index++];
-      Signature = new byte[lengthSig];
-      Array.Copy(buffer, index, Signature, 0, lengthSig);
+      byte[] signature = new byte[lengthSig];
+      Array.Copy(buffer, index, signature, 0, lengthSig);
       index += lengthSig;
 
       if (!Crypto.VerifySignature(
         buffer,
-        startIndexMessage,
-        index - startIndexMessage,
+        0,
+        index,
         PublicKey,
-        Signature))
+        signature))
         throw new ProtocolException($"TX {this} contains invalid signature.");
     }
 

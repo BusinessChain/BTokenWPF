@@ -8,6 +8,8 @@ namespace BTokenLib
 {
   public partial class WalletBitcoin : Wallet
   {
+    public TokenBitcoin Token;
+
     public byte[] PublicScript;
 
     const int LENGTH_P2PKH_OUTPUT = 34;
@@ -20,7 +22,7 @@ namespace BTokenLib
     public const byte OP_RETURN = 0x6A;
 
     public static byte[] PREFIX_ANCHOR_TOKEN =
-      new byte[] { OP_RETURN }.Concat(Token.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
+      new byte[] { OP_RETURN }.Concat(BTokenLib.Token.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 
     public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
       PREFIX_ANCHOR_TOKEN.Length + TokenAnchor.LENGTH_IDTOKEN + 32 + 32;
@@ -28,9 +30,11 @@ namespace BTokenLib
     public List<TXOutputWallet> OutputsSpendable = new();
 
 
-    public WalletBitcoin(string privKeyDec, Token token)
-      : base(privKeyDec, token)
+    public WalletBitcoin(string privKeyDec, TokenBitcoin token)
+      : base(privKeyDec)
     {
+      Token = token;
+
       PublicScript = PREFIX_P2PKH
         .Concat(PublicKeyHash160)
         .Concat(POSTFIX_P2PKH).ToArray();

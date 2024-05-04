@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -12,7 +11,7 @@ namespace BTokenLib
     public TokenAnchor TokenAnchor = new();
 
 
-    public TXBTokenAnchor(byte[] buffer, int startIndexMessage, ref int index, SHA256 sHA256)
+    public TXBTokenAnchor(byte[] buffer, ref int index, SHA256 sHA256)
     {
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
@@ -37,7 +36,7 @@ namespace BTokenLib
 
       index += TokenAnchor.HashBlockPreviousReferenced.Length;
 
-      VerifySignatureTX(buffer, startIndexMessage, ref index);
+      VerifySignatureTX(buffer, ref index);
     }
   }
 }

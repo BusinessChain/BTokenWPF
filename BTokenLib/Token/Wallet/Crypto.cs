@@ -76,7 +76,7 @@ namespace BTokenLib
         curve.N, 
         curve.H);
 
-      var d = new Org.BouncyCastle.Math.BigInteger(privKey);
+      var d = new BigInteger(privKey);
       var q = domain.G.Multiply(d);
 
       var publicKey = new ECPublicKeyParameters(q, domain);

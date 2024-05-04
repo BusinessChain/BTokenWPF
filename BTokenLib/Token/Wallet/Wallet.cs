@@ -12,8 +12,6 @@ namespace BTokenLib
 {
   public abstract class Wallet
   {
-    protected Token Token;
-
     protected SHA256 SHA256 = SHA256.Create();
 
     public string PrivKeyDec;
@@ -30,9 +28,8 @@ namespace BTokenLib
     public long BalanceUnconfirmed;
 
 
-    public Wallet(string privKeyDec, Token token)
+    public Wallet(string privKeyDec)
     {
-      Token = token;
 
       PrivKeyDec = privKeyDec;
 

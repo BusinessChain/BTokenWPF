@@ -11,10 +11,14 @@ namespace BTokenLib
   {
     public List<TXOutputBToken> TXOutputs = new();
 
+
     public TXBTokenValueTransfer()
     { }
 
-    public TXBTokenValueTransfer(byte[] buffer, int startIndexMessage, ref int index, SHA256 sHA256)
+    public TXBTokenValueTransfer(
+      byte[] buffer, 
+      ref int index, 
+      SHA256 sHA256)
     {
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
@@ -28,7 +32,10 @@ namespace BTokenLib
         Value += tXOutput.Value;
       }
 
-      VerifySignatureTX(buffer, startIndexMessage, ref index);
+      VerifySignatureTX(buffer, ref index);
+
+      Hash = sHA256.ComputeHash(
+       sHA256.ComputeHash(buffer));
     }
   }
 }

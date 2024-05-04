@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace BTokenLib
 {
-  partial class TokenBitcoin : Token
+  public partial class TokenBitcoin : Token
   {
     const UInt16 COMPORT_BITCOIN = 8333;
 
@@ -22,7 +22,9 @@ namespace BTokenLib
           flagEnableInboundConnections: true,
           logEntryNotifier)
     {
-      Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
+      Wallet = new WalletBitcoin(
+        File.ReadAllText($"Wallet{GetName()}/wallet"), 
+        this);
     }
 
     public override Header CreateHeaderGenesis()

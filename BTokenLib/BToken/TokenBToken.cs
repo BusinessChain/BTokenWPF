@@ -20,6 +20,14 @@ namespace BTokenLib
     DatabaseAccounts DatabaseAccounts = new();
     PoolTXBToken TXPool = new();
 
+    public enum TypesToken
+    {
+      Coinbase = 0,
+      ValueTransfer = 1,
+      AnchorToken = 2,
+      Data = 3
+    }
+
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier, byte[] iDToken, UInt16 port)
       : base(
@@ -41,7 +49,9 @@ namespace BTokenLib
       Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
       LoadMinedUnconfirmed();
 
-      Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
+      Wallet = new WalletBToken(
+        File.ReadAllText($"Wallet{GetName()}/wallet"), 
+        this);
     }
 
     void LoadMinedUnconfirmed()
@@ -192,27 +202,38 @@ namespace BTokenLib
       SHA256 sHA256,
       bool flagCoinbase)
     {
+      int lengthTXRaw = VarInt.GetInt(stream);
+      byte[] tXRaw = new byte[lengthTXRaw];
+      stream.Read(tXRaw, 0, lengthTXRaw);
+
+      return ParseTX(tXRaw, sHA256, flagCoinbase);
+    }
+
+    public TXBToken ParseTX(
+      byte[] tXRaw,
+      SHA256 sHA256,
+      bool flagCoinbase)
+    {
       TXBToken tX;
 
-      byte[] buffer = null;
       int index = 0;
 
-      var typeToken = (WalletBToken.TypesToken)BitConverter.ToUInt32(buffer, index);
-      index += 4;
+      var typeToken = (TypesToken)tXRaw[index];
+      index += 1;
 
-      if(typeToken == WalletBToken.TypesToken.Coinbase)
+      if (typeToken == TypesToken.Coinbase)
       {
         if (flagCoinbase)
-          tX = new TXBTokenCoinbase(buffer, ref index);
+          tX = new TXBTokenCoinbase(tXRaw, ref index);
         else
           throw new ProtocolException($"TX is of type coinbase but parser flag says it must not be coinbase.");
       }
-      else if (typeToken == WalletBToken.TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(buffer, 0, ref index, sHA256);
-      else if (typeToken == WalletBToken.TypesToken.AnchorToken)
-        tX = new TXBTokenAnchor(buffer, 0, ref index, sHA256);
-      else if (typeToken == WalletBToken.TypesToken.Data)
-        tX = new TXBTokenData(buffer, 0, ref index, sHA256);
+      else if (typeToken == TypesToken.ValueTransfer)
+        tX = new TXBTokenValueTransfer(tXRaw, ref index, sHA256);
+      else if (typeToken == TypesToken.AnchorToken)
+        tX = new TXBTokenAnchor(tXRaw, ref index, sHA256);
+      else if (typeToken == TypesToken.Data)
+        tX = new TXBTokenData(tXRaw, ref index, sHA256);
       else
         throw new ProtocolException($"Unknown token type {typeToken}");
 

@@ -11,7 +11,11 @@ namespace BTokenLib
     public byte[] IDAccount;
     public long Value;
 
-
+    public TXOutputBToken(long value, byte[] iDAccount)
+    {
+      IDAccount = iDAccount;
+      Value = value;
+    }
 
     public TXOutputBToken(byte[] buffer, ref int index)
     {
