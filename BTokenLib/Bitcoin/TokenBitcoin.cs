@@ -127,8 +127,13 @@ namespace BTokenLib
         TokenAnchor tokenAnchor = tX.TXOutputs[0].TokenAnchor;
 
         if (tokenAnchor != null)
-          if (tokenAnchor.IDToken.IsEqual(TokenChild.IDToken))
-            TokenChild.SignalAnchorTokenDetected(tokenAnchor);
+        {
+          Token tokenChild = TokensChild.Find(
+            t => t.IDToken.Equals(tokenAnchor.IDToken));
+
+          if (tokenChild != null)
+            tokenChild.SignalAnchorTokenDetected(tokenAnchor);
+        }
       }
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));

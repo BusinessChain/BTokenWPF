@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -21,6 +21,20 @@ namespace BTokenLib
     }
 
 
+    public TXBToken CreateTXCoinbase(long blockReward)
+    {
+      TXBTokenCoinbase tX = new();
+
+      tX.TXRaw.Add((byte)TokenBToken.TypesToken.Coinbase); // token ; config
+
+      tX.TXRaw.Add(0x01); // count outputs
+
+      tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
+      tX.TXRaw.AddRange(PublicKeyHash160);
+
+      return Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: true);
+    }
+
     public override bool TryCreateTX(
       string addressOutput,
       long valueOutput,
@@ -34,7 +48,7 @@ namespace BTokenLib
       if (BalanceUnconfirmed < valueOutput + tX.Fee)
         return false;
 
-      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TokenBToken.TypesToken.ValueTransfer)); // token ; config
+      tX.TXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer); // token ; config
 
       tX.TXRaw.AddRange(PublicKey);
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
@@ -50,11 +64,8 @@ namespace BTokenLib
         tX.TXRaw.ToArray(),
         SHA256);
 
-      tX.TXRaw.Add((byte)(signature.Length + 1));
+      tX.TXRaw.Add((byte)signature.Length);
       tX.TXRaw.AddRange(signature);
-
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
 
       tX = Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: false);
 
@@ -70,7 +81,7 @@ namespace BTokenLib
       if (BalanceUnconfirmed < tX.Fee)
         return false;
 
-      tX.TXRaw.AddRange(BitConverter.GetBytes((int)TokenBToken.TypesToken.Data)); // token ; config
+      tX.TXRaw.Add((byte)TokenBToken.TypesToken.Data); // token ; config
 
       tX.TXRaw.AddRange(PublicKey);
       tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
@@ -85,11 +96,10 @@ namespace BTokenLib
         tX.TXRaw.ToArray(),
         SHA256);
 
-      tX.TXRaw.Add((byte)(signature.Length + 1));
+      tX.TXRaw.Add((byte)signature.Length);
       tX.TXRaw.AddRange(signature);
 
-      tX.Hash = SHA256.ComputeHash(
-       SHA256.ComputeHash(tX.TXRaw.ToArray()));
+      tX = Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: false);
 
       return true;
     }

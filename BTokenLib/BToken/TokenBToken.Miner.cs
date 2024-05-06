@@ -98,13 +98,14 @@ namespace BTokenLib
       BlockBToken block = new(this);
 
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX)); // should be bytes per block
+      block.Fee = block.TXs.Sum(t => t.Fee);
 
       int height = HeaderTip.Height + 1;
 
       long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
-      blockReward += block.TXs.Sum(t => t.Fee);
+      blockReward += block.Fee;
 
-      TXBTokenCoinbase tXCoinbase = new(blockReward, Wallet.PublicKeyHash160, SHA256Miner);
+      TXBToken tXCoinbase = ((WalletBToken)Wallet).CreateTXCoinbase(blockReward);
 
       block.TXs.Insert(0, tXCoinbase);
 

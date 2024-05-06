@@ -37,7 +37,7 @@ namespace BTokenLib
           logEntryNotifier)
     {
       TokenParent = new TokenBitcoin(logEntryNotifier);
-      TokenParent.TokenChild = this;
+      TokenParent.TokensChild.Add(this);
 
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
       TokenParent.HeaderGenesis.HashChild = HeaderGenesis.Hash;
@@ -216,26 +216,23 @@ namespace BTokenLib
     {
       TXBToken tX;
 
-      int index = 0;
-
-      var typeToken = (TypesToken)tXRaw[index];
-      index += 1;
+      var typeToken = (TypesToken)tXRaw[0];
 
       if (typeToken == TypesToken.Coinbase)
       {
         if (flagCoinbase)
-          tX = new TXBTokenCoinbase(tXRaw, ref index);
+          tX = new TXBTokenCoinbase(tXRaw, sHA256);
         else
           throw new ProtocolException($"TX is of type coinbase but parser flag says it must not be coinbase.");
       }
       else if (typeToken == TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(tXRaw, ref index, sHA256);
+        tX = new TXBTokenValueTransfer(tXRaw, sHA256);
       else if (typeToken == TypesToken.AnchorToken)
-        tX = new TXBTokenAnchor(tXRaw, ref index, sHA256);
+        tX = new TXBTokenAnchor(tXRaw, sHA256);
       else if (typeToken == TypesToken.Data)
-        tX = new TXBTokenData(tXRaw, ref index, sHA256);
+        tX = new TXBTokenData(tXRaw, sHA256);
       else
-        throw new ProtocolException($"Unknown token type {typeToken}");
+        throw new ProtocolException($"Unknown token type {typeToken}.");
 
       return tX;
     }

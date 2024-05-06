@@ -25,7 +25,7 @@ namespace BTokenLib
 
       IDAccount = new byte[TXBToken.LENGTH_IDACCOUNT];
 
-      Array.Copy(buffer, index, IDAccount, index, TXBToken.LENGTH_IDACCOUNT);
+      Array.Copy(buffer, index, IDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
       index += TXBToken.LENGTH_IDACCOUNT;
     }
   }

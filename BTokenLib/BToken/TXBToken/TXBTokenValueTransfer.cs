@@ -15,11 +15,9 @@ namespace BTokenLib
     public TXBTokenValueTransfer()
     { }
 
-    public TXBTokenValueTransfer(
-      byte[] buffer, 
-      ref int index, 
-      SHA256 sHA256)
+    public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256)
     {
+      int index = 0;
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
       int countOutputs = VarInt.GetInt(buffer, ref index);

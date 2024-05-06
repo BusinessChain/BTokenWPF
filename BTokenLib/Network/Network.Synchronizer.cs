@@ -246,8 +246,7 @@ namespace BTokenLib
       $"Synchronization with {PeerSynchronizing} of {Token.GetName()} completed.\n"
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-      if (Token.TokenChild != null)
-        Token.TokenChild.Network.TryStartSynchronization();
+      Token.TokensChild.ForEach(t => t.Network.TryStartSynchronization());
     }
 
     bool InsertBlock_FlagContinue(Peer peer)

@@ -11,8 +11,9 @@ namespace BTokenLib
     public TokenAnchor TokenAnchor = new();
 
 
-    public TXBTokenAnchor(byte[] buffer, ref int index, SHA256 sHA256)
+    public TXBTokenAnchor(byte[] buffer, SHA256 sHA256)
     {
+      int index = 1;
       ParseTXBTokenInput(buffer, ref index, sHA256);
 
       Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
@@ -37,6 +38,9 @@ namespace BTokenLib
       index += TokenAnchor.HashBlockPreviousReferenced.Length;
 
       VerifySignatureTX(buffer, ref index);
+
+      Hash = sHA256.ComputeHash(
+       sHA256.ComputeHash(buffer));
     }
   }
 }

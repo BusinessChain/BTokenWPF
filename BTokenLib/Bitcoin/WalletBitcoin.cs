@@ -265,6 +265,16 @@ namespace BTokenLib
     {
       base.LoadImage(path);
 
+      using (FileStream fileStream = new(
+        Path.Combine(path, "walletHistoryTransactions"),
+        FileMode.Open,
+        FileAccess.Read))
+      {
+        while (fileStream.Position < fileStream.Length)
+          HistoryTransactions.Add(
+            Token.ParseTX(fileStream, SHA256, flagCoinbase: false));
+      }
+
       LoadOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
     }
 

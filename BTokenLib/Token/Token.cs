@@ -12,7 +12,7 @@ namespace BTokenLib
     public ILogEntryNotifier LogEntryNotifier;
 
     public Token TokenParent;
-    public Token TokenChild;
+    public List<Token> TokensChild;
 
     public Header HeaderGenesis;
     public Header HeaderTip;
@@ -82,12 +82,14 @@ namespace BTokenLib
         token = TokenParent;
 
       token.LoadImage();
+      token.StartNetwork();
+    }
 
-      while (token != null)
-      {
-        new Thread(token.Network.Start).Start();
-        token = token.TokenChild;
-      }
+    void StartNetwork()
+    {
+      new Thread(Network.Start).Start();
+
+      TokensChild.ForEach(t => t.StartNetwork());
     }
 
     public void PrintImage(ref string text)
@@ -159,9 +161,9 @@ namespace BTokenLib
       {
         text += $"{i} -> {block.Header}\n";
 
-        if(TokenChild != null)
-          foreach (TX tX in block.TXs)
-            text += tX.Print();
+        //if(TokenChild != null)
+        //  foreach (TX tX in block.TXs)
+        //    text += tX.Print();
 
         i++;
       }
@@ -297,8 +299,7 @@ namespace BTokenLib
         heightBlock += 1;
       }
 
-      if (TokenChild != null)
-        TokenChild.LoadImage(HeaderTip.Height);
+      TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
     }
 
     public virtual void Reset()
@@ -310,9 +311,6 @@ namespace BTokenLib
       IndexingHeaderTip();
 
       Wallet.Clear();
-
-      if (TokenChild != null)
-        TokenChild.Reset();
     }
 
     public void LoadImageHeaderchain(string pathImage)
@@ -370,7 +368,7 @@ namespace BTokenLib
         ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerBytePriorityHigh + block.FeePerByte) /
         ORDER_AVERAGEING_FEEPERBYTE;
 
-      TokenChild.SignalParentBlockInsertion(block.Header);
+      TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
 
       Archiver.ArchiveBlock(block);
 

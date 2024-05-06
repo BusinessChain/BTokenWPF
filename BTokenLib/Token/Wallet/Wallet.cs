@@ -83,16 +83,6 @@ namespace BTokenLib
       byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
         Path.Combine(path, "walletHistoryTransactions"));
 
-      using (FileStream fileStream = new(
-        Path.Combine(path, "walletHistoryTransactions"), 
-        FileMode.Open, 
-        FileAccess.Read))
-      {
-        while (fileStream.Position < fileStream.Length)
-          HistoryTransactions.Add(
-            Token.ParseTX(fileStream, SHA256, flagCoinbase: false));
-      }
-
       LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
       LoadOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
     }
