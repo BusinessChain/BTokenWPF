@@ -50,11 +50,6 @@ namespace BTokenLib
 
                 Token.InsertBlock(Block);
                 Network.ExitSynchronization();
-
-                if (Block.BlockChild != null)
-                  Token.TokenChild.Network.AdvertizeBlockToNetwork(Block.BlockChild);
-                else if (Token.TokenChild != null)
-                  Token.TokenChild.Network.TryStartSynchronization();
               }
               else if (Network.InsertBlock_FlagContinue(this))
                 RequestBlock();
@@ -126,13 +121,7 @@ namespace BTokenLib
             }
             else if (Command == "headers")
             {
-              await ReadBytes(Payload, LengthDataPayload);
-
-              int byteIndex = 0;
-
-              int countHeaders = VarInt.GetInt(
-                Payload,
-                ref byteIndex);
+              int countHeaders = VarInt.GetInt(NetworkStream);
 
               $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -146,11 +135,9 @@ namespace BTokenLib
                   int i = 0;
                   while (i < countHeaders)
                   {
-                    header = Block.ParseHeader(
-                      Payload,
-                      ref byteIndex);
+                    header = Block.ParseHeader(NetworkStream);
 
-                    byteIndex += 1;
+                    NetworkStream.ReadByte();
 
                     Network.HeaderDownload.InsertHeader(header);
 
@@ -177,9 +164,7 @@ namespace BTokenLib
                 if (!Network.TryEnterStateSynchronization(this))
                   continue;
 
-                Header header = Block.ParseHeader(
-                  Payload,
-                  ref byteIndex);
+                Header header = Block.ParseHeader(NetworkStream);
 
                 if (header.HashPrevious.IsEqual(Token.HeaderTip.Hash))
                 {

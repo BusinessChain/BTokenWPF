@@ -11,10 +11,8 @@ namespace BTokenLib
     // gemineden Block nicht durchgespielt werden müsste.
 
     public byte[] HashDatabase = new byte[32];
-    public int HeightAnchorPrevious;
 
     static uint InitializerNonce;
-
 
 
     public HeaderBToken()
@@ -28,6 +26,7 @@ namespace BTokenLib
       byte[] headerHash,
       byte[] hashPrevious,
       byte[] merkleRootHash,
+      byte[] hashDatabase,
       uint unixTimeSeconds,
       uint nonce) : base(
         headerHash,
@@ -37,6 +36,7 @@ namespace BTokenLib
         nonce)
     {
       Difficulty = 1;
+      HashDatabase = hashDatabase;
     }
 
     public override byte[] Serialize()

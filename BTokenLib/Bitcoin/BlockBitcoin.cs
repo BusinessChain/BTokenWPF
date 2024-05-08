@@ -18,7 +18,7 @@ namespace BTokenLib
     public override HeaderBitcoin ParseHeader(Stream stream)
     {
       byte[] buffer = new byte[HeaderBitcoin.COUNT_HEADER_BYTES];
-      stream.Read(buffer, 0, buffer.Length);
+      stream.ReadBuffer(buffer);
 
       int index = 0;
 

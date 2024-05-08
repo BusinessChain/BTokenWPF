@@ -129,7 +129,7 @@ namespace BTokenLib
         if (tokenAnchor != null)
         {
           Token tokenChild = TokensChild.Find(
-            t => t.IDToken.Equals(tokenAnchor.IDToken));
+            t => t.IDToken.IsEqual(tokenAnchor.IDToken));
 
           if (tokenChild != null)
             tokenChild.SignalAnchorTokenDetected(tokenAnchor);

@@ -12,16 +12,20 @@ namespace BTokenLib
     { }
 
 
-    public override HeaderBitcoin ParseHeader(Stream stream)
-    {
-      throw new NotImplementedException();
-    }
-
     public void Parse(byte[] buffer)
     {
       int indexBuffer = 0;
       // parse Anchor Token
+    }
 
+    public override HeaderBToken ParseHeader(Stream stream)
+    {
+      byte[] buffer = new byte[HeaderBToken.COUNT_HEADER_BYTES];
+      stream.ReadBuffer(buffer);
+
+      int index = 0;
+
+      return ParseHeader(buffer, ref index);
     }
 
     public override HeaderBToken ParseHeader(
@@ -43,8 +47,8 @@ namespace BTokenLib
       Array.Copy(buffer, index, merkleRootHash, 0, 32);
       index += 32;
 
-      byte[] hashAnchorPrevious = new byte[32];
-      Array.Copy(buffer, index, hashAnchorPrevious, 0, 32);
+      byte[] hashDatabase = new byte[32];
+      Array.Copy(buffer, index, hashDatabase, 0, 32);
       index += 32;
 
       uint unixTimeSeconds = BitConverter.ToUInt32(
@@ -58,6 +62,7 @@ namespace BTokenLib
         hash,
         hashHeaderPrevious,
         merkleRootHash,
+        hashDatabase,
         unixTimeSeconds,
         nonce);
     }

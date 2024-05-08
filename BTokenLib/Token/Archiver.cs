@@ -49,21 +49,21 @@ namespace BTokenLib
         {
           return false;
         }
-        catch (ProtocolException ex)
-        {
-          Console.WriteLine(
-            $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive.");
-
-          CleanAfterBlockHeight(blockHeight - 1);
-          return false;
-        }
-        catch (Exception ex)
+        catch (IOException ex)
         {
           Console.WriteLine(
             $"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
             $"Retry in 10 seconds.");
 
           Thread.Sleep(10000);
+        }
+        catch (Exception ex)
+        {
+          Console.WriteLine(
+            $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive.");
+
+          CleanAfterBlockHeight(blockHeight - 1);
+          return false;
         }
     }
 

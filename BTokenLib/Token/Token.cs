@@ -12,7 +12,7 @@ namespace BTokenLib
     public ILogEntryNotifier LogEntryNotifier;
 
     public Token TokenParent;
-    public List<Token> TokensChild;
+    public List<Token> TokensChild = new();
 
     public Header HeaderGenesis;
     public Header HeaderTip;

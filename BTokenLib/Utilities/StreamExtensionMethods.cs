@@ -1,13 +1,30 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BTokenLib
 {
   public static class StreamExtensionMethods
   {
+    public static void ReadBuffer(this Stream stream, byte[] buffer)
+    {
+      int offset = 0;
+      int bytesToRead = buffer.Length;
+
+      while (bytesToRead > 0)
+      {
+        int chunkSize = stream.Read( buffer, offset,
+          bytesToRead);
+
+        if (chunkSize == 0)
+          throw new IOException(
+            "Stream returns 0 bytes signifying end of stream.");
+
+        offset += chunkSize;
+        bytesToRead -= chunkSize;
+      }
+    }
+
     public static short ReadInt16(this Stream stream)
     {
       byte[] buffer = new byte[2];
