@@ -204,6 +204,7 @@ namespace BTokenLib
       bool flagCoinbase)
     {
       int lengthTXRaw = VarInt.GetInt(stream);
+
       byte[] tXRaw = new byte[lengthTXRaw];
       stream.Read(tXRaw, 0, lengthTXRaw);
 
@@ -234,6 +235,8 @@ namespace BTokenLib
         tX = new TXBTokenData(tXRaw, sHA256);
       else
         throw new ProtocolException($"Unknown token type {typeToken}.");
+
+      tX.TXRaw = tXRaw.ToList();
 
       return tX;
     }

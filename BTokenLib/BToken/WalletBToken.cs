@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -23,16 +22,15 @@ namespace BTokenLib
 
     public TXBToken CreateTXCoinbase(long blockReward)
     {
-      TXBTokenCoinbase tX = new();
+      List<byte> tXRaw = new();
 
-      tX.TXRaw.Add((byte)TokenBToken.TypesToken.Coinbase); // token ; config
+      tXRaw.Add((byte)TokenBToken.TypesToken.Coinbase); // token ; config
+      tXRaw.Add(0x01); // count outputs
 
-      tX.TXRaw.Add(0x01); // count outputs
+      tXRaw.AddRange(BitConverter.GetBytes(blockReward));
+      tXRaw.AddRange(PublicKeyHash160);
 
-      tX.TXRaw.AddRange(BitConverter.GetBytes(blockReward));
-      tX.TXRaw.AddRange(PublicKeyHash160);
-
-      return Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: true);
+      return Token.ParseTX(tXRaw.ToArray(), SHA256, flagCoinbase: true);
     }
 
     public override bool TryCreateTX(
@@ -41,65 +39,71 @@ namespace BTokenLib
       double feePerByte,
       out TX tX)
     {
-      tX = new TXBTokenValueTransfer();
+      long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      tX.Fee = (long)(feePerByte * LENGTH_P2PKH_TX);
-
-      if (BalanceUnconfirmed < valueOutput + tX.Fee)
+      if (Balance < valueOutput + fee)
+      {
+        tX = null;
         return false;
+      }
 
-      tX.TXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer); // token ; config
+      List<byte> tXRaw = new();
 
-      tX.TXRaw.AddRange(PublicKey);
-      tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
-      tX.TXRaw.AddRange(BitConverter.GetBytes(tX.Fee));
+      tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer); // token ; config
 
-      tX.TXRaw.Add(0x01); // count outputs
+      tXRaw.AddRange(PublicKey);
+      tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tXRaw.AddRange(BitConverter.GetBytes(fee));
 
-      tX.TXRaw.AddRange(BitConverter.GetBytes(valueOutput));
-      tX.TXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
+      tXRaw.Add(0x01); // count outputs
+
+      tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
+      tXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
       
       byte[] signature = Crypto.GetSignature(
         PrivKeyDec,
-        tX.TXRaw.ToArray(),
+        tXRaw.ToArray(),
         SHA256);
 
-      tX.TXRaw.Add((byte)signature.Length);
-      tX.TXRaw.AddRange(signature);
+      tXRaw.Add((byte)signature.Length);
+      tXRaw.AddRange(signature);
 
-      tX = Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: false);
+      tX = Token.ParseTX(tXRaw.ToArray(), SHA256, flagCoinbase: false);
 
       return true;
     }
 
     public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
     {
-      tX = new TXBTokenData();
+      List<byte> tXRaw = new();
 
-      tX.Fee = (long)(feePerByte * LENGTH_P2PKH_TX);
+      long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      if (BalanceUnconfirmed < tX.Fee)
+      if (Balance < fee)
+      {
+        tX = null;
         return false;
+      }
 
-      tX.TXRaw.Add((byte)TokenBToken.TypesToken.Data); // token ; config
+      tXRaw.Add((byte)TokenBToken.TypesToken.Data); // token ; config
 
-      tX.TXRaw.AddRange(PublicKey);
-      tX.TXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
-      tX.TXRaw.AddRange(BitConverter.GetBytes(tX.Fee));
+      tXRaw.AddRange(PublicKey);
+      tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tXRaw.AddRange(BitConverter.GetBytes(fee));
 
-      tX.TXRaw.Add(0x01);
-      tX.TXRaw.AddRange(VarInt.GetBytes(data.Length));
-      tX.TXRaw.AddRange(data);
+      tXRaw.Add(0x01);
+      tXRaw.AddRange(VarInt.GetBytes(data.Length));
+      tXRaw.AddRange(data);
 
       byte[] signature = Crypto.GetSignature(
         PrivKeyDec,
-        tX.TXRaw.ToArray(),
+        tXRaw.ToArray(),
         SHA256);
 
-      tX.TXRaw.Add((byte)signature.Length);
-      tX.TXRaw.AddRange(signature);
+      tXRaw.Add((byte)signature.Length);
+      tXRaw.AddRange(signature);
 
-      tX = Token.ParseTX(tX.TXRaw.ToArray(), SHA256, flagCoinbase: false);
+      tX = Token.ParseTX(tXRaw.ToArray(), SHA256, flagCoinbase: false);
 
       return true;
     }
@@ -140,10 +144,7 @@ namespace BTokenLib
           OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
 
         if (outputValueUnconfirmed != null)
-        {
-          BalanceUnconfirmed -= outputValueUnconfirmed.Value;
           OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-        }
 
         AddTXToHistory(tX);
 

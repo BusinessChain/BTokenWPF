@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -53,6 +51,14 @@ namespace BTokenLib
         PublicKey,
         signature))
         throw new ProtocolException($"TX {this} contains invalid signature.");
+    }
+
+    public override void WriteToStream(Stream stream)
+    {
+      List<byte> tXRawSerialized = TXRaw.ToList();
+      tXRawSerialized.InsertRange(0, VarInt.GetBytes(TXRaw.Count));
+
+      stream.Write(tXRawSerialized.ToArray(), 0, tXRawSerialized.Count);
     }
 
     public override string Print()

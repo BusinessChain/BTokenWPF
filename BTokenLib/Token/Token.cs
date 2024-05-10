@@ -479,7 +479,7 @@ namespace BTokenLib
     public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
     {
       if (TryGetHeader(hash, out Header header))
-        if (Archiver.TryLoadBlockArchive(header.Height, out buffer))
+        if (Archiver.TryLoadBlock(header.Height, out buffer))
           return true;
 
       buffer = null;

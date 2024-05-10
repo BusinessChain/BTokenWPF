@@ -20,7 +20,10 @@ namespace BTokenLib
 
     public static List<byte> GetBytes(string text)
     {
-      List<byte> serializedValue = VarInt.GetBytes(text.Length);
+      byte[] bytesTextLength = VarInt.GetBytes(text.Length);
+
+      List<byte> serializedValue = new();
+      serializedValue.AddRange(bytesTextLength);
       serializedValue.AddRange(Encoding.ASCII.GetBytes(text));
 
       return serializedValue;

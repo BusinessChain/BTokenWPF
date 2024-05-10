@@ -13,12 +13,12 @@ namespace BTokenLib
     public const byte PREFIX_UINT64 = 0XFF;
 
 
-    public static List<byte> GetBytes(int value)
+    public static byte[] GetBytes(int value)
     {
       return GetBytes((ulong)value);
     }
     
-    public static List<byte> GetBytes(ulong value)
+    public static byte[] GetBytes(ulong value)
     {
       List<byte> serializedValue = new();
 
@@ -26,14 +26,16 @@ namespace BTokenLib
       int length;
       AssignPrefixAndLength(value, out prefix, out length);
 
-      serializedValue.Add(prefix);
+      byte[] valueBytes = new byte[length];
+      valueBytes[0] = prefix;
+
       for (int i = 1; i < length; i++)
       {
         byte nextByte = (byte)(value >> 8 * (i - 1));
-        serializedValue.Add(nextByte);
+        valueBytes[i] = nextByte;
       }
 
-      return serializedValue;
+      return valueBytes;
     }
     
     static void AssignPrefixAndLength(

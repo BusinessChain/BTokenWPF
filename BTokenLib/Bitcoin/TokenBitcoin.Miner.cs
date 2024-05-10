@@ -137,8 +137,8 @@ namespace BTokenLib
 
       tXRaw.AddRange("FFFFFFFF".ToBinary()); // TxOutIndex
 
-      List<byte> blockHeight = VarInt.GetBytes(height); // Script coinbase
-      tXRaw.Add((byte)blockHeight.Count);
+      byte[] blockHeight = VarInt.GetBytes(height); // Script coinbase
+      tXRaw.Add((byte)blockHeight.Length);
       tXRaw.AddRange(blockHeight);
 
       tXRaw.AddRange("FFFFFFFF".ToBinary()); // sequence

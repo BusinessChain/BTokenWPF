@@ -62,14 +62,12 @@ namespace BTokenLib
           Console.WriteLine(
             $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive.");
 
-          CleanAfterBlockHeight(blockHeight - 1);
+          //CleanAfterBlockHeight(blockHeight - 1);
           return false;
         }
     }
 
-    public bool TryLoadBlockArchive(
-      int blockHeight,
-      out byte[] buffer)
+    public bool TryLoadBlock(int blockHeight, out byte[] buffer)
     {
       buffer = null;
 

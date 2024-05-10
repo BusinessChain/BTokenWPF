@@ -148,10 +148,10 @@ namespace BTokenLib
       byte[] bufferHeader = Header.Serialize();
       stream.Write(bufferHeader, 0, bufferHeader.Length);
 
-      byte[] countTXs = VarInt.GetBytes(TXs.Count).ToArray();
+      byte[] countTXs = VarInt.GetBytes(TXs.Count);
       stream.Write(countTXs, 0, countTXs.Length);
 
-      TXs.ForEach(t => stream.Write(t.TXRaw.ToArray(), 0, t.TXRaw.Count));
+      TXs.ForEach(t => t.WriteToStream(stream));
     }
 
     public override string ToString()

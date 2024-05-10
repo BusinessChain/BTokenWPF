@@ -297,7 +297,6 @@ namespace BTokenLib
         if (outputValueUnconfirmedSpent != null)
         {
           OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
-          BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
         }
 
         TXOutputWallet tXOutputWallet = OutputsSpendable.Find(o =>
@@ -320,12 +319,11 @@ namespace BTokenLib
         {
           $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-          TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
+          TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed
+            .Find(o => o.TXID.IsEqual(tX.Hash));
+          
           if (outputValueUnconfirmed != null)
-          {
-            BalanceUnconfirmed -= outputValueUnconfirmed.Value;
             OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-          }
 
           OutputsSpendable.Add(
             new TXOutputWallet
@@ -355,10 +353,7 @@ namespace BTokenLib
           .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if(outputSpendable != null)
-        {
           OutputsUnconfirmedSpent.Add(outputSpendable);
-          BalanceUnconfirmed -= outputSpendable.Value;
-        }
       }
 
       foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
@@ -375,8 +370,6 @@ namespace BTokenLib
             Index = tX.TXOutputs.IndexOf(tXOutput),
             Value = tXOutput.Value
           });
-
-          BalanceUnconfirmed += tXOutput.Value;
         }
       }
     }
@@ -389,10 +382,7 @@ namespace BTokenLib
           OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tXs[i].Hash));
 
         if (outputValueUnconfirmed != null)
-        {
           OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-          BalanceUnconfirmed -= outputValueUnconfirmed.Value;
-        }
 
         foreach (TXInput tXInput in tXs[i].Inputs)
         {
@@ -400,10 +390,7 @@ namespace BTokenLib
             .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput));
 
           if (outputValueUnconfirmedSpent != null)
-          {
             OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
-            BalanceUnconfirmed += outputValueUnconfirmedSpent.Value;
-          }
         }
       }
     }
