@@ -18,11 +18,12 @@ namespace BTokenLib
   {       
     public static bool VerifySignature(
       byte[] message,
-      int startIndexMessage,
-      int lengthMessage,
       byte[] pubKeyX,
       byte[] signature)
     {
+      SHA256 sHA256 = SHA256.Create();
+      message = sHA256.ComputeHash(message, 0, message.Length);
+
       X9ECParameters curve = SecNamedCurves.GetByName("secp256k1");
 
       ECPublicKeyParameters keyParameters = new(
@@ -32,7 +33,7 @@ namespace BTokenLib
       ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
 
       signer.Init(false, keyParameters);
-      signer.BlockUpdate(message, startIndexMessage, lengthMessage);
+      signer.BlockUpdate(message, 0, message.Length);
 
       return signer.VerifySignature(signature);
     }
