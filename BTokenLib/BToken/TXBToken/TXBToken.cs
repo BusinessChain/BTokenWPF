@@ -39,15 +39,14 @@ namespace BTokenLib
 
     public void VerifySignatureTX(byte[] buffer, ref int index)
     {
-      byte[] message = new byte[index];
-      Array.Copy(buffer, 0, message, 0, message.Length);
+      int lengthIndexMessage = index;
 
       int lengthSig = buffer[index++];
       byte[] signature = new byte[lengthSig];
       Array.Copy(buffer, index, signature, 0, lengthSig);
       index += lengthSig;
 
-      if (!Crypto.VerifySignature(message, 0, message.Length, PublicKey, signature))
+      if (!Crypto.VerifySignature(buffer, 0, lengthIndexMessage, PublicKey, signature))
         throw new ProtocolException($"TX {this} contains invalid signature.");
     }
 

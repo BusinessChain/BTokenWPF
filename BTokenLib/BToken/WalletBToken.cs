@@ -59,11 +59,8 @@ namespace BTokenLib
 
       tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
       tXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
-      
-      byte[] signature = Crypto.GetSignature(
-        PrivKeyDec,
-        tXRaw.ToArray(),
-        SHA256);
+
+      byte[] signature = Crypto.GetSignature(PrivKeyDec, tXRaw.ToArray());
 
       tXRaw.Add((byte)signature.Length);
       tXRaw.AddRange(signature);
@@ -95,10 +92,7 @@ namespace BTokenLib
       tXRaw.AddRange(VarInt.GetBytes(data.Length));
       tXRaw.AddRange(data);
 
-      byte[] signature = Crypto.GetSignature(
-        PrivKeyDec,
-        tXRaw.ToArray(),
-        SHA256);
+      byte[] signature = Crypto.GetSignature(PrivKeyDec, tXRaw.ToArray());
 
       tXRaw.Add((byte)signature.Length);
       tXRaw.AddRange(signature);

@@ -17,13 +17,12 @@ namespace BTokenLib
   public static class Crypto
   {       
     public static bool VerifySignature(
-      byte[] message,
+      byte[] buffer,
+      int startIndexMessage,
+      int lengthMessage,
       byte[] pubKeyX,
       byte[] signature)
     {
-      SHA256 sHA256 = SHA256.Create();
-      message = sHA256.ComputeHash(message, 0, message.Length);
-
       X9ECParameters curve = SecNamedCurves.GetByName("secp256k1");
 
       ECPublicKeyParameters keyParameters = new(
@@ -33,18 +32,13 @@ namespace BTokenLib
       ISigner signer = SignerUtilities.GetSigner("SHA-256withECDSA");
 
       signer.Init(false, keyParameters);
-      signer.BlockUpdate(message, 0, message.Length);
+      signer.BlockUpdate(buffer, startIndexMessage, lengthMessage);
 
       return signer.VerifySignature(signature);
     }
 
-    public static byte[] GetSignature(
-      string privateKey, 
-      byte[] message,
-      SHA256 sHA256)
-    {      
-      message = sHA256.ComputeHash(message, 0, message.Length);
-
+    public static byte[] GetSignature(string privateKey, byte[] message)
+    {
       var curve = SecNamedCurves.GetByName("secp256k1");
 
       ECPrivateKeyParameters keyParameters = new(
