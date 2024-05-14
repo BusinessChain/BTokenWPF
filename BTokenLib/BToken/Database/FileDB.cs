@@ -45,7 +45,10 @@ namespace BTokenLib
           while (ReadByte() == iDAccount[i++])
             if (i == LENGTH_ID_ACCOUNT)
             {
-              byte[] nonce = new byte[8];
+              byte[] blockheightAccountInit = new byte[4];
+              Read(blockheightAccountInit);
+
+              byte[] nonce = new byte[4];
               Read(nonce);
 
               byte[] value = new byte[8];
@@ -54,7 +57,8 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                Nonce = BitConverter.ToInt64(nonce),
+                BlockheightAccountInit = BitConverter.ToInt32(blockheightAccountInit),
+                Nonce = BitConverter.ToInt32(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 
@@ -76,7 +80,8 @@ namespace BTokenLib
 
           if (account.Value > 0)
           {
-            Position -= LENGTH_NONCE + LENGTH_VALUE;
+            Position -= 4 + 4 + 8;
+            Write(BitConverter.GetBytes(account.BlockheightAccountInit));
             Write(BitConverter.GetBytes(account.Nonce));
             Write(BitConverter.GetBytes(account.Value));
           }
@@ -109,7 +114,10 @@ namespace BTokenLib
           while (ReadByte() == iDAccount[i++])
             if (i == LENGTH_ID_ACCOUNT)
             {
-              byte[] nonce = new byte[8];
+              byte[] blockheightAccountInit = new byte[4];
+              Read(blockheightAccountInit);
+
+              byte[] nonce = new byte[4];
               Read(nonce);
 
               byte[] value = new byte[8];
@@ -118,7 +126,8 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                Nonce = BitConverter.ToInt64(nonce),
+                BlockheightAccountInit = BitConverter.ToInt32(nonce),
+                Nonce = BitConverter.ToInt32(nonce),
                 Value = BitConverter.ToInt64(value)
               };
 

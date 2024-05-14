@@ -14,8 +14,10 @@ namespace BTokenLib
     public const int LENGTH_IDACCOUNT = 20;
     public byte[] IDAccountSource = new byte[LENGTH_IDACCOUNT];
 
-    public long Nonce;
-    public long NonceInDB;
+    public int BlockheightAccountInit;
+
+    public int Nonce;
+    public int NonceInDB;
 
     public long Value;
     public long ValueInDB;
@@ -28,8 +30,11 @@ namespace BTokenLib
 
       IDAccountSource = Crypto.ComputeHash160(PublicKey, sHA256);
 
-      Nonce = BitConverter.ToInt64(buffer, index);
-      index += 8;
+      BlockheightAccountInit = BitConverter.ToInt32(buffer, index);
+      index += 4;
+
+      Nonce = BitConverter.ToInt32(buffer, index);
+      index += 4;
 
       Fee = BitConverter.ToInt64(buffer, index);
       index += 8;

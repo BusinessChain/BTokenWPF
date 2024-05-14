@@ -2,8 +2,8 @@
 {
   class Account
   {
-    public long Nonce; 
-    // blockheight mit (Nonce & 0x0000ffff)  rausfiltern
+    public int BlockheightAccountInit;
+    public int Nonce;
     public long Value;
     public byte[] IDAccount;
 
@@ -14,6 +14,10 @@
         throw new ProtocolException($"Value {Value} on account {this}" +
           $"is lower than value {tX.Value} of tX {tX}.");
       tX.ValueInDB = Value;
+
+      if (BlockheightAccountInit != tX.BlockheightAccountInit)
+        throw new ProtocolException($"Blockheight initialization {BlockheightAccountInit} on account {this}" +
+          $"is not equal than {tX.BlockheightAccountInit} of tX {tX}.");
 
       if (Nonce < tX.Nonce)
         throw new ProtocolException($"Nonce {Nonce} on account {this}" +

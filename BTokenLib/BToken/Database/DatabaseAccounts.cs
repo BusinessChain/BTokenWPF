@@ -22,8 +22,6 @@ namespace BTokenLib
 
     const int LENGTH_RECORD_DB = 41;
     const int LENGTH_ID_ACCOUNT = 25;
-    const int LENGTH_NONCE = 8;
-    const int LENGTH_VALUE = 8;
 
     SHA256 SHA256 = SHA256.Create();
     byte[] Hash;
@@ -55,8 +53,9 @@ namespace BTokenLib
             Account record = new()
             {
               IDAccount = bytesRecord.Take(LENGTH_ID_ACCOUNT).ToArray(),
-              Nonce = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT),
-              Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + LENGTH_NONCE)
+              BlockheightAccountInit = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT),
+              Nonce = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT + 4),
+              Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + 8)
             };
 
             Caches[i].Add(record.IDAccount, record);
@@ -115,8 +114,11 @@ namespace BTokenLib
         {
           Account recordDB = new();
 
-          recordDB.Nonce = BitConverter.ToInt64(bufferDB, index);
-          index += 8;
+          recordDB.BlockheightAccountInit = BitConverter.ToInt32(bufferDB, index);
+          index += 4;
+
+          recordDB.Nonce = BitConverter.ToInt32(bufferDB, index);
+          index += 4;
 
           recordDB.Value = BitConverter.ToUInt32(bufferDB, index);
           index += 8;
@@ -273,7 +275,7 @@ namespace BTokenLib
           else
             account = new Account
             {
-              Nonce = (long)blockHeight << 32,
+              Nonce = blockHeight,
               Value = outputValueTX,
               IDAccount = iDAccount
             };

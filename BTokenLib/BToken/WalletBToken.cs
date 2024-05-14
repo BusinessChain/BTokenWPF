@@ -10,13 +10,15 @@ namespace BTokenLib
     public TokenBToken Token;
 
     static int LENGTH_P2PKH_TX = 120;
-    public long NonceAccount;
+    Account Account;
 
 
     public WalletBToken(string privKeyDec, TokenBToken token)
       : base(privKeyDec)
     {
       Token = token;
+
+      Account = Token.LoadAccount(AddressAccount);
     }
 
 

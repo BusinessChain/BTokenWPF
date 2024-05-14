@@ -38,11 +38,14 @@ namespace BTokenLib
           record.IDAccount.CopyTo(bytesCaches, i);
           i += LENGTH_ID_ACCOUNT;
 
+          BitConverter.GetBytes(record.BlockheightAccountInit).CopyTo(bytesCaches, i);
+          i += 4;
+
           BitConverter.GetBytes(record.Nonce).CopyTo(bytesCaches, i);
-          i += LENGTH_NONCE;
+          i += 4;
 
           BitConverter.GetBytes(record.Value).CopyTo(bytesCaches, i);
-          i += LENGTH_VALUE;
+          i += 8;
         }
 
         Hash = SHA256.ComputeHash(bytesCaches);
