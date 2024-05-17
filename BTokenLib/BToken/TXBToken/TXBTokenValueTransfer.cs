@@ -10,15 +10,18 @@ namespace BTokenLib
   public class TXBTokenValueTransfer : TXBToken
   {
     public List<TXOutputBToken> TXOutputs = new();
+    public bool IsCoinbase;
 
 
     public TXBTokenValueTransfer()
     { }
 
     public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256)
-    {
+    {      
       int index = 1;
-      ParseTXBTokenInput(buffer, ref index, sHA256);
+
+      if (!IsCoinbase)
+        ParseTXBTokenInput(buffer, ref index, sHA256);
 
       int countOutputs = VarInt.GetInt(buffer, ref index);
 
@@ -30,7 +33,8 @@ namespace BTokenLib
         Value += tXOutput.Value;
       }
 
-      VerifySignatureTX(buffer, ref index);
+      if (!IsCoinbase)
+        VerifySignatureTX(buffer, ref index);
 
       Hash = sHA256.ComputeHash(
        sHA256.ComputeHash(buffer));

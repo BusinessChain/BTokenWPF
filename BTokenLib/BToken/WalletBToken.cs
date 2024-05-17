@@ -10,15 +10,12 @@ namespace BTokenLib
     public TokenBToken Token;
 
     static int LENGTH_P2PKH_TX = 120;
-    Account Account;
 
 
     public WalletBToken(string privKeyDec, TokenBToken token)
       : base(privKeyDec)
     {
       Token = token;
-
-      Account = Token.LoadAccount(AddressAccount);
     }
 
 
@@ -26,7 +23,7 @@ namespace BTokenLib
     {
       List<byte> tXRaw = new();
 
-      tXRaw.Add((byte)TokenBToken.TypesToken.Coinbase); // token ; config
+      tXRaw.Add((byte)TokenBToken.TypesToken.Coinbase);
       tXRaw.Add(0x01); // count outputs
 
       tXRaw.AddRange(BitConverter.GetBytes(blockReward));
@@ -41,20 +38,22 @@ namespace BTokenLib
       double feePerByte,
       out TX tX)
     {
+      tX = null;
+
       long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      if (Balance < valueOutput + fee)
-      {
-        tX = null;
+      if(Token.TryAddTXPool())
+      if (!Token.TryGetAccount(PublicKeyHash160, out Account account) || Balance < valueOutput + fee)
         return false;
-      }
 
       List<byte> tXRaw = new();
 
-      tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer); // token ; config
+      tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer);
 
       tXRaw.AddRange(PublicKey);
-      tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tXRaw.AddRange(BitConverter.GetBytes(account.BlockheightAccountInit));
+      tXRaw.AddRange(BitConverter.GetBytes(account.Nonce));
+
       tXRaw.AddRange(BitConverter.GetBytes(fee));
 
       tXRaw.Add(0x01); // count outputs
@@ -74,20 +73,21 @@ namespace BTokenLib
 
     public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
     {
-      List<byte> tXRaw = new();
+      tX = null;
 
       long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      if (Balance < fee)
-      {
-        tX = null;
+      if (!Token.TryGetAccount(PublicKeyHash160, out Account account) || Balance < fee)
         return false;
-      }
 
-      tXRaw.Add((byte)TokenBToken.TypesToken.Data); // token ; config
+      List<byte> tXRaw = new();
+
+      tXRaw.Add((byte)TokenBToken.TypesToken.Data);
 
       tXRaw.AddRange(PublicKey);
-      tXRaw.AddRange(BitConverter.GetBytes(NonceAccount));
+      tXRaw.AddRange(BitConverter.GetBytes(account.BlockheightAccountInit));
+      tXRaw.AddRange(BitConverter.GetBytes(account.Nonce));
+
       tXRaw.AddRange(BitConverter.GetBytes(fee));
 
       tXRaw.Add(0x01);
@@ -103,25 +103,10 @@ namespace BTokenLib
 
       return true;
     }
-
-    public void InsertTXBTokenCoinbase(TXBTokenCoinbase tX)
-    {
-      foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-      {
-        if (!tXOutput.IDAccount.IsEqual(PublicKeyHash160))
-          continue;
-
-        $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-          
-        AddTXToHistory(tX);
-
-        Balance += tXOutput.Value;
-      }
-    }
-
+   
     public void InsertTXBTokenValueTransfer(TXBTokenValueTransfer tX)
     {
-      if (tX.IDAccountSource.IsEqual(PublicKeyHash160))
+      if (!tX.IsCoinbase && tX.IDAccountSource.IsEqual(PublicKeyHash160))
       {
         $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
@@ -135,12 +120,6 @@ namespace BTokenLib
           continue;
 
         $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-        TXOutputWallet outputValueUnconfirmed =
-          OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tX.Hash));
-
-        if (outputValueUnconfirmed != null)
-          OutputsUnconfirmed.Remove(outputValueUnconfirmed);
 
         AddTXToHistory(tX);
 

@@ -149,25 +149,25 @@ namespace BTokenWPF
         long value = long.Parse(TextBoxValue.Text);
         double fee = double.Parse(TextBoxFee.Text);
 
-        if (!Token.MakeTX(address, value, fee, out TX tX))
+        if (Token.TrySendTX(address, value, fee, out TX tX))
         {
-          MessageBox.Show(
-            "Could not create tX. Possibly not enough fund.", 
-            "Error", 
-            MessageBoxButton.OK, 
-            MessageBoxImage.Error);
-
-          return;
+          TextBoxRawTX.Text = tX.TXRaw.ToArray().Reverse().ToArray().ToHexString();
+          TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
         }
-
-        TextBoxRawTX.Text = tX.TXRaw.ToArray().Reverse().ToArray().ToHexString();
-        TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
-
-        Token.BroadcastTX(tX);
+        else
+          MessageBox.Show(
+            "Could not send tX. Possibly not enough fund.",
+            "Error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
       }
       catch(Exception ex)
       {
-        MessageBox.Show(ex.Message, "Exception", MessageBoxButton.OK, MessageBoxImage.Error);
+        MessageBox.Show(
+          ex.Message, 
+          "Exception", 
+          MessageBoxButton.OK, 
+          MessageBoxImage.Error);
       }
     }
   }

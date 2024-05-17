@@ -89,9 +89,7 @@ namespace BTokenLib
       ClearCache();
     }
 
-    public void InsertDB(
-      byte[] bufferDB,
-      int lengthDataInBuffer)
+    public void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
     {
       int index = 0;
 
@@ -154,16 +152,18 @@ namespace BTokenLib
       }
     }
 
-    public bool CheckTXValid(TXBToken tX)
+    public bool TryGetAccount(byte[] iDAccount, out Account account)
     {
-      if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
-      {
-        cache.TryGetValue(tX.IDAccountSource, out Account account);
-        account.CheckTXValid(tX);
-        return true;
-      }
+      if (TryGetCache(iDAccount, out CacheDatabaseAccounts cache))
+        if (cache.TryGetValue(iDAccount, out account))
+          return true;
 
-      return GetFileDB(tX.IDAccountSource).CheckTXValid(tX);
+      FileDB fileDB = GetFileDB(iDAccount);
+
+      if (fileDB.TryGetAccount(iDAccount, out account))
+        return true;
+
+      return false;
     }
 
     public void UpdateHashDatabase()
@@ -173,7 +173,7 @@ namespace BTokenLib
         Caches[i].UpdateHash();
 
         Caches[i].Hash.CopyTo(
-          HashesCaches, 
+          HashesCaches,
           i * Caches[i].Hash.Length);
       }
 
@@ -184,12 +184,12 @@ namespace BTokenLib
         FilesDB[i].UpdateHash();
 
         FilesDB[i].Hash.CopyTo(
-          HashesFilesDB, 
+          HashesFilesDB,
           i * FilesDB[i].Hash.Length);
       }
 
       byte[] hashFilesDB = SHA256.ComputeHash(HashesFilesDB);
-            
+
       Hash = SHA256.ComputeHash(
         hashCaches.Concat(hashFilesDB).ToArray());
     }
@@ -199,9 +199,7 @@ namespace BTokenLib
       return FilesDB[iDAccount[0]];
     }
 
-    public bool TryGetDB(
-      byte[] hash,
-      out byte[] dataDB)
+    public bool TryGetDB(byte[] hash, out byte[] dataDB)
     {
       for (int i = 0; i < HashesFilesDB.Length; i += 1)
         if (hash.IsEqual(HashesFilesDB, i * 32))

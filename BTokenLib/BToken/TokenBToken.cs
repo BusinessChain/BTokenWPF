@@ -105,28 +105,22 @@ namespace BTokenLib
 
       foreach (TXBToken tX in block.TXs)
       {
-        if (tX is TXBTokenCoinbase)
-        {
-          TXBTokenCoinbase tXCoinbase = tX as TXBTokenCoinbase;
-
-          long blockReward = BLOCK_REWARD_INITIAL >>
-            block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
-
-          if (blockReward + block.Fee != tXCoinbase.Value)
-            throw new ProtocolException(
-              $"Output value of Coinbase TX {block.TXs[0]}\n" +
-              $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
-
-          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
-            DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
-
-          walletBToken.InsertTXBTokenCoinbase(tXCoinbase);
-        }
-        else if(tX is TXBTokenValueTransfer)
+        if(tX is TXBTokenValueTransfer)
         {
           TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
 
-          DatabaseAccounts.SpendInput(tXTokenTransfer);
+          if (tXTokenTransfer.IsCoinbase)
+          {
+            long blockReward = BLOCK_REWARD_INITIAL >>
+              block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+
+            if (blockReward + block.Fee != tXTokenTransfer.Value)
+              throw new ProtocolException(
+                $"Output value of Coinbase TX {block.TXs[0]}\n" +
+                $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
+          }
+          else
+            DatabaseAccounts.SpendInput(tXTokenTransfer);
 
           foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
             DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
@@ -148,6 +142,11 @@ namespace BTokenLib
       DatabaseAccounts.UpdateHashDatabase();
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
+    }
+
+    public bool TryGetAccount(byte[] iDAccount, out Account account)
+    {
+      return DatabaseAccounts.TryGetAccount(iDAccount, out account);
     }
 
     public override void InsertDB(
@@ -301,9 +300,14 @@ namespace BTokenLib
     {
       TXBToken tXBToken = (TXBToken)tX;
 
-      if (DatabaseAccounts.CheckTXValid(tXBToken))
-        if (TXPool.TryAddTX(tXBToken))
+      if (DatabaseAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
+      {
+        if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)
+          return false;
+
+        if (TXPool.TryAddTX(tXBToken, accountSource))
           return true;
+      }
 
       return false;
     }

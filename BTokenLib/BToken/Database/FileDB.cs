@@ -28,15 +28,7 @@ namespace BTokenLib
         Seek(0, SeekOrigin.End);
       }
 
-      public bool CheckTXValid(TXBToken tX)
-      {
-        if (TryGetAccount(tX.IDAccountSource, out Account account))
-          return account.CheckTXValid(tX);
-
-        return false;
-      }
-
-      bool TryGetAccount(byte[] iDAccount, out Account account)
+      public bool TryGetAccount(byte[] iDAccount, out Account account)
       {
         while (Position < Length)
         {

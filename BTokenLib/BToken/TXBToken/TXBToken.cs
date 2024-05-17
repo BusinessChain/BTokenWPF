@@ -14,13 +14,23 @@ namespace BTokenLib
     public const int LENGTH_IDACCOUNT = 20;
     public byte[] IDAccountSource = new byte[LENGTH_IDACCOUNT];
 
+    /// <summary>
+    /// This is the block height at which the account source was created.
+    /// It is in a sense an extension of the nonce.
+    /// </summary>
     public int BlockheightAccountInit;
 
+    /// <summary>
+    /// In order for the transaction to be valid, the nonce must be equal as the nonce of the 
+    /// account source.
+    /// </summary>
     public int Nonce;
-    public int NonceInDB;
 
+    /// <summary>
+    /// This is the total transaction value that will be deducted from the source account
+    /// in order to pay the transaction outputs plus fee.
+    /// </summary>
     public long Value;
-    public long ValueInDB;
 
 
     public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)

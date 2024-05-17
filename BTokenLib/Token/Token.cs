@@ -441,18 +441,15 @@ namespace BTokenLib
       SHA256 sHA256,
       bool flagCoinbase);
 
-    public bool MakeTX(string address, long value, double feePerByte, out TX tX)
+    public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
     {
-      //if (this is TokenBitcoin)
-      //  address = "184Z6YZ6qt6wbpyuKXKsyDTeXX5yNuYwWk";
-      //else if (this is TokenBToken)
-      //  address = "1MaJjBpbqYSa1ui3cNPGwMvVqzg2mwKp9P";
+      if (Wallet.TryCreateTX(address, value, feePerByte, out tX))
+      {
+        BroadcastTX(tX);
+        return true;
+      }
 
-      return Wallet.TryCreateTX(
-        address,
-        value,
-        feePerByte,
-        out tX);
+      return false;
     }
 
     public bool IsMining;

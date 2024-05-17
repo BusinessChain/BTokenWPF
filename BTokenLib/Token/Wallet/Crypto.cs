@@ -61,7 +61,7 @@ namespace BTokenLib
       }
     }
 
-    public static byte[] GetPubKeyFromPrivKey(string privKey, bool compressed = true)
+    public static byte[] GetPubKeyFromPrivKey(string privKey)
     {
       var curve = SecNamedCurves.GetByName("secp256k1");
 
@@ -75,9 +75,6 @@ namespace BTokenLib
       var q = domain.G.Multiply(d);
 
       var publicKey = new ECPublicKeyParameters(q, domain);
-
-      if (!compressed)
-        return publicKey.Q.GetEncoded();
 
       List<byte> pubKeyX = publicKey.Q.XCoord.GetEncoded().ToList();
 
