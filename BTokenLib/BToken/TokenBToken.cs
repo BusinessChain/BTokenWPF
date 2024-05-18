@@ -144,11 +144,6 @@ namespace BTokenLib
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
 
-    public bool TryGetAccount(byte[] iDAccount, out Account account)
-    {
-      return DatabaseAccounts.TryGetAccount(iDAccount, out account);
-    }
-
     public override void InsertDB(
       byte[] bufferDB,
       int lengthDataInBuffer)
@@ -222,7 +217,7 @@ namespace BTokenLib
       if (typeToken == TypesToken.Coinbase)
       {
         if (flagCoinbase)
-          tX = new TXBTokenCoinbase(tXRaw, sHA256);
+          tX = new TXBTokenValueTransfer(tXRaw, sHA256);
         else
           throw new ProtocolException($"TX is of type coinbase but parser flag says it must not be coinbase.");
       }
@@ -296,20 +291,25 @@ namespace BTokenLib
         h.HeaderTip.Height - h.HeaderRoot.Height);
     }
 
-    public override bool TryAddTXPool(TX tX)
+    public override void AddTXToPool(TX tX)
     {
       TXBToken tXBToken = (TXBToken)tX;
 
-      if (DatabaseAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
-      {
-        if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)
-          return false;
+      if (!DatabaseAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
+        throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
 
-        if (TXPool.TryAddTX(tXBToken, accountSource))
-          return true;
-      }
+      if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)
+        throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountInit} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockheightAccountInit}.");
 
-      return false;
+      TXPool.AddTX(tXBToken, accountSource);
+    }
+
+    public Account GetAccountUnconfirmed(byte[] iDAccount)
+    {
+      if(!DatabaseAccounts.TryGetAccount(iDAccount, out Account account))
+        throw new ProtocolException($"Account {iDAccount} not in database.");
+
+      return TXPool.ApplyTXsOnAccount(account);
     }
 
     public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)

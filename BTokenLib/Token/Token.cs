@@ -382,7 +382,7 @@ namespace BTokenLib
 
     protected abstract void InsertInDatabase(Block block);
 
-    public abstract bool TryAddTXPool(TX tX);
+    public abstract void AddTXToPool(TX tX);
 
     public abstract bool TryGetFromTXPool(byte[] hashTX, out TX tX);
 
@@ -527,7 +527,7 @@ namespace BTokenLib
 
     public void BroadcastTX(TX tX)
     {
-      TryAddTXPool(tX);
+      AddTXToPool(tX);
       Network.AdvertizeTX(tX);
     }
 

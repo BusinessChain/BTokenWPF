@@ -42,17 +42,18 @@ namespace BTokenLib
 
       long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      if(Token.TryAddTXPool())
-      if (!Token.TryGetAccount(PublicKeyHash160, out Account account) || Balance < valueOutput + fee)
-        return false;
+      Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
+
+      if (accountUnconfirmed.Value < valueOutput + fee)
+        throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Value}.");
 
       List<byte> tXRaw = new();
 
       tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer);
 
       tXRaw.AddRange(PublicKey);
-      tXRaw.AddRange(BitConverter.GetBytes(account.BlockheightAccountInit));
-      tXRaw.AddRange(BitConverter.GetBytes(account.Nonce));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockheightAccountInit));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce + 1));
 
       tXRaw.AddRange(BitConverter.GetBytes(fee));
 
@@ -77,16 +78,18 @@ namespace BTokenLib
 
       long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-      if (!Token.TryGetAccount(PublicKeyHash160, out Account account) || Balance < fee)
-        return false;
+      Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
+
+      if (accountUnconfirmed.Value < fee)
+        throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Value}.");
 
       List<byte> tXRaw = new();
 
       tXRaw.Add((byte)TokenBToken.TypesToken.Data);
 
       tXRaw.AddRange(PublicKey);
-      tXRaw.AddRange(BitConverter.GetBytes(account.BlockheightAccountInit));
-      tXRaw.AddRange(BitConverter.GetBytes(account.Nonce));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockheightAccountInit));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce + 1));
 
       tXRaw.AddRange(BitConverter.GetBytes(fee));
 
@@ -110,7 +113,6 @@ namespace BTokenLib
       {
         $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-        Balance -= tX.TXOutputs.Sum(o => o.Value);
         AddTXToHistory(tX);
       }
 
@@ -122,11 +124,7 @@ namespace BTokenLib
         $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
         AddTXToHistory(tX);
-
-        Balance += tXOutput.Value;
       }
-
-      $"Balance of wallet {Token}: {Balance}".Log(this, Token.LogFile, Token.LogEntryNotifier);
     }
   }
 }

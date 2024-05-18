@@ -181,15 +181,14 @@ namespace BTokenLib
     public override void LoadImageDatabase(string path)
     { }
 
-    public override bool TryAddTXPool(TX tX)
+    public override void AddTXToPool(TX tX)
     {
       TXBitcoin tXBitcoin = (TXBitcoin)tX;
 
       if (!TXPool.TryAddTX(tXBitcoin))
-        return false;
+        throw new ProtocolException($"Could not insert tX {tX} to Bitcoin pool.");
 
       ((WalletBitcoin)Wallet).InsertTXUnconfirmed(tXBitcoin);
-      return true;
     }
 
     public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)

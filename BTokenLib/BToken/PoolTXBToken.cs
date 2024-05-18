@@ -66,20 +66,21 @@ namespace BTokenWPF
       TXBundlesSortedByFee.Insert(indexInsert, tXBundle);
     }
 
-    public bool TryAddTX(TXBToken tX, Account accountScource)
+    public void AddTX(TXBToken tX, Account accountScource)
     {
       lock (LOCK_TXsPool)
       {
         long valueAccountNetPool = accountScource.Value;
 
-        if (TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, 
-          out List<TXBToken> tXsInPool))
+        if (TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsInPool))
         {
           valueAccountNetPool -= tXsInPool.Sum(t => t.Value);
 
           if(tXsInPool.Last().Nonce + 1 != tX.Nonce)
             throw new ProtocolException($"Nonce {tX.Nonce} of tX {tX} not in succession with nonce {tXsInPool.Last().Nonce} of last tX in pool.");
         }
+        else if (accountScource.Nonce != tX.Nonce)
+          throw new ProtocolException($"Nonce {tX.Nonce} of tX {tX} not equal to nonce {accountScource.Nonce} of account {accountScource}.");
 
         if (OutputsByIDAccount.TryGetValue(tX.IDAccountSource, out List<TXOutputBToken> outputsInPool))
           valueAccountNetPool += outputsInPool.Sum(o => o.Value);
@@ -87,68 +88,90 @@ namespace BTokenWPF
         if (valueAccountNetPool < tX.Value)
           throw new ProtocolException($"Value {tX.Value} of tX {tX} bigger than value {valueAccountNetPool} in account {accountScource} considering tXs in pool.");
 
-        int i = 0;
-        while (true)
-        {
-          TXBundle tXBundle = TXBundlesSortedByFee[i];
+        InsertTX(tX);
+      }
+    }
 
-          if (!tX.IDAccountSource.Equals(tXBundle.IDAccountSource) ||
-            tX.Nonce > tXBundle.TXs.Last().Nonce + 1)
-          {
-            i += 1;
-            continue;
-          }
+    public Account ApplyTXsOnAccount(Account account)
+    {
+      Account accounUnconfirmed = new();
 
-          if (tX.Fee < tXBundle.FeeAveragePerTX)
-            InsertTXBundle(new()
-            {
-              IDAccountSource = tX.IDAccountSource,
-              FeeAveragePerTX = tX.Fee,
-              TXs = new List<TXBToken> { tX }
-            });
+      accounUnconfirmed.BlockheightAccountInit = account.BlockheightAccountInit;
+      accounUnconfirmed.Nonce = account.Nonce;
+      accounUnconfirmed.IDAccount = account.IDAccount;
+      accounUnconfirmed.Value = account.Value;
+
+      if (TXsByIDAccountSource.TryGetValue(account.IDAccount, out List<TXBToken> tXsInPool))
+      {
+        accounUnconfirmed.Nonce = tXsInPool.Last().Nonce;
+        accounUnconfirmed.Value -= tXsInPool.Sum(t => t.Value);
+      }
+
+      if (OutputsByIDAccount.TryGetValue(account.IDAccount, out List<TXOutputBToken> outputsInPool))
+        accounUnconfirmed.Value += outputsInPool.Sum(o => o.Value);
+
+      return accounUnconfirmed;
+    }
+
+    void InsertTX(TXBToken tX)
+    {
+      TXsByHash.Add(tX.Hash, tX);
+
+      if (TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsInPool))
+        tXsInPool.Add(tX);
+      else
+        TXsByIDAccountSource.Add(tX.IDAccountSource, new List<TXBToken>() { tX });
+
+      TXBTokenValueTransfer tXValueTransfer = tX as TXBTokenValueTransfer;
+
+      if (tXValueTransfer != null)
+        foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
+          if (OutputsByIDAccount.TryGetValue(tXOutputBToken.IDAccount, out List<TXOutputBToken> tXOutputsBToken))
+            tXOutputsBToken.Add(tXOutputBToken);
           else
-          {
-            tXBundle.TXs.Add(tX);
+            OutputsByIDAccount.Add(tXOutputBToken.IDAccount, new List<TXOutputBToken>() { tXOutputBToken });
 
-            if (tX.Fee > tXBundle.FeeAveragePerTX)
-            {
-              tXBundle.FeeAveragePerTX = tXBundle.TXs.Sum(t => t.Fee) / tXBundle.TXs.Count;
-              TXBundlesSortedByFee.RemoveAt(i);
+      int i = 0;
+      while (true)
+      {
+        TXBundle tXBundle = TXBundlesSortedByFee[i];
 
-              InsertTXBundle(tXBundle);
-            }
-
-            break;
-          }
+        if (!tX.IDAccountSource.Equals(tXBundle.IDAccountSource) ||
+          tX.Nonce > tXBundle.TXs.Last().Nonce + 1)
+        {
+          i += 1;
+          continue;
         }
 
-        tXsInPool.Add(tX);
-
-        TXBTokenValueTransfer tXValueTransfer = tX as TXBTokenValueTransfer;
-
-        if(tXValueTransfer != null)
-          foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
-            if (OutputsByIDAccount.TryGetValue(tXOutputBToken.IDAccount, out List<TXOutputBToken> tXOutputsBToken))
-              tXOutputsBToken.Add(tXOutputBToken);
-
-        {
-          if (tX.Nonce != tX.NonceInDB)
-            return false;
-
-          TXsByIDAccountSource.Add(tX.IDAccountSource, new List<TXBToken> { tX });
-
+        if (tX.Fee < tXBundle.FeeAveragePerTX)
           InsertTXBundle(new()
           {
             IDAccountSource = tX.IDAccountSource,
             FeeAveragePerTX = tX.Fee,
             TXs = new List<TXBToken> { tX }
           });
+        else
+        {
+          tXBundle.TXs.Add(tX);
+
+          if (tX.Fee > tXBundle.FeeAveragePerTX)
+          {
+            tXBundle.FeeAveragePerTX = tXBundle.TXs.Sum(t => t.Fee) / tXBundle.TXs.Count;
+            TXBundlesSortedByFee.RemoveAt(i);
+
+            InsertTXBundle(tXBundle);
+          }
+
+          break;
         }
-
-        TXsByHash.Add(tX.Hash, tX);
-
-        return true;
       }
+
+      InsertTXBundle(new()
+      {
+        IDAccountSource = tX.IDAccountSource,
+        FeeAveragePerTX = tX.Fee,
+        TXs = new List<TXBToken> { tX }
+      });
     }
 
     public List<TXBToken> GetTXs(int countMax)

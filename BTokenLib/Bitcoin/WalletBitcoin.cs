@@ -30,6 +30,8 @@ namespace BTokenLib
 
     public List<TXOutputWallet> OutputsSpendable = new();
 
+    public long Balance;
+
 
     public WalletBitcoin(string privKeyDec, TokenBitcoin token)
       : base(privKeyDec)
@@ -372,6 +374,7 @@ namespace BTokenLib
     public override void Clear()
     {
       OutputsSpendable.Clear();
+      Balance = 0;
       base.Clear();
     }
   }

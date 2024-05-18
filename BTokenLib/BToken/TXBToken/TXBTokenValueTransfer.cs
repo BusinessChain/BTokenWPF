@@ -16,8 +16,10 @@ namespace BTokenLib
     public TXBTokenValueTransfer()
     { }
 
-    public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256)
-    {      
+    public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256, bool flagIsCoinbase = false)
+    {
+      IsCoinbase = flagIsCoinbase;
+
       int index = 1;
 
       if (!IsCoinbase)

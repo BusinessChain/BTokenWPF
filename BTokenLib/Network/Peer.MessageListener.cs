@@ -65,8 +65,7 @@ namespace BTokenLib
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              if(!Token.TryAddTXPool(tX))
-                $"Could not add {tX} to tX pool.".Log(this, LogFiles, Token.LogEntryNotifier);
+              Token.AddTXToPool(tX);
             }
             else if (Command == "dataDB")
             {

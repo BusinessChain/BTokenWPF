@@ -24,7 +24,6 @@ namespace BTokenLib
     protected List<TXOutputWallet> OutputsUnconfirmed = new();
     protected List<TXOutputWallet> OutputsUnconfirmedSpent = new();
 
-    public long Balance;
 
 
     public Wallet(string privKeyDec)
@@ -155,12 +154,12 @@ namespace BTokenLib
         HistoryTransactions.Add(tX);
     }
 
+    public abstract long GetBalance();
+
     public virtual void Clear()
     {
       OutputsUnconfirmed.Clear();
       OutputsUnconfirmedSpent.Clear();
-
-      Balance = 0;
     }
   }
 }
