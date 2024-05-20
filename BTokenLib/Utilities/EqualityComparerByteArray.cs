@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     public bool Equals(byte[] arr1, byte[] arr2)
     {
-      return arr1.IsEqual(arr2);
+      return arr1.HasEqualElements(arr2);
     }
     public int GetHashCode(byte[] arr)
     {

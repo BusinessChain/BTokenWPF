@@ -22,10 +22,9 @@ namespace BTokenLib
 
     public enum TypesToken
     {
-      Coinbase = 0,
-      ValueTransfer = 1,
-      AnchorToken = 2,
-      Data = 3
+      ValueTransfer = 0,
+      AnchorToken = 1,
+      Data = 2
     }
 
 
@@ -168,7 +167,7 @@ namespace BTokenLib
         0,
         length);
 
-      if (!((HeaderBToken)headerTip).HashDatabase.IsEqual(hashRootHashesDB))
+      if (!((HeaderBToken)headerTip).HashDatabase.HasEqualElements(hashRootHashesDB))
         throw new ProtocolException(
           $"Root hash of hashesDB not equal to database hash in header tip");
 
@@ -195,7 +194,7 @@ namespace BTokenLib
     public override TX ParseTX(
       Stream stream,
       SHA256 sHA256,
-      bool flagCoinbase)
+      bool flagCoinbase = false)
     {
       int lengthTXRaw = VarInt.GetInt(stream);
 
@@ -208,21 +207,19 @@ namespace BTokenLib
     public TXBToken ParseTX(
       byte[] tXRaw,
       SHA256 sHA256,
-      bool flagCoinbase)
+      bool flagCoinbase = false)
     {
       TXBToken tX;
 
       var typeToken = (TypesToken)tXRaw[0];
 
-      if (typeToken == TypesToken.Coinbase)
+      if (typeToken == TypesToken.ValueTransfer)
       {
-        if (flagCoinbase)
-          tX = new TXBTokenValueTransfer(tXRaw, sHA256);
-        else
+        tX = new TXBTokenValueTransfer(tXRaw, sHA256);
+
+        if (!flagCoinbase && (tX as TXBTokenValueTransfer).IsCoinbase)
           throw new ProtocolException($"TX is of type coinbase but parser flag says it must not be coinbase.");
       }
-      else if (typeToken == TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(tXRaw, sHA256);
       else if (typeToken == TypesToken.AnchorToken)
         tX = new TXBTokenAnchor(tXRaw, sHA256);
       else if (typeToken == TypesToken.Data)

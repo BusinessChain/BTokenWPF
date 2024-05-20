@@ -93,7 +93,7 @@ namespace BTokenLib
 
       MemoryStream stream = new(tXRaw.ToArray());
 
-      tX = Token.ParseTX(stream, SHA256, flagCoinbase: false);
+      tX = Token.ParseTX(stream, SHA256);
       return true;
     }
 
@@ -142,7 +142,7 @@ namespace BTokenLib
 
       MemoryStream stream = new(tXRaw.ToArray());
 
-      tX = Token.ParseTX(stream, SHA256, flagCoinbase: false);
+      tX = Token.ParseTX(stream, SHA256);
       return true;
     }
 
@@ -247,8 +247,7 @@ namespace BTokenLib
         FileAccess.Read))
       {
         while (fileStream.Position < fileStream.Length)
-          HistoryTransactions.Add(
-            Token.ParseTX(fileStream, SHA256, flagCoinbase: false));
+          HistoryTransactions.Add(Token.ParseTX(fileStream, SHA256));
       }
 
       LoadOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
@@ -268,7 +267,7 @@ namespace BTokenLib
         $"Try spend input in wallet {Token} refing output: {tXInput.TXIDOutput.ToHexString()}, index {tXInput.OutputIndex}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
         TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
-          .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+          .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if (outputValueUnconfirmedSpent != null)
         {
@@ -276,7 +275,7 @@ namespace BTokenLib
         }
 
         TXOutputWallet tXOutputWallet = OutputsSpendable.Find(o =>
-          o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+          o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if (tXOutputWallet != null)
         {
@@ -291,12 +290,12 @@ namespace BTokenLib
       foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
       {
         if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
-          tXOutput.PublicKeyHash160.IsEqual(PublicKeyHash160))
+          tXOutput.PublicKeyHash160.HasEqualElements(PublicKeyHash160))
         {
           $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
           TXOutputWallet outputValueUnconfirmed = OutputsUnconfirmed
-            .Find(o => o.TXID.IsEqual(tX.Hash));
+            .Find(o => o.TXID.HasEqualElements(tX.Hash));
           
           if (outputValueUnconfirmed != null)
             OutputsUnconfirmed.Remove(outputValueUnconfirmed);
@@ -326,7 +325,7 @@ namespace BTokenLib
           $"index {tXInput.OutputIndex}").Log(this, Token.LogFile, Token.LogEntryNotifier);
 
         TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsUnconfirmed).ToList()
-          .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+          .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if(outputSpendable != null)
           OutputsUnconfirmedSpent.Add(outputSpendable);
@@ -335,7 +334,7 @@ namespace BTokenLib
       foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
       {
         if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
-          tXOutput.PublicKeyHash160.IsEqual(PublicKeyHash160))
+          tXOutput.PublicKeyHash160.HasEqualElements(PublicKeyHash160))
         {
           ($"AddOutput unconfirmes to wallet {Token}, TXID: {tX.Hash.ToHexString()}, " +
             $"Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}").Log(this, Token.LogFile, Token.LogEntryNotifier);
@@ -355,7 +354,7 @@ namespace BTokenLib
       for(int i = tXs.Count - 1; i > -1; i -= 1)
       {
         TXOutputWallet outputValueUnconfirmed =
-          OutputsUnconfirmed.Find(o => o.TXID.IsEqual(tXs[i].Hash));
+          OutputsUnconfirmed.Find(o => o.TXID.HasEqualElements(tXs[i].Hash));
 
         if (outputValueUnconfirmed != null)
           OutputsUnconfirmed.Remove(outputValueUnconfirmed);
@@ -363,7 +362,7 @@ namespace BTokenLib
         foreach (TXInput tXInput in tXs[i].Inputs)
         {
           TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
-            .Find(o => o.TXID.IsEqual(tXInput.TXIDOutput));
+            .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput));
 
           if (outputValueUnconfirmedSpent != null)
             OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
@@ -376,6 +375,11 @@ namespace BTokenLib
       OutputsSpendable.Clear();
       Balance = 0;
       base.Clear();
+    }
+
+    public override long GetBalance()
+    {
+      return OutputsSpendable.Sum(o => o.Value);
     }
   }
 }

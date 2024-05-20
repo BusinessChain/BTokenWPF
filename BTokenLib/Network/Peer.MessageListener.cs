@@ -32,7 +32,7 @@ namespace BTokenLib
 
               $"Received block {Block}".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              if (!Block.Header.Hash.IsEqual(HeaderSync.Hash))
+              if (!Block.Header.Hash.HasEqualElements(HeaderSync.Hash))
                 throw new ProtocolException(
                   $"Received unexpected block {Block} at height {Block.Header.Height} from peer {this}.\n" +
                   $"Requested was {HeaderSync}.");
@@ -58,10 +58,7 @@ namespace BTokenLib
             }
             else if (Command == "tx")
             {
-              TX tX = Token.ParseTX(
-                NetworkStream,
-                SHA256.Create(),
-                flagCoinbase: false);
+              TX tX = Token.ParseTX(NetworkStream, SHA256);
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -78,7 +75,7 @@ namespace BTokenLib
                   0,
                   LengthDataPayload);
 
-                if (!hashDataDB.IsEqual(HashDBDownload))
+                if (!hashDataDB.HasEqualElements(HashDBDownload))
                   throw new ProtocolException(
                     $"Unexpected dataDB with hash {hashDataDB.ToHexString()}.\n" +
                     $"Excpected hash {HashDBDownload.ToHexString()}.");
@@ -165,7 +162,7 @@ namespace BTokenLib
 
                 Header header = Block.ParseHeader(NetworkStream);
 
-                if (header.HashPrevious.IsEqual(Token.HeaderTip.Hash))
+                if (header.HashPrevious.HasEqualElements(Token.HeaderTip.Hash))
                 {
                   header.AppendToHeader(Token.HeaderTip);
 
@@ -184,9 +181,9 @@ namespace BTokenLib
                       break;
                     }
 
-                    if (header.HashPrevious.IsEqual(headerPrevious.Hash))
+                    if (header.HashPrevious.HasEqualElements(headerPrevious.Hash))
                     {
-                      if (!header.HashPrevious.IsEqual(Token.HeaderTip.HashPrevious))
+                      if (!header.HashPrevious.HasEqualElements(Token.HeaderTip.HashPrevious))
                         await SendHeaders(new List<Header>() { Token.HeaderTip });
 
                       Network.ExitSynchronization();

@@ -18,12 +18,11 @@ namespace BTokenLib
       Token = token;
     }
 
-
     public TXBToken CreateTXCoinbase(long blockReward)
     {
       List<byte> tXRaw = new();
 
-      tXRaw.Add((byte)TokenBToken.TypesToken.Coinbase);
+      tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer);
       tXRaw.Add(0x01); // count outputs
 
       tXRaw.AddRange(BitConverter.GetBytes(blockReward));
@@ -53,7 +52,7 @@ namespace BTokenLib
 
       tXRaw.AddRange(PublicKey);
       tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockheightAccountInit));
-      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce + 1));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce));
 
       tXRaw.AddRange(BitConverter.GetBytes(fee));
 
@@ -67,7 +66,7 @@ namespace BTokenLib
       tXRaw.Add((byte)signature.Length);
       tXRaw.AddRange(signature);
 
-      tX = Token.ParseTX(tXRaw.ToArray(), SHA256, flagCoinbase: false);
+      tX = Token.ParseTX(tXRaw.ToArray(), SHA256);
 
       return true;
     }
@@ -89,7 +88,7 @@ namespace BTokenLib
 
       tXRaw.AddRange(PublicKey);
       tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockheightAccountInit));
-      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce + 1));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce));
 
       tXRaw.AddRange(BitConverter.GetBytes(fee));
 
@@ -102,28 +101,43 @@ namespace BTokenLib
       tXRaw.Add((byte)signature.Length);
       tXRaw.AddRange(signature);
 
-      tX = Token.ParseTX(tXRaw.ToArray(), SHA256, flagCoinbase: false);
+      tX = Token.ParseTX(tXRaw.ToArray(), SHA256);
 
       return true;
     }
    
     public void InsertTXBTokenValueTransfer(TXBTokenValueTransfer tX)
     {
-      if (!tX.IsCoinbase && tX.IDAccountSource.IsEqual(PublicKeyHash160))
+      if (tX.IDAccountSource.HasEqualElements(PublicKeyHash160))
       {
-        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}."
+          .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
         AddTXToHistory(tX);
       }
 
       foreach (TXOutputBToken tXOutput in tX.TXOutputs)
       {
-        if (!tXOutput.IDAccount.IsEqual(PublicKeyHash160))
+        if (!tXOutput.IDAccount.HasEqualElements(PublicKeyHash160))
           continue;
 
-        $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}"
+          .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
         AddTXToHistory(tX);
+      }
+    }
+
+    public override long GetBalance()
+    {
+      try
+      {
+        Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
+        return accountUnconfirmed.Value;
+      }
+      catch
+      {
+        return 0;
       }
     }
   }

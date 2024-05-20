@@ -9,16 +9,18 @@ namespace BTokenLib
 {
   public class TXBTokenValueTransfer : TXBToken
   {
-    public List<TXOutputBToken> TXOutputs = new();
     public bool IsCoinbase;
+    const int LENGTH_TXRAW_COINBASE = 30;
+    public List<TXOutputBToken> TXOutputs = new();
 
 
     public TXBTokenValueTransfer()
     { }
 
-    public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256, bool flagIsCoinbase = false)
+    public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256)
     {
-      IsCoinbase = flagIsCoinbase;
+      if (buffer.Length == LENGTH_TXRAW_COINBASE)
+        IsCoinbase = true;
 
       int index = 1;
 

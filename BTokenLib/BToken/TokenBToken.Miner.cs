@@ -153,14 +153,14 @@ namespace BTokenLib
           if (BlocksMined.Count > 0)
           {
             block = BlocksMined.Find(b =>
-            b.Header.Hash.IsEqual(headerAnchor.HashChild));
+            b.Header.Hash.HasEqualElements(headerAnchor.HashChild));
 
             BlocksMined.Clear();
 
             if (block == null)
               return;
 
-            if (block.Header.HashPrevious.IsEqual(HeaderTip.Hash))
+            if (block.Header.HashPrevious.HasEqualElements(HeaderTip.Hash))
               InsertBlock(block);
             else
               ($"Self mined block {block} is obsoleted.\n" +
@@ -196,7 +196,7 @@ namespace BTokenLib
 
     public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
     {
-      if (TokensAnchorSelfMinedUnconfirmed.RemoveAll(t => t.TX.Hash.IsEqual(tokenAnchor.TX.Hash)) > 0)
+      if (TokensAnchorSelfMinedUnconfirmed.RemoveAll(t => t.TX.Hash.HasEqualElements(tokenAnchor.TX.Hash)) > 0)
         $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
       else
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);

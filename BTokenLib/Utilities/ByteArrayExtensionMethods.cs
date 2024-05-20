@@ -74,19 +74,10 @@ namespace BTokenLib
       return rv;
     }
 
-    public static bool IsEqual(this byte[] arr1, byte[] arr2, int startIndex2)
+    public static bool HasEqualElements(this byte[] arr1, byte[] arr2, int startIndex2 = 0)
     {
       for (int i = 0; i < arr1.Length; i += 1)
         if (arr1[i] != arr2[startIndex2 + i])
-          return false;
-
-      return true;
-    }
-
-    public static bool IsEqual(this byte[] arr1, byte[] arr2)
-    {
-      for (int i = 0; i < arr1.Length; i += 1)
-        if (arr1[i] != arr2[i])
           return false;
 
       return true;

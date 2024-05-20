@@ -62,7 +62,7 @@ namespace BTokenLib
       DifficultyAccumulated = headerPrevious.DifficultyAccumulated + Difficulty;
       CountBytesBlocksAccumulated = headerPrevious.CountBytesBlocksAccumulated + CountBytesBlock;
 
-      if (!HashPrevious.IsEqual(headerPrevious.Hash))
+      if (!HashPrevious.HasEqualElements(headerPrevious.Hash))
         throw new ProtocolException(
           $"Header {this} references header previous " +
           $"{HashPrevious.ToHexString()} but attempts to append to {headerPrevious}.");
@@ -76,7 +76,7 @@ namespace BTokenLib
           if (headerParent == null)
             throw new ProtocolException($"Header {this} not anchored in parent chain.");
 
-          if(headerParent.HashChild != null && headerParent.HashChild.IsEqual(Hash))
+          if(headerParent.HashChild != null && headerParent.HashChild.HasEqualElements(Hash))
           {
             HeaderParent = headerParent;
             return;

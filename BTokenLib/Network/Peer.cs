@@ -373,7 +373,7 @@ namespace BTokenLib
           }
 
           if (HeaderUnsolicited != null &&
-            HeaderUnsolicited.Hash.IsEqual(block.Header.Hash))
+            HeaderUnsolicited.Hash.HasEqualElements(block.Header.Hash))
           {
             $"Advertized block {block} was received by same peer.".Log(this, LogFiles, Token.LogEntryNotifier);
             return;

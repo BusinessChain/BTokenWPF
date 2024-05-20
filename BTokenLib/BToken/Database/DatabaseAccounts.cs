@@ -202,7 +202,7 @@ namespace BTokenLib
     public bool TryGetDB(byte[] hash, out byte[] dataDB)
     {
       for (int i = 0; i < HashesFilesDB.Length; i += 1)
-        if (hash.IsEqual(HashesFilesDB, i * 32))
+        if (hash.HasEqualElements(HashesFilesDB, i * 32))
         {
           dataDB = new byte[FilesDB[i].Length];
           FilesDB[i].Write(dataDB, 0, dataDB.Length);
@@ -210,7 +210,7 @@ namespace BTokenLib
         }
 
       for (int i = 0; i < HashesCaches.Length; i += 1)
-        if (hash.IsEqual(HashesCaches, i * 32))
+        if (hash.HasEqualElements(HashesCaches, i * 32))
         {
           dataDB = Caches[i].GetBytes();
           return true;
@@ -273,7 +273,8 @@ namespace BTokenLib
           else
             account = new Account
             {
-              Nonce = blockHeight,
+              BlockheightAccountInit = blockHeight,
+              Nonce = 0,
               Value = outputValueTX,
               IDAccount = iDAccount
             };

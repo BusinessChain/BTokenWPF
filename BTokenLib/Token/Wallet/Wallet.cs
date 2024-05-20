@@ -150,7 +150,7 @@ namespace BTokenLib
 
     protected void AddTXToHistory(TX tX)
     {
-      if (!HistoryTransactions.Any(t => t.Hash.IsEqual(tX.Hash)))
+      if (!HistoryTransactions.Any(t => t.Hash.HasEqualElements(tX.Hash)))
         HistoryTransactions.Add(tX);
     }
 

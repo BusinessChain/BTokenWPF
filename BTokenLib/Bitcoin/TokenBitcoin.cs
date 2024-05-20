@@ -65,7 +65,7 @@ namespace BTokenLib
     public override TX ParseTX(
       Stream stream,
       SHA256 sHA256,
-      bool flagCoinbase)
+      bool flagCoinbase = false)
     {
       TXBitcoin tX = new();
 
@@ -129,7 +129,7 @@ namespace BTokenLib
         if (tokenAnchor != null)
         {
           Token tokenChild = TokensChild.Find(
-            t => t.IDToken.IsEqual(tokenAnchor.IDToken));
+            t => t.IDToken.HasEqualElements(tokenAnchor.IDToken));
 
           if (tokenChild != null)
             tokenChild.SignalAnchorTokenDetected(tokenAnchor);
@@ -223,12 +223,12 @@ namespace BTokenLib
         }
         else
           for (int i = 0; i < tXAnchorTokens.Count; i += 1)
-            if (tXAnchorTokens[i].Hash.IsEqual(tX.Inputs[0].TXIDOutput))
+            if (tXAnchorTokens[i].Hash.HasEqualElements(tX.Inputs[0].TXIDOutput))
               tXAnchorTokens.Insert(i + 1, tX);
       }
 
       for (int i = 0; i < tXAnchorTokens.Count - 1; i += 1)
-        if (!tXAnchorTokens[i].Hash.IsEqual(tXAnchorTokens[i + 1].Inputs[0].TXIDOutput))
+        if (!tXAnchorTokens[i].Hash.HasEqualElements(tXAnchorTokens[i + 1].Inputs[0].TXIDOutput))
           throw new ProtocolException(
             $"RBF Anchor tokens do not build a coherent graph:" +
             $"\nAnchor tX {tXAnchorTokens[i + 1]} does not reference {tXAnchorTokens[i]} but should.");
@@ -248,5 +248,6 @@ namespace BTokenLib
           break;
       }
     }
+
   }
 }

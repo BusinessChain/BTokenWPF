@@ -439,7 +439,7 @@ namespace BTokenLib
     public abstract TX ParseTX(
       Stream stream,
       SHA256 sHA256,
-      bool flagCoinbase);
+      bool flagCoinbase = false);
 
     public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
     {
@@ -589,7 +589,7 @@ namespace BTokenLib
           while (
             header.HeaderNext != null &&
             headers.Count < count &&
-            !header.Hash.IsEqual(stopHash))
+            !header.Hash.HasEqualElements(stopHash))
           {
             Header nextHeader = header.HeaderNext;
 
@@ -623,7 +623,7 @@ namespace BTokenLib
           out List<Header> headers))
         {
           foreach (Header h in headers)
-            if (headerHash.IsEqual(h.Hash))
+            if (headerHash.HasEqualElements(h.Hash))
             {
               header = h;
               return true;

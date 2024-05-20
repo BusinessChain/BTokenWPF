@@ -25,7 +25,7 @@ namespace BTokenLib
         if (HeaderAncestor == null)
         {
           HeaderAncestor = Locator.Find(
-            h => h.Hash.IsEqual(header.HashPrevious));
+            h => h.Hash.HasEqualElements(header.HashPrevious));
 
           if (HeaderAncestor == null)
             throw new ProtocolException(
@@ -33,9 +33,9 @@ namespace BTokenLib
         }
 
         if (HeaderAncestor.HeaderNext != null &&
-          HeaderAncestor.HeaderNext.Hash.IsEqual(header.Hash))
+          HeaderAncestor.HeaderNext.Hash.HasEqualElements(header.Hash))
         {
-          if (Locator.Any(h => h.Hash.IsEqual(header.Hash)))
+          if (Locator.Any(h => h.Hash.HasEqualElements(header.Hash)))
             throw new ProtocolException(
               "Received redundant headers from peer.");
 

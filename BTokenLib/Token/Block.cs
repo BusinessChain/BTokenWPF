@@ -79,10 +79,7 @@ namespace BTokenLib
 
         for (int t = 1; t < tXCount; t += 1)
         {
-          tX = Token.ParseTX(
-            stream,
-            SHA256,
-            flagCoinbase: false);
+          tX = Token.ParseTX(stream, SHA256);
 
           TXs.Add(tX);
 
@@ -96,7 +93,7 @@ namespace BTokenLib
           merkleList[tXCount] = merkleList[tXCount - 1];
       }
 
-      if (!Header.MerkleRoot.IsEqual(ComputeMerkleRoot()))
+      if (!Header.MerkleRoot.HasEqualElements(ComputeMerkleRoot()))
         throw new ProtocolException("Payload hash not equal to merkle root.");
     }
 
