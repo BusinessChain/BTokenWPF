@@ -148,7 +148,10 @@ namespace BTokenWPF
         TXBundle tXBundleNext = TXBundlesSortedByFee[i];
 
         if(tXBundle.FeeAveragePerTX < tXBundleNext.FeeAveragePerTX)
+        {
           TXBundlesSortedByFee.Insert(i + 1, tXBundle);
+          return;
+        }
         else if(tXBundle.IDAccountSource.HasEqualElements(tXBundleNext.IDAccountSource))
         {
           tXBundleNext.TXs.AddRange(tXBundle.TXs);
@@ -157,6 +160,8 @@ namespace BTokenWPF
             tXBundleNext.TXs.Sum(t => t.Fee) / tXBundleNext.TXs.Count;
 
           tXBundle = tXBundleNext;
+
+          TXBundlesSortedByFee.RemoveAt(i);
         }
 
         i--;
@@ -165,33 +170,20 @@ namespace BTokenWPF
       TXBundlesSortedByFee.Insert(0, tXBundle);
     }
 
-    void InsertTXBundle(TXBundle tXBundle)
-    {
-      int indexInsert = TXBundlesSortedByFee.FindIndex(b => b.FeeAveragePerTX < tXBundle.FeeAveragePerTX);
-
-      if (indexInsert == -1)
-        indexInsert = TXBundlesSortedByFee.Count;
-
-      TXBundlesSortedByFee.Insert(indexInsert, tXBundle);
-    }
-
-    public List<TXBToken> GetTXs(int countMax)
+    public List<TXBToken> GetTXs(int countBytesMax)
     {
       List<TXBToken> tXs = new();
+      int countBytesCurrent = 0;
 
-      int i = 0;
-      while (i < TXBundlesSortedByFee.Count)
-      {
-        TXBundle tXBundle = TXBundlesSortedByFee[i];
+      for (int i = 0; i < TXBundlesSortedByFee.Count; i += 1)
+        for (int j = 0; j < TXBundlesSortedByFee[i].TXs.Count; j += 1)
+        {
+          if (countBytesCurrent + TXBundlesSortedByFee[i].TXs[j].TXRaw.Count > countBytesMax)
+            return tXs;
 
-        if (tXs.Count + tXBundle.TXs.Count > countMax)
-          break;
+          tXs.Add(TXBundlesSortedByFee[i].TXs[j]);
+        }
 
-        tXs.AddRange(tXBundle.TXs);
-
-        i += 1;
-      }
-      
       return tXs;
     }
 

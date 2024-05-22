@@ -79,7 +79,7 @@ namespace BTokenLib
 
       BlockBitcoin block = new(this);
 
-      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
+      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, 0)); // COUNT_TXS_PER_BLOCK_MAX
 
       int height = HeaderTip.Height + 1;
 

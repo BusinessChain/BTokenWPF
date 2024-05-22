@@ -9,7 +9,7 @@ namespace BTokenLib
 {
   partial class TokenBToken : Token
   {
-    const int COUNT_TXS_PER_BLOCK_MAX = 5;
+    const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE = 1.2;
@@ -97,7 +97,7 @@ namespace BTokenLib
     {
       BlockBToken block = new(this);
 
-      block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX)); // should be bytes per block
+      block.TXs.AddRange(TXPool.GetTXs(COUNT_BYTES_PER_BLOCK_MAX));
       block.Fee = block.TXs.Sum(t => t.Fee);
 
       int height = HeaderTip.Height + 1;
@@ -188,7 +188,7 @@ namespace BTokenLib
             t.TX.Hash.ToHexString())));
 
         TokenAnchor tokenAnchorNew = MineAnchorToken();
-        tokenAnchorNew.NumberSequence = TokensAnchorSelfMinedUnconfirmed[0].NumberSequence += 1;
+        tokenAnchorNew.NumberSequence = TokensAnchorSelfMinedUnconfirmed[0].NumberSequence + 1;
         
         TokenParent.RBFAnchorTokens(ref TokensAnchorSelfMinedUnconfirmed, tokenAnchorNew);
       }

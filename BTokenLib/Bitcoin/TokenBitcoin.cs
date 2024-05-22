@@ -208,7 +208,8 @@ namespace BTokenLib
 
       foreach (TokenAnchor tokenAnchor in tokensAnchorSelfMinedUnconfirmed)
       {
-        TXPool.TryGetTX(tokenAnchor.TX.Hash, out TXBitcoin tX);
+        if (!TXPool.TryGetTX(tokenAnchor.TX.Hash, out TXBitcoin tX))
+          throw new ProtocolException($"Mined unconfirmed anchor token {tokenAnchor} but tX not in Bitcoin Pool.");
 
         if(tXAnchorTokens.Count == 0)
           tXAnchorTokens.Add(tX);
