@@ -140,7 +140,7 @@ namespace BTokenLib
 
       DatabaseAccounts.UpdateHashDatabase();
 
-      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
+      TXPool.RemoveTXs(block);
     }
 
     public override void InsertDB(

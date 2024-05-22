@@ -33,45 +33,11 @@ namespace BTokenWPF
     Dictionary<byte[], List<TXOutputBToken>> OutputsByIDAccount =
       new(new EqualityComparerByteArray());
 
+    /// <summary>
+    /// A bundle conains tXs with the same source account with consecutive nonce.
+    /// The miner can pull bundles from this list and be sure to have maximized fee.
+    /// </summary>
     List<TXBundle> TXBundlesSortedByFee = new();
-
-
-    public void RemoveTXs(IEnumerable<byte[]> hashesTX)
-    {
-      foreach (byte[] hashTX in hashesTX)
-      {
-        if (!TXsByHash.Remove(hashTX, out TXBToken tX))
-          continue;
-
-        TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXs);
-        tXs.RemoveAt(0);
-
-        if (tXs.Count == 0)
-          TXsByIDAccountSource.Remove(tX.IDAccountSource);
-
-        int indexBundle = TXBundlesSortedByFee.FindIndex(b => b.IDAccountSource.HasEqualElements(tX.IDAccountSource));
-        TXBundle tXBundle = TXBundlesSortedByFee[indexBundle];
-        TXBundlesSortedByFee.RemoveAt(indexBundle);
-
-        tXBundle.TXs.RemoveAt(0);
-
-        if (tXBundle.TXs.Count > 0)
-        {
-          tXBundle.FeeAveragePerTX = tXBundle.TXs.Sum(t => t.Fee) / tXBundle.TXs.Count;
-          InsertTXBundle(tXBundle);
-        }
-      }
-    }
-
-    void InsertTXBundle(TXBundle tXBundle)
-    {
-      int indexInsert = TXBundlesSortedByFee.FindIndex(b => b.FeeAveragePerTX < tXBundle.FeeAveragePerTX);
-
-      if (indexInsert == -1)
-        indexInsert = TXBundlesSortedByFee.Count;
-
-      TXBundlesSortedByFee.Insert(indexInsert, tXBundle);
-    }
 
     public void AddTX(TXBToken tX, Account accountScource)
     {
@@ -138,28 +104,75 @@ namespace BTokenWPF
           else
             OutputsByIDAccount.Add(tXOutputBToken.IDAccount, new List<TXOutputBToken>() { tXOutputBToken });
 
-      TXBundle tXBundle = null;
-      int indexBundles = TXBundlesSortedByFee.FindIndex(
-        b => tX.IDAccountSource.HasEqualElements(b.IDAccountSource) && tX.Nonce == (b.TXs.Last().Nonce + 1));
+      InsertTXInTXBundlesSortedByFee(tX);
+    }
 
-      if(indexBundles == -1)
-        tXBundle = new(tX);
-      else
+    public void RemoveTXs(Block block)
+    {
+      foreach (TX tXRemove in block.TXs)
       {
-        tXBundle = TXBundlesSortedByFee[indexBundles];
+        if (!TXsByHash.Remove(tXRemove.Hash, out TXBToken tX))
+          continue;
 
-        if (tX.Fee < tXBundle.FeeAveragePerTX)
-          tXBundle = new(tX);
-        else
+        if(TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXs))
         {
-          tXBundle.TXs.Add(tX);
+          if (!tXs[0].Hash.HasEqualElements(tXRemove.Hash))
+            throw new ProtocolException($"Removal of tX {tXRemove} from pool not in expected order of nonce.");
+          
+          tXs.RemoveAt(0);
 
-          tXBundle.FeeAveragePerTX = tXBundle.TXs.Sum(t => t.Fee) / tXBundle.TXs.Count;
-          TXBundlesSortedByFee.RemoveAt(indexBundles);
+          if (tXs.Count == 0)
+            TXsByIDAccountSource.Remove(tX.IDAccountSource);
         }
+
+        RebuildTXBundlesSortedByFee();
+      }
+    }
+
+    void RebuildTXBundlesSortedByFee()
+    {
+      TXBundlesSortedByFee.Clear();
+
+      foreach(var tXByHash in TXsByHash)
+        InsertTXInTXBundlesSortedByFee(tXByHash.Value);
+    }
+
+    void InsertTXInTXBundlesSortedByFee(TXBToken tX)
+    {
+      TXBundle tXBundle = new(tX);
+
+      int i = TXBundlesSortedByFee.Count - 1;
+
+      while(i > -1)
+      {
+        TXBundle tXBundleNext = TXBundlesSortedByFee[i];
+
+        if(tXBundle.FeeAveragePerTX < tXBundleNext.FeeAveragePerTX)
+          TXBundlesSortedByFee.Insert(i + 1, tXBundle);
+        else if(tXBundle.IDAccountSource.HasEqualElements(tXBundleNext.IDAccountSource))
+        {
+          tXBundleNext.TXs.AddRange(tXBundle.TXs);
+
+          tXBundleNext.FeeAveragePerTX = 
+            tXBundleNext.TXs.Sum(t => t.Fee) / tXBundleNext.TXs.Count;
+
+          tXBundle = tXBundleNext;
+        }
+
+        i--;
       }
 
-      InsertTXBundle(tXBundle);
+      TXBundlesSortedByFee.Insert(0, tXBundle);
+    }
+
+    void InsertTXBundle(TXBundle tXBundle)
+    {
+      int indexInsert = TXBundlesSortedByFee.FindIndex(b => b.FeeAveragePerTX < tXBundle.FeeAveragePerTX);
+
+      if (indexInsert == -1)
+        indexInsert = TXBundlesSortedByFee.Count;
+
+      TXBundlesSortedByFee.Insert(indexInsert, tXBundle);
     }
 
     public List<TXBToken> GetTXs(int countMax)
