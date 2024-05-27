@@ -19,7 +19,8 @@ namespace BTokenLib
 
     SHA256 SHA256Miner = SHA256.Create();
     Random RandomGeneratorMiner = new();
-    int NumberSequence;
+
+    double FeeSatoshiPerByte;
 
     List<TokenAnchor> TokensAnchorSelfMinedUnconfirmed = new();
     List<TokenAnchor> TokensAnchorDetectedInBlock = new();
@@ -35,6 +36,8 @@ namespace BTokenLib
       int timerMinerPause = 0;
       int timerCreateNextToken = 0;
       int timeMinerLoopMilliseconds = 100;
+
+      FeeSatoshiPerByte = TokenParent.HeaderTip.FeeSatoshiPerByteAverage;
 
       while (IsMining)
       {
@@ -65,7 +68,7 @@ namespace BTokenLib
             timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            TokenAnchor tokenAnchor = MineAnchorToken();
+            TokenAnchor tokenAnchor = MineAnchorToken(0);
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
@@ -93,7 +96,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    public TokenAnchor MineAnchorToken()
+    public TokenAnchor MineAnchorToken(int numberSequence)
     {
       BlockBToken block = new(this);
 
@@ -126,6 +129,8 @@ namespace BTokenLib
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
+      tokenAnchor.FeeSatoshiPerByte = FeeSatoshiPerByte;
+      tokenAnchor.NumberSequence = numberSequence;
 
       string pathFileBlock = Path.Combine(PathBlocksMinedUnconfirmed, block.ToString());
 
@@ -181,16 +186,25 @@ namespace BTokenLib
 
       if (TokensAnchorSelfMinedUnconfirmed.Count > 0)
       {
-        $"RBF {TokensAnchorSelfMinedUnconfirmed.Count} anchor tokens.".Log(this, LogFile, LogEntryNotifier);
+        TokenAnchor tokenAnchorOld = TokensAnchorSelfMinedUnconfirmed.Last();
 
-        TokensAnchorSelfMinedUnconfirmed.ForEach(t => File.Delete(Path.Combine(
-            PathBlocksMinedUnconfirmed,
-            t.TX.Hash.ToHexString())));
+        $"RBF anchor token {tokenAnchorOld}.".Log(this, LogFile, LogEntryNotifier);
 
-        TokenAnchor tokenAnchorNew = MineAnchorToken();
-        tokenAnchorNew.NumberSequence = TokensAnchorSelfMinedUnconfirmed[0].NumberSequence + 1;
-        
-        TokenParent.RBFAnchorTokens(ref TokensAnchorSelfMinedUnconfirmed, tokenAnchorNew);
+        TokenAnchor tokenAnchorNew = MineAnchorToken(tokenAnchorOld.NumberSequence + 1);
+
+        FeeSatoshiPerByte = tokenAnchorOld.FeeSatoshiPerByte * FACTOR_INCREMENT_FEE_PER_BYTE;
+
+        if (TokenParent.TryBroadcastAnchorToken(tokenAnchorNew))
+        {
+          TokensAnchorSelfMinedUnconfirmed.Remove(tokenAnchorOld);
+          TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchorNew);
+          $"RBF'ed anchor token {tokenAnchorOld} by {tokenAnchorNew} referencing block {tokenAnchorNew.HashBlockReferenced.ToHexString()}.".Log(this, LogFile, LogEntryNotifier);
+        }
+        else
+        {
+          IsMining = false;
+          $"Could not RBF anchor token. Stop Miner.".Log(this, LogFile, LogEntryNotifier);
+        }
       }
     }
 
@@ -202,13 +216,6 @@ namespace BTokenLib
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
 
       TokensAnchorDetectedInBlock.Add(tokenAnchor);
-    }
-
-    public override void RBFAnchorTokens(
-      ref List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed,
-      TokenAnchor tokenAnchorTemplate)
-    {
-      throw new NotImplementedException();
     }
 
     byte[] GetHashBlockChildWinner(byte[] hashHeaderAnchor)

@@ -205,11 +205,12 @@ namespace BTokenLib
       //{
       //  new TXOutputWallet()
       //  {
-      //    TXID = "610d58d4d8516a2c9aab20f863a2d7f8de88ae6e4bcaab868fbd86326c1c6558".ToBinary(),
-      //    Value = 26134,
+      //    TXID = "20da7491ec53757a914dc1f045afbcb0a5c3396785a9abe9fc074e017e9403fd".ToBinary(),
+      //    Value = 7106,
       //    Index = 1
       //  }
       //};
+
 
       List<TXOutputWallet> outputsSpendable = OutputsSpendable
         .Where(o => o.Value > feePerTXInput)

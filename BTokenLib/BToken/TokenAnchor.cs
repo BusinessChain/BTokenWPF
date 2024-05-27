@@ -12,6 +12,7 @@ namespace BTokenLib
     public byte[] IDToken = new byte[LENGTH_IDTOKEN];
 
     public int NumberSequence = 0;
+    public double FeeSatoshiPerByte;
 
     public byte[] HashBlockReferenced = new byte[32];
     public byte[] HashBlockPreviousReferenced = new byte[32];

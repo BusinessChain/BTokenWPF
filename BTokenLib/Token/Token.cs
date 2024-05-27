@@ -36,7 +36,7 @@ namespace BTokenLib
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
     const int ORDER_AVERAGEING_FEEPERBYTE = 3;
-    double FeeSatoshiPerBytePriorityHigh = 13;
+    double FeeSatoshiPerBytePriorityHigh = 7.06;
 
     public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
     public byte[] IDToken;
@@ -376,10 +376,6 @@ namespace BTokenLib
         CreateImage();
     }
 
-    public abstract void RBFAnchorTokens(
-      ref List<TokenAnchor> tokensAnchorRBF,
-      TokenAnchor tokenAnchorNew);
-
     protected abstract void InsertInDatabase(Block block);
 
     public abstract void AddTXToPool(TX tX);
@@ -540,8 +536,8 @@ namespace BTokenLib
 
       if (Wallet.TryCreateTXData(
         dataAnchorToken, 
-        tokenAnchor.NumberSequence, 
-        FeeSatoshiPerBytePriorityHigh,
+        tokenAnchor.NumberSequence,
+        tokenAnchor.FeeSatoshiPerByte,
         out TX tX))
       {
         tokenAnchor.TX = tX;

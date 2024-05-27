@@ -199,56 +199,5 @@ namespace BTokenLib
 
       return flagSuccess;
     }
-
-    public override void RBFAnchorTokens(
-      ref List<TokenAnchor> tokensAnchorSelfMinedUnconfirmed, 
-      TokenAnchor tokenAnchorTemplate)
-    {
-      List<TXBitcoin> tXAnchorTokens = new();
-
-      foreach (TokenAnchor tokenAnchor in tokensAnchorSelfMinedUnconfirmed)
-      {
-        if (!TXPool.TryGetTX(tokenAnchor.TX.Hash, out TXBitcoin tX))
-          throw new ProtocolException($"Mined unconfirmed anchor token {tokenAnchor} but tX not in Bitcoin Pool.");
-
-        if(tXAnchorTokens.Count == 0)
-          tXAnchorTokens.Add(tX);
-        else if (tX.Inputs.Count > 0)
-        {
-          if (tXAnchorTokens[0].Inputs.Count > 0)
-            throw new ProtocolException(
-              $"Only one anchorToken in RBF graph should have more than one input,\n" +
-              $"but there are {tXAnchorTokens[0]} and {tX}.");
-
-          tXAnchorTokens.Insert(0, tX);
-        }
-        else
-          for (int i = 0; i < tXAnchorTokens.Count; i += 1)
-            if (tXAnchorTokens[i].Hash.HasEqualElements(tX.Inputs[0].TXIDOutput))
-              tXAnchorTokens.Insert(i + 1, tX);
-      }
-
-      for (int i = 0; i < tXAnchorTokens.Count - 1; i += 1)
-        if (!tXAnchorTokens[i].Hash.HasEqualElements(tXAnchorTokens[i + 1].Inputs[0].TXIDOutput))
-          throw new ProtocolException(
-            $"RBF Anchor tokens do not build a coherent graph:" +
-            $"\nAnchor tX {tXAnchorTokens[i + 1]} does not reference {tXAnchorTokens[i]} but should.");
-
-      TXPool.RemoveTXRecursive(tXAnchorTokens[0].Hash);
-
-      ((WalletBitcoin)Wallet).ReverseTXsUnconfirmed(tXAnchorTokens);
-
-      tokensAnchorSelfMinedUnconfirmed.Clear();
-      for (int i = 0; i < tXAnchorTokens.Count; i += 1)
-      {
-        TokenAnchor tokenAnchor = tokenAnchorTemplate.Copy();
-
-        if (TryBroadcastAnchorToken(tokenAnchor))
-          tokensAnchorSelfMinedUnconfirmed.Add(tokenAnchor);
-        else
-          break;
-      }
-    }
-
   }
 }
