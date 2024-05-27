@@ -12,7 +12,7 @@ namespace BTokenLib
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
-    const double FACTOR_INCREMENT_FEE_PER_BYTE = 1.2;
+    const double FACTOR_INCREMENT_FEE_PER_BYTE = 1.02;
 
     string PathBlocksMinedUnconfirmed;
     List<BlockBToken> BlocksMined = new();
@@ -143,6 +143,7 @@ namespace BTokenLib
       return tokenAnchor;
     }
 
+
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
       Block block;
@@ -192,7 +193,7 @@ namespace BTokenLib
 
         TokenAnchor tokenAnchorNew = MineAnchorToken(tokenAnchorOld.NumberSequence + 1);
 
-        FeeSatoshiPerByte = tokenAnchorOld.FeeSatoshiPerByte * FACTOR_INCREMENT_FEE_PER_BYTE;
+        FeeSatoshiPerByte *= FACTOR_INCREMENT_FEE_PER_BYTE;
 
         if (TokenParent.TryBroadcastAnchorToken(tokenAnchorNew))
         {
@@ -211,7 +212,11 @@ namespace BTokenLib
     public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
     {
       if (TokensAnchorSelfMinedUnconfirmed.RemoveAll(t => t.TX.Hash.HasEqualElements(tokenAnchor.TX.Hash)) > 0)
+      {
         $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
+        if(FeeSatoshiPerByte > tokenAnchor.FeeSatoshiPerByte)
+          FeeSatoshiPerByte /= FACTOR_INCREMENT_FEE_PER_BYTE;
+      }
       else
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
 
