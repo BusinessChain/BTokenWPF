@@ -19,9 +19,6 @@ namespace BTokenLib
 
     public List<TX> TXs = new();
 
-    public long Fee;
-    public long FeePerByte;
-
 
     public Block(Token token)
     {
@@ -39,8 +36,6 @@ namespace BTokenLib
 
       Header.CountTXs = TXs.Count;
       Header.CountBytesBlock = (int)(stream.Position - positionStreamStart);
-
-      FeePerByte = Fee / Header.CountBytesBlock;
     }
 
     public abstract Header ParseHeader(byte[] buffer, ref int index);
@@ -82,9 +77,6 @@ namespace BTokenLib
           tX = Token.ParseTX(stream, SHA256);
 
           TXs.Add(tX);
-
-          Fee += tX.Fee;
-          Header.CountBytesBlock += tX.TXRaw.Count;
 
           merkleList[t] = tX.Hash;
         }

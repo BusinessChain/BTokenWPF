@@ -11,7 +11,7 @@ namespace BTokenLib
   partial class TokenBitcoin : Token
   {
     const long BLOCK_REWARD_INITIAL = 5000000000;
-    const int PERIOD_HALVENING_BLOCK_REWARD = 105000;
+    const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
     const int COUNT_TXS_PER_BLOCK_MAX = 5;
     int NumberOfProcesses = 1;// Math.Max(Environment.ProcessorCount - 1, 1);
@@ -79,12 +79,11 @@ namespace BTokenLib
 
       BlockBitcoin block = new(this);
 
-      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, 0)); // COUNT_TXS_PER_BLOCK_MAX
+      block.TXs.AddRange(TXPool.GetTXs(out int countTXsPool, COUNT_TXS_PER_BLOCK_MAX));
 
       int height = HeaderTip.Height + 1;
 
       long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
-      blockReward += block.TXs.Sum(t => t.Fee);
 
       block.TXs.Insert(0, CreateCoinbaseTX(height, blockReward, sHA256));
 
@@ -102,8 +101,11 @@ namespace BTokenLib
         NBits = nBits,
         Difficulty = difficulty,
         DifficultyAccumulated = HeaderTip.DifficultyAccumulated + difficulty,
-        MerkleRoot = block.ComputeMerkleRoot()
+        MerkleRoot = block.ComputeMerkleRoot(),
+        CountBytesBlock = HeaderBitcoin.COUNT_HEADER_BYTES
       };
+
+      header.CountBytesBlock += block.TXs.Sum(t => t.TXRaw.Count);
 
       block.Header = header;
 

@@ -35,8 +35,6 @@ namespace BTokenLib
     string PathRootToken;
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
-    const int ORDER_AVERAGEING_FEEPERBYTE = 3;
-    double FeeSatoshiPerBytePriorityHigh = 7.06;
 
     public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
     public byte[] IDToken;
@@ -361,12 +359,13 @@ namespace BTokenLib
       $"Insert block {block}.".Log(this, LogFile, LogEntryNotifier);
 
       block.Header.AppendToHeader(HeaderTip);
-      InsertInDatabase(block);
-      AppendHeaderToTip(block.Header);
 
-      //FeeSatoshiPerBytePriorityHigh =
-      //  ((ORDER_AVERAGEING_FEEPERBYTE - 1) * FeeSatoshiPerBytePriorityHigh + block.FeePerByte) /
-      //  ORDER_AVERAGEING_FEEPERBYTE;
+      InsertInDatabase(block);
+
+      HeaderTip.HeaderNext = block.Header;
+      HeaderTip = block.Header;
+
+      IndexingHeaderTip();
 
       TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
 
@@ -599,14 +598,6 @@ namespace BTokenLib
 
       throw new ProtocolException(string.Format(
         "Locator does not root in headerchain."));
-    }
-
-    public void AppendHeaderToTip(Header header)
-    {
-      HeaderTip.HeaderNext = header;
-      HeaderTip = header;
-
-      IndexingHeaderTip();
     }
 
     public bool TryGetHeader(byte[] headerHash, out Header header)

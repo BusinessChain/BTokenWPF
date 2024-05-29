@@ -32,6 +32,8 @@ namespace BTokenLib
     /// </summary>
     public long Value;
 
+    public long Fee;
+
 
     public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)
     {

@@ -113,10 +113,10 @@ namespace BTokenLib
             long blockReward = BLOCK_REWARD_INITIAL >>
               block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
 
-            if (blockReward + block.Fee != tXTokenTransfer.Value)
+            if (blockReward + block.Header.Fee != tXTokenTransfer.Value)
               throw new ProtocolException(
                 $"Output value of Coinbase TX {block.TXs[0]}\n" +
-                $"does not add up to block reward {blockReward} plus block fee {block.Fee}.");
+                $"does not add up to block reward {blockReward} plus block fee {block.Header.Fee}.");
           }
           else
             DatabaseAccounts.SpendInput(tXTokenTransfer);
@@ -217,8 +217,8 @@ namespace BTokenLib
       {
         tX = new TXBTokenValueTransfer(tXRaw, sHA256);
 
-        if (!flagCoinbase && (tX as TXBTokenValueTransfer).IsCoinbase)
-          throw new ProtocolException($"TX is of type coinbase but parser flag says it must not be coinbase.");
+        if (flagCoinbase != (tX as TXBTokenValueTransfer).IsCoinbase)
+          throw new ProtocolException($"TX {tX} does not comply with parser rule regarding coinbase status.");
       }
       else if (typeToken == TypesToken.AnchorToken)
         tX = new TXBTokenAnchor(tXRaw, sHA256);

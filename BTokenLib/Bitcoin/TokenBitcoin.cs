@@ -118,6 +118,12 @@ namespace BTokenLib
 
     protected override void InsertInDatabase(Block block)
     {
+      TXBitcoin tXcoinbase = block.TXs[0] as TXBitcoin;
+      long blockReward = BLOCK_REWARD_INITIAL >> block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+      block.Header.Fee = tXcoinbase.TXOutputs.Sum(o => o.Value) - blockReward;
+
+      block.Header.FeePerByte = (double)block.Header.Fee / block.Header.CountBytesBlock;
+
       WalletBitcoin walletBitcoin = (WalletBitcoin)Wallet;
 
       foreach (TXBitcoin tX in block.TXs)

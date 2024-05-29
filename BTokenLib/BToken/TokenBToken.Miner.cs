@@ -12,7 +12,8 @@ namespace BTokenLib
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
-    const double FACTOR_INCREMENT_FEE_PER_BYTE = 1.02;
+    const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
+    const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
     string PathBlocksMinedUnconfirmed;
     List<BlockBToken> BlocksMined = new();
@@ -20,7 +21,7 @@ namespace BTokenLib
     SHA256 SHA256Miner = SHA256.Create();
     Random RandomGeneratorMiner = new();
 
-    double FeeSatoshiPerByte;
+    double FeeSatoshiPerByteAnchorToken;
 
     List<TokenAnchor> TokensAnchorSelfMinedUnconfirmed = new();
     List<TokenAnchor> TokensAnchorDetectedInBlock = new();
@@ -37,7 +38,10 @@ namespace BTokenLib
       int timerCreateNextToken = 0;
       int timeMinerLoopMilliseconds = 100;
 
-      FeeSatoshiPerByte = TokenParent.HeaderTip.FeeSatoshiPerByteAverage;
+      FeeSatoshiPerByteAnchorToken = TokenParent.HeaderTip.FeePerByte;
+
+      if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
+        FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;
 
       while (IsMining)
       {
@@ -68,7 +72,7 @@ namespace BTokenLib
             timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            TokenAnchor tokenAnchor = MineAnchorToken(0);
+            TokenAnchor tokenAnchor = MineAnchorToken(numberSequence: 0);
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
@@ -100,13 +104,12 @@ namespace BTokenLib
     {
       BlockBToken block = new(this);
 
-      block.TXs.AddRange(TXPool.GetTXs(COUNT_BYTES_PER_BLOCK_MAX));
-      block.Fee = block.TXs.Sum(t => t.Fee);
+      block.TXs.AddRange(TXPool.GetTXs(COUNT_BYTES_PER_BLOCK_MAX, out long feeTXs));
 
       int height = HeaderTip.Height + 1;
 
       long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
-      blockReward += block.Fee;
+      blockReward += feeTXs;
 
       TXBToken tXCoinbase = ((WalletBToken)Wallet).CreateTXCoinbase(blockReward);
 
@@ -129,7 +132,7 @@ namespace BTokenLib
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
-      tokenAnchor.FeeSatoshiPerByte = FeeSatoshiPerByte;
+      tokenAnchor.FeeSatoshiPerByte = FeeSatoshiPerByteAnchorToken;
       tokenAnchor.NumberSequence = numberSequence;
 
       string pathFileBlock = Path.Combine(PathBlocksMinedUnconfirmed, block.ToString());
@@ -193,7 +196,7 @@ namespace BTokenLib
 
         TokenAnchor tokenAnchorNew = MineAnchorToken(tokenAnchorOld.NumberSequence + 1);
 
-        FeeSatoshiPerByte *= FACTOR_INCREMENT_FEE_PER_BYTE;
+        FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
         if (TokenParent.TryBroadcastAnchorToken(tokenAnchorNew))
         {
@@ -214,8 +217,13 @@ namespace BTokenLib
       if (TokensAnchorSelfMinedUnconfirmed.RemoveAll(t => t.TX.Hash.HasEqualElements(tokenAnchor.TX.Hash)) > 0)
       {
         $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-        if(FeeSatoshiPerByte > tokenAnchor.FeeSatoshiPerByte)
-          FeeSatoshiPerByte /= FACTOR_INCREMENT_FEE_PER_BYTE;
+        if(FeeSatoshiPerByteAnchorToken > tokenAnchor.FeeSatoshiPerByte)
+        {
+          FeeSatoshiPerByteAnchorToken /= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
+
+          if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
+            FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;
+        }
       }
       else
         $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);

@@ -7,10 +7,6 @@ namespace BTokenLib
 {
   class BlockBitcoin : Block
   {
-    const long VALUE_REWARD_INITIAL_SATOSHI = 5000000000;
-    const int NUMBER_OF_BLOCKS_HALFING_CYCLE = 210000;
-
-
     public BlockBitcoin(Token token) 
       : base(token)
     { }

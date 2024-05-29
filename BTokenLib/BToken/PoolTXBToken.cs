@@ -170,10 +170,11 @@ namespace BTokenWPF
       TXBundlesSortedByFee.Insert(0, tXBundle);
     }
 
-    public List<TXBToken> GetTXs(int countBytesMax)
+    public List<TXBToken> GetTXs(int countBytesMax, out long feeTotal)
     {
       List<TXBToken> tXs = new();
       int countBytesCurrent = 0;
+      feeTotal = 0;
 
       for (int i = 0; i < TXBundlesSortedByFee.Count; i += 1)
         for (int j = 0; j < TXBundlesSortedByFee[i].TXs.Count; j += 1)
@@ -182,6 +183,7 @@ namespace BTokenWPF
             return tXs;
 
           tXs.Add(TXBundlesSortedByFee[i].TXs[j]);
+          feeTotal += TXBundlesSortedByFee[i].TXs[j].Fee;
         }
 
       return tXs;

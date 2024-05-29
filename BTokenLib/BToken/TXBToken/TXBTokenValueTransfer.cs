@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -40,8 +39,7 @@ namespace BTokenLib
       if (!IsCoinbase)
         VerifySignatureTX(buffer, ref index);
 
-      Hash = sHA256.ComputeHash(
-       sHA256.ComputeHash(buffer));
+      Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer));
     }
   }
 }

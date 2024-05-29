@@ -11,8 +11,6 @@ namespace BTokenLib
 
     public List<byte> TXRaw = new();
 
-    public long Fee;
-
 
     public string GetStringTXRaw()
     {

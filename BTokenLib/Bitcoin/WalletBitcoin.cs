@@ -211,7 +211,6 @@ namespace BTokenLib
       //  }
       //};
 
-
       List<TXOutputWallet> outputsSpendable = OutputsSpendable
         .Where(o => o.Value > feePerTXInput)
         .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
@@ -221,7 +220,7 @@ namespace BTokenLib
       value = outputsSpendable.Sum(o => o.Value);
       feeTXInputScaffold = feePerTXInput * outputsSpendable.Count;
 
-      if (value - feeTXInputScaffold < valueNettoMinimum)
+      if (value - feeTXInputScaffold < valueNettoMinimum || outputsSpendable.Count == 0)
         return false;
 
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
@@ -271,9 +270,7 @@ namespace BTokenLib
           .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if (outputValueUnconfirmedSpent != null)
-        {
           OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
-        }
 
         TXOutputWallet tXOutputWallet = OutputsSpendable.Find(o =>
           o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);

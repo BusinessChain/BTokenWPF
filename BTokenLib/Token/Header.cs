@@ -20,7 +20,6 @@ namespace BTokenLib
     public byte[] HashChild;
 
     public int Height;
-
     public int CountTXs;
 
     public int CountBytesBlock;
@@ -28,6 +27,9 @@ namespace BTokenLib
 
     public double Difficulty;
     public double DifficultyAccumulated;
+
+    public long Fee;
+    public double FeePerByte;
 
 
     public Header()
