@@ -37,7 +37,7 @@ namespace BTokenWPF
 
             UpdateTextBoxWallet();
 
-            //UpdateListBoxTXPool();
+            UpdateListBoxTXPool();
 
             Token.ReleaseLock();
           }
@@ -85,21 +85,33 @@ namespace BTokenWPF
           ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet));
     }
 
-    //int CountTXsPoolOld;
-    //void UpdateListBoxTXPool()
-    //{
-    //  int countTXsPool = Token.TXPool.GetCountTXs();
+    void UpdateListBoxTXPool()
+    {
+      List<TX> tXs = Token.GetTXsFromPool();
 
-    //  if (countTXsPool == CountTXsPoolOld)
-    //    return;
+      ListBoxTXPool.Items.Clear();
 
-    //  List<TX> tXs = Token.TXPool.GetTXs(out CountTXsPoolOld);
+      foreach (TX tX in tXs)
+        ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
+    }
 
-    //  ListBoxTXPool.Items.Clear();
+    void ListBoxTXPool_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+      TX tX = ((ListBoxItemTX)ListBoxTXPool.SelectedItem).TX;
 
-    //  foreach (TX tX in tXs)
-    //    ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
-    //}
+      foreach (Window w in Application.Current.Windows)
+      {
+        DisplayTXWindow windowDisplayTX = w as DisplayTXWindow;
+
+        if (windowDisplayTX != null && windowDisplayTX.TX == tX)
+        {
+          windowDisplayTX.Activate();
+          return;
+        }
+      }
+
+      new DisplayTXWindow(tX).Show();
+    }
 
     void UpdateListBoxHeaderchain()
     {

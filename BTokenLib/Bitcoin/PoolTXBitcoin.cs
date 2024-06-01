@@ -22,7 +22,6 @@ namespace BTokenWPF
     int CountMaxTXsGet;
 
 
-
     public bool TryGetTX(byte[] hashTX, out TXBitcoin tX)
     {
       lock (LOCK_TXsPool)
@@ -69,7 +68,7 @@ namespace BTokenWPF
                 }
 
           if (flagRemoveTXInPoolBeingRBFed)
-            RemoveTXRecursive(tXInPoolBeingRBFed.Hash);
+            RemoveTX(tXInPoolBeingRBFed.Hash, flagRemoveRecursive: true);
 
           TXPoolDict.Add(tX.Hash, tX);
 
@@ -89,14 +88,12 @@ namespace BTokenWPF
       }
     }
 
-    public List<TX> GetTXs(out int countTXsPool, int countMax)
+    public List<TX> GetTXs(int countMax = int.MaxValue)
     {
       lock (LOCK_TXsPool)
       {
         TXsGet.Clear();
         CountMaxTXsGet = countMax;
-
-        countTXsPool = TXPoolDict.Count;
 
         foreach (KeyValuePair<byte[], TXBitcoin> tXInPool in TXPoolDict)
           if (TXsGet.Count < CountMaxTXsGet)
@@ -111,13 +108,13 @@ namespace BTokenWPF
     public void RemoveTXs(IEnumerable<byte[]> hashesTX)
     {
       foreach (byte[] hashTX in hashesTX)
-        RemoveTXRecursive(hashTX);
+        RemoveTX(hashTX, flagRemoveRecursive: false);
     }
 
     /// <summary>
     /// Removes a tX and all tXs that reference its outputs.
     /// </summary>
-    public void RemoveTXRecursive(byte[] hashTX)
+    void RemoveTX(byte[] hashTX, bool flagRemoveRecursive)
     {
       lock (LOCK_TXsPool)
         if (TXPoolDict.Remove(hashTX, out TXBitcoin tX))
@@ -133,9 +130,9 @@ namespace BTokenWPF
                 InputsPool.Remove(tXInput.TXIDOutput);
             }
 
-          if (InputsPool.TryGetValue(hashTX, out tupelInputs))
+          if (flagRemoveRecursive && InputsPool.TryGetValue(hashTX, out tupelInputs))
             foreach ((TXInput input, TXBitcoin tX) tupelInputInPool in tupelInputs.ToList())
-              RemoveTXRecursive(tupelInputInPool.tX.Hash);
+              RemoveTX(tupelInputInPool.tX.Hash, flagRemoveRecursive: true);
         }
     }
 

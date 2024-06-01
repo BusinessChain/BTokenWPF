@@ -105,7 +105,10 @@ namespace BTokenLib
 
       return true;
     }
-   
+
+    public override void ReverseTX(TX tX)
+    { throw new NotImplementedException(); }
+
     public void InsertTXBTokenValueTransfer(TXBTokenValueTransfer tX)
     {
       if (tX.IDAccountSource.HasEqualElements(PublicKeyHash160))

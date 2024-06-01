@@ -205,5 +205,10 @@ namespace BTokenLib
 
       return flagSuccess;
     }
+
+    public override List<TX> GetTXsFromPool()
+    {
+      return TXPool.GetTXs();
+    }
   }
 }

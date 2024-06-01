@@ -10,7 +10,7 @@ namespace BTokenLib
   partial class TokenBToken : Token
   {
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
-    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
+    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
@@ -87,8 +87,6 @@ namespace BTokenLib
               // timeMSCreateNextAnchorToken / 2,
               // timeMSCreateNextAnchorToken * 3 / 2);
             }
-            else
-              IsMining = false;
           }
 
           ReleaseLock();
@@ -140,9 +138,6 @@ namespace BTokenLib
       // File.WriteAllBytes(pathFileBlock, block.Buffer);
 
       BlocksMined.Add(block);
-
-      $"BToken minSignalAnchorTokenDetecteder successfully mined anchor Token {tokenAnchor}.".Log(this, LogFile, LogEntryNotifier);
-
       return tokenAnchor;
     }
 
@@ -161,8 +156,7 @@ namespace BTokenLib
 
           if (BlocksMined.Count > 0)
           {
-            block = BlocksMined.Find(b =>
-            b.Header.Hash.HasEqualElements(headerAnchor.HashChild));
+            block = BlocksMined.Find(b => b.Header.Hash.HasEqualElements(headerAnchor.HashChild));
 
             BlocksMined.Clear();
 
@@ -194,21 +188,17 @@ namespace BTokenLib
 
         $"RBF anchor token {tokenAnchorOld}.".Log(this, LogFile, LogEntryNotifier);
 
-        TokenAnchor tokenAnchorNew = MineAnchorToken(tokenAnchorOld.NumberSequence + 1);
-
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
-        if (TokenParent.TryBroadcastAnchorToken(tokenAnchorNew))
-        {
-          TokensAnchorSelfMinedUnconfirmed.Remove(tokenAnchorOld);
-          TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchorNew);
-          $"RBF'ed anchor token {tokenAnchorOld} by {tokenAnchorNew} referencing block {tokenAnchorNew.HashBlockReferenced.ToHexString()}.".Log(this, LogFile, LogEntryNotifier);
-        }
-        else
-        {
-          IsMining = false;
-          $"Could not RBF anchor token. Stop Miner.".Log(this, LogFile, LogEntryNotifier);
-        }
+        TokenAnchor tokenAnchorNew = MineAnchorToken(tokenAnchorOld.NumberSequence + 1);
+
+        TokenParent.RBFAnchorToken(tokenAnchorOld, tokenAnchorNew);
+
+        TokensAnchorSelfMinedUnconfirmed.Remove(tokenAnchorOld);
+        TokensAnchorSelfMinedUnconfirmed.Add(tokenAnchorNew);
+
+        $"RBF'ed anchor token {tokenAnchorOld} by {tokenAnchorNew} referencing block {tokenAnchorNew.HashBlockReferenced.ToHexString()}."
+          .Log(this, LogFile, LogEntryNotifier);
       }
     }
 

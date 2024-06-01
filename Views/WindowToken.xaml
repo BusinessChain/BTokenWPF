@@ -10,7 +10,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
             <ColumnDefinition/>
-            <ColumnDefinition Width="250"/>
+            <ColumnDefinition/>
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -63,10 +63,16 @@
             <ListBox Name="ListBoxTXPool" FontSize="10"/>-->
         </StackPanel>
 
-        <Label Content="Blockchain" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+        <Label Content="Blockchain / TXPool" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
 
-        <ListBox Name="ListBoxBlockchain" 
-                 FontSize="10" MouseDoubleClick="ListBoxBlockchain_MouseDoubleClick" 
-                 Grid.Row="2" Grid.Column="2"/>
+        <Grid ShowGridLines="True" Grid.Row="2" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <ListBox Grid.Row="0" Name="ListBoxBlockchain" FontSize="10" MouseDoubleClick="ListBoxBlockchain_MouseDoubleClick"/>
+            <ListBox Grid.Row="1" Name="ListBoxTXPool" FontSize="10" MouseDoubleClick="ListBoxTXPool_MouseDoubleClick"/>
+        </Grid>
     </Grid>
 </Window>

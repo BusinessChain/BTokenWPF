@@ -317,5 +317,10 @@ namespace BTokenLib
 
       return flagSuccess;
     }
+
+    public override List<TX> GetTXsFromPool()
+    {
+      return TXPool.GetTXs(int.MaxValue, out long feeTotal);
+    }
   }
 }

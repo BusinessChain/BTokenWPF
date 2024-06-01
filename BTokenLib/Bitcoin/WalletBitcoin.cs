@@ -23,7 +23,7 @@ namespace BTokenLib
     public const byte LengthDataAnchorToken = 70;
 
     public static byte[] PREFIX_ANCHOR_TOKEN =
-      new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(BTokenLib.Token.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
+      new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 
     public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
       PREFIX_ANCHOR_TOKEN.Length + TokenAnchor.LENGTH_IDTOKEN + 32 + 32;
@@ -347,25 +347,12 @@ namespace BTokenLib
       }
     }
 
-    public void ReverseTXsUnconfirmed(List<TXBitcoin> tXs)
+    public override void ReverseTX(TX tX)
     {
-      for(int i = tXs.Count - 1; i > -1; i -= 1)
-      {
-        TXOutputWallet outputValueUnconfirmed =
-          OutputsUnconfirmed.Find(o => o.TXID.HasEqualElements(tXs[i].Hash));
+      OutputsUnconfirmed.RemoveAll(o => o.TXID.HasEqualElements(tX.Hash));
 
-        if (outputValueUnconfirmed != null)
-          OutputsUnconfirmed.Remove(outputValueUnconfirmed);
-
-        foreach (TXInput tXInput in tXs[i].Inputs)
-        {
-          TXOutputWallet outputValueUnconfirmedSpent = OutputsUnconfirmedSpent
-            .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput));
-
-          if (outputValueUnconfirmedSpent != null)
-            OutputsUnconfirmedSpent.Remove(outputValueUnconfirmedSpent);
-        }
-      }
+      foreach (TXInput tXInput in ((TXBitcoin)tX).Inputs)
+        OutputsUnconfirmedSpent.RemoveAll(o => o.TXID.HasEqualElements(tXInput.TXIDOutput));
     }
         
     public override void Clear()

@@ -36,7 +36,6 @@ namespace BTokenLib
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
 
-    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
     public byte[] IDToken;
 
     bool IsLocked;
@@ -381,6 +380,8 @@ namespace BTokenLib
 
     public abstract bool TryGetFromTXPool(byte[] hashTX, out TX tX);
 
+    public abstract List<TX> GetTXsFromPool();
+
     public void CreateImage()
     {
       PathImage.TryMoveDirectoryTo(PathImageOld);
@@ -526,12 +527,18 @@ namespace BTokenLib
       Network.AdvertizeTX(tX);
     }
 
+    public void RBFAnchorToken(
+      TokenAnchor tokenAnchorOld,
+      TokenAnchor tokenAnchorNew)
+    {
+      Wallet.ReverseTX(tokenAnchorOld.TX);
+
+      TryBroadcastAnchorToken(tokenAnchorNew);
+    }
+
     public bool TryBroadcastAnchorToken(TokenAnchor tokenAnchor)
     {
-      byte[] dataAnchorToken = IDENTIFIER_BTOKEN_PROTOCOL
-      .Concat(tokenAnchor.IDToken)
-      .Concat(tokenAnchor.HashBlockReferenced)
-      .Concat(tokenAnchor.HashBlockPreviousReferenced).ToArray();
+      byte[] dataAnchorToken = tokenAnchor.Serialize();
 
       if (Wallet.TryCreateTXData(
         dataAnchorToken, 
