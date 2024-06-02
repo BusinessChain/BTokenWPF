@@ -23,5 +23,44 @@ namespace BTokenLib
     {
       stream.Write(TXRaw.ToArray(), 0, TXRaw.Count);
     }
+
+    public override List<(string label, string value)> GetLabelsValuePairs()
+    {
+      List<(string label, string value)> labelValuePairs = new()
+      {
+        ("Hash", $"{this}")
+      };
+
+      for (int i = 0; i < Inputs.Count; i += 1)
+      {
+        TXInput tXInput = Inputs[i];
+        labelValuePairs.Add(($"Input{i} :: TXIDOutput", $"{tXInput.TXIDOutput.ToHexString()}"));
+        labelValuePairs.Add(($"Input{i} :: OutputIndex", $"{tXInput.OutputIndex}"));
+        labelValuePairs.Add(($"Input{i} :: Sequence", $"{tXInput.Sequence}"));
+      }
+
+      for (int i = 0; i < TXOutputs.Count; i += 1)
+      {
+        TXOutputBitcoin output = TXOutputs[i];
+
+        labelValuePairs.Add(($"Output{i} :: Type", $"{output.Type}"));
+
+        if (output.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
+        {
+          labelValuePairs.Add(($"Output{i} :: PublicKeyHash160", $"{output.PublicKeyHash160.ToHexString()}"));
+          labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
+        }
+        else if(output.Type == TXOutputBitcoin.TypesToken.AnchorToken)
+        {
+          labelValuePairs.Add(($"Output{i} :: IDToken", $"{output.TokenAnchor.IDToken.ToHexString()}"));
+          labelValuePairs.Add(($"Output{i} :: HashBlockReferenced", $"{output.TokenAnchor.HashBlockReferenced.ToHexString()}"));
+          labelValuePairs.Add(($"Output{i} :: HashBlockPreviousReferenced", $"{output.TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
+        }
+      }
+
+      labelValuePairs.Add(($"TXRaw", $"{TXRaw.ToArray().Reverse().ToArray().ToHexString()}"));
+
+      return labelValuePairs;
+    }
   }
 }

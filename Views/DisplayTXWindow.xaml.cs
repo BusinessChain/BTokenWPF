@@ -1,6 +1,8 @@
-﻿using BTokenLib;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows;
+
+using BTokenLib;
 
 namespace BTokenWPF
 {
@@ -14,7 +16,15 @@ namespace BTokenWPF
 
       InitializeComponent();
 
-      Title = $"Block: {tX.Hash.ToHexString()}";
+      Title = $"TX: {tX}";
+
+      List<(string label, string value)> labelValuePairs = tX.GetLabelsValuePairs();
+
+      foreach((string label, string value) labelValuePair in labelValuePairs)
+      {
+        TextBoxTXLabels.Text += labelValuePair.label + "\n";
+        TextBoxTXValues.Text += labelValuePair.value + "\n";
+      }
     }
 
   }

@@ -41,5 +41,23 @@ namespace BTokenLib
 
       Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer));
     }
+
+    public override List<(string label, string value)> GetLabelsValuePairs()
+    {
+      List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();
+
+      if (IsCoinbase)
+        labelValuePairs.Add(($"IsCoinbase", $"{IsCoinbase}"));
+
+      for (int i = 0; i < TXOutputs.Count; i += 1)
+      {
+        TXOutputBToken output = TXOutputs[i];
+
+        labelValuePairs.Add(($"Output{i} :: IDAccount", $"{output.IDAccount.ToHexString()}"));
+        labelValuePairs.Add(($"Output{i} :: Value", $"{Value}"));
+      }
+
+      return labelValuePairs;
+    }
   }
 }

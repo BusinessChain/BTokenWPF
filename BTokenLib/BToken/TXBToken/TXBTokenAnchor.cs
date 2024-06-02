@@ -42,5 +42,16 @@ namespace BTokenLib
       Hash = sHA256.ComputeHash(
        sHA256.ComputeHash(buffer));
     }
+
+    public override List<(string label, string value)> GetLabelsValuePairs()
+    {
+      List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();
+
+      labelValuePairs.Add(($"IDToken", $"{TokenAnchor.IDToken.ToHexString()}"));
+      labelValuePairs.Add(($"HashBlockReferenced", $"{TokenAnchor.HashBlockReferenced.ToHexString()}"));
+      labelValuePairs.Add(($"HashBlockPreviousReferenced", $"{TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
+
+      return labelValuePairs;
+    }
   }
 }

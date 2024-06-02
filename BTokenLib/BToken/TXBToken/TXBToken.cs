@@ -81,6 +81,20 @@ namespace BTokenLib
 
       return text;
     }
+
+    public override List<(string label, string value)> GetLabelsValuePairs()
+    {
+      return new List<(string label, string value)>()
+      {
+        ("Type", $"{GetType().Name}"),
+        ("Hash", $"{this}"),
+        ("IDAccountSource", $"{IDAccountSource.ToHexString()}"),
+        ("BlockheightAccountInit", $"{BlockheightAccountInit}"),
+        ("Nonce", $"{Nonce}"),
+        ("Value", $"{Value}"),
+        ("Fee", $"{Fee}")
+      };
+    }
   }
 }
 
