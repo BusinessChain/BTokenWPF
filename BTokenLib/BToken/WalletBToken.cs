@@ -18,17 +18,21 @@ namespace BTokenLib
       Token = token;
     }
 
-    public TXBToken CreateTXCoinbase(long blockReward)
+    public TXBToken CreateTXCoinbase(long blockReward, int blockHeight)
     {
-      List<byte> tXRaw = new();
+      List<byte> tXRaw = new() 
+      { 
+        (byte)TokenBToken.TypesToken.Coinbase 
+      };
 
-      tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer);
+      tXRaw.AddRange(BitConverter.GetBytes(blockHeight));
+
       tXRaw.Add(0x01); // count outputs
 
       tXRaw.AddRange(BitConverter.GetBytes(blockReward));
       tXRaw.AddRange(PublicKeyHash160);
 
-      return Token.ParseTX(tXRaw.ToArray(), SHA256, flagCoinbase: true);
+      return Token.ParseTX(tXRaw.ToArray(), SHA256);
     }
 
     public override bool TryCreateTX(
@@ -108,28 +112,6 @@ namespace BTokenLib
 
     public override void ReverseTX(TX tX)
     { throw new NotImplementedException(); }
-
-    public void InsertTXBTokenValueTransfer(TXBTokenValueTransfer tX)
-    {
-      if (tX.IDAccountSource.HasEqualElements(PublicKeyHash160))
-      {
-        $"Try spend from {Token} wallet: {tX.IDAccountSource.ToHexString()} nonce: {tX.Nonce}."
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-        AddTXToHistory(tX);
-      }
-
-      foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-      {
-        if (!tXOutput.IDAccount.HasEqualElements(PublicKeyHash160))
-          continue;
-
-        $"AddOutput to wallet {Token}, TXID: {tX.Hash.ToHexString()}, Index {tX.TXOutputs.IndexOf(tXOutput)}, Value {tXOutput.Value}"
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-        AddTXToHistory(tX);
-      }
-    }
 
     public override long GetBalance()
     {

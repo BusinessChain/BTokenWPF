@@ -22,9 +22,10 @@ namespace BTokenLib
 
     public enum TypesToken
     {
-      ValueTransfer = 0,
-      AnchorToken = 1,
-      Data = 2
+      Coinbase = 0,
+      ValueTransfer = 1,
+      AnchorToken = 2,
+      Data = 3
     }
 
 
@@ -102,29 +103,51 @@ namespace BTokenLib
     {
       WalletBToken walletBToken = (WalletBToken)Wallet;
 
-      foreach (TXBToken tX in block.TXs)
+      TXBTokenCoinbase tXCoinbase = block.TXs[0] as TXBTokenCoinbase;
+
+      if (tXCoinbase != null)
       {
+        long blockReward = BLOCK_REWARD_INITIAL >>
+          block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+
+        if (blockReward + block.Header.Fee != tXCoinbase.Value)
+          throw new ProtocolException(
+            $"Output value of Coinbase TX {block.TXs[0]}\n" +
+            $"does not add up to block reward {blockReward} plus block fee {block.Header.Fee}.");
+
+        foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+        {
+          DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+
+          if (walletBToken.PublicKeyHash160.HasEqualElements(tXOutput.IDAccount))
+            walletBToken.AddTXToHistory(tXCoinbase);
+        }
+
+      }
+      else
+        throw new ProtocolException($"First tX of block {block} is not coinbase.");
+
+
+      for (int i = 1; i < block.TXs.Count; i += 1)
+      {
+        TXBToken tX = (TXBToken)block.TXs[i];
+
         if(tX is TXBTokenValueTransfer)
         {
           TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
 
-          if (tXTokenTransfer.IsCoinbase)
-          {
-            long blockReward = BLOCK_REWARD_INITIAL >>
-              block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+          DatabaseAccounts.SpendInput(tXTokenTransfer);
 
-            if (blockReward + block.Header.Fee != tXTokenTransfer.Value)
-              throw new ProtocolException(
-                $"Output value of Coinbase TX {block.TXs[0]}\n" +
-                $"does not add up to block reward {blockReward} plus block fee {block.Header.Fee}.");
-          }
-          else
-            DatabaseAccounts.SpendInput(tXTokenTransfer);
+          if (tXTokenTransfer.IDAccountSource.HasEqualElements(walletBToken.PublicKeyHash160))
+            walletBToken.AddTXToHistory(tXTokenTransfer);
 
           foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+          {
             DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
 
-          walletBToken.InsertTXBTokenValueTransfer(tXTokenTransfer);
+            if (walletBToken.PublicKeyHash160.HasEqualElements(tXOutput.IDAccount))
+              walletBToken.AddTXToHistory(tXTokenTransfer);
+          }
         }
         else if(tX is TXBTokenAnchor)
         {
@@ -135,7 +158,7 @@ namespace BTokenLib
 
         }
         else
-          throw new ProtocolException($"Unknown token type {tX.GetType().Name}");
+          throw new ProtocolException($"Invalid token type {tX.GetType().Name}.");
       }
 
       DatabaseAccounts.UpdateHashDatabase();
@@ -191,35 +214,26 @@ namespace BTokenLib
       return new BlockBToken(this);
     }
 
-    public override TX ParseTX(
-      Stream stream,
-      SHA256 sHA256,
-      bool flagCoinbase = false)
+    public override TX ParseTX(Stream stream, SHA256 sHA256)
     {
       int lengthTXRaw = VarInt.GetInt(stream);
 
       byte[] tXRaw = new byte[lengthTXRaw];
       stream.Read(tXRaw, 0, lengthTXRaw);
 
-      return ParseTX(tXRaw, sHA256, flagCoinbase);
+      return ParseTX(tXRaw, sHA256);
     }
 
-    public TXBToken ParseTX(
-      byte[] tXRaw,
-      SHA256 sHA256,
-      bool flagCoinbase = false)
+    public TXBToken ParseTX(byte[] tXRaw, SHA256 sHA256)
     {
       TXBToken tX;
 
       var typeToken = (TypesToken)tXRaw[0];
 
-      if (typeToken == TypesToken.ValueTransfer)
-      {
+      if (typeToken == TypesToken.Coinbase)
+        tX = new TXBTokenCoinbase(tXRaw, sHA256);
+      else if (typeToken == TypesToken.ValueTransfer)
         tX = new TXBTokenValueTransfer(tXRaw, sHA256);
-
-        if (flagCoinbase != (tX as TXBTokenValueTransfer).IsCoinbase)
-          throw new ProtocolException($"TX {tX} does not comply with parser rule regarding coinbase status.");
-      }
       else if (typeToken == TypesToken.AnchorToken)
         tX = new TXBTokenAnchor(tXRaw, sHA256);
       else if (typeToken == TypesToken.Data)

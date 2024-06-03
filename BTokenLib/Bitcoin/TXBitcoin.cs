@@ -47,7 +47,7 @@ namespace BTokenLib
 
         if (output.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
         {
-          labelValuePairs.Add(($"Output{i} :: PublicKeyHash160", $"{output.PublicKeyHash160.ToHexString()}"));
+          labelValuePairs.Add(($"Output{i} :: PublicKeyHash160", $"{output.PublicKeyHash160.BinaryToBase58Check()}"));
           labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
         }
         else if(output.Type == TXOutputBitcoin.TypesToken.AnchorToken)

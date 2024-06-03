@@ -6,19 +6,21 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public class TXBTokenValueTransfer : TXBToken
+  public class TXBTokenCoinbase : TXBToken
   {
+    public int BlockHeight;
     public List<TXOutputBToken> TXOutputs = new();
 
 
-    public TXBTokenValueTransfer()
+    public TXBTokenCoinbase()
     { }
 
-    public TXBTokenValueTransfer(byte[] buffer, SHA256 sHA256)
+    public TXBTokenCoinbase(byte[] buffer, SHA256 sHA256)
     {
       int index = 1;
 
-      ParseTXBTokenInput(buffer, ref index, sHA256);
+      BlockHeight = BitConverter.ToInt32(buffer, index);
+      index += 4;
 
       int countOutputs = VarInt.GetInt(buffer, ref index);
 
@@ -29,8 +31,6 @@ namespace BTokenLib
 
         Value += tXOutput.Value;
       }
-
-      VerifySignatureTX(buffer, ref index);
 
       Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer));
     }

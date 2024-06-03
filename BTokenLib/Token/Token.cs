@@ -432,10 +432,7 @@ namespace BTokenLib
 
     public abstract Block CreateBlock();
 
-    public abstract TX ParseTX(
-      Stream stream,
-      SHA256 sHA256,
-      bool flagCoinbase = false);
+    public abstract TX ParseTX(Stream stream, SHA256 sHA256);
 
     public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
     {

@@ -158,7 +158,7 @@ namespace BTokenLib
 
       MemoryStream stream = new(tXRaw.ToArray());
 
-      return ParseTX(stream, sHA256, flagCoinbase: true);
+      return ParseTX(stream, sHA256);
     }
   }
 }

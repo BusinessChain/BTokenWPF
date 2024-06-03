@@ -88,7 +88,7 @@ namespace BTokenLib
       {
         ("Type", $"{GetType().Name}"),
         ("Hash", $"{this}"),
-        ("IDAccountSource", $"{IDAccountSource.ToHexString()}"),
+        ("IDAccountSource", $"{IDAccountSource.BinaryToBase58Check()}"),
         ("BlockheightAccountInit", $"{BlockheightAccountInit}"),
         ("Nonce", $"{Nonce}"),
         ("Value", $"{Value}"),

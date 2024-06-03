@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -46,8 +47,20 @@ namespace BTokenLib
       return ToHexString(list.ToArray());
     }
 
-    public static string ToBase58String(this byte[] ba)
+    public static string BinaryToBase58Check(this byte[] byteArray)
     {
+      List<byte> pubKey = byteArray.ToList();
+      pubKey.Insert(0, 0x00);
+
+      SHA256 sHA256 = SHA256.Create();
+
+      byte[] checksum = sHA256.ComputeHash(
+        sHA256.ComputeHash(pubKey.ToArray()));
+
+      pubKey.AddRange(checksum.Take(4));
+
+      byte[] ba = pubKey.ToArray();
+
       Org.BouncyCastle.Math.BigInteger addrremain = new Org.BouncyCastle.Math.BigInteger(1, ba);
 
       Org.BouncyCastle.Math.BigInteger big0 = new Org.BouncyCastle.Math.BigInteger("0");
@@ -69,8 +82,8 @@ namespace BTokenLib
       {
         if (b != 0) break;
         rv = "1" + rv;
-
       }
+
       return rv;
     }
 

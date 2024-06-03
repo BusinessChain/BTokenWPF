@@ -51,10 +51,7 @@ namespace BTokenLib
 
       if (tXCount == 1)
       {
-        TX tX = Token.ParseTX(
-          stream,
-          SHA256,
-          flagCoinbase: true);
+        TX tX = Token.ParseTX(stream, SHA256);
 
         TXs.Add(tX);
       }
@@ -63,10 +60,7 @@ namespace BTokenLib
         int tXsLengthMod2 = tXCount & 1;
         var merkleList = new byte[tXCount + tXsLengthMod2][];
 
-        TX tX = Token.ParseTX(
-          stream,
-          SHA256,
-          flagCoinbase: true);
+        TX tX = Token.ParseTX(stream, SHA256);
 
         TXs.Add(tX);
 

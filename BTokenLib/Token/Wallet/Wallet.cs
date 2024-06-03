@@ -25,7 +25,6 @@ namespace BTokenLib
     protected List<TXOutputWallet> OutputsUnconfirmedSpent = new();
 
 
-
     public Wallet(string privKeyDec)
     {
       PrivKeyDec = privKeyDec;
@@ -34,7 +33,7 @@ namespace BTokenLib
 
       PublicKeyHash160 = Crypto.ComputeHash160(PublicKey, SHA256);
 
-      AddressAccount = PubKeyHashToBase58Check(PublicKeyHash160);
+      AddressAccount = PublicKeyHash160.BinaryToBase58Check();
     }
 
     public abstract bool TryCreateTX(string address, long value, double feePerByte, out TX tX);
@@ -63,20 +62,7 @@ namespace BTokenLib
       Array.Copy(bb, 1, rv, 0, bb.Length - 5);
       return rv;
     }
-
-    public string PubKeyHashToBase58Check(byte[] pubKeyArray)
-    {
-      List<byte> pubKey = pubKeyArray.ToList();
-      pubKey.Insert(0, 0x00);
-
-      byte[] checksum = SHA256.ComputeHash(
-        SHA256.ComputeHash(pubKey.ToArray()));
-
-      pubKey.AddRange(checksum.Take(4));
-
-      return pubKey.ToArray().ToBase58String();
-    }
-       
+           
     public virtual void LoadImage(string path)
     {
       byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
@@ -150,7 +136,7 @@ namespace BTokenLib
       }
     }
 
-    protected void AddTXToHistory(TX tX)
+    public void AddTXToHistory(TX tX)
     {
       if (!HistoryTransactions.Any(t => t.Hash.HasEqualElements(tX.Hash)))
         HistoryTransactions.Add(tX);

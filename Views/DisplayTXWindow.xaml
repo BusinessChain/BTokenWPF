@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BTokenWPF"
         mc:Ignorable="d"
-        Title="DisplayTXWindow" Height="300" Width="700">
+        Title="DisplayTXWindow">
 
-    <Grid HorizontalAlignment="Center" Margin="10" Width="650">
+    <Grid HorizontalAlignment="Center" Margin="10">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="30*"/>
-            <ColumnDefinition Width="70*"/>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
         </Grid.ColumnDefinitions>
 
         <TextBox Name="TextBoxTXLabels" IsReadOnly="True" Grid.Column="0" FontWeight="Bold" TextAlignment="Right"/>
