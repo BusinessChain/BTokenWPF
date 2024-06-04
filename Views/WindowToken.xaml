@@ -59,8 +59,6 @@
             <Button Name="ButtonMakeTX" Content="Make TX" Click="ButtonMakeTX_Click" Margin="0,5,0,5"/>
             <ListBox Name="ListBoxWallet" FontSize="10"/>
 
-            <!--<Label Content="TX Pool" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
-            <ListBox Name="ListBoxTXPool" FontSize="10"/>-->
         </StackPanel>
 
         <Label Content="Blockchain / TXPool" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>

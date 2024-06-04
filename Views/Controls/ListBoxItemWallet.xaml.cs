@@ -17,15 +17,18 @@ namespace BTokenWPF
       LabelIndex.Content = $"Index";
       LabelValue.HorizontalAlignment = HorizontalAlignment.Center;
       LabelValue.Content = $"Value";
+      LabelStatus.HorizontalAlignment = HorizontalAlignment.Center;
+      LabelStatus.Content = $"Status";
     }
 
-    public ListBoxItemWallet(TXOutputWallet tXOutputWallet)
+    public ListBoxItemWallet(TXOutputWallet tXOutputWallet, string status)
     {
       InitializeComponent();
 
       LabelTXID.Content = $"{tXOutputWallet.TXID.ToHexString().Substring(0, 16) + " ..."}";
       LabelIndex.Content = $"{tXOutputWallet.Index}";
       LabelValue.Content = $"{tXOutputWallet.Value}";
+      LabelStatus.Content = $"{status}";
     }
   }
 }

@@ -11,10 +11,12 @@
             <ColumnDefinition Width="120"/>
             <ColumnDefinition Width="40"/>
             <ColumnDefinition Width="70"/>
+            <ColumnDefinition Width="70"/>
         </Grid.ColumnDefinitions>
 
         <Label Name="LabelTXID" HorizontalAlignment="Left" Grid.Column="0"/>
         <Label Name="LabelIndex" HorizontalAlignment="Center" Grid.Column="1"/>
         <Label Name="LabelValue" HorizontalAlignment="Right" Grid.Column="2"/>
+        <Label Name="LabelStatus" HorizontalAlignment="Right" Grid.Column="3"/>
     </Grid>
 </UserControl>

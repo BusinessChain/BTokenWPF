@@ -21,8 +21,8 @@ namespace BTokenLib
 
     public List<TX> HistoryTransactions = new();
 
-    protected List<TXOutputWallet> OutputsUnconfirmed = new();
-    protected List<TXOutputWallet> OutputsUnconfirmedSpent = new();
+    public List<TXOutputWallet> OutputsUnconfirmed = new();
+    public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
 
 
     public Wallet(string privKeyDec)
@@ -69,7 +69,7 @@ namespace BTokenLib
         Path.Combine(path, "walletHistoryTransactions"));
 
       LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      LoadOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
+      LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
     }
 
     protected static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
@@ -112,7 +112,7 @@ namespace BTokenLib
       }
 
       StoreOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      StoreOutputs(OutputsUnconfirmedSpent, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
+      StoreOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
     }
 
     protected static void StoreOutputs(List<TXOutputWallet> outputs, string fileName)
@@ -147,7 +147,7 @@ namespace BTokenLib
     public virtual void Clear()
     {
       OutputsUnconfirmed.Clear();
-      OutputsUnconfirmedSpent.Clear();
+      OutputsSpentUnconfirmed.Clear();
     }
   }
 }
