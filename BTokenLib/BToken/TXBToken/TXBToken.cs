@@ -8,8 +8,8 @@ namespace BTokenLib
 {
   public abstract class TXBToken : TX
   {
-    public const int LENGTH_PUBKEYCOMPRESSED = 33;
-    public byte[] PublicKey = new byte[LENGTH_PUBKEYCOMPRESSED];
+    const int LENGTH_PUBKEYCOMPRESSED = 33;
+    byte[] PublicKey = new byte[LENGTH_PUBKEYCOMPRESSED];
 
     public const int LENGTH_IDACCOUNT = 20;
     public byte[] IDAccountSource = new byte[LENGTH_IDACCOUNT];
@@ -34,6 +34,16 @@ namespace BTokenLib
 
     public long Fee;
 
+
+    public override bool IsSuccessorTo(TX tX)
+    {
+      TXBToken tXBToken = tX as TXBToken;
+
+      return tXBToken != null
+        && IDAccountSource.HasEqualElements(tXBToken.IDAccountSource)
+        && BlockheightAccountInit == tXBToken.BlockheightAccountInit
+        && Nonce == tXBToken.Nonce + 1;
+    }
 
     public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)
     {

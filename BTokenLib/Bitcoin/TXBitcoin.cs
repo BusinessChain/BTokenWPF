@@ -8,9 +8,23 @@ namespace BTokenLib
 {
   public class TXBitcoin : TX
   {
-    public List<TXInput> Inputs = new();
+    public List<TXInputBitcoin> Inputs = new();
     public List<TXOutputBitcoin> TXOutputs = new();
 
+
+    public override bool IsSuccessorTo(TX tX)
+    {
+      TXBitcoin tXBitcoin = tX as TXBitcoin;
+
+      if(tXBitcoin != null)
+      {
+        foreach(TXInputBitcoin tXInput in Inputs)
+          if (tXInput.TXIDOutput.HasEqualElements(tX.Hash))
+            return true;
+      }
+
+      return false;
+    }
 
     public override string Print()
     {
@@ -33,7 +47,7 @@ namespace BTokenLib
 
       for (int i = 0; i < Inputs.Count; i += 1)
       {
-        TXInput tXInput = Inputs[i];
+        TXInputBitcoin tXInput = Inputs[i];
         labelValuePairs.Add(($"Input{i} :: TXIDOutput", $"{tXInput.TXIDOutput.ToHexString()}"));
         labelValuePairs.Add(($"Input{i} :: OutputIndex", $"{tXInput.OutputIndex}"));
         labelValuePairs.Add(($"Input{i} :: Sequence", $"{tXInput.Sequence}"));

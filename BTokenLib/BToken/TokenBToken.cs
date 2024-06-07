@@ -42,36 +42,11 @@ namespace BTokenLib
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
       TokenParent.HeaderGenesis.HashChild = HeaderGenesis.Hash;
 
-      PathBlocksMinedUnconfirmed = Path.Combine(
-        GetName(),
-        "BlocksMinedUnconfirmed");
-
-      Directory.CreateDirectory(PathBlocksMinedUnconfirmed);
-      LoadMinedUnconfirmed();
+      AnchorTokenConsensusAlgorithm = new(GetName());
 
       Wallet = new WalletBToken(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
-    }
-
-    void LoadMinedUnconfirmed()
-    {
-      foreach (string pathFile in Directory.GetFiles(PathBlocksMinedUnconfirmed))
-      {
-        try
-        {
-          BlockBToken block = new(this);
-          block.Parse(File.ReadAllBytes(pathFile));
-          BlocksMined.Add(block);
-
-          //TokensAnchorMinedUnconfirmed.Add(tokenAnchor);
-        }
-        catch (Exception ex)
-        {
-          $"Failed to parse unconfirmed mined block {pathFile}.\n{ex.Message}"
-            .Log(this, LogFile, LogEntryNotifier);
-        }
-      }
     }
 
     public override Header CreateHeaderGenesis()

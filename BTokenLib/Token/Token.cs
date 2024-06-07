@@ -524,13 +524,13 @@ namespace BTokenLib
       Network.AdvertizeTX(tX);
     }
 
-    public void RBFAnchorToken(
+    public bool TryRBFAnchorToken(
       TokenAnchor tokenAnchorOld,
       TokenAnchor tokenAnchorNew)
     {
       Wallet.ReverseTX(tokenAnchorOld.TX);
 
-      TryBroadcastAnchorToken(tokenAnchorNew);
+      return TryBroadcastAnchorToken(tokenAnchorNew);
     }
 
     public bool TryBroadcastAnchorToken(TokenAnchor tokenAnchor)

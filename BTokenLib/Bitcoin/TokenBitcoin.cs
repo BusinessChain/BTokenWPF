@@ -78,7 +78,7 @@ namespace BTokenLib
           throw new NotImplementedException("Segwit is not implemented.");
 
         for (int i = 0; i < countInputs; i += 1)
-          tX.Inputs.Add(new TXInput(stream));
+          tX.Inputs.Add(new TXInputBitcoin(stream));
 
         int countTXOutputs = VarInt.GetInt(stream);
 

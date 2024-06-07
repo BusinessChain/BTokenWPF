@@ -29,5 +29,7 @@ namespace BTokenLib
     {
       return Hash.ToHexString();
     }
+
+    public abstract bool IsSuccessorTo(TX tX);
   }
 }

@@ -12,7 +12,7 @@ namespace BTokenWPF
     readonly object LOCK_TXsPool = new(); 
     const bool FLAG_ENABLE_RBF = true;
 
-    Dictionary<byte[], List<(TXInput, TXBitcoin)>> InputsPool =
+    Dictionary<byte[], List<(TXInputBitcoin, TXBitcoin)>> InputsPool =
       new(new EqualityComparerByteArray());
 
     Dictionary<byte[], TXBitcoin> TXPoolDict =
@@ -43,9 +43,9 @@ namespace BTokenWPF
       {
         lock (LOCK_TXsPool)
         {
-          foreach (TXInput tXInput in tX.Inputs)
-            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInput, TXBitcoin)> inputsInPool))
-              foreach ((TXInput input, TX tX) tupelInputsInPool in inputsInPool)
+          foreach (TXInputBitcoin tXInput in tX.Inputs)
+            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin, TXBitcoin)> inputsInPool))
+              foreach ((TXInputBitcoin input, TX tX) tupelInputsInPool in inputsInPool)
                 if (tupelInputsInPool.input.OutputIndex == tXInput.OutputIndex)
                 {
                   Debug.WriteLine(
@@ -72,11 +72,11 @@ namespace BTokenWPF
 
           TXPoolDict.Add(tX.Hash, tX);
 
-          foreach (TXInput tXInput in tX.Inputs)
-            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInput input, TXBitcoin)> inputsInPool))
+          foreach (TXInputBitcoin tXInput in tX.Inputs)
+            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin input, TXBitcoin)> inputsInPool))
               inputsInPool.Add((tXInput, tX));
             else
-              InputsPool.Add(tXInput.TXIDOutput, new List<(TXInput, TXBitcoin)>() { (tXInput, tX) });
+              InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
 
           return true;
         }
@@ -119,9 +119,9 @@ namespace BTokenWPF
       lock (LOCK_TXsPool)
         if (TXPoolDict.Remove(hashTX, out TXBitcoin tX))
         {
-          List<(TXInput input, TXBitcoin)> tupelInputs = null;
+          List<(TXInputBitcoin input, TXBitcoin)> tupelInputs = null;
 
-          foreach (TXInput tXInput in tX.Inputs)
+          foreach (TXInputBitcoin tXInput in tX.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out tupelInputs))
             {
               tupelInputs.RemoveAll(t => t.input.OutputIndex == tXInput.OutputIndex);
@@ -131,7 +131,7 @@ namespace BTokenWPF
             }
 
           if (flagRemoveRecursive && InputsPool.TryGetValue(hashTX, out tupelInputs))
-            foreach ((TXInput input, TXBitcoin tX) tupelInputInPool in tupelInputs.ToList())
+            foreach ((TXInputBitcoin input, TXBitcoin tX) tupelInputInPool in tupelInputs.ToList())
               RemoveTX(tupelInputInPool.tX.Hash, flagRemoveRecursive: true);
         }
     }
@@ -147,7 +147,7 @@ namespace BTokenWPF
 
       foreach (TXBitcoin tXBranch in tXsBranch)
       {
-        foreach (TXInput input in tXBranch.Inputs)
+        foreach (TXInputBitcoin input in tXBranch.Inputs)
         {
           if (TXsGet.Count >= CountMaxTXsGet)
             return;
@@ -162,7 +162,7 @@ namespace BTokenWPF
 
     void TraceTXToLeaf(List<TXBitcoin> tXsBranch)
     {
-      foreach (TXInput input in tXsBranch[0].Inputs)
+      foreach (TXInputBitcoin input in tXsBranch[0].Inputs)
         if (TXPoolDict.TryGetValue(input.TXIDOutput, out TXBitcoin tXInPool) &&
             !TXsGet.Contains(tXInPool))
         {

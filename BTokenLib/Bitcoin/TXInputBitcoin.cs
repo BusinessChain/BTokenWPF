@@ -4,7 +4,7 @@ using System.IO;
 
 namespace BTokenLib
 {
-  public class TXInput
+  public class TXInputBitcoin
   {
     const int HASH_BYTE_SIZE = 32;
 
@@ -14,11 +14,11 @@ namespace BTokenLib
     public int Sequence;
 
 
-    public TXInput()
+    public TXInputBitcoin()
     { }
 
 
-    public TXInput(byte[] buffer, ref int index)
+    public TXInputBitcoin(byte[] buffer, ref int index)
     {
       TXIDOutput = new byte[HASH_BYTE_SIZE];
 
@@ -35,7 +35,7 @@ namespace BTokenLib
       index += 4;
     }
 
-    public TXInput(Stream stream)
+    public TXInputBitcoin(Stream stream)
     {
       TXIDOutput = new byte[HASH_BYTE_SIZE];
 

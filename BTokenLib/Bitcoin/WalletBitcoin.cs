@@ -260,7 +260,7 @@ namespace BTokenLib
 
     public void InsertTX(TXBitcoin tX)
     {
-      foreach (TXInput tXInput in tX.Inputs)
+      foreach (TXInputBitcoin tXInput in tX.Inputs)
       {
         OutputsSpentUnconfirmed.RemoveAll(
           o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
@@ -302,7 +302,7 @@ namespace BTokenLib
 
     public void InsertTXUnconfirmed(TXBitcoin tX)
     {
-      foreach (TXInput tXInput in tX.Inputs)
+      foreach (TXInputBitcoin tXInput in tX.Inputs)
       {
         TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsUnconfirmed).ToList()
           .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
@@ -330,7 +330,7 @@ namespace BTokenLib
     {
       OutputsUnconfirmed.RemoveAll(o => o.TXID.HasEqualElements(tX.Hash));
 
-      foreach (TXInput tXInput in ((TXBitcoin)tX).Inputs)
+      foreach (TXInputBitcoin tXInput in ((TXBitcoin)tX).Inputs)
         OutputsSpentUnconfirmed.RemoveAll(o => o.TXID.HasEqualElements(tXInput.TXIDOutput));
     }
         

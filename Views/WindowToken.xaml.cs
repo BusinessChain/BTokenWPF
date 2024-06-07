@@ -82,13 +82,12 @@ namespace BTokenWPF
       if (Token.Wallet is WalletBitcoin)
       {
         foreach (TXOutputWallet tXOutputWallet in ((WalletBitcoin)Token.Wallet).OutputsSpendable)
-          ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "confirmed"));
+          if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
+            ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "confirmed"));
 
         foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsUnconfirmed)
-          ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "unconfirmed"));
-
-        foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsSpentUnconfirmed)
-          ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "spent unconfirmed"));
+          if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
+            ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "unconfirmed"));
       }
     }
 

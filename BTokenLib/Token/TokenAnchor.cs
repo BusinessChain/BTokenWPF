@@ -20,6 +20,7 @@ namespace BTokenLib
     public byte[] HashBlockPreviousReferenced = new byte[32];
 
     public TX TX;
+    public Block BlockAnchored;
 
     public TokenAnchor Copy()
     {
