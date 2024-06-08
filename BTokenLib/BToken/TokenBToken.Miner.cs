@@ -135,20 +135,25 @@ namespace BTokenLib
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
       if (AnchorTokenConsensusAlgorithm.TryGetAnchorTokenWinner(
-        headerAnchor.Hash, 
+        headerAnchor, 
         out TokenAnchor tokenAnchorWinner))
       {
-        try
-        {
-          ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
-            $"{tokenAnchorWinner.BlockAnchored}.").Log(this, LogFile, LogEntryNotifier);
+        ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
+          $"{tokenAnchorWinner.BlockAnchored}.").Log(this, LogFile, LogEntryNotifier);
 
-          InsertBlock(tokenAnchorWinner.BlockAnchored);
-        }
-        catch (Exception ex)
+        if (tokenAnchorWinner.BlockAnchored != null)
         {
-          ($"{ex.GetType().Name} when inserting anchored block {tokenAnchorWinner.BlockAnchored}:\n" +
-            $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
+          try
+          {
+            InsertBlock(tokenAnchorWinner.BlockAnchored);
+          }
+          catch (Exception ex)
+          {
+            ($"{ex.GetType().Name} when inserting anchored block {tokenAnchorWinner.BlockAnchored}:\n" +
+              $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
+          }
+
+          Network.AdvertizeBlockToNetwork(tokenAnchorWinner.BlockAnchored);
         }
       }
       

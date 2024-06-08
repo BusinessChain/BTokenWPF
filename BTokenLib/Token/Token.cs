@@ -366,12 +366,12 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
-      TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
-
       Archiver.ArchiveBlock(block);
 
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
         CreateImage();
+
+      TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
     }
 
     protected abstract void InsertInDatabase(Block block);

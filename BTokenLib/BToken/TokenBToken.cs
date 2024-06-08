@@ -59,8 +59,6 @@ namespace BTokenLib
         unixTimeSeconds: 1231006505,
         nonce: 0);
 
-      header.DifficultyAccumulated = header.Difficulty;
-
       return header;
     }
 

@@ -12,13 +12,9 @@ namespace BTokenLib
 
     public byte[] HashDatabase = new byte[32];
 
-    static uint InitializerNonce;
-
 
     public HeaderBToken()
     {
-      Nonce = InitializerNonce++;
-
       Difficulty = 1;
     }
 

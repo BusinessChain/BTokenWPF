@@ -27,9 +27,7 @@ namespace BTokenLib
     {
       PathBackupAnchorTokenConsensusAlgorithm = Path.Combine(
         nameToken,
-        "BlocksMinedUnconfirmed");
-
-      Directory.CreateDirectory(PathBackupAnchorTokenConsensusAlgorithm);
+        "AnchorTokenConsensusAlgorithm");
 
       LoadImage();
     }
@@ -53,6 +51,7 @@ namespace BTokenLib
 
       if (tokenAnchor.TX.Hash.HasEqualElements(TokensAnchorsMined[0].TX.Hash))
       {
+        tokenAnchor.BlockAnchored = TokensAnchorsMined[0].BlockAnchored;
         TokensAnchorsMined.RemoveAt(0);
         flagTokenAnchorWasSelfMined = true;
       }
@@ -66,9 +65,11 @@ namespace BTokenLib
         TokensAnchorsMined = new() { tokenAnchor };
     }
 
-    public bool TryGetAnchorTokenWinner(byte[] hashHeaderAnchor, out TokenAnchor tokenAnchorWinner)
+    public bool TryGetAnchorTokenWinner(
+      Header headerAnchor, 
+      out TokenAnchor tokenAnchorWinner)
     {
-      byte[] targetValue = SHA256.ComputeHash(hashHeaderAnchor);
+      byte[] targetValue = SHA256.ComputeHash(headerAnchor.Hash);
       byte[] biggestDifferenceTemp = new byte[32];
       tokenAnchorWinner = null;
 
@@ -82,6 +83,7 @@ namespace BTokenLib
           {
             biggestDifferenceTemp = differenceHash;
             tokenAnchorWinner = branchTokenAnchor.Last();
+            headerAnchor.HashChild = tokenAnchorWinner.HashBlockReferenced;
           }
         };
 
@@ -105,7 +107,14 @@ namespace BTokenLib
 
     public void LoadImage()
     {
-      byte[] buffer = File.ReadAllBytes(PathBackupAnchorTokenConsensusAlgorithm);
+      try
+      {
+        byte[] buffer = File.ReadAllBytes(PathBackupAnchorTokenConsensusAlgorithm);
+      }
+      catch
+      {
+
+      }
 
       // Parse module
     }
