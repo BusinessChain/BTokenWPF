@@ -114,14 +114,14 @@ namespace BTokenLib
         Height = height,
         UnixTimeSeconds = (uint)DateTimeOffset.Now.ToUnixTimeSeconds(),
         MerkleRoot = block.ComputeMerkleRoot(),
-        CountTXs = block.TXs.Count
+        CountTXs = block.TXs.Count,
+        Fee = feeTXs
       };
 
       block.Header.ComputeHash(SHA256Miner);
 
       TokenAnchor tokenAnchor = new();
 
-      tokenAnchor.BlockAnchored = block;
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
@@ -131,6 +131,7 @@ namespace BTokenLib
       return tokenAnchor;
     }
 
+    List<Block> BocksMined = new();
 
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
@@ -139,21 +140,71 @@ namespace BTokenLib
         out TokenAnchor tokenAnchorWinner))
       {
         ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
-          $"{tokenAnchorWinner.BlockAnchored}.").Log(this, LogFile, LogEntryNotifier);
+          $"{tokenAnchorWinner.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
 
-        if (tokenAnchorWinner.BlockAnchored != null)
-        {
+        Block blockMined = BocksMined.Find(b => b.Header.Hash.HasEqualElements(tokenAnchorWinner.HashBlockReferenced)) 
+          ?? null;
+
+        string pathBlockMined = Path.Combine(PathBlockMined, tokenAnchorWinner.HeightBlockReferenced.ToString());
+
+        while (true)
           try
           {
-            InsertBlock(tokenAnchorWinner.BlockAnchored);
+            using (FileStream fileStream = new(
+              pathBlockMined,
+              FileMode.Open,
+              FileAccess.Read,
+              FileShare.None))
+            {
+              blockMined = ParseBlock(fileStream);
+            }
+
+            break;
+          }
+          catch (FileNotFoundException)
+          {
+            break;
+          }
+          catch (IOException ex)
+          {
+            ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+              $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+
+            Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
           }
           catch (Exception ex)
           {
-            ($"{ex.GetType().Name} when inserting anchored block {tokenAnchorWinner.BlockAnchored}:\n" +
+            $"{ex.GetType().Name} when trying to load block height {tokenAnchorWinner.HeightBlockReferenced} from archive."
+            .Log(this, LogEntryNotifier);
+
+            break;
+          }
+
+        if (blockMined != null)
+        {
+          try
+          {
+            InsertBlock(blockMined);
+          }
+          catch (Exception ex)
+          {
+            ($"{ex.GetType().Name} when inserting anchored block {blockMined}:\n" +
               $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
           }
 
-          Network.AdvertizeBlockToNetwork(tokenAnchorWinner.BlockAnchored);
+          Network.AdvertizeBlockToNetwork(blockMined);
+        }
+        else if(TryGetBlock(tokenAnchorWinner.HeightBlockReferenced, out Block block))
+        {
+          try
+          {
+            InsertBlock(blockMined);
+          }
+          catch (Exception ex)
+          {
+            ($"{ex.GetType().Name} when inserting anchored block {blockMined}:\n" +
+              $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
+          }
         }
       }
       
@@ -172,25 +223,7 @@ namespace BTokenLib
 
     public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
     {
-      AnchorTokenConsensusAlgorithm.IncludeAnchorTokenConfirmed(
-        tokenAnchor, 
-        out bool flagTokenAnchorWasSelfMined);
-
-      if(flagTokenAnchorWasSelfMined)
-      {
-        $"Detected self mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-        if (FeeSatoshiPerByteAnchorToken > tokenAnchor.FeeSatoshiPerByte)
-        {
-          FeeSatoshiPerByteAnchorToken /= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
-
-          if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
-            FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;
-        }
-      }
-      else
-      {
-        $"Detected foreign mined anchor token {tokenAnchor} in Bitcoin block.".Log(this, LogFile, LogEntryNotifier);
-      }
+      AnchorTokenConsensusAlgorithm.IncludeAnchorTokenConfirmed(tokenAnchor);
     }
   }
 }

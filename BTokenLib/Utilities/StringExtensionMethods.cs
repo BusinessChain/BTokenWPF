@@ -348,6 +348,19 @@ namespace BTokenLib
       { "FF", 0xFF }
     };
 
+
+    public static void Log(
+      this string message,
+      object module,
+      ILogEntryNotifier logEntryNotifier)
+    {
+      Log(
+        message,
+        module,
+        new List<StreamWriter>(),
+        logEntryNotifier);
+    }
+
     public static void Log(
       this string message,
       object module,

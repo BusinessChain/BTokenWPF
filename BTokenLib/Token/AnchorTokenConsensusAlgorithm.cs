@@ -29,15 +29,12 @@ namespace BTokenLib
         nameToken,
         "AnchorTokenConsensusAlgorithm");
 
-      LoadImage();
+      LoadState();
     }
 
-    public void IncludeAnchorTokenConfirmed(
-      TokenAnchor tokenAnchor,
-      out bool flagTokenAnchorWasSelfMined)
+    public void IncludeAnchorTokenConfirmed(TokenAnchor tokenAnchor)
     {
       bool hasSuccessor = false;
-      flagTokenAnchorWasSelfMined = false;
 
       foreach (List<TokenAnchor> branchTokenAnchorsConfirmed in TokensAnchorsConfirmed)
         if (tokenAnchor.TX.IsSuccessorTo(branchTokenAnchorsConfirmed.Last().TX))
@@ -48,13 +45,6 @@ namespace BTokenLib
 
       if (!hasSuccessor)
         TokensAnchorsConfirmed.Add(new() { tokenAnchor });
-
-      if (tokenAnchor.TX.Hash.HasEqualElements(TokensAnchorsMined[0].TX.Hash))
-      {
-        tokenAnchor.BlockAnchored = TokensAnchorsMined[0].BlockAnchored;
-        TokensAnchorsMined.RemoveAt(0);
-        flagTokenAnchorWasSelfMined = true;
-      }
     }
 
     public void IncludeAnchorTokenMined(TokenAnchor tokenAnchor)
@@ -105,7 +95,7 @@ namespace BTokenLib
       return false;
     }
 
-    public void LoadImage()
+    public void LoadState()
     {
       try
       {

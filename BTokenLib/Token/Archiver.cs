@@ -14,8 +14,12 @@ namespace BTokenLib
     string PathBlockArchiveFork;
     const int COUNT_MAX_BLOCKS_ARCHIVED = 2016;
 
+    const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
-    public BlockArchiver(string nameToken)
+    ILogEntryNotifier LogEntryNotifier;
+
+
+    public BlockArchiver(string nameToken, ILogEntryNotifier logEntryNotifier)
     {
       NameToken = nameToken;
 
@@ -25,6 +29,8 @@ namespace BTokenLib
       PathBlockArchiveFork = Path.Combine(PathBlockArchiveMain, "fork");
 
       PathBlockArchive = PathBlockArchiveMain;
+
+      LogEntryNotifier = logEntryNotifier;
     }
 
     public bool TryLoadBlock(int blockHeight, Block block)
@@ -51,16 +57,15 @@ namespace BTokenLib
         }
         catch (IOException ex)
         {
-          Console.WriteLine(
-            $"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
-            $"Retry in 10 seconds.");
+          ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
 
-          Thread.Sleep(10000);
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
         }
         catch (Exception ex)
         {
-          Console.WriteLine(
-            $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive.");
+            $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive."
+            .Log(this, LogEntryNotifier);
 
           //CleanAfterBlockHeight(blockHeight - 1);
           return false;
@@ -86,10 +91,10 @@ namespace BTokenLib
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
-            $"Retry in 10 seconds.");
+          ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
 
-          Thread.Sleep(10000);
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS);
         }
       }
     }
@@ -154,12 +159,11 @@ namespace BTokenLib
         }
         catch (Exception ex)
         {
-          Console.WriteLine(
-            $"{ex.GetType().Name} when writing block height {block.Header.Height} to file:\n" +
+          ($"{ex.GetType().Name} when writing block height {block.Header.Height} to file:\n" +
             $"{ex.Message}\n " +
-            $"Try again in 10 seconds ...");
+            $"Try again in {TIMEOUT_FILE_RELOAD_SECONDS} seconds ...").Log(this, LogEntryNotifier);
 
-          Thread.Sleep(10000);
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS);
         }
     }
 

@@ -20,7 +20,6 @@ namespace BTokenLib
     public byte[] HashBlockPreviousReferenced = new byte[32];
 
     public TX TX;
-    public Block BlockAnchored;
 
     public TokenAnchor Copy()
     {
@@ -40,6 +39,11 @@ namespace BTokenLib
       .Concat(IDToken)
       .Concat(HashBlockReferenced)
       .Concat(HashBlockPreviousReferenced).ToArray();
+    }
+
+    public override string ToString()
+    {
+      return TX.ToString();
     }
   }
 }

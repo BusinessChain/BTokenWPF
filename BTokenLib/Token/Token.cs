@@ -66,7 +66,7 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
-      Archiver = new(GetName());
+      Archiver = new(GetName(), logEntryNotifier);
 
       Network = new(this, port, flagEnableInboundConnections);
     }
@@ -355,8 +355,6 @@ namespace BTokenLib
 
     public void InsertBlock(Block block)
     {
-      $"Insert block {block}.".Log(this, LogFile, LogEntryNotifier);
-
       block.Header.AppendToHeader(HeaderTip);
 
       InsertInDatabase(block);
