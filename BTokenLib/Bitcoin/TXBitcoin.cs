@@ -19,7 +19,7 @@ namespace BTokenLib
       if(tXBitcoin != null)
       {
         foreach(TXInputBitcoin tXInput in Inputs)
-          if (tXInput.TXIDOutput.HasEqualElements(tX.Hash))
+          if (tXInput.TXIDOutput.IsAllBytesEqual(tX.Hash))
             return true;
       }
 

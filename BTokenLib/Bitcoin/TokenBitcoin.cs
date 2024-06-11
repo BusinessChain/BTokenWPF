@@ -62,6 +62,73 @@ namespace BTokenLib
       return new BlockBitcoin(this);
     }
 
+
+    public override Header ParseHeader(Stream stream)
+    {
+      byte[] buffer = new byte[HeaderBitcoin.COUNT_HEADER_BYTES];
+      stream.ReadBuffer(buffer);
+
+      int index = 0;
+
+      return ParseHeader(buffer, ref index);
+    }
+
+    public override HeaderBitcoin ParseHeader(
+      byte[] buffer,
+      ref int index)
+    {
+      SHA256 sHA256 = SHA256.Create();
+
+      byte[] hash =
+        sHA256.ComputeHash(
+          sHA256.ComputeHash(
+            buffer,
+            index,
+            HeaderBitcoin.COUNT_HEADER_BYTES));
+
+      uint version = BitConverter.ToUInt32(buffer, index);
+      index += 4;
+
+      byte[] previousHeaderHash = new byte[32];
+      Array.Copy(buffer, index, previousHeaderHash, 0, 32);
+      index += 32;
+
+      byte[] merkleRootHash = new byte[32];
+      Array.Copy(buffer, index, merkleRootHash, 0, 32);
+      index += 32;
+
+      uint unixTimeSeconds = BitConverter.ToUInt32(
+        buffer, index);
+      index += 4;
+
+      bool isBlockTimePremature = unixTimeSeconds >
+        (DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 2 * 60 * 60);
+
+      if (isBlockTimePremature)
+        throw new ProtocolException(
+          $"Timestamp premature {new DateTime(unixTimeSeconds).Date}.");
+
+      uint nBits = BitConverter.ToUInt32(buffer, index);
+      index += 4;
+
+      if (hash.IsGreaterThan(nBits))
+        throw new ProtocolException(
+          $"Header hash {hash.ToHexString()} greater than NBits {nBits}.");
+
+      uint nonce = BitConverter.ToUInt32(buffer, index);
+      index += 4;
+
+      return new HeaderBitcoin(
+        hash,
+        version,
+        previousHeaderHash,
+        merkleRootHash,
+        unixTimeSeconds,
+        nBits,
+        nonce);
+    }
+
+
     public override TX ParseTX(Stream stream, SHA256 sHA256)
     {
       TXBitcoin tX = new();
@@ -118,7 +185,7 @@ namespace BTokenLib
       TXBitcoin tXcoinbase = block.TXs[0] as TXBitcoin;
       long blockReward = BLOCK_REWARD_INITIAL >> block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
       block.Header.Fee = tXcoinbase.TXOutputs.Sum(o => o.Value) - blockReward;
-      block.Header.FeePerByte = (double)block.Header.Fee / block.Header.CountBytesBlock;
+      block.Header.FeePerByte = (double)block.Header.Fee / block.Header.CountBytesTXs;
 
       WalletBitcoin walletBitcoin = (WalletBitcoin)Wallet;
 
@@ -131,7 +198,7 @@ namespace BTokenLib
         if (tokenAnchor != null)
         {
           Token tokenChild = TokensChild.Find(
-            t => t.IDToken.HasEqualElements(tokenAnchor.IDToken));
+            t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken));
 
           if (tokenChild != null)
             tokenChild.SignalAnchorTokenDetected(tokenAnchor);

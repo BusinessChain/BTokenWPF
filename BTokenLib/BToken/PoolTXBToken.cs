@@ -116,7 +116,7 @@ namespace BTokenWPF
 
         if(TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXs))
         {
-          if (!tXs[0].Hash.HasEqualElements(tXRemove.Hash))
+          if (!tXs[0].Hash.IsAllBytesEqual(tXRemove.Hash))
             throw new ProtocolException($"Removal of tX {tXRemove} from pool not in expected order of nonce.");
           
           tXs.RemoveAt(0);
@@ -152,7 +152,7 @@ namespace BTokenWPF
           TXBundlesSortedByFee.Insert(i + 1, tXBundle);
           return;
         }
-        else if(tXBundle.IDAccountSource.HasEqualElements(tXBundleNext.IDAccountSource))
+        else if(tXBundle.IDAccountSource.IsAllBytesEqual(tXBundleNext.IDAccountSource))
         {
           tXBundleNext.TXs.AddRange(tXBundle.TXs);
 

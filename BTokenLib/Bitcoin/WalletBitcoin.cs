@@ -263,10 +263,10 @@ namespace BTokenLib
       foreach (TXInputBitcoin tXInput in tX.Inputs)
       {
         OutputsSpentUnconfirmed.RemoveAll(
-          o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+          o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         TXOutputWallet tXOutputWallet = OutputsSpendable.Find(o =>
-          o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+          o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if (tXOutputWallet != null)
         {
@@ -280,11 +280,11 @@ namespace BTokenLib
         TXOutputBitcoin tXOutput = tX.TXOutputs[i];
 
         if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
-          tXOutput.PublicKeyHash160.HasEqualElements(PublicKeyHash160))
+          tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
         {
-          OutputsUnconfirmed.RemoveAll(o => o.TXID.HasEqualElements(tX.Hash));
+          OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
 
-          if (!OutputsSpentUnconfirmed.Any(o => o.TXID.HasEqualElements(tX.Hash) && o.Index == i))
+          if (!OutputsSpentUnconfirmed.Any(o => o.TXID.IsAllBytesEqual(tX.Hash) && o.Index == i))
           {
             OutputsSpendable.Add(
               new TXOutputWallet
@@ -305,7 +305,7 @@ namespace BTokenLib
       foreach (TXInputBitcoin tXInput in tX.Inputs)
       {
         TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsUnconfirmed).ToList()
-          .Find(o => o.TXID.HasEqualElements(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+          .Find(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if(outputSpendable != null)
           OutputsSpentUnconfirmed.Add(outputSpendable);
@@ -314,7 +314,7 @@ namespace BTokenLib
       foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
       {
         if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
-          tXOutput.PublicKeyHash160.HasEqualElements(PublicKeyHash160))
+          tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
         {
           OutputsUnconfirmed.Add(new TXOutputWallet
           {
@@ -328,10 +328,10 @@ namespace BTokenLib
 
     public override void ReverseTX(TX tX)
     {
-      OutputsUnconfirmed.RemoveAll(o => o.TXID.HasEqualElements(tX.Hash));
+      OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
 
       foreach (TXInputBitcoin tXInput in ((TXBitcoin)tX).Inputs)
-        OutputsSpentUnconfirmed.RemoveAll(o => o.TXID.HasEqualElements(tXInput.TXIDOutput));
+        OutputsSpentUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput));
     }
         
     public override void Clear()

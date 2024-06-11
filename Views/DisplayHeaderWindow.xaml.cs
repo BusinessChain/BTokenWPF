@@ -45,8 +45,8 @@ namespace BTokenWPF
         $"{header.CountTXs}\n" +
         $"{header.Difficulty}\n" +
         $"{header.DifficultyAccumulated}\n" +
-        $"{header.CountBytesBlock}\n" +
-        $"{header.CountBytesBlocksAccumulated}\n" +
+        $"{header.CountBytesTXs}\n" +
+        $"{header.CountBytesTXsAccumulated}\n" +
         $"{DateTimeOffset.FromUnixTimeSeconds(header.UnixTimeSeconds)}\n" +
         $"{header.Nonce}\n";
 

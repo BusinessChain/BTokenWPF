@@ -16,7 +16,7 @@ namespace BTokenLib
     public partial class Peer
     {
       Network Network;
-      public Token Token;
+      Token Token;
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
@@ -373,7 +373,7 @@ namespace BTokenLib
           }
 
           if (HeaderUnsolicited != null &&
-            HeaderUnsolicited.Hash.HasEqualElements(block.Header.Hash))
+            HeaderUnsolicited.Hash.IsAllBytesEqual(block.Header.Hash))
           {
             $"Advertized block {block} was received by same peer.".Log(this, LogFiles, Token.LogEntryNotifier);
             return;

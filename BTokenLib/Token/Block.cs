@@ -25,25 +25,14 @@ namespace BTokenLib
       Token = token;
     }
 
-
-    public void Parse(Stream stream)
-    {
-      long positionStreamStart = stream.Position;
-
-      Header = ParseHeader(stream);
-
-      ParseTXs(stream);
-
-      Header.CountTXs = TXs.Count;
-      Header.CountBytesBlock = (int)(stream.Position - positionStreamStart);
-    }
-
     public abstract Header ParseHeader(byte[] buffer, ref int index);
 
     public abstract Header ParseHeader(Stream stream);
 
-    void ParseTXs(Stream stream)
+    public void ParseTXs(Stream stream)
     {
+      long positionStreamStart = stream.Position;
+
       int tXCount = VarInt.GetInt(stream);
 
       if (tXCount == 0)
@@ -79,8 +68,11 @@ namespace BTokenLib
           merkleList[tXCount] = merkleList[tXCount - 1];
       }
 
-      if (!Header.MerkleRoot.HasEqualElements(ComputeMerkleRoot()))
+      if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
         throw new ProtocolException("Payload hash not equal to merkle root.");
+
+      Header.CountTXs = TXs.Count;
+      Header.CountBytesTXs = (int)(stream.Position - positionStreamStart);
     }
 
     public byte[] ComputeMerkleRoot()

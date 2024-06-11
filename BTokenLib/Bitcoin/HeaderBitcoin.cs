@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace BTokenLib
 {
-  class HeaderBitcoin : Header
+  public class HeaderBitcoin : Header
   {
     public const int COUNT_HEADER_BYTES = 80;
 

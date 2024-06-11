@@ -40,7 +40,7 @@ namespace BTokenLib
       TXBToken tXBToken = tX as TXBToken;
 
       return tXBToken != null
-        && IDAccountSource.HasEqualElements(tXBToken.IDAccountSource)
+        && IDAccountSource.IsAllBytesEqual(tXBToken.IDAccountSource)
         && BlockheightAccountInit == tXBToken.BlockheightAccountInit
         && Nonce == tXBToken.Nonce + 1;
     }

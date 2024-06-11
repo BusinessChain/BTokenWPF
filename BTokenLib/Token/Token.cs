@@ -34,6 +34,8 @@ namespace BTokenLib
     string PathImageOld;
     string PathRootToken;
 
+    public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
+
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
 
     public byte[] IDToken;
@@ -66,7 +68,7 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
-      Archiver = new(GetName(), logEntryNotifier);
+      Archiver = new(this, logEntryNotifier);
 
       Network = new(this, port, flagEnableInboundConnections);
     }
@@ -109,15 +111,13 @@ namespace BTokenLib
 
         while (index < bytesHeaderImage.Length)
         {
-          Block block = CreateBlock();
-
-          Header header = block.ParseHeader(
+          Header header = ParseHeader(
             bytesHeaderImage,
             ref index);
 
           heightHeader += 1;
 
-          header.CountBytesBlock = BitConverter.ToInt32(
+          header.CountBytesTXs = BitConverter.ToInt32(
             bytesHeaderImage, index);
 
           index += 4;
@@ -327,7 +327,7 @@ namespace BTokenLib
           bytesHeaderImage,
           ref index);
 
-        header.CountBytesBlock = BitConverter.ToInt32(
+        header.CountBytesTXs = BitConverter.ToInt32(
           bytesHeaderImage, index);
 
         index += 4;
@@ -411,7 +411,7 @@ namespace BTokenLib
             headerBytes, 0, headerBytes.Length);
 
           fileImageHeaderchain.Write(
-            BitConverter.GetBytes(header.CountBytesBlock), 0, 4);
+            BitConverter.GetBytes(header.CountBytesTXs), 0, 4);
 
           if(header.HashChild == null)
             fileImageHeaderchain.WriteByte(0x00);
@@ -429,6 +429,20 @@ namespace BTokenLib
     public abstract void CreateImageDatabase(string path);
 
     public abstract Block CreateBlock();
+
+    public Block ParseBlock(Stream stream)
+    {
+      Block block = CreateBlock();
+
+      block.ParseHeader(stream);
+
+      block.ParseTXs(stream);
+
+      return block;
+    }
+
+    public abstract Header ParseHeader(byte[] buffer, ref int index);
+    public abstract Header ParseHeader(Stream stream);
 
     public abstract TX ParseTX(Stream stream, SHA256 sHA256);
 
@@ -476,9 +490,7 @@ namespace BTokenLib
 
     public bool TryGetBlock(int heightHeader, out Block block)
     {
-      block = CreateBlock();
-
-      if (Archiver.TryLoadBlock(heightHeader, block))
+      if (Archiver.TryLoadBlock(heightHeader, out block))
         return true;
 
       block = null;
@@ -586,7 +598,7 @@ namespace BTokenLib
           while (
             header.HeaderNext != null &&
             headers.Count < count &&
-            !header.Hash.HasEqualElements(stopHash))
+            !header.Hash.IsAllBytesEqual(stopHash))
           {
             Header nextHeader = header.HeaderNext;
 
@@ -612,7 +624,7 @@ namespace BTokenLib
           out List<Header> headers))
         {
           foreach (Header h in headers)
-            if (headerHash.HasEqualElements(h.Hash))
+            if (headerHash.IsAllBytesEqual(h.Hash))
             {
               header = h;
               return true;

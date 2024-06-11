@@ -2,7 +2,7 @@
 
 namespace BTokenLib
 {
-  class HeaderBToken : Header
+  public class HeaderBToken : Header
   {
     public const int COUNT_HEADER_BYTES = 104;
 

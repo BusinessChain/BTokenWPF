@@ -92,7 +92,7 @@ namespace BTokenLib
         {
           DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
 
-          if (walletBToken.PublicKeyHash160.HasEqualElements(tXOutput.IDAccount))
+          if (walletBToken.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
             walletBToken.AddTXToHistory(tXCoinbase);
         }
 
@@ -111,14 +111,14 @@ namespace BTokenLib
 
           DatabaseAccounts.SpendInput(tXTokenTransfer);
 
-          if (tXTokenTransfer.IDAccountSource.HasEqualElements(walletBToken.PublicKeyHash160))
+          if (tXTokenTransfer.IDAccountSource.IsAllBytesEqual(walletBToken.PublicKeyHash160))
             walletBToken.AddTXToHistory(tXTokenTransfer);
 
           foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
           {
             DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
 
-            if (walletBToken.PublicKeyHash160.HasEqualElements(tXOutput.IDAccount))
+            if (walletBToken.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
               walletBToken.AddTXToHistory(tXTokenTransfer);
           }
         }
@@ -163,7 +163,7 @@ namespace BTokenLib
         0,
         length);
 
-      if (!((HeaderBToken)headerTip).HashDatabase.HasEqualElements(hashRootHashesDB))
+      if (!((HeaderBToken)headerTip).HashDatabase.IsAllBytesEqual(hashRootHashesDB))
         throw new ProtocolException(
           $"Root hash of hashesDB not equal to database hash in header tip");
 
@@ -269,7 +269,7 @@ namespace BTokenLib
         h.HeaderTip != null
         &&
         (DatabaseAccounts.GetCountBytes() <
-        h.HeaderTip.CountBytesBlocksAccumulated - h.HeaderRoot.CountBytesBlocksAccumulated
+        h.HeaderTip.CountBytesTXsAccumulated - h.HeaderRoot.CountBytesTXsAccumulated
         ||
         COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX <
         h.HeaderTip.Height - h.HeaderRoot.Height);
@@ -308,6 +308,57 @@ namespace BTokenLib
     public override List<TX> GetTXsFromPool()
     {
       return TXPool.GetTXs(int.MaxValue, out long feeTotal);
+    }
+
+    public override HeaderBToken ParseHeader(Stream stream)
+    {
+      byte[] buffer = new byte[HeaderBToken.COUNT_HEADER_BYTES];
+      stream.ReadBuffer(buffer);
+
+      int index = 0;
+
+      return ParseHeader(buffer, ref index);
+    }
+
+    public override HeaderBToken ParseHeader(
+      byte[] buffer,
+      ref int index)
+    {
+      SHA256 sHA256 = SHA256.Create();
+
+      byte[] hash =
+        sHA256.ComputeHash(
+          sHA256.ComputeHash(
+            buffer,
+            index,
+            HeaderBToken.COUNT_HEADER_BYTES));
+
+      byte[] hashHeaderPrevious = new byte[32];
+      Array.Copy(buffer, index, hashHeaderPrevious, 0, 32);
+      index += 32;
+
+      byte[] merkleRootHash = new byte[32];
+      Array.Copy(buffer, index, merkleRootHash, 0, 32);
+      index += 32;
+
+      byte[] hashDatabase = new byte[32];
+      Array.Copy(buffer, index, hashDatabase, 0, 32);
+      index += 32;
+
+      uint unixTimeSeconds = BitConverter.ToUInt32(
+        buffer, index);
+      index += 4;
+
+      uint nonce = BitConverter.ToUInt32(buffer, index);
+      index += 4;
+
+      return new HeaderBToken(
+        hash,
+        hashHeaderPrevious,
+        merkleRootHash,
+        hashDatabase,
+        unixTimeSeconds,
+        nonce);
     }
   }
 }

@@ -28,11 +28,11 @@ namespace BTokenLib
               if (!IsStateBlockSynchronization())
                 throw new ProtocolException($"Received unrequested block message.");
 
-              Block.Parse(NetworkStream);
+              Block block = Token.ParseBlock(NetworkStream);
 
               $"Received block {Block}".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              if (!Block.Header.Hash.HasEqualElements(HeaderSync.Hash))
+              if (!Block.Header.Hash.IsAllBytesEqual(HeaderSync.Hash))
                 throw new ProtocolException(
                   $"Received unexpected block {Block} at height {Block.Header.Height} from peer {this}.\n" +
                   $"Requested was {HeaderSync}.");
@@ -75,7 +75,7 @@ namespace BTokenLib
                   0,
                   LengthDataPayload);
 
-                if (!hashDataDB.HasEqualElements(HashDBDownload))
+                if (!hashDataDB.IsAllBytesEqual(HashDBDownload))
                   throw new ProtocolException(
                     $"Unexpected dataDB with hash {hashDataDB.ToHexString()}.\n" +
                     $"Excpected hash {HashDBDownload.ToHexString()}.");
@@ -131,7 +131,7 @@ namespace BTokenLib
                   int i = 0;
                   while (i < countHeaders)
                   {
-                    header = Block.ParseHeader(NetworkStream);
+                    header = Token.ParseHeader(NetworkStream);
 
                     NetworkStream.ReadByte();
 
@@ -157,42 +157,22 @@ namespace BTokenLib
                 if (countHeaders != 1)
                   throw new ProtocolException($"Peer sent unsolicited not exactly one header.");
 
+                Header header = Token.ParseHeader(NetworkStream);
+
                 if (!Network.TryEnterStateSynchronization(this))
                   continue;
 
-                Header header = Block.ParseHeader(NetworkStream);
-
-                if (header.HashPrevious.HasEqualElements(Token.HeaderTip.Hash))
+                if (header.HashPrevious.IsAllBytesEqual(Token.HeaderTip.Hash))
                 {
                   header.AppendToHeader(Token.HeaderTip);
 
                   FlagSingleBlockDownload = true;
                   await RequestBlock(header);
                 }
+                else if(header.HashPrevious.IsAllBytesEqual(Token.HeaderTip.HashPrevious))
+                  Network.ExitSynchronization();
                 else
-                {
-                  Header headerPrevious = Token.HeaderTip.HeaderPrevious;
-
-                  while (true)
-                  {
-                    if (headerPrevious == null)
-                    {
-                      await SendGetHeaders(Token.GetLocator());
-                      break;
-                    }
-
-                    if (header.HashPrevious.HasEqualElements(headerPrevious.Hash))
-                    {
-                      if (!header.HashPrevious.HasEqualElements(Token.HeaderTip.HashPrevious))
-                        await SendHeaders(new List<Header>() { Token.HeaderTip });
-
-                      Network.ExitSynchronization();
-                      break;
-                    }
-
-                    headerPrevious = headerPrevious.HeaderPrevious;
-                  }
-                }
+                  await SendGetHeaders(Token.GetLocator());
               }
             }
             else if (Command == "getheaders")

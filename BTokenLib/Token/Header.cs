@@ -22,8 +22,8 @@ namespace BTokenLib
     public int Height;
     public int CountTXs;
 
-    public int CountBytesBlock;
-    public long CountBytesBlocksAccumulated;
+    public int CountBytesTXs;
+    public long CountBytesTXsAccumulated;
 
     public double Difficulty;
     public double DifficultyAccumulated;
@@ -62,9 +62,9 @@ namespace BTokenLib
       HeaderPrevious = headerPrevious;
 
       DifficultyAccumulated = headerPrevious.DifficultyAccumulated + Difficulty;
-      CountBytesBlocksAccumulated = headerPrevious.CountBytesBlocksAccumulated + CountBytesBlock;
+      CountBytesTXsAccumulated = headerPrevious.CountBytesTXsAccumulated + CountBytesTXs;
 
-      if (!HashPrevious.HasEqualElements(headerPrevious.Hash))
+      if (!HashPrevious.IsAllBytesEqual(headerPrevious.Hash))
         throw new ProtocolException(
           $"Header {this} references header previous " +
           $"{HashPrevious.ToHexString()} but attempts to append to {headerPrevious}.");
@@ -78,7 +78,7 @@ namespace BTokenLib
           if (headerParent == null)
             throw new ProtocolException($"Header {this} not anchored in parent chain.");
 
-          if(headerParent.HashChild != null && headerParent.HashChild.HasEqualElements(Hash))
+          if(headerParent.HashChild != null && headerParent.HashChild.IsAllBytesEqual(Hash))
           {
             HeaderParent = headerParent;
             return;
