@@ -47,6 +47,9 @@ namespace BTokenLib
       Wallet = new WalletBToken(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
+
+      PathBlocksMined = Path.Combine(GetName(), "blocksMined");
+      Directory.CreateDirectory(PathBlocksMined);
     }
 
     public override Header CreateHeaderGenesis()

@@ -23,6 +23,9 @@ namespace BTokenLib
 
     AnchorTokenConsensusAlgorithm AnchorTokenConsensusAlgorithm;
 
+    List<Block> BocksMined = new();
+    string PathBlocksMined;
+
 
     protected override async void RunMining()
     {
@@ -124,6 +127,7 @@ namespace BTokenLib
       TokenAnchor tokenAnchor = new();
 
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
+      tokenAnchor.HeightBlockReferenced = block.Header.Height;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
       tokenAnchor.FeeSatoshiPerByte = FeeSatoshiPerByteAnchorToken;
@@ -131,8 +135,6 @@ namespace BTokenLib
 
       return tokenAnchor;
     }
-
-    List<Block> BocksMined = new();
 
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
@@ -148,31 +150,30 @@ namespace BTokenLib
 
         if (blockMined != null)
         {
-          Directory.Delete(PathBlockMined, recursive: true);
-
           try
           {
             InsertBlock(blockMined);
+
+            Network.AdvertizeBlockToNetwork(blockMined);
           }
           catch (Exception ex)
           {
             ($"{ex.GetType().Name} when inserting self mined block {blockMined}:\n" +
               $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
-
-            return;
           }
 
-          Network.AdvertizeBlockToNetwork(blockMined);
+          foreach (FileInfo file in new DirectoryInfo(PathBlocksMined).GetFiles())
+            file.Delete();
         }
-        else if(TryGetBlock(tokenAnchorWinner.HeightBlockReferenced, out Block block))
+        else if(Archiver.TryLoadBlock(tokenAnchorWinner.HeightBlockReferenced, out Block block))
         {
           try
           {
-            InsertBlock(blockMined);
+            InsertBlock(block);
           }
           catch (Exception ex)
           {
-            ($"{ex.GetType().Name} when inserting anchored block {blockMined}:\n" +
+            ($"{ex.GetType().Name} when inserting archived block {block}:\n" +
               $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
           }
         }
@@ -194,7 +195,7 @@ namespace BTokenLib
     Block GetBlockMinedFromDisk(byte[] hashBlock)
     {
       Block block = null;
-      string pathBlockMined = Path.Combine(PathBlockMined, hashBlock);
+      string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
 
       while (true)
         try
@@ -214,7 +215,7 @@ namespace BTokenLib
         }
         catch (IOException ex)
         {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+          ($"{ex.GetType().Name} when attempting to load file {pathBlockMined}: {ex.Message}.\n" +
             $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
 
           Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);

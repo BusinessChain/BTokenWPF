@@ -19,7 +19,7 @@ namespace BTokenLib
 
     Dictionary<int, List<Header>> HeaderIndex = new();
 
-    protected BlockArchiver Archiver;
+    public BlockArchiver Archiver;
 
     public Wallet Wallet;
 
@@ -42,6 +42,8 @@ namespace BTokenLib
 
     bool IsLocked;
     static object LOCK_Token = new();
+
+    bool FlagLoadingImage;
 
 
     public Token(
@@ -154,7 +156,7 @@ namespace BTokenLib
 
       int i = 1;
 
-      while (TryGetBlock(i, out Block block))
+      while (Archiver.TryLoadBlock(i, out Block block))
       {
         text += $"{i} -> {block.Header}\n";
 
@@ -276,24 +278,31 @@ namespace BTokenLib
 
       int heightBlock = HeaderTip.Height + 1;
 
-      while (
-        heightBlock <= heightMax &&
-        TryGetBlock(heightBlock, out Block block))
+      try
       {
-        $"Pull block height {heightBlock} from Archiver of {GetName()}."
+        while (
+          heightBlock <= heightMax &&
+          Archiver.TryLoadBlock(heightBlock, out Block block))
+        {
+          $"Pull block height {heightBlock} from Archiver of {GetName()}."
+            .Log(this, LogFile, LogEntryNotifier);
+
+          block.Header.AppendToHeader(HeaderTip);
+
+          InsertInDatabase(block);
+
+          HeaderTip.HeaderNext = block.Header;
+          HeaderTip = block.Header;
+
+          IndexingHeaderTip();
+
+          heightBlock += 1;
+        }
+      }
+      finally
+      {
+        $"{this} completed loading from disk with block tip {HeaderTip} at height {HeaderTip.Height}."
           .Log(this, LogFile, LogEntryNotifier);
-
-        try
-        {
-          InsertBlock(block);
-        }
-        catch
-        {
-          Archiver.CleanAfterBlockHeight(HeaderTip.Height);
-          break;
-        }
-
-        heightBlock += 1;
       }
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
@@ -315,15 +324,13 @@ namespace BTokenLib
       byte[] bytesHeaderImage = File.ReadAllBytes(
         Path.Combine(pathImage, "ImageHeaderchain"));
 
-      Block block = CreateBlock();
-
       int index = 0;
 
       $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
 
       while (index < bytesHeaderImage.Length)
       {
-        Header header = block.ParseHeader(
+        Header header = ParseHeader(
           bytesHeaderImage,
           ref index);
 
@@ -372,6 +379,10 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
     }
 
+    /// <summary>
+    /// Make sure that in case of an invalid block, the database is not left in a inconsistent state.
+    /// Throws exception if block invalid.
+    /// </summary>
     protected abstract void InsertInDatabase(Block block);
 
     public abstract void AddTXToPool(TX tX);
@@ -485,15 +496,6 @@ namespace BTokenLib
           return true;
 
       buffer = null;
-      return false;
-    }
-
-    public bool TryGetBlock(int heightHeader, out Block block)
-    {
-      if (Archiver.TryLoadBlock(heightHeader, out block))
-        return true;
-
-      block = null;
       return false;
     }
 

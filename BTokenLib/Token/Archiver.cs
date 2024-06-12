@@ -66,7 +66,6 @@ namespace BTokenLib
             $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive."
             .Log(this, LogEntryNotifier);
 
-          CleanAfterBlockHeight(blockHeight - 1);
           return false;
         }
     }
@@ -166,11 +165,5 @@ namespace BTokenLib
         }
     }
 
-    public void CleanAfterBlockHeight(int height)
-    {
-      foreach (string file in Directory.GetFiles(PathBlockArchive))
-        if (!int.TryParse(Path.GetFileName(file), out int blockHeight) || blockHeight > height)
-          File.Delete(file);
-    }
   }
 }

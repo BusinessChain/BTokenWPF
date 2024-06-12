@@ -16,6 +16,7 @@ namespace BTokenLib
     public int NumberSequence = 0;
     public double FeeSatoshiPerByte;
 
+    public int HeightBlockReferenced;
     public byte[] HashBlockReferenced = new byte[32];
     public byte[] HashBlockPreviousReferenced = new byte[32];
 
