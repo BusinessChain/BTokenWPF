@@ -72,7 +72,7 @@ namespace BTokenLib
             timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            TokenAnchor tokenAnchor = MineAnchorToken(numberSequence: 0);
+            TokenAnchor tokenAnchor = MineBlock(numberSequence: 0);
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
@@ -96,7 +96,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    public TokenAnchor MineAnchorToken(int numberSequence)
+    public TokenAnchor MineBlock(int numberSequence)
     {
       BlockBToken block = new(this);
 
@@ -124,6 +124,9 @@ namespace BTokenLib
 
       block.Header.ComputeHash(SHA256Miner);
 
+      BocksMined.Add(block);
+      WriteBlockMinedToDisk(block);
+
       TokenAnchor tokenAnchor = new();
 
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
@@ -136,90 +139,136 @@ namespace BTokenLib
       return tokenAnchor;
     }
 
+    void WriteBlockMinedToDisk(Block block)
+    {
+      string pathBlockMined = Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString());
+
+      while (true)
+        try
+        {
+          using (FileStream fileStreamBlock = new(
+          pathBlockMined,
+          FileMode.Create,
+          FileAccess.Write,
+          FileShare.None))
+          {
+            block.Serialize(fileStreamBlock);
+          }
+
+          return;
+        }
+        catch (Exception ex)
+        {
+          ($"{ex.GetType().Name} when writing block height {block.Header.Height} to file:\n" +
+            $"{ex.Message}\n " +
+            $"Try again in {TIMEOUT_FILE_RELOAD_SECONDS} seconds ...").Log(this, LogEntryNotifier);
+
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS);
+        }
+    }
+
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
-      if (AnchorTokenConsensusAlgorithm.TryGetAnchorTokenWinner(
-        headerAnchor, 
-        out TokenAnchor tokenAnchorWinner))
+      if (!AnchorTokenConsensusAlgorithm.TryGetAnchorTokenWinner(headerAnchor, out TokenAnchor tokenAnchorWinner))
+        return;
+
+      ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
+        $"{tokenAnchorWinner.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
+
+      if (TryGetBlockMined(tokenAnchorWinner.HashBlockReferenced, out Block blockMined))
       {
-        ($"The winning anchor token is {tokenAnchorWinner.TX} referencing block " +
-          $"{tokenAnchorWinner.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
-
-        Block blockMined = BocksMined.Find(b => b.Header.Hash.IsAllBytesEqual(tokenAnchorWinner.HashBlockReferenced)) 
-          ?? GetBlockMinedFromDisk(tokenAnchorWinner.HashBlockReferenced);
-
-        if (blockMined != null)
+        try
         {
-          try
-          {
-            InsertBlock(blockMined);
+          InsertBlock(blockMined);
 
-            Network.AdvertizeBlockToNetwork(blockMined);
-          }
-          catch (Exception ex)
-          {
-            ($"{ex.GetType().Name} when inserting self mined block {blockMined}:\n" +
-              $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
-          }
-
-          foreach (FileInfo file in new DirectoryInfo(PathBlocksMined).GetFiles())
-            file.Delete();
+          Network.AdvertizeBlockToNetwork(blockMined);
         }
-        else if(Archiver.TryLoadBlock(tokenAnchorWinner.HeightBlockReferenced, out Block block))
+        catch (Exception ex)
         {
-          try
-          {
-            InsertBlock(block);
-          }
-          catch (Exception ex)
-          {
-            ($"{ex.GetType().Name} when inserting archived block {block}:\n" +
-              $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
-          }
+          ($"{ex.GetType().Name} when inserting self mined block {blockMined}:\n" +
+            $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
         }
       }
-      
-      if(AnchorTokenConsensusAlgorithm.TryGetAnchorTokenRBF(out TokenAnchor tokenAnchorOld))
+      else if (Archiver.TryLoadBlock(tokenAnchorWinner.HeightBlockReferenced, out Block block))
+      {
+        try
+        {
+          InsertBlock(block);
+        }
+        catch (Exception ex)
+        {
+          ($"{ex.GetType().Name} when inserting archived block {block}:\n" +
+            $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
+        }
+      }
+
+      if (AnchorTokenConsensusAlgorithm.TryGetAnchorTokenRBF(out TokenAnchor tokenAnchorOld))
       {
         $"RBF anchor token {tokenAnchorOld}.".Log(this, LogFile, LogEntryNotifier);
 
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
-        TokenAnchor tokenAnchorNew = MineAnchorToken(tokenAnchorOld.NumberSequence + 1);
+        TokenAnchor tokenAnchorNew = MineBlock(tokenAnchorOld.NumberSequence + 1);
 
         if(TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew))
           AnchorTokenConsensusAlgorithm.IncludeAnchorTokenMined(tokenAnchorNew);
       }
     }
 
-    Block GetBlockMinedFromDisk(byte[] hashBlock)
+    bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
     {
-      Block block = null;
-      string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
+      blockMined = BocksMined.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
 
-      while (true)
-        try
-        {
-          using (FileStream fileStream = new(
-            pathBlockMined,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.None))
+      if (blockMined == null)
+      {
+        string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
+
+        while (true)
+          try
           {
-            block = ParseBlock(fileStream);
-          }
-        }
-        catch (FileNotFoundException)
-        {
-          return null;
-        }
-        catch (IOException ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlockMined}: {ex.Message}.\n" +
-            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+            using (FileStream fileStream = new(
+              pathBlockMined,
+              FileMode.Open,
+              FileAccess.Read,
+              FileShare.None))
+            {
+              try
+              {
+                blockMined = ParseBlock(fileStream);
+              }
+              catch (Exception ex)
+              {
+                $"{ex.GetType().Name} when attempting to parse file {pathBlockMined}: {ex.Message}"
+                  .Log(this, LogEntryNotifier);
 
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-        }
+                blockMined = null;
+
+                break;
+              }
+            }
+
+            break;
+          }
+          catch (FileNotFoundException)
+          {
+            break;
+          }
+          catch (IOException ex)
+          {
+            ($"{ex.GetType().Name} when attempting to load file {pathBlockMined}: {ex.Message}.\n" +
+              $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+
+            Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
+            continue;
+          }
+      }
+
+      BocksMined.Clear();
+
+      foreach (FileInfo file in new DirectoryInfo(PathBlocksMined).GetFiles())
+        file.Delete();
+
+      return blockMined != null;
     }
 
     public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)

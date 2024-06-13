@@ -59,9 +59,13 @@ namespace BTokenLib
       Header headerAnchor, 
       out TokenAnchor tokenAnchorWinner)
     {
+      tokenAnchorWinner = null;
+
+      if (TokensAnchorsConfirmed.Count == 0)
+        return false;
+
       byte[] targetValue = SHA256.ComputeHash(headerAnchor.Hash);
       byte[] biggestDifferenceTemp = new byte[32];
-      tokenAnchorWinner = null;
 
       foreach (List<TokenAnchor> branchTokenAnchor in TokensAnchorsConfirmed)
         foreach (TokenAnchor tokenAnchor in branchTokenAnchor)
@@ -79,7 +83,7 @@ namespace BTokenLib
 
       TokensAnchorsConfirmed.Clear();
 
-      return tokenAnchorWinner != null;
+      return true;
     }
   
     public bool TryGetAnchorTokenRBF(out TokenAnchor anchorTokenOld)
