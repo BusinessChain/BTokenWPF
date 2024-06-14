@@ -8,27 +8,24 @@ namespace BTokenLib
 {
   public class BlockArchiver
   {
-    Token Token;
     string PathBlockArchive;
     string PathBlockArchiveMain;
     string PathBlockArchiveFork;
     const int COUNT_MAX_BLOCKS_ARCHIVED = 2016;
 
-    ILogEntryNotifier LogEntryNotifier;
+    Token Token;
 
 
-    public BlockArchiver(Token token, ILogEntryNotifier logEntryNotifier)
+    public BlockArchiver(Token token)
     {
-      Token Token = token;
+      Token = token;
 
-      PathBlockArchiveMain = Path.Combine(Token.GetName(), "blocks");
+      PathBlockArchiveMain = Path.Combine(token.GetName(), "blocks");
       Directory.CreateDirectory(PathBlockArchiveMain);
 
       PathBlockArchiveFork = Path.Combine(PathBlockArchiveMain, "fork");
 
       PathBlockArchive = PathBlockArchiveMain;
-
-      LogEntryNotifier = logEntryNotifier;
     }
 
     public bool TryLoadBlock(int blockHeight, out Block block)
@@ -57,20 +54,20 @@ namespace BTokenLib
         catch (IOException ex)
         {
           ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
-            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
 
           Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS * 1000);
         }
         catch (Exception ex)
         {
             $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive."
-            .Log(this, LogEntryNotifier);
+            .Log(this, Token.LogEntryNotifier);
 
           return false;
         }
     }
 
-    public bool TryLoadBlock(int blockHeight, out byte[] buffer)
+    public bool TryLoadBlockBytes(int blockHeight, out byte[] buffer)
     {
       buffer = null;
 
@@ -90,7 +87,7 @@ namespace BTokenLib
         catch (Exception ex)
         {
           ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
-            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
 
           Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS);
         }
@@ -159,7 +156,8 @@ namespace BTokenLib
         {
           ($"{ex.GetType().Name} when writing block height {block.Header.Height} to file:\n" +
             $"{ex.Message}\n " +
-            $"Try again in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds ...").Log(this, LogEntryNotifier);
+            $"Try again in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds ...")
+            .Log(this, Token.LogEntryNotifier);
 
           Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS);
         }

@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace BTokenLib
 {
-  partial class TokenBToken : Token
+  public partial class TokenBToken : Token
   {
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 10;
@@ -21,7 +21,7 @@ namespace BTokenLib
 
     double FeeSatoshiPerByteAnchorToken;
 
-    AnchorTokenConsensusAlgorithm AnchorTokenConsensusAlgorithm;
+    ClassAnchorTokenConsensusAlgorithm AnchorTokenConsensusAlgorithm;
 
     List<Block> BocksMined = new();
     string PathBlocksMined;

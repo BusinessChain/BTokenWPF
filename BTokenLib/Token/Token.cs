@@ -43,8 +43,6 @@ namespace BTokenLib
     bool IsLocked;
     static object LOCK_Token = new();
 
-    bool FlagLoadingImage;
-
 
     public Token(
       UInt16 port,
@@ -70,7 +68,7 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
-      Archiver = new(this, logEntryNotifier);
+      Archiver = new(this);
 
       Network = new(this, port, flagEnableInboundConnections);
     }
@@ -492,7 +490,7 @@ namespace BTokenLib
     public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
     {
       if (TryGetHeader(hash, out Header header))
-        if (Archiver.TryLoadBlock(header.Height, out buffer))
+        if (Archiver.TryLoadBlockBytes(header.Height, out buffer))
           return true;
 
       buffer = null;

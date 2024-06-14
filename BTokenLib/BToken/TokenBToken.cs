@@ -42,7 +42,7 @@ namespace BTokenLib
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
       TokenParent.HeaderGenesis.HashChild = HeaderGenesis.Hash;
 
-      AnchorTokenConsensusAlgorithm = new(GetName());
+      AnchorTokenConsensusAlgorithm = new(this);
 
       Wallet = new WalletBToken(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 

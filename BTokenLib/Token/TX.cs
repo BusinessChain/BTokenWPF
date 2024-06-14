@@ -19,6 +19,8 @@ namespace BTokenLib
         .ToHexString();
     }
 
+    public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
+
     public abstract string Print();
 
     public abstract void WriteToStream(Stream stream);
