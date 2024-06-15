@@ -217,8 +217,6 @@ namespace BTokenLib
       else
         throw new ProtocolException($"Unknown token type {typeToken}.");
 
-      tX.TXRaw = tXRaw.ToList();
-
       return tX;
     }
 

@@ -128,7 +128,6 @@ namespace BTokenLib
         nonce);
     }
 
-
     public override TX ParseTX(Stream stream, SHA256 sHA256)
     {
       TXBitcoin tX = new();

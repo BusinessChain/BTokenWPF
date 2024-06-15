@@ -30,6 +30,8 @@ namespace BTokenLib
 
       public ClassAnchorTokenConsensusAlgorithm(Token token)
       {
+        Token = token;
+
         PathTokensAnchorMined = Path.Combine(token.GetName(), "TokensAnchorMined");
 
         LoadTokensAnchorMined();
@@ -139,12 +141,14 @@ namespace BTokenLib
             {
               while(fileStream.Position < fileStream.Length)
               {
-                TX tX = Token.ParseTX(fileStream, SHA256);
+                TX tX = Token.TokenParent.ParseTX(fileStream, SHA256);
 
-                if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+                TokenAnchor tokenAnchor = tX.GetAnchorToken();
+                
+                if (tokenAnchor != null)
                   TokensAnchorMined.Add(tokenAnchor);
                 else
-                  throw new InvalidOperationException($"Error: Could not load anchor token mined");
+                  throw new InvalidOperationException($"Error: Could not load anchor token mined from tX {tX}.");
               }
             }
 

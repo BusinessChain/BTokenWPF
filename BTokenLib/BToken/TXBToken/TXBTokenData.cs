@@ -15,22 +15,24 @@ namespace BTokenLib
     public TXBTokenData()
     { }
 
-    public TXBTokenData(byte[] buffer, SHA256 sHA256)
+    public TXBTokenData(byte[] tXRaw, SHA256 sHA256)
     {
       int index = 1;
 
-      ParseTXBTokenInput(buffer, ref index, sHA256);
+      ParseTXBTokenInput(tXRaw, ref index, sHA256);
 
-      Data = new byte[VarInt.GetInt(buffer, ref index)];
+      Data = new byte[VarInt.GetInt(tXRaw, ref index)];
 
-      Array.Copy(buffer, index, Data, 0, Data.Length);
+      Array.Copy(tXRaw, index, Data, 0, Data.Length);
 
       index += Data.Length;
 
-      VerifySignatureTX(buffer, ref index);
+      VerifySignatureTX(tXRaw, ref index);
+
+      TXRaw = tXRaw.ToList();
 
       Hash = sHA256.ComputeHash(
-       sHA256.ComputeHash(buffer));
+       sHA256.ComputeHash(tXRaw));
     }
   }
 }

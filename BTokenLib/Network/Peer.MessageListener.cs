@@ -28,7 +28,7 @@ namespace BTokenLib
               if (!IsStateBlockSynchronization())
                 throw new ProtocolException($"Received unrequested block message.");
 
-              Block block = Token.ParseBlock(NetworkStream);
+              Block = Token.ParseBlock(NetworkStream);
 
               $"Received block {Block}".Log(this, LogFiles, Token.LogEntryNotifier);
 

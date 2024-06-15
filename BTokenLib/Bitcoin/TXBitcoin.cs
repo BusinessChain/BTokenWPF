@@ -26,6 +26,11 @@ namespace BTokenLib
       return false;
     }
 
+    public override TokenAnchor GetAnchorToken()
+    {
+      return TXOutputs[0].TokenAnchor;
+    }
+
     public override string Print()
     {
       string text = "";

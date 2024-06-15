@@ -25,10 +25,6 @@ namespace BTokenLib
       Token = token;
     }
 
-    public abstract Header ParseHeader(byte[] buffer, ref int index);
-
-    public abstract Header ParseHeader(Stream stream);
-
     public void ParseTXs(Stream stream)
     {
       long positionStreamStart = stream.Position;

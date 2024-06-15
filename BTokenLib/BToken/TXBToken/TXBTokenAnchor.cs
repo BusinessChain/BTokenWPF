@@ -11,16 +11,16 @@ namespace BTokenLib
     public TokenAnchor TokenAnchor = new();
 
 
-    public TXBTokenAnchor(byte[] buffer, SHA256 sHA256)
+    public TXBTokenAnchor(byte[] tXRaw, SHA256 sHA256)
     {
       int index = 1;
-      ParseTXBTokenInput(buffer, ref index, sHA256);
+      ParseTXBTokenInput(tXRaw, ref index, sHA256);
 
-      Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
+      Array.Copy(tXRaw, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
       index += TokenAnchor.LENGTH_IDTOKEN;
 
       Array.Copy(
-        buffer,
+        tXRaw,
         index,
         TokenAnchor.HashBlockReferenced,
         0,
@@ -29,7 +29,7 @@ namespace BTokenLib
       index += 32;
 
       Array.Copy(
-        buffer,
+        tXRaw,
         index,
         TokenAnchor.HashBlockPreviousReferenced,
         0,
@@ -37,10 +37,12 @@ namespace BTokenLib
 
       index += TokenAnchor.HashBlockPreviousReferenced.Length;
 
-      VerifySignatureTX(buffer, ref index);
+      VerifySignatureTX(tXRaw, ref index);
+
+      TXRaw = tXRaw.ToList();
 
       Hash = sHA256.ComputeHash(
-       sHA256.ComputeHash(buffer));
+       sHA256.ComputeHash(tXRaw));
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()

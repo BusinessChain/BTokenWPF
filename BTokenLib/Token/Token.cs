@@ -443,7 +443,7 @@ namespace BTokenLib
     {
       Block block = CreateBlock();
 
-      block.ParseHeader(stream);
+      block.Header = ParseHeader(stream);
 
       block.ParseTXs(stream);
 

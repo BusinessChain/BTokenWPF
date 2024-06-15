@@ -45,6 +45,16 @@ namespace BTokenLib
         && Nonce == tXBToken.Nonce + 1;
     }
 
+    public override TokenAnchor GetAnchorToken()
+    {
+      TXBTokenAnchor tXBTokenAnchor = this as TXBTokenAnchor;
+
+      if (tXBTokenAnchor == null)
+        return null;
+
+      return tXBTokenAnchor.TokenAnchor;
+    }
+
     public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)
     {
       Array.Copy(buffer, index, PublicKey, 0, PublicKey.Length);
@@ -79,10 +89,10 @@ namespace BTokenLib
 
     public override void WriteToStream(Stream stream)
     {
-      List<byte> tXRawSerialized = TXRaw.ToList();
-      tXRawSerialized.InsertRange(0, VarInt.GetBytes(TXRaw.Count));
+      byte[] lengthTXRaw = VarInt.GetBytes(TXRaw.Count);
 
-      stream.Write(tXRawSerialized.ToArray(), 0, tXRawSerialized.Count);
+      stream.Write(lengthTXRaw, 0, lengthTXRaw.Length);
+      stream.Write(TXRaw.ToArray(), 0, TXRaw.Count);
     }
 
     public override string Print()
