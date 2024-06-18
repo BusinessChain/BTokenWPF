@@ -19,7 +19,7 @@ namespace BTokenLib
         .ToHexString();
     }
 
-    public abstract TokenAnchor GetAnchorToken();
+    public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
 
     public abstract string Print();
 

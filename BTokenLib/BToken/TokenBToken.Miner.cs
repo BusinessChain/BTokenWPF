@@ -11,7 +11,7 @@ namespace BTokenLib
   public partial class TokenBToken : Token
   {
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
-    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 8;
+    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
@@ -265,7 +265,9 @@ namespace BTokenLib
 
       BocksMined.Clear();
 
-      foreach (FileInfo file in new DirectoryInfo(PathBlocksMined).GetFiles())
+      var files = new DirectoryInfo(PathBlocksMined).GetFiles();
+
+      foreach (FileInfo file in files)
         file.Delete();
 
       return blockMined != null;

@@ -45,14 +45,16 @@ namespace BTokenLib
         && Nonce == tXBToken.Nonce + 1;
     }
 
-    public override TokenAnchor GetAnchorToken()
+    public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)
     {
       TXBTokenAnchor tXBTokenAnchor = this as TXBTokenAnchor;
 
       if (tXBTokenAnchor == null)
-        return null;
+        tokenAnchor = null;
+      else
+        tokenAnchor = tXBTokenAnchor.TokenAnchor;
 
-      return tXBTokenAnchor.TokenAnchor;
+      return tokenAnchor != null;
     }
 
     public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)

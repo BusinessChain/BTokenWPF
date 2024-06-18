@@ -378,8 +378,8 @@ namespace BTokenLib
     }
 
     /// <summary>
-    /// Make sure that in case of an invalid block, the database is not left in a inconsistent state.
-    /// Throws exception if block invalid.
+    /// Make sure that in case of an invalid block, the database is not left in an inconsistent state.
+    /// Throw exception if block is invalid.
     /// </summary>
     protected abstract void InsertInDatabase(Block block);
 

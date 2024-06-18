@@ -9,11 +9,7 @@ namespace BTokenLib
   {
     Token Token;
 
-    const int HASH_BYTE_SIZE = 32;
-
     public Header Header;
-    public Block BlockNext;
-    public Block BlockChild;
 
     public SHA256 SHA256 = SHA256.Create();
 
@@ -45,19 +41,30 @@ namespace BTokenLib
         int tXsLengthMod2 = tXCount & 1;
         var merkleList = new byte[tXCount + tXsLengthMod2][];
 
-        TX tX = Token.ParseTX(stream, SHA256);
+        byte[] targetValue = SHA256.ComputeHash(Header.Hash);
+        byte[] biggestDifferenceTemp = new byte[32];
 
-        TXs.Add(tX);
+        TX tXWinner = null;
 
-        merkleList[0] = tX.Hash;
-
-        for (int t = 1; t < tXCount; t += 1)
+        for (int t = 0; t < tXCount; t += 1)
         {
-          tX = Token.ParseTX(stream, SHA256);
+          TX tX = Token.ParseTX(stream, SHA256);
 
           TXs.Add(tX);
 
           merkleList[t] = tX.Hash;
+
+          if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+          {
+            byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
+
+            if (differenceHash.IsGreaterThan(biggestDifferenceTemp) || tX.IsSuccessorTo(tXWinner))
+            {
+              biggestDifferenceTemp = differenceHash;
+              tXWinner = tX;
+              Header.HashChild = tokenAnchor.HashBlockReferenced;
+            }
+          }
         }
 
         if (tXsLengthMod2 != 0)
@@ -69,10 +76,39 @@ namespace BTokenLib
 
       Header.CountTXs = TXs.Count;
       Header.CountBytesTXs = (int)(stream.Position - positionStreamStart);
+
+      DetermineAnchorTokenWinner();
+    }
+
+    bool DetermineAnchorTokenWinner()
+    {
+      byte[] targetValue = SHA256.ComputeHash(Header.Hash);
+      byte[] biggestDifferenceTemp = new byte[32];
+
+      TX tXWinner = null;
+
+      foreach (TX tX in TXs)
+      {
+        if (!tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+          continue;
+
+        byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
+
+        if (differenceHash.IsGreaterThan(biggestDifferenceTemp) || tX.IsSuccessorTo(tXWinner))
+        {
+          biggestDifferenceTemp = differenceHash;
+          tXWinner = tX;
+          Header.HashChild = tokenAnchor.HashBlockReferenced;
+        }
+      }
+
+      return true;
     }
 
     public byte[] ComputeMerkleRoot()
     {
+      const int HASH_BYTE_SIZE = 32;
+
       if (TXs.Count == 1)
         return TXs[0].Hash;
 

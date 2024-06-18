@@ -26,9 +26,10 @@ namespace BTokenLib
       return false;
     }
 
-    public override TokenAnchor GetAnchorToken()
+    public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)
     {
-      return TXOutputs[0].TokenAnchor;
+      tokenAnchor = TXOutputs[0].TokenAnchor;
+      return tokenAnchor != null;
     }
 
     public override string Print()
