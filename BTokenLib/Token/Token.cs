@@ -282,9 +282,6 @@ namespace BTokenLib
           heightBlock <= heightMax &&
           Archiver.TryLoadBlock(heightBlock, out Block block))
         {
-          $"Pull block height {heightBlock} from Archiver of {GetName()}."
-            .Log(this, LogFile, LogEntryNotifier);
-
           block.Header.AppendToHeader(HeaderTip);
 
           InsertInDatabase(block);
@@ -512,10 +509,7 @@ namespace BTokenLib
     public virtual void RevokeBlockInsertion()
     { throw new NotImplementedException(); }
 
-    public virtual List<byte[]> ParseHashesDB(
-      byte[] buffer,
-      int length,
-      Header headerTip)
+    public virtual List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
     { throw new NotImplementedException(); }
 
     public string GetName()

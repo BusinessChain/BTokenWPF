@@ -42,11 +42,11 @@ namespace BTokenLib
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
       TokenParent.HeaderGenesis.HashChild = HeaderGenesis.Hash;
 
-      AnchorTokenConsensusAlgorithm = new(this);
-
       Wallet = new WalletBToken(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
+
+      PathTokensAnchorMined = Path.Combine(GetName(), "TokensAnchorMined");
 
       PathBlocksMined = Path.Combine(GetName(), "blocksMined");
       Directory.CreateDirectory(PathBlocksMined);
@@ -127,7 +127,13 @@ namespace BTokenLib
         }
         else if(tX is TXBTokenAnchor)
         {
+          TXBTokenAnchor tXBTokenAnchor = tX as TXBTokenAnchor;
 
+          Token tokenChild = TokensChild.Find(
+            t => t.IDToken.IsAllBytesEqual(tXBTokenAnchor.TokenAnchor.IDToken));
+
+          if (tokenChild != null)
+            tokenChild.SignalAnchorTokenDetected(tXBTokenAnchor.TokenAnchor);
         }
         else if(tX is TXBTokenData)
         {

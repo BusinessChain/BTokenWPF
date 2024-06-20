@@ -186,11 +186,9 @@ namespace BTokenLib
       block.Header.Fee = tXcoinbase.TXOutputs.Sum(o => o.Value) - blockReward;
       block.Header.FeePerByte = (double)block.Header.Fee / block.Header.CountBytesTXs;
 
-      WalletBitcoin walletBitcoin = (WalletBitcoin)Wallet;
-
       foreach (TXBitcoin tX in block.TXs)
       {
-        walletBitcoin.InsertTX(tX);
+        ((WalletBitcoin)Wallet).InsertTX(tX);
 
         TokenAnchor tokenAnchor = tX.TXOutputs[0].TokenAnchor;
 
