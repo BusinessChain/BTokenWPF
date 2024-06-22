@@ -1,10 +1,10 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
-using System.IO;
 using System.Collections.Generic;
-using System.Linq;
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -13,7 +13,7 @@ namespace BTokenLib
     const long BLOCK_REWARD_INITIAL = 5000000000;
     const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
-    const int COUNT_TXS_PER_BLOCK_MAX = 3;
+    const int COUNT_TXS_PER_BLOCK_MAX = 1;
     int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);
 
 

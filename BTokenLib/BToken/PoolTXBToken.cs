@@ -107,21 +107,21 @@ namespace BTokenWPF
       InsertTXInTXBundlesSortedByFee(tX);
     }
 
-    public void RemoveTXs(Block block)
+    public void RemoveTXs(List<TX> tXs)
     {
-      foreach (TX tXRemove in block.TXs)
+      foreach (TXBToken tXRemove in tXs)
       {
         if (!TXsByHash.Remove(tXRemove.Hash, out TXBToken tX))
           continue;
 
-        if(TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXs))
+        if(TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsByAccountSource))
         {
-          if (!tXs[0].Hash.IsAllBytesEqual(tXRemove.Hash))
+          if (!tXsByAccountSource[0].Hash.IsAllBytesEqual(tXRemove.Hash))
             throw new ProtocolException($"Removal of tX {tXRemove} from pool not in expected order of nonce.");
-          
-          tXs.RemoveAt(0);
 
-          if (tXs.Count == 0)
+          tXsByAccountSource.RemoveAt(0);
+
+          if (tXsByAccountSource.Count == 0)
             TXsByIDAccountSource.Remove(tX.IDAccountSource);
         }
 

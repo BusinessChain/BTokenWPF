@@ -43,7 +43,6 @@ namespace BTokenLib
 
         byte[] targetValue = SHA256.ComputeHash(Header.Hash);
         byte[] biggestDifferenceTemp = new byte[32];
-
         TX tXAnchorWinner = null;
 
         for (int t = 0; t < tXCount; t += 1)

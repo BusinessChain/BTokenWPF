@@ -284,7 +284,9 @@ namespace BTokenLib
         {
           block.Header.AppendToHeader(HeaderTip);
 
-          InsertInDatabase(block);
+          InsertInDatabase(block); // Allenfalls nicht abstrakt machen und das 
+          // anchor winner hier ermitteln. Evt. könnte die Winner Ermittlung 
+          // als Funktion des Header Objektes angelegt werden.
 
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;
@@ -378,7 +380,57 @@ namespace BTokenLib
     /// Make sure that in case of an invalid block, the database is not left in an inconsistent state.
     /// Throw exception if block is invalid.
     /// </summary>
-    protected abstract void InsertInDatabase(Block block);
+    //protected abstract void InsertInDatabase(Block block);
+
+
+    protected abstract void StageTXInDatabase(TX tX, Header header);
+    protected abstract void CommitTXsInDatabase();
+    protected abstract void DiscardStagedTXsInDatabase();
+
+    protected void InsertInDatabase(Block block)
+    {
+      byte[] targetValue = SHA256.HashData(block.Header.Hash);
+      byte[] biggestDifferenceTemp = new byte[32];
+      TX tXAnchorWinner = null;
+
+      try
+      {
+        for (int i = 0; i < block.TXs.Count; i += 1)
+        {
+          TX tX = block.TXs[i];
+
+          StageTXInDatabase(tX, block.Header);
+
+          if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+          {
+            byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
+
+            if (
+              differenceHash.IsGreaterThan(biggestDifferenceTemp) ||
+              tX.IsSuccessorTo(tXAnchorWinner))
+            {
+              biggestDifferenceTemp = differenceHash;
+              tXAnchorWinner = tX;
+              block.Header.HashChild = tokenAnchor.HashBlockReferenced;
+            }
+
+            Token tokenChild = TokensChild.Find(
+              t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken));
+
+            if (tokenChild != null)
+              tokenChild.SignalAnchorTokenDetected(tokenAnchor);
+          }
+        }
+      }
+      catch(Exception ex)
+      {
+        DiscardStagedTXsInDatabase();
+
+        throw ex;
+      }
+
+      CommitTXsInDatabase();
+    }
 
     public abstract void AddTXToPool(TX tX);
 

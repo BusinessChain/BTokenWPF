@@ -200,11 +200,11 @@ namespace BTokenLib
         TokenAnchor tokenAnchorNew = MineBlock(tokenAnchorOld.NumberSequence + 1);
 
         if(TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew))
+        {
+          TokensAnchorMined.Remove(tokenAnchorOld);
           IncludeAnchorTokenMined(tokenAnchorNew);
+        }
       }
-
-      TokensAnchorMined.Clear();
-      File.Delete(PathTokensAnchorMined);
     }
 
     public void IncludeAnchorTokenMined(TokenAnchor tokenAnchor)

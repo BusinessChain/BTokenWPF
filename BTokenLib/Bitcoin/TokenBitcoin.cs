@@ -179,30 +179,34 @@ namespace BTokenLib
       }
     }
 
-    protected override void InsertInDatabase(Block block)
+    List<TX> TXsStaged = new();
+
+    protected override void StageTXInDatabase(TX tX, Header header)
     {
-      TXBitcoin tXcoinbase = block.TXs[0] as TXBitcoin;
-      long blockReward = BLOCK_REWARD_INITIAL >> block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
-      block.Header.Fee = tXcoinbase.TXOutputs.Sum(o => o.Value) - blockReward;
-      block.Header.FeePerByte = (double)block.Header.Fee / block.Header.CountBytesTXs;
+      TXBitcoin tXBitcoin = tX as TXBitcoin;
 
-      foreach (TXBitcoin tX in block.TXs)
+      if (TXsStaged.Count == 0)
       {
-        ((WalletBitcoin)Wallet).InsertTX(tX);
-
-        TokenAnchor tokenAnchor = tX.TXOutputs[0].TokenAnchor;
-
-        if (tokenAnchor != null)
-        {
-          Token tokenChild = TokensChild.Find(
-            t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken));
-
-          if (tokenChild != null)
-            tokenChild.SignalAnchorTokenDetected(tokenAnchor);
-        }
+        long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+        header.Fee = tXBitcoin.TXOutputs.Sum(o => o.Value) - blockReward;
+        header.FeePerByte = (double)header.Fee / header.CountBytesTXs;
       }
+      
+      ((WalletBitcoin)Wallet).InsertTX(tXBitcoin);
 
-      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
+      TXsStaged.Add(tXBitcoin);
+    }
+
+    protected override void CommitTXsInDatabase()
+    {
+      TXPool.RemoveTXs(TXsStaged.Select(tX => tX.Hash));
+
+      DiscardStagedTXsInDatabase();
+    }
+
+    protected override void DiscardStagedTXsInDatabase()
+    {
+      TXsStaged.Clear();
     }
 
     public override List<string> GetSeedAddresses()

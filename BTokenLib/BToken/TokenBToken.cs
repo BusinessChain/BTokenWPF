@@ -75,77 +75,85 @@ namespace BTokenLib
       DatabaseAccounts.CreateImage(pathImage);
     }
 
-    protected override void InsertInDatabase(Block block)
+
+    List<TX> TXsStaged = new();
+
+    protected override void StageTXInDatabase(TX tX, Header header)
     {
-      WalletBToken walletBToken = (WalletBToken)Wallet;
-
-      TXBTokenCoinbase tXCoinbase = block.TXs[0] as TXBTokenCoinbase;
-
-      if (tXCoinbase != null)
+      if(TXsStaged.Count == 0)
       {
-        long blockReward = BLOCK_REWARD_INITIAL >>
-          block.Header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+        TXBTokenCoinbase tXCoinbase = tX as TXBTokenCoinbase;
 
-        if (blockReward + block.Header.Fee != tXCoinbase.Value)
+        if (tXCoinbase == null)
+          throw new ProtocolException($"First tX of block {header} is not coinbase.");
+
+        long blockReward = BLOCK_REWARD_INITIAL >>
+          header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+
+        if (blockReward + header.Fee != tXCoinbase.Value)
           throw new ProtocolException(
-            $"Output value of Coinbase TX {block.TXs[0]}\n" +
-            $"does not add up to block reward {blockReward} plus block fee {block.Header.Fee}.");
+            $"Output value of Coinbase TX {tXCoinbase}\n" +
+            $"does not add up to block reward {blockReward} plus block fee {header.Fee}.");
 
         foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
         {
-          DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
+          DatabaseAccounts.InsertOutput(tXOutput, header.Height);
 
-          if (walletBToken.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
-            walletBToken.AddTXToHistory(tXCoinbase);
+          if (Wallet.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
+            Wallet.AddTXToHistory(tXCoinbase);
         }
+      }
+      else if (tX is TXBTokenValueTransfer)
+      {
+        TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
+
+        DatabaseAccounts.SpendInput(tXTokenTransfer);
+
+        if (tXTokenTransfer.IDAccountSource.IsAllBytesEqual(Wallet.PublicKeyHash160))
+          Wallet.AddTXToHistory(tXTokenTransfer);
+
+        foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+        {
+          DatabaseAccounts.InsertOutput(tXOutput, header.Height);
+
+          if (Wallet.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
+            Wallet.AddTXToHistory(tXTokenTransfer);
+        }
+      }
+      else if (tX is TXBTokenAnchor)
+      {
+        // wo wird der Input validiert?
+        TXBTokenAnchor tXBTokenAnchor = tX as TXBTokenAnchor;
+
+        Token tokenChild = TokensChild.Find(
+          t => t.IDToken.IsAllBytesEqual(tXBTokenAnchor.TokenAnchor.IDToken));
+
+        if (tokenChild != null)
+          tokenChild.SignalAnchorTokenDetected(tXBTokenAnchor.TokenAnchor);
+      }
+      else if (tX is TXBTokenData)
+      {
 
       }
       else
-        throw new ProtocolException($"First tX of block {block} is not coinbase.");
+        throw new ProtocolException(
+          $"Invalid token type {tX.GetType().Name} at TX index {TXsStaged.Count}.");
 
+      TXsStaged.Add(tX);
+    }
 
-      for (int i = 1; i < block.TXs.Count; i += 1)
-      {
-        TXBToken tX = (TXBToken)block.TXs[i];
-
-        if(tX is TXBTokenValueTransfer)
-        {
-          TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
-
-          DatabaseAccounts.SpendInput(tXTokenTransfer);
-
-          if (tXTokenTransfer.IDAccountSource.IsAllBytesEqual(walletBToken.PublicKeyHash160))
-            walletBToken.AddTXToHistory(tXTokenTransfer);
-
-          foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
-          {
-            DatabaseAccounts.InsertOutput(tXOutput, block.Header.Height);
-
-            if (walletBToken.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
-              walletBToken.AddTXToHistory(tXTokenTransfer);
-          }
-        }
-        else if(tX is TXBTokenAnchor)
-        {
-          TXBTokenAnchor tXBTokenAnchor = tX as TXBTokenAnchor;
-
-          Token tokenChild = TokensChild.Find(
-            t => t.IDToken.IsAllBytesEqual(tXBTokenAnchor.TokenAnchor.IDToken));
-
-          if (tokenChild != null)
-            tokenChild.SignalAnchorTokenDetected(tXBTokenAnchor.TokenAnchor);
-        }
-        else if(tX is TXBTokenData)
-        {
-
-        }
-        else
-          throw new ProtocolException($"Invalid token type {tX.GetType().Name}.");
-      }
-
+    protected override void CommitTXsInDatabase()
+    {
       DatabaseAccounts.UpdateHashDatabase();
 
-      TXPool.RemoveTXs(block);
+      TXPool.RemoveTXs(TXsStaged);
+
+      DiscardStagedTXsInDatabase();
+    }
+
+    protected override void DiscardStagedTXsInDatabase()
+    {
+      TXsStaged.Clear();
     }
 
     public override void InsertDB(
