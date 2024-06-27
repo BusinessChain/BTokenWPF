@@ -13,7 +13,7 @@ namespace BTokenLib
     const long BLOCK_REWARD_INITIAL = 5000000000;
     const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
-    const int COUNT_TXS_PER_BLOCK_MAX = 1;
+    const int COUNT_TXS_PER_BLOCK_MAX = 5;
     int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);
 
 
@@ -79,7 +79,6 @@ namespace BTokenLib
 
       BlockBitcoin block = new(this);
 
-      int countTXsPool = TXPool.GetCountTXs();
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX));
 
       int height = HeaderTip.Height + 1;
@@ -114,8 +113,7 @@ namespace BTokenLib
 
       while (header.Hash.IsGreaterThan(header.NBits))
       {
-        if (HeaderTip.Height >= height
-          || TXPool.GetCountTXs() != countTXsPool)
+        if (HeaderTip.Height >= height || TXPool.GetFlagTXAddedSinceLastInquiry())
           goto LABEL_StartPoW;
 
         if (!IsMining)

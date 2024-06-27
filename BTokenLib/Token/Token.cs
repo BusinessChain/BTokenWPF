@@ -129,11 +129,11 @@ namespace BTokenLib
 
           if (flagHasHashChild == 0x01)
           {
-            header.HashChild = new byte[32];
-            Array.Copy(bytesHeaderImage, index, header.HashChild, 0, 32);
-            index += 32;
+            //header.HashesChild = new byte[32];
+            //Array.Copy(bytesHeaderImage, index, header.HashesChild, 0, 32);
+            //index += 32;
 
-            text += $" -> {header.HashChild.ToHexString()}";
+            //text += $" -> {header.HashesChild.ToHexString()}";
           }
 
           text += "\n";
@@ -284,9 +284,7 @@ namespace BTokenLib
         {
           block.Header.AppendToHeader(HeaderTip);
 
-          InsertInDatabase(block); // Allenfalls nicht abstrakt machen und das 
-          // anchor winner hier ermitteln. Evt. könnte die Winner Ermittlung 
-          // als Funktion des Header Objektes angelegt werden.
+          InsertInDatabase(block);
 
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;
@@ -331,19 +329,22 @@ namespace BTokenLib
           bytesHeaderImage,
           ref index);
 
-        header.CountBytesTXs = BitConverter.ToInt32(
-          bytesHeaderImage, index);
-
+        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
         index += 4;
 
-        byte flagHasHashChild = bytesHeaderImage[index];
-        index += 1;
-
-        if(flagHasHashChild == 0x01)
+        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref index);
+        
+        for(int i = 0; i < countHashesChild; i += 1)
         {
-          header.HashChild = new byte[32];
-          Array.Copy(bytesHeaderImage, index, header.HashChild, 0, 32);
+          byte[] iDToken = new byte[IDToken.Length];
+          Array.Copy(bytesHeaderImage, index, iDToken, 0, iDToken.Length);
+          index += iDToken.Length;
+
+          byte[] hashesChild = new byte[32];
+          Array.Copy(bytesHeaderImage, index, hashesChild, 0, 32);
           index += 32;
+
+          header.HashesChild.Add(iDToken, hashesChild);
         }
 
         header.AppendToHeader(HeaderTip);
@@ -359,6 +360,8 @@ namespace BTokenLib
 
     public void InsertBlock(Block block)
     {
+      $"Insert block {block} in {this}.".Log(this, LogEntryNotifier);
+
       block.Header.AppendToHeader(HeaderTip);
 
       InsertInDatabase(block);
@@ -376,13 +379,6 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
     }
 
-    /// <summary>
-    /// Make sure that in case of an invalid block, the database is not left in an inconsistent state.
-    /// Throw exception if block is invalid.
-    /// </summary>
-    //protected abstract void InsertInDatabase(Block block);
-
-
     protected abstract void StageTXInDatabase(TX tX, Header header);
     protected abstract void CommitTXsInDatabase();
     protected abstract void DiscardStagedTXsInDatabase();
@@ -390,8 +386,14 @@ namespace BTokenLib
     protected void InsertInDatabase(Block block)
     {
       byte[] targetValue = SHA256.HashData(block.Header.Hash);
-      byte[] biggestDifferenceTemp = new byte[32];
-      TX tXAnchorWinner = null;
+
+      Dictionary<byte[], byte[]> biggestDifferencesTemp =
+        new(new EqualityComparerByteArray());
+      byte[] biggestDifferenceTemp;
+
+      Dictionary<byte[], TX> tXAnchorWinners =
+        new(new EqualityComparerByteArray());
+      TX tXAnchorWinner;
 
       try
       {
@@ -403,22 +405,29 @@ namespace BTokenLib
 
           if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
           {
+            $"Detected anchor token {tX} in block {block} referencing {tokenAnchor.HashBlockReferenced.ToHexString()}.".Log(this, LogEntryNotifier);
+
+            if (!biggestDifferencesTemp.TryGetValue(tokenAnchor.IDToken, out biggestDifferenceTemp))
+              biggestDifferenceTemp = new byte[32];
+
+            tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out tXAnchorWinner);
+
             byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
 
-            if (
-              differenceHash.IsGreaterThan(biggestDifferenceTemp) ||
-              tX.IsSuccessorTo(tXAnchorWinner))
+            if (differenceHash.IsGreaterThan(biggestDifferenceTemp))
             {
-              biggestDifferenceTemp = differenceHash;
-              tXAnchorWinner = tX;
-              block.Header.HashChild = tokenAnchor.HashBlockReferenced;
+              biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
+              tXAnchorWinners[tokenAnchor.IDToken] = tX;
+              block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
+            }
+            else if(tX.IsSuccessorTo(tXAnchorWinner))
+            {
+              tXAnchorWinners[tokenAnchor.IDToken] = tX;
+              block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
             }
 
-            Token tokenChild = TokensChild.Find(
-              t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken));
-
-            if (tokenChild != null)
-              tokenChild.SignalAnchorTokenDetected(tokenAnchor);
+            TokensChild.FirstOrDefault(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)) 
+              ?.SignalAnchorTokenDetected(tokenAnchor);
           }
         }
       }
@@ -465,18 +474,16 @@ namespace BTokenLib
         {
           byte[] headerBytes = header.Serialize();
 
-          fileImageHeaderchain.Write(
-            headerBytes, 0, headerBytes.Length);
+          fileImageHeaderchain.Write(headerBytes);
 
-          fileImageHeaderchain.Write(
-            BitConverter.GetBytes(header.CountBytesTXs), 0, 4);
+          fileImageHeaderchain.Write(BitConverter.GetBytes(header.CountBytesTXs));
 
-          if(header.HashChild == null)
-            fileImageHeaderchain.WriteByte(0x00);
-          else
+          fileImageHeaderchain.Write(VarInt.GetBytes(header.HashesChild.Count));
+
+          foreach(var hashChild in header.HashesChild)
           {
-            fileImageHeaderchain.WriteByte(0x01);
-            fileImageHeaderchain.Write(header.HashChild, 0, 32);
+            fileImageHeaderchain.Write(hashChild.Key);
+            fileImageHeaderchain.Write(hashChild.Value);
           }
 
           header = header.HeaderNext;
@@ -600,7 +607,12 @@ namespace BTokenLib
         out TX tX))
       {
         tokenAnchor.TX = tX;
+
         BroadcastTX(tX);
+
+        $"Created and broadcasted anchor token {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()}."
+          .Log(this, LogEntryNotifier);
+
         return true;
       }
 

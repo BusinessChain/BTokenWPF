@@ -40,7 +40,7 @@ namespace BTokenLib
       TokenParent.TokensChild.Add(this);
 
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
-      TokenParent.HeaderGenesis.HashChild = HeaderGenesis.Hash;
+      TokenParent.HeaderGenesis.HashesChild.Add(IDToken, HeaderGenesis.Hash);
 
       Wallet = new WalletBToken(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 

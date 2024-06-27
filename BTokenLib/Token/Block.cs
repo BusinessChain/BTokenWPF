@@ -33,7 +33,6 @@ namespace BTokenLib
       if (tXCount == 1)
       {
         TX tX = Token.ParseTX(stream, SHA256);
-
         TXs.Add(tX);
       }
       else
@@ -41,31 +40,11 @@ namespace BTokenLib
         int tXsLengthMod2 = tXCount & 1;
         var merkleList = new byte[tXCount + tXsLengthMod2][];
 
-        byte[] targetValue = SHA256.ComputeHash(Header.Hash);
-        byte[] biggestDifferenceTemp = new byte[32];
-        TX tXAnchorWinner = null;
-
         for (int t = 0; t < tXCount; t += 1)
         {
           TX tX = Token.ParseTX(stream, SHA256);
-
           TXs.Add(tX);
-
           merkleList[t] = tX.Hash;
-
-          if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
-          {
-            byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
-
-            if (
-              differenceHash.IsGreaterThan(biggestDifferenceTemp) || 
-              tX.IsSuccessorTo(tXAnchorWinner))
-            {
-              biggestDifferenceTemp = differenceHash;
-              tXAnchorWinner = tX;
-              Header.HashChild = tokenAnchor.HashBlockReferenced;
-            }
-          }
         }
 
         if (tXsLengthMod2 != 0)
@@ -77,7 +56,6 @@ namespace BTokenLib
 
       Header.CountTXs = TXs.Count;
       Header.CountBytesTXs = (int)(stream.Position - positionStreamStart);
-
     }
 
     public byte[] ComputeMerkleRoot()

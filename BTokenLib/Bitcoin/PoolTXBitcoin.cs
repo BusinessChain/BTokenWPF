@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Diagnostics;
 
 namespace BTokenWPF
@@ -21,6 +20,8 @@ namespace BTokenWPF
     List<TX> TXsGet = new();
     int CountMaxTXsGet;
 
+    bool FlagTXAdded;
+
 
     public bool TryGetTX(byte[] hashTX, out TXBitcoin tX)
     {
@@ -28,10 +29,16 @@ namespace BTokenWPF
         return TXPoolDict.TryGetValue(hashTX, out tX);
     }
 
-    public int GetCountTXs()
+    public bool GetFlagTXAddedSinceLastInquiry()
     {
       lock (LOCK_TXsPool)
-        return TXPoolDict.Count;
+      {
+        if(!FlagTXAdded)
+          return false;
+
+        FlagTXAdded = false;
+        return true;
+      }
     }
 
     public bool TryAddTX(TXBitcoin tX)
@@ -77,6 +84,8 @@ namespace BTokenWPF
               inputsInPool.Add((tXInput, tX));
             else
               InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
+          
+          FlagTXAdded = true;
 
           return true;
         }

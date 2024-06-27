@@ -24,7 +24,7 @@ namespace BTokenWPF
         $"Previous\n" +
         $"Next\n" +
         $"Parent\n" +
-        $"Child\n" +
+        //$"Child\n" +
         $"MerkleRoot\n" +
         $"Count TXs\n" +
         $"Difficulty\n" +
@@ -40,7 +40,7 @@ namespace BTokenWPF
         $"{header.HashPrevious.ToHexString()}\n" +
         $"{header.HeaderNext}\n" +
         $"{header.HeaderParent}\n" +
-        $"{header.HashChild.ToHexString()}\n" +
+        //$"{header.HashesChild.ToHexString()}\n" +
         $"{header.MerkleRoot.ToHexString()}\n" +
         $"{header.CountTXs}\n" +
         $"{header.Difficulty}\n" +

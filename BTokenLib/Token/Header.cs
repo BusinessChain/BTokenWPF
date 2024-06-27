@@ -1,4 +1,6 @@
 ﻿using System.Security.Cryptography;
+using System.Collections.Generic;
+using System.Linq;
 
 
 
@@ -16,7 +18,8 @@ namespace BTokenLib
     public Header HeaderNext;
 
     public Header HeaderParent;
-    public byte[] HashChild;
+    public Dictionary<byte[], byte[]> HashesChild = 
+      new(new EqualityComparerByteArray());
 
     public int Height;
     public int CountTXs;
@@ -77,7 +80,7 @@ namespace BTokenLib
           if (headerParent == null)
             throw new ProtocolException($"Header {this} not anchored in parent chain.");
 
-          if(headerParent.HashChild != null && headerParent.HashChild.IsAllBytesEqual(Hash))
+          if(headerParent.HashesChild.Any(h => h.Value.IsAllBytesEqual(Hash)))
           {
             HeaderParent = headerParent;
             return;

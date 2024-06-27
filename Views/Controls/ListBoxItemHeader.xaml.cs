@@ -1,4 +1,5 @@
 ﻿using System.Windows.Controls;
+using System.Linq;
 using BTokenLib;
 
 namespace BTokenWPF
@@ -16,9 +17,9 @@ namespace BTokenWPF
       LabelHeight.Content = $"Height: {header.Height}";
       LabelHash.Content = header.Hash.ToHexString().Substring(0,24) + " ...";
 
-      if (header.HashChild != null)
+      if (header.HashesChild.Count > 0)
         LabelHashChild.Content = $"{char.ConvertFromUtf32(0x21b3)} " +
-          $"{header.HashChild.ToHexString().Substring(0, 24)} ...";
+          $"{header.HashesChild.First().Value.ToHexString().Substring(0, 24)} ...";
       else
         Grid.Children.Remove(LabelHashChild);
     }
