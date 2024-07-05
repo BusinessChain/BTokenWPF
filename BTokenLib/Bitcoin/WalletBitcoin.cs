@@ -237,7 +237,8 @@ namespace BTokenLib
 
     public override void LoadImage(string path)
     {
-      base.LoadImage(path);
+      LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
+      LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
 
       using (FileStream fileStream = new(
         Path.Combine(path, "walletHistoryTransactions"),
@@ -245,7 +246,7 @@ namespace BTokenLib
         FileAccess.Read))
       {
         while (fileStream.Position < fileStream.Length)
-          HistoryTransactions.Add(Token.ParseTX(fileStream, SHA256));
+          HistoryTXs.Add(Token.ParseTX(fileStream, SHA256));
       }
 
       LoadOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
+using System.Threading;
 
 namespace BTokenWPF
 {
@@ -20,7 +21,8 @@ namespace BTokenWPF
     List<TX> TXsGet = new();
     int CountMaxTXsGet;
 
-    bool FlagTXAdded;
+
+    Dictionary<int, bool> FlagTXAddedPerThreadID = new();
 
 
     public bool TryGetTX(byte[] hashTX, out TXBitcoin tX)
@@ -31,12 +33,14 @@ namespace BTokenWPF
 
     public bool GetFlagTXAddedSinceLastInquiry()
     {
+      int iDThread = Thread.CurrentThread.ManagedThreadId;
+
       lock (LOCK_TXsPool)
       {
-        if(!FlagTXAdded)
+        if(FlagTXAddedPerThreadID.TryGetValue(iDThread, out bool flagTXAdded) && !flagTXAdded)
           return false;
 
-        FlagTXAdded = false;
+        FlagTXAddedPerThreadID[iDThread] = false;
         return true;
       }
     }
@@ -84,8 +88,9 @@ namespace BTokenWPF
               inputsInPool.Add((tXInput, tX));
             else
               InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
-          
-          FlagTXAdded = true;
+
+          foreach (int key in FlagTXAddedPerThreadID.Keys.ToList())
+            FlagTXAddedPerThreadID[key] = true;
 
           return true;
         }
@@ -101,6 +106,8 @@ namespace BTokenWPF
     {
       lock (LOCK_TXsPool)
       {
+        FlagTXAddedPerThreadID[Thread.CurrentThread.ManagedThreadId] = false;
+
         TXsGet.Clear();
         CountMaxTXsGet = countMax;
 

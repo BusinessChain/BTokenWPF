@@ -78,7 +78,7 @@ namespace BTokenLib
               }
               catch(Exception ex)
               {
-                Debug.WriteLine($"{ex.GetType().Name} on line 79:\n {ex.Message}");
+                $"{ex.GetType().Name} on line 79:\n {ex.Message}".Log(this, Token.LogEntryNotifier);
               }
 
               await Task.WhenAll(createPeerTasks);

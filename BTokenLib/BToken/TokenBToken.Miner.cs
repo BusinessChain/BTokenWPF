@@ -11,7 +11,7 @@ namespace BTokenLib
   public partial class TokenBToken : Token
   {
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
-    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 8;
+    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
@@ -128,10 +128,10 @@ namespace BTokenLib
 
       block.Header.ComputeHash(SHA256Miner);
 
-      $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
-
       BocksMined.Add(block);
       WriteBlockMinedToDisk(block);
+
+      $"Mine block {block}. {BocksMined.Count} blocks in BocksMined.".Log(this, LogFile, LogEntryNotifier);
 
       TokenAnchor tokenAnchor = new();
 
@@ -174,6 +174,15 @@ namespace BTokenLib
         
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
+      string textLog = $"Signal parent block insertion {headerAnchor}";
+
+      if (headerAnchor.HashesChild.TryGetValue(IDToken, out byte[] hashChildTmp))
+        textLog += $" referencing hash child {hashChildTmp.ToHexString()}.";
+      else
+        textLog += $" referencing no hash child.";
+
+      textLog.Log(this, LogFile, LogEntryNotifier);
+
       if (
         headerAnchor.HashesChild.TryGetValue(IDToken, out byte[] hashChild) &&
         TryGetBlockMined(hashChild, out Block blockMined))
@@ -196,6 +205,8 @@ namespace BTokenLib
 
       if (tokenAnchorOld != null)
       {
+        $"{TokensAnchorMined.Count} anchor tokens mined not in parent block. Last being {tokenAnchorOld}.".Log(this, LogFile, LogEntryNotifier);
+
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
         TokenAnchor tokenAnchorNew = MineBlock();
@@ -260,6 +271,11 @@ namespace BTokenLib
           }
       }
 
+      if(blockMined == null)
+        $"Did not find self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
+      else
+        $"Found self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
+
       $"Clear list Blocks mined, delete {BocksMined.Count} blocks.".Log(this, LogFile, LogEntryNotifier);
       BocksMined.Clear();
 
@@ -286,6 +302,9 @@ namespace BTokenLib
         TokensAnchorMined.RemoveAt(0);
         WriteTokensAnchorMinedToDisk();
       }
+      else 
+        $"Anchor token {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()} not found in TokensAnchorMined.".Log(this, LogEntryNotifier);
+
     }
 
     public void IncludeAnchorTokenMined(TokenAnchor tokenAnchor)
@@ -296,6 +315,8 @@ namespace BTokenLib
         TokensAnchorMined = new() { tokenAnchor };
 
       WriteTokensAnchorMinedToDisk();
+
+      $"Included anchor token {tokenAnchor}. {TokensAnchorMined.Count} anchor tokens in TokensAnchorMined.".Log(this, LogFile, LogEntryNotifier);
     }
 
     public void LoadTokensAnchorMined()

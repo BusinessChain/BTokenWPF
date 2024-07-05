@@ -86,7 +86,7 @@ namespace BTokenLib
 
     void StartNetwork()
     {
-      new Thread(Network.Start).Start();
+      new Thread(Network.Start).Start(); // evt. kein Thread machen, da alles async ist.
 
       TokensChild.ForEach(t => t.StartNetwork());
     }
@@ -516,6 +516,7 @@ namespace BTokenLib
       if (Wallet.TryCreateTX(address, value, feePerByte, out tX))
       {
         BroadcastTX(tX);
+        Wallet.AddTXUnconfirmedToHistory(tX);
         return true;
       }
 
@@ -581,7 +582,7 @@ namespace BTokenLib
       out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-    public void BroadcastTX(TX tX)
+    void BroadcastTX(TX tX)
     {
       AddTXToPool(tX);
       Network.AdvertizeTX(tX);
@@ -609,6 +610,8 @@ namespace BTokenLib
         tokenAnchor.TX = tX;
 
         BroadcastTX(tX);
+
+        Wallet.AddTXUnconfirmedToHistory(tX);
 
         $"Created and broadcasted anchor token {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()}."
           .Log(this, LogEntryNotifier);

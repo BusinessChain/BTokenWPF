@@ -19,7 +19,8 @@ namespace BTokenLib
     public byte[] PublicKeyHash160 = new byte[20];
     public string AddressAccount;
 
-    public List<TX> HistoryTransactions = new();
+    public List<TX> HistoryTXs = new();
+    public List<TX> HistoryTXsUnconfirmed = new();
 
     public List<TXOutputWallet> OutputsUnconfirmed = new();
     public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
@@ -62,15 +63,8 @@ namespace BTokenLib
       Array.Copy(bb, 1, rv, 0, bb.Length - 5);
       return rv;
     }
-           
-    public virtual void LoadImage(string path)
-    {
-      byte[] fileWalletHistoryTransactions = File.ReadAllBytes(
-        Path.Combine(path, "walletHistoryTransactions"));
 
-      LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
-    }
+    public abstract void LoadImage(string path);
 
     protected static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
     {
@@ -98,16 +92,29 @@ namespace BTokenLib
 
     public virtual void CreateImage(string path)
     {
-      using (FileStream fileWalletHistoryTransactions = new(
-        Path.Combine(path, "walletHistoryTransactions"),
+      using (FileStream fileWalletHistoryTXs = new(
+        Path.Combine(path, "walletHistoryTXs"),
         FileMode.Create,
         FileAccess.Write,
         FileShare.None))
       {
-        foreach(TX tX in HistoryTransactions)
+        foreach(TX tX in HistoryTXs)
         {
           byte[] txRaw = tX.TXRaw.ToArray();
-          fileWalletHistoryTransactions.Write(txRaw, 0, txRaw.Length);
+          fileWalletHistoryTXs.Write(txRaw, 0, txRaw.Length);
+        }
+      }
+
+      using (FileStream fileWalletHistoryTXsUnconfirmed = new(
+        Path.Combine(path, "walletHistoryTXsUnconfirmed"),
+        FileMode.Create,
+        FileAccess.Write,
+        FileShare.None))
+      {
+        foreach (TX tX in HistoryTXsUnconfirmed)
+        {
+          byte[] txRaw = tX.TXRaw.ToArray();
+          fileWalletHistoryTXsUnconfirmed.Write(txRaw, 0, txRaw.Length);
         }
       }
 
@@ -138,8 +145,14 @@ namespace BTokenLib
 
     public void AddTXToHistory(TX tX)
     {
-      if (!HistoryTransactions.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
-        HistoryTransactions.Add(tX);
+      if (!HistoryTXs.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
+        HistoryTXs.Add(tX);
+    }
+
+    public void AddTXUnconfirmedToHistory(TX tX)
+    {
+      if (!HistoryTXsUnconfirmed.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
+        HistoryTXsUnconfirmed.Add(tX);
     }
 
     public abstract long GetBalance();
