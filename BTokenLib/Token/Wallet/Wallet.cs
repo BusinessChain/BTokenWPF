@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 // Remove this
@@ -153,6 +153,8 @@ namespace BTokenLib
     {
       if (!HistoryTXsUnconfirmed.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
         HistoryTXsUnconfirmed.Add(tX);
+
+      // Immediately backup tX unconfirmed on disk
     }
 
     public abstract long GetBalance();

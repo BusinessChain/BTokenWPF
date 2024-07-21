@@ -1,9 +1,8 @@
 ﻿using BTokenLib;
 using System;
 using System.IO;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
 using System.Windows;
+using System.Threading.Tasks;
 
 namespace BTokenWPF
 {

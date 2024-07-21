@@ -53,6 +53,9 @@ namespace BTokenLib
 
     public bool TryStartSynchronization()
     {
+      $"Try start synchronization of token {Token.GetName()}."
+        .Log(this, Token.LogFile, Token.LogEntryNotifier);
+
       Peer peerSync = null;
 
       lock (LOCK_IsStateSynchronizing)
@@ -246,7 +249,10 @@ namespace BTokenLib
       $"Synchronization with {PeerSynchronizing} of {Token.GetName()} completed.\n"
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-      Token.TokensChild.ForEach(t => t.Network.TryStartSynchronization());
+      Token.RebroadcastTXsUnconfirmed();
+
+      foreach (Token token in Token.TokensChild)
+        token.Network.TryStartSynchronization();
     }
 
     bool InsertBlock_FlagContinue(Peer peer)

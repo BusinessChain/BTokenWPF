@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Threading;
-using System.Security.Cryptography;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+
 
 namespace BTokenLib
 {
@@ -58,7 +60,7 @@ namespace BTokenLib
 
       LogFile = new StreamWriter(
         Path.Combine(GetName(), "LogToken"),
-        false);
+        append: false);
 
       PathImage = Path.Combine(PathRootToken, NameImage);
       PathImageOld = Path.Combine(PathRootToken, NameImageOld);
@@ -301,6 +303,12 @@ namespace BTokenLib
       }
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
+    }
+
+    public async Task RebroadcastTXsUnconfirmed()
+    {
+      // Rebroadcast wird bei beendigung der Netzwerk Sync getriggert.
+      // Versuche alle txs die noch nicht bestätigt wurden zu rebroadcasten
     }
 
     public virtual void Reset()

@@ -1,11 +1,12 @@
-﻿using BTokenLib;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.IO;
 using System.Linq;
-using System.Diagnostics;
 using System.Threading;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 
-namespace BTokenWPF
+
+namespace BTokenLib
 {
   public class PoolTXBitcoin
   {
@@ -21,9 +22,36 @@ namespace BTokenWPF
     List<TX> TXsGet = new();
     int CountMaxTXsGet;
 
+    public FileStream FileTXPoolDict;
 
     Dictionary<int, bool> FlagTXAddedPerThreadID = new();
 
+    Token Token;
+
+
+    public PoolTXBitcoin(Token token)
+    {
+      Token = token;
+
+      FileTXPoolDict = new FileStream(
+        Path.Combine(token.GetName(), "TXPoolDict"), 
+        FileMode.OpenOrCreate,
+        FileAccess.ReadWrite,
+        FileShare.Read);
+
+      LoadFromFile();
+    }
+
+    void LoadFromFile()
+    {
+      SHA256 sHA256 = SHA256.Create();
+
+      while (FileTXPoolDict.Position < FileTXPoolDict.Length)
+      {
+        TXBitcoin tX = (TXBitcoin)Token.ParseTX(FileTXPoolDict, sHA256);
+        AddTX(tX);
+      }
+    }
 
     public bool TryGetTX(byte[] hashTX, out TXBitcoin tX)
     {
@@ -45,6 +73,17 @@ namespace BTokenWPF
       }
     }
 
+    void AddTX(TXBitcoin tX)
+    {
+      TXPoolDict.Add(tX.Hash, tX);
+
+      foreach (TXInputBitcoin tXInput in tX.Inputs)
+        if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin input, TXBitcoin)> inputsInPool))
+          inputsInPool.Add((tXInput, tX));
+        else
+          InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
+    }
+
     public bool TryAddTX(TXBitcoin tX)
     {
       bool flagRemoveTXInPoolBeingRBFed = false;
@@ -56,23 +95,21 @@ namespace BTokenWPF
         {
           foreach (TXInputBitcoin tXInput in tX.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin, TXBitcoin)> inputsInPool))
-              foreach ((TXInputBitcoin input, TX tX) tupelInputsInPool in inputsInPool)
-                if (tupelInputsInPool.input.OutputIndex == tXInput.OutputIndex)
+              foreach ((TXInputBitcoin input, TX tX) tupleInputsInPool in inputsInPool)
+                if (tupleInputsInPool.input.OutputIndex == tXInput.OutputIndex)
                 {
-                  Debug.WriteLine(
-                    $"Output {tXInput.TXIDOutput.ToHexString()} - {tXInput.OutputIndex} referenced by tX {tX} " +
-                    $"already referenced by tX {tupelInputsInPool.tX}.");
+                  ($"Output {tXInput.TXIDOutput.ToHexString()} - {tXInput.OutputIndex} referenced by tX {tX} " +
+                    $"already referenced by tX {tupleInputsInPool.tX}.").Log(this, Token.LogEntryNotifier);
 
                   if (
                     FLAG_ENABLE_RBF &&
-                    tXInput.Sequence > tupelInputsInPool.input.Sequence)
+                    tXInput.Sequence > tupleInputsInPool.input.Sequence)
                   {
-                    Debug.WriteLine(
-                      $"Replace tX {tupelInputsInPool.tX} (sequence = {tupelInputsInPool.input.Sequence}) " +
-                      $"with tX {tX} (sequence = {tXInput.Sequence}).");
+                    ($"Replace tX {tupleInputsInPool.tX} (sequence = {tupleInputsInPool.input.Sequence}) " +
+                      $"with tX {tX} (sequence = {tXInput.Sequence}).").Log(this, Token.LogEntryNotifier);
 
                     flagRemoveTXInPoolBeingRBFed = true;
-                    tXInPoolBeingRBFed = tupelInputsInPool.tX;
+                    tXInPoolBeingRBFed = tupleInputsInPool.tX;
                   }
                   else
                     return false;
@@ -81,13 +118,8 @@ namespace BTokenWPF
           if (flagRemoveTXInPoolBeingRBFed)
             RemoveTX(tXInPoolBeingRBFed.Hash, flagRemoveRecursive: true);
 
-          TXPoolDict.Add(tX.Hash, tX);
-
-          foreach (TXInputBitcoin tXInput in tX.Inputs)
-            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin input, TXBitcoin)> inputsInPool))
-              inputsInPool.Add((tXInput, tX));
-            else
-              InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
+          AddTX(tX);
+          FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
 
           foreach (int key in FlagTXAddedPerThreadID.Keys.ToList())
             FlagTXAddedPerThreadID[key] = true;
@@ -97,7 +129,9 @@ namespace BTokenWPF
       }
       catch (Exception ex)
       {
-        Debug.WriteLine($"Exception {ex.GetType().Name} when trying to insert tx {tX} in TXPool.");
+        $"Exception {ex.GetType().Name} when trying to insert tx {tX} in TXPool."
+          .Log(this, Token.LogEntryNotifier);
+
         return false;
       }
     }
@@ -125,6 +159,11 @@ namespace BTokenWPF
     {
       foreach (byte[] hashTX in hashesTX)
         RemoveTX(hashTX, flagRemoveRecursive: false);
+
+      FileTXPoolDict.SetLength(0);
+
+      foreach(TXBitcoin tX in TXPoolDict.Values)
+        FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
     }
 
     /// <summary>

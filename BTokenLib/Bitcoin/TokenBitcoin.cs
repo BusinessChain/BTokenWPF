@@ -1,9 +1,8 @@
-﻿using BTokenWPF;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Linq;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 
 
 namespace BTokenLib
@@ -12,7 +11,7 @@ namespace BTokenLib
   {
     const UInt16 COMPORT_BITCOIN = 8333;
 
-    PoolTXBitcoin TXPool = new();
+    PoolTXBitcoin TXPool;
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -25,6 +24,8 @@ namespace BTokenLib
       Wallet = new WalletBitcoin(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
+
+      TXPool = new(this);
     }
 
     public override Header CreateHeaderGenesis()
@@ -61,7 +62,6 @@ namespace BTokenLib
     {
       return new BlockBitcoin(this);
     }
-
 
     public override Header ParseHeader(Stream stream)
     {
