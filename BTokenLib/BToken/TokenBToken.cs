@@ -122,14 +122,7 @@ namespace BTokenLib
       }
       else if (tX is TXBTokenAnchor)
       {
-        // wo wird der Input validiert?
-        TXBTokenAnchor tXBTokenAnchor = tX as TXBTokenAnchor;
 
-        Token tokenChild = TokensChild.Find(
-          t => t.IDToken.IsAllBytesEqual(tXBTokenAnchor.TokenAnchor.IDToken));
-
-        if (tokenChild != null)
-          tokenChild.SignalAnchorTokenDetected(tXBTokenAnchor.TokenAnchor);
       }
       else if (tX is TXBTokenData)
       {

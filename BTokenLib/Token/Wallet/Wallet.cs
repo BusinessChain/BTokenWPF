@@ -143,6 +143,8 @@ namespace BTokenLib
       }
     }
 
+    public abstract void InsertTXUnconfirmed(TX tX);
+
     public void AddTXToHistory(TX tX)
     {
       if (!HistoryTXs.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))

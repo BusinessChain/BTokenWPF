@@ -110,6 +110,16 @@ namespace BTokenLib
       return true;
     }
 
+    public override void InsertTXUnconfirmed(TX tX)
+    {
+
+    }
+
+    public override void LoadImage(string path)
+    {
+      throw new NotImplementedException();
+    }
+
     public override void ReverseTX(TX tX)
     { throw new NotImplementedException(); }
 

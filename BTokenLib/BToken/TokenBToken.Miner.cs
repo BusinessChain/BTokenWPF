@@ -26,14 +26,12 @@ namespace BTokenLib
     List<Block> BocksMined = new();
     string PathBlocksMined;
 
-    List<TokenAnchor> TokensAnchorMined = new();
+    List<TokenAnchor> TokensAnchorMinedUnconfirmed = new();
 
 
     protected override async void RunMining()
     {
       $"Miner {this} starts.".Log(this, LogFile, LogEntryNotifier);
-
-      LoadTokensAnchorMined();
 
       Header headerTipParent = null;
       Header headerTip = null;
@@ -80,8 +78,6 @@ namespace BTokenLib
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
-              IncludeAnchorTokenMined(tokenAnchor);
-
               // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
               // COUNT_SATOSHIS_PER_DAY_MINING);
 
@@ -171,7 +167,7 @@ namespace BTokenLib
           Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS);
         }
     }
-        
+
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
       string textLog = $"Signal parent block insertion {headerAnchor}";
@@ -201,11 +197,11 @@ namespace BTokenLib
         }
       }
 
-      TokenAnchor tokenAnchorOld = TokensAnchorMined.FindLast(t => t != null);
-
-      if (tokenAnchorOld != null)
+      if (TokensAnchorMinedUnconfirmed.Count > 0)
       {
-        $"{TokensAnchorMined.Count} anchor tokens mined not in parent block. Last being {tokenAnchorOld}.".Log(this, LogFile, LogEntryNotifier);
+        TokenAnchor tokenAnchorOld = TokensAnchorMinedUnconfirmed.Last();
+
+        $"{TokensAnchorMinedUnconfirmed.Count} anchor tokens mined not in parent block. Last being {tokenAnchorOld}.".Log(this, LogFile, LogEntryNotifier);
 
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
@@ -214,8 +210,8 @@ namespace BTokenLib
 
         if (TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew))
         {
-          TokensAnchorMined.Remove(tokenAnchorOld);
-          IncludeAnchorTokenMined(tokenAnchorNew);
+          TokensAnchorMinedUnconfirmed.RemoveAt(TokensAnchorMinedUnconfirmed.Count - 1);
+          CacheAnchorTokenUnconfirmedIfSelfMined(tokenAnchorNew);
 
           ($"RBF old anchor token {tokenAnchorOld} referencing {tokenAnchorOld.HashBlockReferenced.ToHexString()}\n" +
             $" with {tokenAnchorNew} referenching {tokenAnchorNew.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
@@ -271,7 +267,7 @@ namespace BTokenLib
           }
       }
 
-      if(blockMined == null)
+      if (blockMined == null)
         $"Did not find self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
       else
         $"Found self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
@@ -287,101 +283,76 @@ namespace BTokenLib
       return blockMined != null;
     }
 
-    public override void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
+    public override void ReceiveAnchorTokenConfirmed(TokenAnchor tokenAnchor)
     {
-      TokenAnchor tokenAnchorMined = TokensAnchorMined.Find(
-        t => t.TX.Hash.IsAllBytesEqual(tokenAnchor.TX.Hash));
+      TokenAnchor tokenAnchorMined = TokensAnchorMinedUnconfirmed.Find(
+        t => tokenAnchor.TX.Hash.IsAllBytesEqual(tokenAnchor.TX.Hash));
 
       if (tokenAnchorMined != null)
       {
-        if (tokenAnchorMined != TokensAnchorMined.First())
-          throw new ProtocolException($"Detected anchor token {tokenAnchorMined} is not the oldest mined anchor token.");
-
-        $"Remove anchor token in {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()} in TokensAnchorMined.".Log(this, LogEntryNotifier);
-
-        TokensAnchorMined.RemoveAt(0);
-        WriteTokensAnchorMinedToDisk();
+        $"Remove anchor token {tokenAnchorMined} in TokensAnchorMined.".Log(this, LogEntryNotifier);
+        TokensAnchorMinedUnconfirmed.RemoveAt(0);
       }
-      else 
-        $"Anchor token {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()} not found in TokensAnchorMined.".Log(this, LogEntryNotifier);
-
-    }
-
-    public void IncludeAnchorTokenMined(TokenAnchor tokenAnchor)
-    {
-      if (TokensAnchorMined.Count > 0 && tokenAnchor.TX.IsSuccessorTo(TokensAnchorMined.Last().TX))
-        TokensAnchorMined.Add(tokenAnchor);
       else
-        TokensAnchorMined = new() { tokenAnchor };
-
-      WriteTokensAnchorMinedToDisk();
-
-      $"Included anchor token {tokenAnchor}. {TokensAnchorMined.Count} anchor tokens in TokensAnchorMined.".Log(this, LogFile, LogEntryNotifier);
+        $"Anchor token {tokenAnchorMined} not found in TokensAnchorMined.".Log(this, LogEntryNotifier);
     }
 
-    public void LoadTokensAnchorMined()
+    public override void CacheAnchorTokenUnconfirmedIfSelfMined(TokenAnchor tokenAnchor)
     {
-      while (true)
-        try
+      if (!File.Exists(Path.Combine(PathBlocksMined, tokenAnchor.HashBlockReferenced.ToHexString())))
+        return;
+
+      if(TokensAnchorMinedUnconfirmed.Count == 0)
+      {
+        TokensAnchorMinedUnconfirmed.Add(tokenAnchor);
+        return;
+      }
+
+      int indexAnchorTokenInserted;
+      int i = TokensAnchorMinedUnconfirmed.Count;
+
+      while (i > 0)
+      {
+        i -= 1;
+
+        if (tokenAnchor.TX.IsSuccessorTo(TokensAnchorMinedUnconfirmed[i].TX))
         {
-          TokensAnchorMined.Clear();
+          indexAnchorTokenInserted = i + 1;
+          TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted, tokenAnchor);
 
-          using (FileStream fileStream = new(
-            PathTokensAnchorMined,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.None))
+          while(i > 0)
           {
-            while (fileStream.Position < fileStream.Length)
-            {
-              TX tX = TokenParent.ParseTX(fileStream, SHA256Miner);
+            i -= 1;
 
-              if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
-                TokensAnchorMined.Add(tokenAnchor);
-              else
-                throw new InvalidOperationException($"Error: Could not load anchor token mined from tX {tX}.");
+            if (TokensAnchorMinedUnconfirmed[i].TX.IsSuccessorTo(tokenAnchor.TX))
+            {
+              TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted + 1, tokenAnchor);
+              TokensAnchorMinedUnconfirmed.RemoveAt(i);
+              return;
             }
           }
-
-          return;
         }
-        catch (FileNotFoundException)
+        else if (TokensAnchorMinedUnconfirmed[i].TX.IsSuccessorTo(tokenAnchor.TX))
         {
-          return;
-        }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load mined anchor token {PathTokensAnchorMined}: {ex.Message}.\n" +
-            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+          indexAnchorTokenInserted = i;
+          TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted, tokenAnchor);
 
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-        }
-    }
-
-    void WriteTokensAnchorMinedToDisk()
-    {
-      while (true)
-        try
-        {
-          using (FileStream fileStreamBlock = new(
-            PathTokensAnchorMined,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None))
+          while (i > 0)
           {
-            TokensAnchorMined.ForEach(t => t.TX.WriteToStream(fileStreamBlock));
+            i -= 1;
+
+            if (tokenAnchor.TX.IsSuccessorTo(TokensAnchorMinedUnconfirmed[i].TX))
+            {
+              TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted - 1, tokenAnchor);
+              TokensAnchorMinedUnconfirmed.RemoveAt(i);
+              return;
+            }
           }
-
-          break;
         }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when writing TokensAnchorMined to file:\n" +
-            $"{ex.Message}\n " +
-            $"Try again in {TIMEOUT_FILE_RELOAD_SECONDS} seconds ...").Log(this, LogEntryNotifier);
+      }
 
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS);
-        }
+      $"Included anchor token {tokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMined."
+        .Log(this, LogFile, LogEntryNotifier);
     }
   }
 }

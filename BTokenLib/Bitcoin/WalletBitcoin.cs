@@ -301,9 +301,11 @@ namespace BTokenLib
       }
     }
 
-    public void InsertTXUnconfirmed(TXBitcoin tX)
+    public override void InsertTXUnconfirmed(TX tX)
     {
-      foreach (TXInputBitcoin tXInput in tX.Inputs)
+      TXBitcoin tXBitcoin = (TXBitcoin)tX;
+
+      foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
       {
         TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsUnconfirmed).ToList()
           .Find(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
@@ -312,15 +314,15 @@ namespace BTokenLib
           OutputsSpentUnconfirmed.Add(outputSpendable);
       }
 
-      foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
+      foreach (TXOutputBitcoin tXOutput in tXBitcoin.TXOutputs)
       {
         if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
           tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
         {
           OutputsUnconfirmed.Add(new TXOutputWallet
           {
-            TXID = tX.Hash,
-            Index = tX.TXOutputs.IndexOf(tXOutput),
+            TXID = tXBitcoin.Hash,
+            Index = tXBitcoin.TXOutputs.IndexOf(tXOutput),
             Value = tXOutput.Value
           });
         }

@@ -405,10 +405,8 @@ namespace BTokenLib
 
       try
       {
-        for (int i = 0; i < block.TXs.Count; i += 1)
+        foreach (TX tX in block.TXs)
         {
-          TX tX = block.TXs[i];
-
           StageTXInDatabase(tX, block.Header);
 
           if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
@@ -434,8 +432,8 @@ namespace BTokenLib
               block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
             }
 
-            TokensChild.FirstOrDefault(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)) 
-              ?.SignalAnchorTokenDetected(tokenAnchor);
+            TokensChild.FirstOrDefault(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
+              ?.ReceiveAnchorTokenConfirmed(tokenAnchor);
           }
         }
       }
@@ -568,10 +566,13 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void SignalAnchorTokenDetected(TokenAnchor tokenAnchor)
+    public virtual void ReceiveAnchorTokenConfirmed(TokenAnchor tokenAnchor)
     { throw new NotImplementedException(); }
 
     public virtual void SignalParentBlockInsertion(Header header)
+    { throw new NotImplementedException(); }
+
+    public virtual void CacheAnchorTokenUnconfirmedIfSelfMined(TokenAnchor tokenAnchor)
     { throw new NotImplementedException(); }
 
     public virtual void RevokeBlockInsertion()
@@ -593,7 +594,17 @@ namespace BTokenLib
     void BroadcastTX(TX tX)
     {
       AddTXToPool(tX);
+
+      SendAnchorTokenUnconfirmedToChilds(tX);
+
       Network.AdvertizeTX(tX);
+    }
+
+    public void SendAnchorTokenUnconfirmedToChilds(TX tX)
+    {
+      if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+        TokensChild.FirstOrDefault(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
+          ?.CacheAnchorTokenUnconfirmedIfSelfMined(tokenAnchor);
     }
 
     public bool TryRBFAnchorToken(

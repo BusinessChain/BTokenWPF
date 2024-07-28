@@ -22,6 +22,7 @@ namespace BTokenLib
 
     public TX TX;
 
+
     public TokenAnchor Copy()
     {
       TokenAnchor tokenAnchor = new();
