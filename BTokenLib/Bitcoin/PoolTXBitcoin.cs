@@ -46,17 +46,8 @@ namespace BTokenLib
     {
       SHA256 sHA256 = SHA256.Create();
 
-      int i = 0;
       while (FileTXPoolDict.Position < FileTXPoolDict.Length)
       {
-        if(i == 26)
-        {
-          // TX hat keine outpuuts, müsste doch schon Parser fehler geben 
-        }
-
-        i.ToString().Log(this, Token.LogEntryNotifier);
-        i += 1;
-
         TXBitcoin tX = (TXBitcoin)Token.ParseTX(FileTXPoolDict, sHA256);
 
         AddTX(tX);

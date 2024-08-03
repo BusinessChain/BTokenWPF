@@ -32,6 +32,8 @@ namespace BTokenLib
       return Hash.ToHexString();
     }
 
-    public abstract bool IsSuccessorTo(TX tX);
+    public abstract bool IsSuccessorTo(TX tX);    
+
+    public abstract bool IsReplacementByFee(TX tX);
   }
 }

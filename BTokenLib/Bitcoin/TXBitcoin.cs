@@ -17,11 +17,22 @@ namespace BTokenLib
       TXBitcoin tXBitcoin = tX as TXBitcoin;
 
       if(tXBitcoin != null)
-      {
-        foreach(TXInputBitcoin tXInput in Inputs)
+        foreach (TXInputBitcoin tXInput in Inputs)
           if (tXInput.TXIDOutput.IsAllBytesEqual(tX.Hash))
             return true;
-      }
+
+      return false;
+    }
+
+    public override bool IsReplacementByFee(TX tX)
+    {
+      if (tX is TXBitcoin tXBitcoin)
+        foreach (TXInputBitcoin tXInput in Inputs)
+          foreach (TXInputBitcoin tXBitcoinInput in tXBitcoin.Inputs)
+            if (tXInput.TXIDOutput.IsAllBytesEqual(tXBitcoinInput.TXIDOutput) &&
+                tXInput.OutputIndex == tXBitcoinInput.OutputIndex &&
+                tXInput.Sequence > tXBitcoinInput.Sequence)
+              return true;
 
       return false;
     }

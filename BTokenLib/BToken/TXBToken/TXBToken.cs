@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -43,6 +42,11 @@ namespace BTokenLib
         && IDAccountSource.IsAllBytesEqual(tXBToken.IDAccountSource)
         && BlockheightAccountInit == tXBToken.BlockheightAccountInit
         && Nonce == tXBToken.Nonce + 1;
+    }
+
+    public override bool IsReplacementByFee(TX tX)
+    {
+      throw new NotImplementedException();
     }
 
     public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)
