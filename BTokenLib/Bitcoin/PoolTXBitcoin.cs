@@ -42,7 +42,7 @@ namespace BTokenLib
       LoadFromFile();
     }
 
-    void LoadFromFile()
+    public void LoadFromFile()
     {
       SHA256 sHA256 = SHA256.Create();
 
@@ -125,6 +125,7 @@ namespace BTokenLib
 
           AddTX(tX);
           FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
+          FileTXPoolDict.Flush();
 
           foreach (int key in FlagTXAddedPerThreadID.Keys.ToList())
             FlagTXAddedPerThreadID[key] = true;

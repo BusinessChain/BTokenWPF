@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using System.Threading.Tasks;
-using System.Security.Cryptography;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -20,8 +20,6 @@ namespace BTokenLib
     Random RandomGeneratorMiner = new();
 
     double FeeSatoshiPerByteAnchorToken;
-
-    string PathTokensAnchorMined;
 
     List<Block> BocksMined = new();
     string PathBlocksMined;
@@ -78,9 +76,6 @@ namespace BTokenLib
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
-              BocksMined.Add(block);
-              WriteBlockMinedToDisk(block);
-
               $"Mine block {block}. {BocksMined.Count} blocks in BocksMined.".Log(this, LogFile, LogEntryNotifier);
 
               // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
@@ -128,6 +123,9 @@ namespace BTokenLib
       };
 
       block.Header.ComputeHash(SHA256Miner);
+
+      BocksMined.Add(block);
+      WriteBlockMinedToDisk(block);
 
       tokenAnchor = new();
 

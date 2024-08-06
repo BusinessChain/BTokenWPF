@@ -238,6 +238,8 @@ namespace BTokenLib
     {
       Reset();
 
+      LoadPool(); 
+
       string pathImage = Path.Combine(GetName(), NameImage);
 
       while (true)
@@ -304,6 +306,8 @@ namespace BTokenLib
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
     }
+
+    public abstract void LoadPool();
 
     public async Task RebroadcastTXsUnconfirmed()
     {

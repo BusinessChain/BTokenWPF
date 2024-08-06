@@ -28,6 +28,11 @@ namespace BTokenLib
       TXPool = new(this);
     }
 
+    public override void LoadPool()
+    {
+      TXPool.LoadFromFile();
+    }
+
     public override Header CreateHeaderGenesis()
     {
       //HeaderBitcoin header = new(

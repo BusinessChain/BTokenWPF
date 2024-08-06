@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Collections.Generic;
 using System.Security.Cryptography;
-using BTokenWPF;
+
 
 namespace BTokenLib
 {
@@ -46,10 +45,13 @@ namespace BTokenLib
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
 
-      PathTokensAnchorMined = Path.Combine(GetName(), "TokensAnchorMined");
-
       PathBlocksMined = Path.Combine(GetName(), "blocksMined");
       Directory.CreateDirectory(PathBlocksMined);
+    }
+
+    public override void LoadPool()
+    {
+      //TXPool.LoadFromFile();
     }
 
     public override Header CreateHeaderGenesis()
