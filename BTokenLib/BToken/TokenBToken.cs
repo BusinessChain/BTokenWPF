@@ -17,7 +17,6 @@ namespace BTokenLib
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
     DatabaseAccounts DatabaseAccounts = new();
-    PoolTXBToken TXPool = new();
 
     public enum TypesToken
     {
@@ -45,13 +44,10 @@ namespace BTokenLib
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
 
+      TXPool = new PoolTXBToken();
+
       PathBlocksMined = Path.Combine(GetName(), "blocksMined");
       Directory.CreateDirectory(PathBlocksMined);
-    }
-
-    public override void LoadPool()
-    {
-      //TXPool.LoadFromFile();
     }
 
     public override Header CreateHeaderGenesis()
@@ -285,7 +281,7 @@ namespace BTokenLib
         h.HeaderTip.Height - h.HeaderRoot.Height);
     }
 
-    public override void AddTXToPool(TX tX)
+    public void AddTXToPool(TX tX)
     {
       TXBToken tXBToken = (TXBToken)tX;
 
@@ -304,20 +300,6 @@ namespace BTokenLib
         throw new ProtocolException($"Account {iDAccount} not in database.");
 
       return TXPool.ApplyTXsOnAccount(account);
-    }
-
-    public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)
-    {
-      bool flagSuccess = TXPool.TryGetTX(hashTX, out TXBToken tXBToken);
-
-      tX = tXBToken;
-
-      return flagSuccess;
-    }
-
-    public override List<TX> GetTXsFromPool()
-    {
-      return TXPool.GetTXs(int.MaxValue, out long feeTotal);
     }
 
     public override HeaderBToken ParseHeader(Stream stream)

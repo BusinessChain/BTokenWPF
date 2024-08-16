@@ -11,8 +11,6 @@ namespace BTokenLib
   {
     const UInt16 COMPORT_BITCOIN = 8333;
 
-    PoolTXBitcoin TXPool;
-
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(
@@ -25,12 +23,7 @@ namespace BTokenLib
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
 
-      TXPool = new(this);
-    }
-
-    public override void LoadPool()
-    {
-      TXPool.LoadFromFile();
+      TXPool = new PoolTXBitcoin(this);
     }
 
     public override Header CreateHeaderGenesis()
@@ -204,8 +197,6 @@ namespace BTokenLib
 
     protected override void CommitTXsInDatabase()
     {
-      TXPool.RemoveTXs(TXsStaged.Select(tX => tX.Hash));
-
       DiscardStagedTXsInDatabase();
     }
 
@@ -256,28 +247,5 @@ namespace BTokenLib
     public override void LoadImageDatabase(string path)
     { }
 
-    public override void AddTXToPool(TX tX)
-    {
-      TXBitcoin tXBitcoin = (TXBitcoin)tX;
-
-      if (!TXPool.TryAddTX(tXBitcoin))
-        throw new ProtocolException($"Could not insert tX {tX} to Bitcoin pool.");
-
-      ((WalletBitcoin)Wallet).InsertTXUnconfirmed(tXBitcoin);
-    }
-
-    public override bool TryGetFromTXPool(byte[] hashTX, out TX tX)
-    {
-      bool flagSuccess = TXPool.TryGetTX(hashTX, out TXBitcoin tXBitcoin);
-
-      tX = tXBitcoin;
-
-      return flagSuccess;
-    }
-
-    public override List<TX> GetTXsFromPool()
-    {
-      return TXPool.GetTXs();
-    }
   }
 }

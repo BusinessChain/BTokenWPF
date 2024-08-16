@@ -237,8 +237,8 @@ namespace BTokenLib
 
     public override void LoadImage(string path)
     {
-      LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
+      //LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
+      //LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
 
       using (FileStream fileStream = new(
         Path.Combine(path, "walletHistoryTransactions"),

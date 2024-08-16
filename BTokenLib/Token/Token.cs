@@ -21,6 +21,8 @@ namespace BTokenLib
 
     Dictionary<int, List<Header>> HeaderIndex = new();
 
+    public TXPool TXPool;
+
     public BlockArchiver Archiver;
 
     public Wallet Wallet;
@@ -238,8 +240,6 @@ namespace BTokenLib
     {
       Reset();
 
-      LoadPool(); 
-
       string pathImage = Path.Combine(GetName(), NameImage);
 
       while (true)
@@ -305,9 +305,9 @@ namespace BTokenLib
       }
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
-    }
 
-    public abstract void LoadPool();
+      TXPool.Load();
+    }
 
     public async Task RebroadcastTXsUnconfirmed()
     {
@@ -383,6 +383,8 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
+      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
+
       Archiver.ArchiveBlock(block);
 
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
@@ -450,12 +452,6 @@ namespace BTokenLib
 
       CommitTXsInDatabase();
     }
-
-    public abstract void AddTXToPool(TX tX);
-
-    public abstract bool TryGetFromTXPool(byte[] hashTX, out TX tX);
-
-    public abstract List<TX> GetTXsFromPool();
 
     public void CreateImage()
     {
@@ -525,8 +521,8 @@ namespace BTokenLib
     {
       if (Wallet.TryCreateTX(address, value, feePerByte, out tX))
       {
-        BroadcastTX(tX);
-        Wallet.AddTXUnconfirmedToHistory(tX);
+        InsertTXUnconfirmed(tX);
+        Network.AdvertizeTX(tX);
         return true;
       }
 
@@ -595,13 +591,18 @@ namespace BTokenLib
       out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-    void BroadcastTX(TX tX)
+
+    public void InsertTXUnconfirmed(TX tX)
     {
-      AddTXToPool(tX);
+      if (!TXPool.TryAddTX(tX))
+      {
+        Wallet.InsertTXUnconfirmed(tX);
+        Wallet.AddTXUnconfirmedToHistory(tX);
 
-      SendAnchorTokenUnconfirmedToChilds(tX);
-
-      Network.AdvertizeTX(tX);
+        SendAnchorTokenUnconfirmedToChilds(tX);
+      }
+      else
+        $"Could not insert tX {tX} to pool.".Log(this, LogEntryNotifier);
     }
 
     public void SendAnchorTokenUnconfirmedToChilds(TX tX)
@@ -632,9 +633,8 @@ namespace BTokenLib
       {
         tokenAnchor.TX = tX;
 
-        BroadcastTX(tX);
-
-        Wallet.AddTXUnconfirmedToHistory(tX);
+        InsertTXUnconfirmed(tX);
+        Network.AdvertizeTX(tX);
 
         $"Created and broadcasted anchor token {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()}."
           .Log(this, LogEntryNotifier);

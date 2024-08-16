@@ -93,7 +93,7 @@ namespace BTokenWPF
 
     void UpdateListBoxTXPool()
     {
-      List<TX> tXs = Token.GetTXsFromPool();
+      List<TX> tXs = Token.TXPool.GetTXs();
 
       ListBoxTXPool.Items.Clear();
 

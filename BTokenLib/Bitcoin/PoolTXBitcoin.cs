@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public class PoolTXBitcoin
+  public class PoolTXBitcoin : TXPool
   {
     readonly object LOCK_TXsPool = new(); 
     const bool FLAG_ENABLE_RBF = true;
@@ -38,11 +38,9 @@ namespace BTokenLib
         FileMode.OpenOrCreate,
         FileAccess.ReadWrite,
         FileShare.Read);
-
-      LoadFromFile();
     }
 
-    public void LoadFromFile()
+    public override void Load()
     {
       SHA256 sHA256 = SHA256.Create();
 
@@ -58,10 +56,19 @@ namespace BTokenLib
       }
     }
 
-    public bool TryGetTX(byte[] hashTX, out TXBitcoin tX)
+    public override bool TryGetTX(byte[] hashTX, out TX tX)
     {
       lock (LOCK_TXsPool)
-        return TXPoolDict.TryGetValue(hashTX, out tX);
+      {
+        if(TXPoolDict.TryGetValue(hashTX, out TXBitcoin tXBitcoin))
+        {
+          tX = tXBitcoin;
+          return true;
+        }
+
+        tX = null;
+        return false;
+      }
     }
 
     public bool GetFlagTXAddedSinceLastInquiry()
@@ -89,8 +96,10 @@ namespace BTokenLib
           InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
     }
 
-    public bool TryAddTX(TXBitcoin tX)
+    public override bool TryAddTX(TX tX)
     {
+      TXBitcoin tXBitcoin = (TXBitcoin)tX;
+
       bool flagRemoveTXInPoolBeingRBFed = false;
       TX tXInPoolBeingRBFed = null;
 
@@ -98,7 +107,7 @@ namespace BTokenLib
       {
         lock (LOCK_TXsPool)
         {
-          foreach (TXInputBitcoin tXInput in tX.Inputs)
+          foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin, TXBitcoin)> inputsInPool))
               foreach ((TXInputBitcoin input, TX tX) tupleInputsInPool in inputsInPool)
                 if (tupleInputsInPool.input.OutputIndex == tXInput.OutputIndex)
@@ -123,7 +132,7 @@ namespace BTokenLib
           if (flagRemoveTXInPoolBeingRBFed)
             RemoveTX(tXInPoolBeingRBFed.Hash, flagRemoveRecursive: true);
 
-          AddTX(tX);
+          AddTX(tXBitcoin);
           FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
           FileTXPoolDict.Flush();
 
@@ -142,7 +151,7 @@ namespace BTokenLib
       }
     }
 
-    public List<TX> GetTXs(int countMax = int.MaxValue)
+    public override List<TX> GetTXs(int countMax = int.MaxValue)
     {
       lock (LOCK_TXsPool)
       {
@@ -161,14 +170,14 @@ namespace BTokenLib
       }
     }
 
-    public void RemoveTXs(IEnumerable<byte[]> hashesTX)
+    public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
     {
       foreach (byte[] hashTX in hashesTX)
         RemoveTX(hashTX, flagRemoveRecursive: false);
 
       FileTXPoolDict.SetLength(0);
 
-      foreach(TXBitcoin tX in TXPoolDict.Values)
+      foreach (TXBitcoin tX in TXPoolDict.Values)
         FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
     }
 

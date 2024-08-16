@@ -117,7 +117,7 @@ namespace BTokenLib
 
       while (header.Hash.IsGreaterThan(header.NBits))
       {
-        if (HeaderTip.Height >= height || TXPool.GetFlagTXAddedSinceLastInquiry())
+        if (HeaderTip.Height >= height || ((PoolTXBitcoin)TXPool).GetFlagTXAddedSinceLastInquiry())
           goto LABEL_StartPoW;
 
         if (!IsMining)

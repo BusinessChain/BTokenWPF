@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  public class PoolTXBToken
+  public class PoolTXBToken : TXPool
   {
     class TXBundle
     {
