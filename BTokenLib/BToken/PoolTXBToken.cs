@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 
 
@@ -37,30 +38,53 @@ namespace BTokenLib
     /// </summary>
     List<TXBundle> TXBundlesSortedByFee = new();
 
-    public void AddTX(TXBToken tX, Account accountScource)
+
+    public PoolTXBToken(Token token)
+      : base(token)
+    { }
+
+    public override bool TryAddTX(TX tX)
     {
-      lock (LOCK_TXsPool)
+      try
       {
-        long valueAccountNetPool = accountScource.Value;
+        TXBToken tXBToken = (TXBToken)tX;
 
-        if (TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsInPool))
+        if (!((TokenBToken)Token).DatabaseAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
+          throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
+
+        if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)
+          throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountInit} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockheightAccountInit}.");
+
+        lock (LOCK_TXsPool)
         {
-          valueAccountNetPool -= tXsInPool.Sum(t => t.Value);
+          long valueAccountNetPool = accountSource.Value;
 
-          if(tXsInPool.Last().Nonce + 1 != tX.Nonce)
-            throw new ProtocolException($"Nonce {tX.Nonce} of tX {tX} not in succession with nonce {tXsInPool.Last().Nonce} of last tX in pool.");
+          if (TXsByIDAccountSource.TryGetValue(tXBToken.IDAccountSource, out List<TXBToken> tXsInPool))
+          {
+            valueAccountNetPool -= tXsInPool.Sum(t => t.Value);
+
+            if (tXsInPool.Last().Nonce + 1 != tXBToken.Nonce)
+              throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not in succession with nonce {tXsInPool.Last().Nonce} of last tX in pool.");
+          }
+          else if (accountSource.Nonce != tXBToken.Nonce)
+            throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not equal to nonce {accountSource.Nonce} of account {accountSource}.");
+
+          if (OutputsByIDAccount.TryGetValue(tXBToken.IDAccountSource, out List<TXOutputBToken> outputsInPool))
+            valueAccountNetPool += outputsInPool.Sum(o => o.Value);
+
+          if (valueAccountNetPool < tXBToken.Value)
+            throw new ProtocolException($"Value {tXBToken.Value} of tX {tXBToken} bigger than value {valueAccountNetPool} in account {accountSource} considering tXs in pool.");
+
+          InsertTX(tXBToken);
         }
-        else if (accountScource.Nonce != tX.Nonce)
-          throw new ProtocolException($"Nonce {tX.Nonce} of tX {tX} not equal to nonce {accountScource.Nonce} of account {accountScource}.");
-
-        if (OutputsByIDAccount.TryGetValue(tX.IDAccountSource, out List<TXOutputBToken> outputsInPool))
-          valueAccountNetPool += outputsInPool.Sum(o => o.Value);
-
-        if (valueAccountNetPool < tX.Value)
-          throw new ProtocolException($"Value {tX.Value} of tX {tX} bigger than value {valueAccountNetPool} in account {accountScource} considering tXs in pool.");
-
-        InsertTX(tX);
+        return true;
       }
+      catch (ProtocolException ex)
+      {
+        ex.Message.Log(this, Token.LogEntryNotifier);
+        return false;
+      }
+
     }
 
     public Account ApplyTXsOnAccount(Account account)
@@ -105,17 +129,17 @@ namespace BTokenLib
       InsertTXInTXBundlesSortedByFee(tX);
     }
 
-    public void RemoveTXs(List<TX> tXs)
+    public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
     {
-      foreach (TXBToken tXRemove in tXs)
+      foreach (byte[] hashTX in hashesTX)
       {
-        if (!TXsByHash.Remove(tXRemove.Hash, out TXBToken tX))
+        if (!TXsByHash.Remove(hashTX, out TXBToken tX))
           continue;
 
         if(TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsByAccountSource))
         {
-          if (!tXsByAccountSource[0].Hash.IsAllBytesEqual(tXRemove.Hash))
-            throw new ProtocolException($"Removal of tX {tXRemove} from pool not in expected order of nonce.");
+          if (!tXsByAccountSource[0].Hash.IsAllBytesEqual(hashTX))
+            throw new ProtocolException($"Removal of tX {hashTX.ToHexString()} from pool not in expected order of nonce.");
 
           tXsByAccountSource.RemoveAt(0);
 
@@ -168,7 +192,7 @@ namespace BTokenLib
       TXBundlesSortedByFee.Insert(0, tXBundle);
     }
 
-    public List<TX> GetTXs(int countBytesMax, out long feeTotal)
+    public override List<TX> GetTXs(int countBytesMax, out long feeTotal)
     {
       List<TX> tXs = new();
       int countBytesCurrent = 0;
@@ -187,10 +211,19 @@ namespace BTokenLib
       return tXs;
     }
 
-    public bool TryGetTX(byte[] hashTX, out TXBToken tX)
+    public override bool TryGetTX(byte[] hashTX, out TX tX)
     {
       lock (LOCK_TXsPool)
-        return TXsByHash.TryGetValue(hashTX, out tX);
+      {
+        if (TXsByHash.TryGetValue(hashTX, out TXBToken tXBToken))
+        {
+          tX = tXBToken;
+          return true;
+        }
+
+        tX = null;
+        return false;
+      }
     }
   }
 }

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 
 namespace BTokenLib
@@ -22,39 +20,12 @@ namespace BTokenLib
     List<TX> TXsGet = new();
     int CountMaxTXsGet;
 
-    public FileStream FileTXPoolDict;
-
     Dictionary<int, bool> FlagTXAddedPerThreadID = new();
 
-    Token Token;
 
-
-    public PoolTXBitcoin(Token token)
-    {
-      Token = token;
-
-      FileTXPoolDict = new FileStream(
-        Path.Combine(token.GetName(), "TXPoolDict"), 
-        FileMode.OpenOrCreate,
-        FileAccess.ReadWrite,
-        FileShare.Read);
-    }
-
-    public override void Load()
-    {
-      SHA256 sHA256 = SHA256.Create();
-
-      while (FileTXPoolDict.Position < FileTXPoolDict.Length)
-      {
-        TXBitcoin tX = (TXBitcoin)Token.ParseTX(FileTXPoolDict, sHA256);
-
-        AddTX(tX);
-
-        Token.SendAnchorTokenUnconfirmedToChilds(tX);
-
-        Token.Wallet.InsertTXUnconfirmed(tX);
-      }
-    }
+    public PoolTXBitcoin(Token token) 
+      : base(token)
+    { }
 
     public override bool TryGetTX(byte[] hashTX, out TX tX)
     {
@@ -83,17 +54,6 @@ namespace BTokenLib
         FlagTXAddedPerThreadID[iDThread] = false;
         return true;
       }
-    }
-
-    void AddTX(TXBitcoin tX)
-    {
-      TXPoolDict.Add(tX.Hash, tX);
-
-      foreach (TXInputBitcoin tXInput in tX.Inputs)
-        if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin input, TXBitcoin)> inputsInPool))
-          inputsInPool.Add((tXInput, tX));
-        else
-          InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tX) });
     }
 
     public override bool TryAddTX(TX tX)
@@ -132,7 +92,14 @@ namespace BTokenLib
           if (flagRemoveTXInPoolBeingRBFed)
             RemoveTX(tXInPoolBeingRBFed.Hash, flagRemoveRecursive: true);
 
-          AddTX(tXBitcoin);
+          TXPoolDict.Add(tXBitcoin.Hash, tXBitcoin);
+
+          foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
+            if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin input, TXBitcoin)> inputsInPool))
+              inputsInPool.Add((tXInput, tXBitcoin));
+            else
+              InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tXBitcoin) });
+
           FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
           FileTXPoolDict.Flush();
 
@@ -151,8 +118,10 @@ namespace BTokenLib
       }
     }
 
-    public override List<TX> GetTXs(int countMax = int.MaxValue)
+    public override List<TX> GetTXs(int countMax, out long feeTXs)
     {
+      feeTXs = 0;
+
       lock (LOCK_TXsPool)
       {
         FlagTXAddedPerThreadID[Thread.CurrentThread.ManagedThreadId] = false;

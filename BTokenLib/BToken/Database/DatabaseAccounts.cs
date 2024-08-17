@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  partial class DatabaseAccounts
+  public partial class DatabaseAccounts
   {
     public const int COUNT_CACHES = 256;
     byte[] HashesCaches = new byte[COUNT_CACHES * 32];

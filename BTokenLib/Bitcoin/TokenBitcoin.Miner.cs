@@ -82,7 +82,7 @@ namespace BTokenLib
       while (!TryLock())
         Thread.Sleep(20);
 
-      block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX));
+      block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX, out long feeTXs));
       int height = HeaderTip.Height + 1;
 
       ReleaseLock();

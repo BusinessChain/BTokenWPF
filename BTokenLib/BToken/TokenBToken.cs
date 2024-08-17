@@ -16,7 +16,7 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    DatabaseAccounts DatabaseAccounts = new();
+    public DatabaseAccounts DatabaseAccounts = new();
 
     public enum TypesToken
     {
@@ -44,7 +44,7 @@ namespace BTokenLib
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
         this);
 
-      TXPool = new PoolTXBToken();
+      TXPool = new PoolTXBToken(this);
 
       PathBlocksMined = Path.Combine(GetName(), "blocksMined");
       Directory.CreateDirectory(PathBlocksMined);
@@ -136,8 +136,6 @@ namespace BTokenLib
     protected override void CommitTXsInDatabase()
     {
       DatabaseAccounts.UpdateHashDatabase();
-
-      TXPool.RemoveTXs(TXsStaged);
 
       DiscardStagedTXsInDatabase();
     }
@@ -281,25 +279,12 @@ namespace BTokenLib
         h.HeaderTip.Height - h.HeaderRoot.Height);
     }
 
-    public void AddTXToPool(TX tX)
-    {
-      TXBToken tXBToken = (TXBToken)tX;
-
-      if (!DatabaseAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
-        throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
-
-      if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)
-        throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountInit} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockheightAccountInit}.");
-
-      TXPool.AddTX(tXBToken, accountSource);
-    }
-
     public Account GetAccountUnconfirmed(byte[] iDAccount)
     {
       if(!DatabaseAccounts.TryGetAccount(iDAccount, out Account account))
         throw new ProtocolException($"Account {iDAccount} not in database.");
 
-      return TXPool.ApplyTXsOnAccount(account);
+      return ((PoolTXBToken)TXPool).ApplyTXsOnAccount(account);
     }
 
     public override HeaderBToken ParseHeader(Stream stream)
