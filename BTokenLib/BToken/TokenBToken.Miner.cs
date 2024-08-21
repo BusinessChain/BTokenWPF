@@ -303,54 +303,7 @@ namespace BTokenLib
 
       TokensAnchorMinedUnconfirmed.RemoveAll(t => tokenAnchor.TX.IsReplacementByFee(t.TX));
 
-      if (TokensAnchorMinedUnconfirmed.Count == 0)
-      {
-        TokensAnchorMinedUnconfirmed.Add(tokenAnchor);
-        return;
-      }
-
-      int indexAnchorTokenInserted;
-      int i = TokensAnchorMinedUnconfirmed.Count;
-
-      while (i > 0)
-      {
-        i -= 1;
-
-        if (tokenAnchor.TX.IsSuccessorTo(TokensAnchorMinedUnconfirmed[i].TX))
-        {
-          indexAnchorTokenInserted = i + 1;
-          TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted, tokenAnchor);
-
-          while(i > 0)
-          {
-            i -= 1;
-
-            if (TokensAnchorMinedUnconfirmed[i].TX.IsSuccessorTo(tokenAnchor.TX))
-            {
-              TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted + 1, tokenAnchor);
-              TokensAnchorMinedUnconfirmed.RemoveAt(i);
-              return;
-            }
-          }
-        }
-        else if (TokensAnchorMinedUnconfirmed[i].TX.IsSuccessorTo(tokenAnchor.TX))
-        {
-          indexAnchorTokenInserted = i;
-          TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted, tokenAnchor);
-
-          while (i > 0)
-          {
-            i -= 1;
-
-            if (tokenAnchor.TX.IsSuccessorTo(TokensAnchorMinedUnconfirmed[i].TX))
-            {
-              TokensAnchorMinedUnconfirmed.Insert(indexAnchorTokenInserted - 1, tokenAnchor);
-              TokensAnchorMinedUnconfirmed.RemoveAt(i);
-              return;
-            }
-          }
-        }
-      }
+      TokensAnchorMinedUnconfirmed.Add(tokenAnchor);
 
       $"Included anchor token {tokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMined."
         .Log(this, LogFile, LogEntryNotifier);

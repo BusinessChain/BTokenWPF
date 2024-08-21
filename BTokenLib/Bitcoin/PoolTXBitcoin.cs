@@ -14,7 +14,7 @@ namespace BTokenLib
     Dictionary<byte[], List<(TXInputBitcoin, TXBitcoin)>> InputsPool =
       new(new EqualityComparerByteArray());
 
-    Dictionary<byte[], TXBitcoin> TXPoolDict =
+    Dictionary<byte[], (TXBitcoin tX, int sequenceNumberTX)> TXPoolDict =
       new(new EqualityComparerByteArray());
 
     List<TX> TXsGet = new();
@@ -31,9 +31,9 @@ namespace BTokenLib
     {
       lock (LOCK_TXsPool)
       {
-        if(TXPoolDict.TryGetValue(hashTX, out TXBitcoin tXBitcoin))
+        if(TXPoolDict.TryGetValue(hashTX, out (TXBitcoin tX, int) itemTXPool))
         {
-          tX = tXBitcoin;
+          tX = itemTXPool.tX;
           return true;
         }
 
@@ -92,7 +92,7 @@ namespace BTokenLib
           if (flagRemoveTXInPoolBeingRBFed)
             RemoveTX(tXInPoolBeingRBFed.Hash, flagRemoveRecursive: true);
 
-          TXPoolDict.Add(tXBitcoin.Hash, tXBitcoin);
+          TXPoolDict.Add(tXBitcoin.Hash, (tXBitcoin, SequenceNumberTX++));
 
           foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out List<(TXInputBitcoin input, TXBitcoin)> inputsInPool))
@@ -129,9 +129,9 @@ namespace BTokenLib
         TXsGet.Clear();
         CountMaxTXsGet = countMax;
 
-        foreach (KeyValuePair<byte[], TXBitcoin> tXInPool in TXPoolDict)
+        foreach (KeyValuePair<byte[], (TXBitcoin tX, int)> itemInPool in TXPoolDict)
           if (TXsGet.Count < CountMaxTXsGet)
-            ExtractBranch(tXInPool.Value);
+            ExtractBranch(itemInPool.Value.tX);
           else
             break;
 
@@ -145,22 +145,26 @@ namespace BTokenLib
         RemoveTX(hashTX, flagRemoveRecursive: false);
 
       FileTXPoolDict.SetLength(0);
+      SequenceNumberTX = 0;
 
-      foreach (TXBitcoin tX in TXPoolDict.Values)
-        FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
+      var orderedItems = 
+        TXPoolDict.OrderBy(i => i.Value.sequenceNumberTX).ToList();
+
+      for (int i = 0; i < orderedItems.Count; i++)
+      {
+        TXPoolDict[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
+        FileTXPoolDict.Write(orderedItems[i].Value.tX.TXRaw.ToArray(), 0, orderedItems[i].Value.tX.TXRaw.Count);
+      }
     }
 
-    /// <summary>
-    /// Removes a tX and all tXs that reference its outputs.
-    /// </summary>
     void RemoveTX(byte[] hashTX, bool flagRemoveRecursive)
     {
       lock (LOCK_TXsPool)
-        if (TXPoolDict.Remove(hashTX, out TXBitcoin tX))
+        if (TXPoolDict.Remove(hashTX, out (TXBitcoin tX, int) itemInPool))
         {
           List<(TXInputBitcoin input, TXBitcoin)> tupelInputs = null;
 
-          foreach (TXInputBitcoin tXInput in tX.Inputs)
+          foreach (TXInputBitcoin tXInput in itemInPool.tX.Inputs)
             if (InputsPool.TryGetValue(tXInput.TXIDOutput, out tupelInputs))
             {
               tupelInputs.RemoveAll(t => t.input.OutputIndex == tXInput.OutputIndex);
@@ -191,8 +195,8 @@ namespace BTokenLib
           if (TXsGet.Count >= CountMaxTXsGet)
             return;
 
-          if (TXPoolDict.TryGetValue(input.TXIDOutput, out TXBitcoin tXRootSubBranch))
-            ExtractBranch(tXRootSubBranch);
+          if (TXPoolDict.TryGetValue(input.TXIDOutput, out (TXBitcoin tX, int) itemRootSubBranch))
+            ExtractBranch(itemRootSubBranch.tX);
         }
 
         TXsGet.Add(tXBranch);
@@ -202,10 +206,10 @@ namespace BTokenLib
     void TraceTXToLeaf(List<TXBitcoin> tXsBranch)
     {
       foreach (TXInputBitcoin input in tXsBranch[0].Inputs)
-        if (TXPoolDict.TryGetValue(input.TXIDOutput, out TXBitcoin tXInPool) &&
-            !TXsGet.Contains(tXInPool))
+        if (TXPoolDict.TryGetValue(input.TXIDOutput, out (TXBitcoin tX, int) itemInPool) &&
+            !TXsGet.Contains(itemInPool.tX))
         {
-          tXsBranch.Insert(0, tXInPool);
+          tXsBranch.Insert(0, itemInPool.tX);
           TraceTXToLeaf(tXsBranch);
           return;
         }

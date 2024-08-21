@@ -594,7 +594,7 @@ namespace BTokenLib
 
     public void InsertTXUnconfirmed(TX tX)
     {
-      if (!TXPool.TryAddTX(tX))
+      if (TXPool.TryAddTX(tX))
       {
         Wallet.InsertTXUnconfirmed(tX);
         Wallet.AddTXUnconfirmedToHistory(tX);
