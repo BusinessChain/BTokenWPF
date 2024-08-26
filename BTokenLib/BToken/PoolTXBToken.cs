@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -129,7 +130,7 @@ namespace BTokenLib
       InsertTXInTXBundlesSortedByFee(tX);
     }
 
-    public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
+    public override void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup)
     {
       foreach (byte[] hashTX in hashesTX)
       {

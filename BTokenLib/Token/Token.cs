@@ -22,6 +22,7 @@ namespace BTokenLib
     Dictionary<int, List<Header>> HeaderIndex = new();
 
     public TXPool TXPool;
+    public FileStream FileTXPoolBackup;
 
     public BlockArchiver Archiver;
 
@@ -63,6 +64,12 @@ namespace BTokenLib
       LogFile = new StreamWriter(
         Path.Combine(GetName(), "LogToken"),
         append: false);
+
+      FileTXPoolBackup = new FileStream(
+        Path.Combine(GetName(), "FileTXPoolBackup"),
+        FileMode.OpenOrCreate,
+        FileAccess.ReadWrite,
+        FileShare.Read);
 
       PathImage = Path.Combine(PathRootToken, NameImage);
       PathImageOld = Path.Combine(PathRootToken, NameImageOld);
@@ -306,7 +313,35 @@ namespace BTokenLib
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
 
-      TXPool.Load();
+      LoadTXPool();
+    }
+
+    public void LoadTXPool()
+    {
+      SHA256 sHA256 = SHA256.Create();
+
+      while (FileTXPoolBackup.Position < FileTXPoolBackup.Length)
+      {
+        TX tX;
+        long startIndexTX = FileTXPoolBackup.Position;
+
+        try
+        {
+          tX = ParseTX(FileTXPoolBackup, sHA256);
+        }
+        catch (Exception ex)
+        {
+          $"Invalid TX when loading TXPool: {ex.Message}".Log(this, LogEntryNotifier);
+          FileTXPoolBackup.Position = startIndexTX;
+          break;
+        }
+
+        if (TXPool.TryAddTX(tX))
+        {
+          SendAnchorTokenUnconfirmedToChilds(tX);
+          Wallet.InsertTXUnconfirmed(tX);
+        }
+      }
     }
 
     public async Task RebroadcastTXsUnconfirmed()
@@ -383,7 +418,9 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
-      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
+      TXPool.RemoveTXs(
+        block.TXs.Select(tX => tX.Hash), 
+        FileTXPoolBackup);
 
       Archiver.ArchiveBlock(block);
 
@@ -572,7 +609,7 @@ namespace BTokenLib
     public virtual void SignalParentBlockInsertion(Header header)
     { throw new NotImplementedException(); }
 
-    public virtual void CacheAnchorTokenUnconfirmedIfSelfMined(TokenAnchor tokenAnchor)
+    public virtual void SaveAnchorTokenUnconfirmedMined(TokenAnchor tokenAnchor)
     { throw new NotImplementedException(); }
 
     public virtual void RevokeBlockInsertion()
@@ -596,6 +633,9 @@ namespace BTokenLib
     {
       if (TXPool.TryAddTX(tX))
       {
+        FileTXPoolBackup.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
+        FileTXPoolBackup.Flush();
+
         Wallet.InsertTXUnconfirmed(tX);
         Wallet.AddTXUnconfirmedToHistory(tX);
 
@@ -607,9 +647,9 @@ namespace BTokenLib
 
     public void SendAnchorTokenUnconfirmedToChilds(TX tX)
     {
-      if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
-        TokensChild.FirstOrDefault(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
-          ?.CacheAnchorTokenUnconfirmedIfSelfMined(tokenAnchor);
+      if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor) && tokenAnchor.Block != null)
+        TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
+          ?.SaveAnchorTokenUnconfirmedMined(tokenAnchor);
     }
 
     public bool TryRBFAnchorToken(

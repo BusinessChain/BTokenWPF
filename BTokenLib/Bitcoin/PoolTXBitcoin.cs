@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
-
+using System.IO;
 
 namespace BTokenLib
 {
@@ -100,9 +100,6 @@ namespace BTokenLib
             else
               InputsPool.Add(tXInput.TXIDOutput, new List<(TXInputBitcoin, TXBitcoin)>() { (tXInput, tXBitcoin) });
 
-          FileTXPoolDict.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
-          FileTXPoolDict.Flush();
-
           foreach (int key in FlagTXAddedPerThreadID.Keys.ToList())
             FlagTXAddedPerThreadID[key] = true;
 
@@ -139,21 +136,21 @@ namespace BTokenLib
       }
     }
 
-    public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
+    public override void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup)
     {
       foreach (byte[] hashTX in hashesTX)
         RemoveTX(hashTX, flagRemoveRecursive: false);
 
-      FileTXPoolDict.SetLength(0);
+      fileTXPoolBackup.SetLength(0);
+
       SequenceNumberTX = 0;
 
-      var orderedItems = 
-        TXPoolDict.OrderBy(i => i.Value.sequenceNumberTX).ToList();
+      var orderedItems = TXPoolDict.OrderBy(i => i.Value.sequenceNumberTX).ToList();
 
       for (int i = 0; i < orderedItems.Count; i++)
       {
         TXPoolDict[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
-        FileTXPoolDict.Write(orderedItems[i].Value.tX.TXRaw.ToArray(), 0, orderedItems[i].Value.tX.TXRaw.Count);
+        fileTXPoolBackup.Write(orderedItems[i].Value.tX.TXRaw.ToArray(), 0, orderedItems[i].Value.tX.TXRaw.Count);
       }
     }
 

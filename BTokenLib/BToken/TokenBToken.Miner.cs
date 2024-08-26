@@ -72,11 +72,11 @@ namespace BTokenLib
             timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            BlockBToken block = MineBlock(out TokenAnchor tokenAnchor);
+            TokenAnchor tokenAnchor = MineAnchorToken();
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
-              $"Mine block {block}. {BocksMined.Count} blocks in BocksMined.".Log(this, LogFile, LogEntryNotifier);
+              $"Mine block {tokenAnchor.Block}. {BocksMined.Count} blocks in BocksMined.".Log(this, LogFile, LogEntryNotifier);
 
               // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
               // COUNT_SATOSHIS_PER_DAY_MINING);
@@ -96,7 +96,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    BlockBToken MineBlock(out TokenAnchor tokenAnchor)
+    TokenAnchor MineAnchorToken()
     {
       BlockBToken block = new(this);
 
@@ -125,17 +125,17 @@ namespace BTokenLib
       block.Header.ComputeHash(SHA256Miner);
 
       BocksMined.Add(block);
-      WriteBlockMinedToDisk(block);
 
-      tokenAnchor = new();
+      TokenAnchor tokenAnchor = new();
 
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
       tokenAnchor.HeightBlockReferenced = block.Header.Height;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
       tokenAnchor.FeeSatoshiPerByte = FeeSatoshiPerByteAnchorToken;
+      tokenAnchor.Block = block;
 
-      return block;
+      return tokenAnchor;
     }
 
     void WriteBlockMinedToDisk(Block block)
@@ -211,14 +211,14 @@ namespace BTokenLib
 
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
-        BlockBToken block = MineBlock(out TokenAnchor tokenAnchorNew);
+        TokenAnchor tokenAnchorNew = MineAnchorToken();
 
         tokenAnchorNew.NumberSequence = tokenAnchorOld.NumberSequence + 1;
 
         if (TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew))
         {
-          BocksMined.Add(block);
-          WriteBlockMinedToDisk(block);
+          BocksMined.Add(tokenAnchorNew.Block);
+          WriteBlockMinedToDisk(tokenAnchorNew.Block);
 
           ($"RBF old anchor token {tokenAnchorOld} referencing {tokenAnchorOld.HashBlockReferenced.ToHexString()}\n" +
             $" with {tokenAnchorNew} referenching {tokenAnchorNew.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
@@ -296,14 +296,22 @@ namespace BTokenLib
         $"Anchor token {tokenAnchorMined} not found in TokensAnchorMined.".Log(this, LogEntryNotifier);
     }
 
-    public override void CacheAnchorTokenUnconfirmedIfSelfMined(TokenAnchor tokenAnchor)
+    public override void SaveAnchorTokenUnconfirmedMined(TokenAnchor tokenAnchor)
     {
-      if (!BocksMined.Any(b => b.Header.Hash.IsAllBytesEqual(tokenAnchor.HashBlockReferenced)))
-        return;
+      TokenAnchor tokenAnchorRBFed = TokensAnchorMinedUnconfirmed.Find(t => tokenAnchor.TX.IsReplacementByFee(t.TX));
 
-      TokensAnchorMinedUnconfirmed.RemoveAll(t => tokenAnchor.TX.IsReplacementByFee(t.TX));
+      if(tokenAnchorRBFed != null)
+      {
+        TokensAnchorMinedUnconfirmed.Remove(tokenAnchorRBFed);
+
+        if (tokenAnchorRBFed.Block != null)
+          File.Delete(Path.Combine(
+            PathBlocksMined,
+            tokenAnchorRBFed.Block.Header.Hash.ToHexString()));
+      }
 
       TokensAnchorMinedUnconfirmed.Add(tokenAnchor);
+      WriteBlockMinedToDisk(tokenAnchor.Block);
 
       $"Included anchor token {tokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMined."
         .Log(this, LogFile, LogEntryNotifier);

@@ -20,6 +20,7 @@ namespace BTokenLib
     public byte[] HashBlockReferenced = new byte[32];
     public byte[] HashBlockPreviousReferenced = new byte[32];
 
+    public Block Block;
     public TX TX;
 
 
