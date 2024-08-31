@@ -21,10 +21,9 @@ namespace BTokenLib
 
     double FeeSatoshiPerByteAnchorToken;
 
-    List<Block> BocksMined = new();
-    string PathBlocksMined;
-
     List<TokenAnchor> TokensAnchorMinedUnconfirmed = new();
+    List<TokenAnchor> TokensAnchorConfirmed = new();
+    string PathBlocksMined;
 
 
     protected override async void RunMining()
@@ -76,7 +75,7 @@ namespace BTokenLib
 
             if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
             {
-              $"Mine block {tokenAnchor.Block}. {BocksMined.Count} blocks in BocksMined.".Log(this, LogFile, LogEntryNotifier);
+              $"Mine block {tokenAnchor.Block}.".Log(this, LogFile, LogEntryNotifier);
 
               // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
               // COUNT_SATOSHIS_PER_DAY_MINING);
@@ -124,8 +123,6 @@ namespace BTokenLib
 
       block.Header.ComputeHash(SHA256Miner);
 
-      BocksMined.Add(block);
-
       TokenAnchor tokenAnchor = new();
 
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
@@ -168,38 +165,30 @@ namespace BTokenLib
 
     public override void SignalParentBlockInsertion(Header headerAnchor)
     {
-      string textLog = $"Signal parent block insertion {headerAnchor}";
-
-      if (headerAnchor.HashesChild.TryGetValue(IDToken, out byte[] hashChildTmp))
-        textLog += $" referencing hash child {hashChildTmp.ToHexString()}.";
-      else
-        textLog += $" referencing no hash child.";
-
-      textLog.Log(this, LogFile, LogEntryNotifier);
-
-      if (
-        headerAnchor.HashesChild.TryGetValue(IDToken, out byte[] hashChild) &&
-        TryGetBlockMined(hashChild, out Block blockMined))
+      if (headerAnchor.HashesChild.TryGetValue(IDToken, out byte[] hashChild))
       {
-        $"Clear list Blocks mined, delete {BocksMined.Count} blocks.".Log(this, LogFile, LogEntryNotifier);
-        BocksMined.Clear();
+        TokenAnchor tokenMined = TokensAnchorMinedUnconfirmed.Find(t => t.HashBlockReferenced.IsAllBytesEqual(hashChild));
 
-        var files = new DirectoryInfo(PathBlocksMined).GetFiles();
-
-        foreach (FileInfo file in files)
-          file.Delete();
-
-        $"Insert self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
-
-        try
+        if (tokenMined != null)
         {
-          InsertBlock(blockMined);
-          Network.AdvertizeBlockToNetwork(blockMined);
-        }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when inserting self mined block {blockMined}:\n" +
-            $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
+          $"Insert self mined block {tokenMined.Block}.".Log(this, LogFile, LogEntryNotifier);
+
+          try
+          {
+            InsertBlock(tokenMined.Block);
+            Network.AdvertizeBlockToNetwork(tokenMined.Block);
+          }
+          catch (Exception ex)
+          {
+            ($"{ex.GetType().Name} when inserting self mined block {tokenMined.Block}:\n" +
+              $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
+          }
+
+          foreach(TokenAnchor tokenAnchorConfirmed in TokensAnchorConfirmed)
+          {
+            TokensAnchorMinedUnconfirmed.RemoveAll(t => t.TX.Hash.IsAllBytesEqual(tokenAnchorConfirmed.TX.Hash));
+            File.Delete(Path.Combine(PathBlocksMined, tokenAnchorConfirmed.Block.Header.Hash.ToHexString()));
+          }
         }
       }
 
@@ -217,7 +206,6 @@ namespace BTokenLib
 
         if (TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew))
         {
-          BocksMined.Add(tokenAnchorNew.Block);
           WriteBlockMinedToDisk(tokenAnchorNew.Block);
 
           ($"RBF old anchor token {tokenAnchorOld} referencing {tokenAnchorOld.HashBlockReferenced.ToHexString()}\n" +
@@ -226,95 +214,86 @@ namespace BTokenLib
       }
     }
 
-    bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
-    {
-      blockMined = BocksMined.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
-
-      if (blockMined == null)
-      {
-        string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
-
-        while (true)
-          try
-          {
-            using (FileStream fileStream = new(
-              pathBlockMined,
-              FileMode.Open,
-              FileAccess.Read,
-              FileShare.None))
-            {
-              try
-              {
-                blockMined = ParseBlock(fileStream);
-              }
-              catch (Exception ex)
-              {
-                $"{ex.GetType().Name} when attempting to parse file {pathBlockMined}: {ex.Message}"
-                  .Log(this, LogEntryNotifier);
-
-                blockMined = null;
-
-                break;
-              }
-            }
-
-            break;
-          }
-          catch (FileNotFoundException)
-          {
-            break;
-          }
-          catch (IOException ex)
-          {
-            ($"{ex.GetType().Name} when attempting to load file {pathBlockMined}: {ex.Message}.\n" +
-              $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
-
-            Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-            continue;
-          }
-      }
-
-      if (blockMined == null)
-        $"Did not find self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
-      else
-        $"Found self mined block {blockMined}.".Log(this, LogFile, LogEntryNotifier);
-
-      return blockMined != null;
-    }
-
     public override void ReceiveAnchorTokenConfirmed(TokenAnchor tokenAnchor)
     {
-      TokenAnchor tokenAnchorMined = TokensAnchorMinedUnconfirmed.Find(
-        t => tokenAnchor.TX.Hash.IsAllBytesEqual(tokenAnchor.TX.Hash));
-
-      if (tokenAnchorMined != null)
-      {
-        $"Remove anchor token {tokenAnchorMined} in TokensAnchorMined.".Log(this, LogEntryNotifier);
-        TokensAnchorMinedUnconfirmed.RemoveAt(0);
-      }
-      else
-        $"Anchor token {tokenAnchorMined} not found in TokensAnchorMined.".Log(this, LogEntryNotifier);
+      TokensAnchorConfirmed.Add(tokenAnchor);
     }
 
     public override void SaveAnchorTokenUnconfirmedMined(TokenAnchor tokenAnchor)
     {
-      TokenAnchor tokenAnchorRBFed = TokensAnchorMinedUnconfirmed.Find(t => tokenAnchor.TX.IsReplacementByFee(t.TX));
-
-      if(tokenAnchorRBFed != null)
+      if (tokenAnchor.Block == null)
       {
-        TokensAnchorMinedUnconfirmed.Remove(tokenAnchorRBFed);
+        if (!TryGetBlockMined(tokenAnchor.HashBlockReferenced, out Block blockMined))
+          return;
 
-        if (tokenAnchorRBFed.Block != null)
-          File.Delete(Path.Combine(
-            PathBlocksMined,
-            tokenAnchorRBFed.Block.Header.Hash.ToHexString()));
+        tokenAnchor.Block = blockMined;
+      }
+      else
+      {
+        TokenAnchor tokenAnchorRBFed = TokensAnchorMinedUnconfirmed.Find(t => tokenAnchor.TX.IsReplacementByFee(t.TX));
+
+        if (tokenAnchorRBFed != null)
+        {
+          TokensAnchorMinedUnconfirmed.Remove(tokenAnchorRBFed);
+
+          if (tokenAnchorRBFed.Block != null)
+            File.Delete(Path.Combine(
+              PathBlocksMined,
+              tokenAnchorRBFed.Block.Header.Hash.ToHexString()));
+        }
+
+        WriteBlockMinedToDisk(tokenAnchor.Block);
       }
 
       TokensAnchorMinedUnconfirmed.Add(tokenAnchor);
-      WriteBlockMinedToDisk(tokenAnchor.Block);
 
       $"Included anchor token {tokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMined."
         .Log(this, LogFile, LogEntryNotifier);
+    }
+
+
+    bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
+    {
+      string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
+      blockMined = null;
+
+      while (true)
+        try
+        {
+          using (FileStream fileStream = new(
+            pathBlockMined,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None))
+          {
+            try
+            {
+              blockMined = ParseBlock(fileStream);
+              return true;
+            }
+            catch (Exception ex)
+            {
+              $"{ex.GetType().Name} when attempting to parse file {pathBlockMined}: {ex.Message}"
+                .Log(this, LogEntryNotifier);
+
+              break;
+            }
+          }
+        }
+        catch (FileNotFoundException)
+        {
+          break;
+        }
+        catch (IOException ex)
+        {
+          ($"{ex.GetType().Name} when attempting to load file {pathBlockMined}: {ex.Message}.\n" +
+            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
+          continue;
+        }
+
+      return false;
     }
   }
 }

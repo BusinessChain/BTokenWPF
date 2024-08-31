@@ -338,7 +338,7 @@ namespace BTokenLib
 
         if (TXPool.TryAddTX(tX))
         {
-          SendAnchorTokenUnconfirmedToChilds(tX);
+          SendAnchorTokenUnconfirmedToChild(tX);
           Wallet.InsertTXUnconfirmed(tX);
         }
       }
@@ -475,7 +475,7 @@ namespace BTokenLib
               block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
             }
 
-            TokensChild.FirstOrDefault(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
+            TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
               ?.ReceiveAnchorTokenConfirmed(tokenAnchor);
           }
         }
@@ -639,15 +639,15 @@ namespace BTokenLib
         Wallet.InsertTXUnconfirmed(tX);
         Wallet.AddTXUnconfirmedToHistory(tX);
 
-        SendAnchorTokenUnconfirmedToChilds(tX);
+        SendAnchorTokenUnconfirmedToChild(tX);
       }
       else
         $"Could not insert tX {tX} to pool.".Log(this, LogEntryNotifier);
     }
 
-    public void SendAnchorTokenUnconfirmedToChilds(TX tX)
+    public void SendAnchorTokenUnconfirmedToChild(TX tX)
     {
-      if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor) && tokenAnchor.Block != null)
+      if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
           ?.SaveAnchorTokenUnconfirmedMined(tokenAnchor);
     }
