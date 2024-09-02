@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 
 namespace BTokenLib
@@ -13,15 +11,8 @@ namespace BTokenLib
     public const int LENGTH_IDTOKEN = 4;
     public byte[] IDToken = new byte[LENGTH_IDTOKEN];
 
-    public int NumberSequence = 0;
-    public double FeeSatoshiPerByte;
-
-    public int HeightBlockReferenced;
     public byte[] HashBlockReferenced = new byte[32];
     public byte[] HashBlockPreviousReferenced = new byte[32];
-
-    public Block Block;
-    public TX TX;
 
 
     public TokenAnchor Copy()
@@ -29,7 +20,6 @@ namespace BTokenLib
       TokenAnchor tokenAnchor = new();
 
       tokenAnchor.IDToken = IDToken;
-      tokenAnchor.NumberSequence = NumberSequence;
       tokenAnchor.HashBlockReferenced = HashBlockReferenced;
       tokenAnchor.HashBlockPreviousReferenced = HashBlockPreviousReferenced;
 

@@ -654,21 +654,33 @@ namespace BTokenLib
 
     public bool TryRBFAnchorToken(
       TokenAnchor tokenAnchorOld,
-      TokenAnchor tokenAnchorNew)
+      TokenAnchor tokenAnchorNew,
+      double feeSatoshiPerByte)
     {
       Wallet.ReverseTX(tokenAnchorOld.TX);
 
-      return TryBroadcastAnchorToken(tokenAnchorNew);
+      int sequence = tokenAnchorOld.TX.GetSequence() + 1;
+
+      // Vielleicht sollte AnchorToken, Block und TX auseinander genommen werden, und erst am
+      // schluss wieder gebündelt werden falls man sieht, dass etwas immer zusammen ist.
+
+      return TryBroadcastAnchorToken(
+        tokenAnchorNew, 
+        feeSatoshiPerByte, 
+        sequence);
     }
 
-    public bool TryBroadcastAnchorToken(TokenAnchor tokenAnchor)
+    public bool TryBroadcastAnchorToken(
+      TokenAnchor tokenAnchor, 
+      double feeSatoshiPerByte, 
+      int sequence = 0)
     {
       byte[] dataAnchorToken = tokenAnchor.Serialize();
 
       if (Wallet.TryCreateTXData(
-        dataAnchorToken, 
-        tokenAnchor.NumberSequence,
-        tokenAnchor.FeeSatoshiPerByte,
+        dataAnchorToken,
+        sequence,
+        feeSatoshiPerByte,
         out TX tX))
       {
         tokenAnchor.TX = tX;

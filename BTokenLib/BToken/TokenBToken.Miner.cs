@@ -73,7 +73,7 @@ namespace BTokenLib
 
             TokenAnchor tokenAnchor = MineAnchorToken();
 
-            if (TokenParent.TryBroadcastAnchorToken(tokenAnchor))
+            if (TokenParent.TryBroadcastAnchorToken(tokenAnchor, FeeSatoshiPerByteAnchorToken))
             {
               $"Mine block {tokenAnchor.Block}.".Log(this, LogFile, LogEntryNotifier);
 
@@ -126,10 +126,8 @@ namespace BTokenLib
       TokenAnchor tokenAnchor = new();
 
       tokenAnchor.HashBlockReferenced = block.Header.Hash;
-      tokenAnchor.HeightBlockReferenced = block.Header.Height;
       tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
       tokenAnchor.IDToken = IDToken;
-      tokenAnchor.FeeSatoshiPerByte = FeeSatoshiPerByteAnchorToken;
       tokenAnchor.Block = block;
 
       return tokenAnchor;
@@ -202,9 +200,7 @@ namespace BTokenLib
 
         TokenAnchor tokenAnchorNew = MineAnchorToken();
 
-        tokenAnchorNew.NumberSequence = tokenAnchorOld.NumberSequence + 1;
-
-        if (TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew))
+        if (TokenParent.TryRBFAnchorToken(tokenAnchorOld, tokenAnchorNew, FeeSatoshiPerByteAnchorToken))
         {
           WriteBlockMinedToDisk(tokenAnchorNew.Block);
 
