@@ -150,9 +150,6 @@ namespace BTokenLib
         {
           TXOutputBitcoin tXOutputBitcoin = new(stream);
           tX.TXOutputs.Add(tXOutputBitcoin);
-
-          if (i == 0 && tXOutputBitcoin.Type == TXOutputBitcoin.TypesToken.AnchorToken)
-            tXOutputBitcoin.TokenAnchor.TX = tX;
         }
 
         stream.Position += 4; //BYTE_LENGTH_LOCK_TIME

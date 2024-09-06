@@ -427,7 +427,11 @@ namespace BTokenLib
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
         CreateImage();
 
-      TokensChild.ForEach(t => t.SignalParentBlockInsertion(block.Header));
+      foreach(var hashBlockChildToken in block.Header.HashesChild)
+        TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
+          .SignalHashBlockWinnerToChild(hashBlockChildToken.Value);
+
+      TokensChild.ForEach(t => t.SignalParentBlockInsertion());
     }
 
     protected abstract void StageTXInDatabase(TX tX, Header header);
@@ -476,7 +480,7 @@ namespace BTokenLib
             }
 
             TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
-              ?.ReceiveAnchorTokenConfirmed(tokenAnchor);
+              ?.ReceiveAnchorTokenConfirmed(tX);
           }
         }
       }
@@ -603,10 +607,13 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void ReceiveAnchorTokenConfirmed(TokenAnchor tokenAnchor)
+    public virtual void ReceiveAnchorTokenConfirmed(TX tX)
     { throw new NotImplementedException(); }
 
-    public virtual void SignalParentBlockInsertion(Header header)
+    public virtual void SignalHashBlockWinnerToChild(byte[] hashBlockChildToken)
+    { throw new NotImplementedException(); }
+
+    public virtual void SignalParentBlockInsertion()
     { throw new NotImplementedException(); }
 
     public virtual void SaveAnchorTokenUnconfirmedMined(TokenAnchor tokenAnchor)
@@ -653,16 +660,13 @@ namespace BTokenLib
     }
 
     public bool TryRBFAnchorToken(
-      TokenAnchor tokenAnchorOld,
+      TX tokenAnchorOld,
       TokenAnchor tokenAnchorNew,
       double feeSatoshiPerByte)
     {
-      Wallet.ReverseTX(tokenAnchorOld.TX);
+      Wallet.ReverseTX(tokenAnchorOld);
 
-      int sequence = tokenAnchorOld.TX.GetSequence() + 1;
-
-      // Vielleicht sollte AnchorToken, Block und TX auseinander genommen werden, und erst am
-      // schluss wieder gebündelt werden falls man sieht, dass etwas immer zusammen ist.
+      int sequence = tokenAnchorOld.GetSequence() + 1;
 
       return TryBroadcastAnchorToken(
         tokenAnchorNew, 
@@ -683,8 +687,6 @@ namespace BTokenLib
         feeSatoshiPerByte,
         out TX tX))
       {
-        tokenAnchor.TX = tX;
-
         InsertTXUnconfirmed(tX);
         Network.AdvertizeTX(tX);
 

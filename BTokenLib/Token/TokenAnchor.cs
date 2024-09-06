@@ -33,10 +33,5 @@ namespace BTokenLib
       .Concat(HashBlockReferenced)
       .Concat(HashBlockPreviousReferenced).ToArray();
     }
-
-    public override string ToString()
-    {
-      return TX.ToString();
-    }
   }
 }
