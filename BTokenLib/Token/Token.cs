@@ -616,7 +616,7 @@ namespace BTokenLib
     public virtual void SignalParentBlockInsertion()
     { throw new NotImplementedException(); }
 
-    public virtual void SaveAnchorTokenUnconfirmedMined(TokenAnchor tokenAnchor)
+    public virtual void SaveAnchorTokenUnconfirmedMined(TX tXTokenAnchor)
     { throw new NotImplementedException(); }
 
     public virtual void RevokeBlockInsertion()
@@ -656,7 +656,7 @@ namespace BTokenLib
     {
       if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
-          ?.SaveAnchorTokenUnconfirmedMined(tokenAnchor);
+          ?.SaveAnchorTokenUnconfirmedMined(tX);
     }
 
     public bool TryRBFAnchorToken(
