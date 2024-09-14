@@ -10,6 +10,8 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
+    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
+
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
@@ -22,6 +24,7 @@ namespace BTokenLib
     double FeeSatoshiPerByteAnchorToken;
 
     List<TX> TokensAnchorMinedUnconfirmed = new();
+    List<Block> BlocksMinedCache = new();
     string PathBlocksMined;
 
 
@@ -70,13 +73,13 @@ namespace BTokenLib
             timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            TokenAnchor tokenAnchor = MineAnchorToken(out Block block);
+            byte[] dataAnchorToken = MineAnchorToken(out Block block);
 
-            if (TokenParent.TryBroadcastAnchorToken(tokenAnchor, FeeSatoshiPerByteAnchorToken))
+            if (TokenParent.TryBroadcastTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
             {
               $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
 
-              WriteBlockMinedToDisk(block);
+              SaveBlockMined(block);
 
               // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
               // COUNT_SATOSHIS_PER_DAY_MINING);
@@ -96,7 +99,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    TokenAnchor MineAnchorToken(out Block block)
+    byte[] MineAnchorToken(out Block block)
     {
       block = new BlockBToken(this);
 
@@ -124,17 +127,16 @@ namespace BTokenLib
 
       block.Header.ComputeHash(SHA256Miner);
 
-      TokenAnchor tokenAnchor = new();
-
-      tokenAnchor.HashBlockReferenced = block.Header.Hash;
-      tokenAnchor.HashBlockPreviousReferenced = block.Header.HashPrevious;
-      tokenAnchor.IDToken = IDToken;
-
-      return tokenAnchor;
+      return IDENTIFIER_BTOKEN_PROTOCOL
+      .Concat(IDToken)
+      .Concat(block.Header.Hash)
+      .Concat(block.Header.HashPrevious).ToArray();
     }
 
-    void WriteBlockMinedToDisk(Block block)
+    void SaveBlockMined(Block block)
     {
+      BlocksMinedCache.Add(block);
+
       string pathBlockMined = Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString());
 
       while (true)
@@ -169,14 +171,13 @@ namespace BTokenLib
 
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
-        TokenAnchor tokenAnchorNew = MineAnchorToken(out Block block);
+        byte[] dataAnchorTokenNew = MineAnchorToken(out Block block);
 
-        if (TokenParent.TryRBFAnchorToken(tXTokenAnchorOld, tokenAnchorNew, FeeSatoshiPerByteAnchorToken))
+        if (TokenParent.TryRBFTXData(tXTokenAnchorOld, dataAnchorTokenNew, FeeSatoshiPerByteAnchorToken))
         {
-          ($"RBF old anchor token {tXTokenAnchorOld} with {tokenAnchorNew} referenching " +
-            $"{tokenAnchorNew.HashBlockReferenced.ToHexString()}.").Log(this, LogFile, LogEntryNotifier);
+          $"RBF old anchor token {tXTokenAnchorOld} with new anchor token referenching {block}.".Log(this, LogFile, LogEntryNotifier);
 
-          WriteBlockMinedToDisk(block);
+          SaveBlockMined(block);
         }
       }
     }
@@ -200,6 +201,14 @@ namespace BTokenLib
       }
     }
 
+    public override void DeleteBlocksMinedUnconfirmed()
+    {
+      BlocksMinedCache.Clear();
+
+      foreach (string pathFile in Directory.GetFiles(PathBlocksMined))
+        File.Delete(pathFile);
+    }
+
     public override void ReceiveAnchorTokenConfirmed(TX tX)
     {
       TokensAnchorMinedUnconfirmed.RemoveAll(t => t.Hash.IsAllBytesEqual(tX.Hash));
@@ -218,10 +227,12 @@ namespace BTokenLib
 
     bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
     {
-      // We should have some cache here
+      blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
+
+      if (blockMined != null)
+        return true;
 
       string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
-      blockMined = null;
 
       while (true)
         try

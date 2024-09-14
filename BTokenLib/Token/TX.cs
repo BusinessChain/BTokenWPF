@@ -21,6 +21,9 @@ namespace BTokenLib
 
     public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
 
+    public virtual int GetSequence()
+    { throw new NotImplementedException(); }
+
     public abstract string Print();
 
     public abstract void WriteToStream(Stream stream);

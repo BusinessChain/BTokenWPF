@@ -424,6 +424,8 @@ namespace BTokenLib
 
       Archiver.ArchiveBlock(block);
 
+      DeleteBlocksMinedUnconfirmed();
+
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
         CreateImage();
 
@@ -616,6 +618,8 @@ namespace BTokenLib
     public virtual void SignalParentBlockInsertion()
     { throw new NotImplementedException(); }
 
+    public virtual void DeleteBlocksMinedUnconfirmed() { }
+
     public virtual void SaveAnchorTokenUnconfirmedMined(TX tXTokenAnchor)
     { throw new NotImplementedException(); }
 
@@ -659,39 +663,29 @@ namespace BTokenLib
           ?.SaveAnchorTokenUnconfirmedMined(tX);
     }
 
-    public bool TryRBFAnchorToken(
-      TX tokenAnchorOld,
-      TokenAnchor tokenAnchorNew,
-      double feeSatoshiPerByte)
+    public bool TryRBFTXData(TX tXDataOld, byte[] data, double feeSatoshiPerByte)
     {
-      Wallet.ReverseTX(tokenAnchorOld);
+      Wallet.UndoTXUnconfirmed(tXDataOld);
 
-      int sequence = tokenAnchorOld.GetSequence() + 1;
+      int sequence = tXDataOld.GetSequence() + 1;
 
-      return TryBroadcastAnchorToken(
-        tokenAnchorNew, 
-        feeSatoshiPerByte, 
+      return TryBroadcastTXData(
+        data,
+        feeSatoshiPerByte,
         sequence);
     }
 
-    public bool TryBroadcastAnchorToken(
-      TokenAnchor tokenAnchor, 
+    public bool TryBroadcastTXData(
+      byte[] data, 
       double feeSatoshiPerByte, 
       int sequence = 0)
     {
-      byte[] dataAnchorToken = tokenAnchor.Serialize();
-
-      if (Wallet.TryCreateTXData(
-        dataAnchorToken,
-        sequence,
-        feeSatoshiPerByte,
-        out TX tX))
+      if (Wallet.TryCreateTXData(data, sequence, feeSatoshiPerByte, out TX tX))
       {
         InsertTXUnconfirmed(tX);
         Network.AdvertizeTX(tX);
 
-        $"Created and broadcasted anchor token {tokenAnchor} referencing {tokenAnchor.HashBlockReferenced.ToHexString()}."
-          .Log(this, LogEntryNotifier);
+        $"Created and broadcasted anchor token {tX}.".Log(this, LogEntryNotifier);
 
         return true;
       }

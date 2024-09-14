@@ -13,7 +13,7 @@ namespace BTokenLib
     const long BLOCK_REWARD_INITIAL = 5000000000;
     const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
-    const int COUNT_TXS_PER_BLOCK_MAX = 3;
+    const int COUNT_TXS_PER_BLOCK_MAX = 2;
     int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);
 
 

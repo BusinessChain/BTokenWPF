@@ -12,6 +12,11 @@ namespace BTokenLib
     public List<TXOutputBitcoin> TXOutputs = new();
 
 
+    public override int GetSequence()
+    {
+      return Inputs.First().Sequence;
+    }
+
     public override bool IsSuccessorTo(TX tX)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;

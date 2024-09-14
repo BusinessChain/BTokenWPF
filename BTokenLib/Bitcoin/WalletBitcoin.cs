@@ -263,17 +263,10 @@ namespace BTokenLib
     {
       foreach (TXInputBitcoin tXInput in tX.Inputs)
       {
-        OutputsSpentUnconfirmed.RemoveAll(
-          o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
-
-        TXOutputWallet tXOutputWallet = OutputsSpendable.Find(o =>
-          o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
-
-        if (tXOutputWallet != null)
-        {
-          OutputsSpendable.Remove(tXOutputWallet);
+        if (0 < OutputsSpendable.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex))
           AddTXToHistory(tX);
-        }
+
+        OutputsSpentUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
       }
 
       for (int i = 0; i < tX.TXOutputs.Count; i += 1)
@@ -285,18 +278,15 @@ namespace BTokenLib
         {
           OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
 
-          if (!OutputsSpentUnconfirmed.Any(o => o.TXID.IsAllBytesEqual(tX.Hash) && o.Index == i))
-          {
-            OutputsSpendable.Add(
-              new TXOutputWallet
-              {
-                TXID = tX.Hash,
-                Index = i,
-                Value = tXOutput.Value
-              });
+          OutputsSpendable.Add(
+            new TXOutputWallet
+            {
+              TXID = tX.Hash,
+              Index = i,
+              Value = tXOutput.Value
+            });
 
-            AddTXToHistory(tX);
-          }
+          AddTXToHistory(tX);
         }
       }
     }
@@ -307,8 +297,8 @@ namespace BTokenLib
 
       foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
       {
-        TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsUnconfirmed).ToList()
-          .Find(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+        TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsUnconfirmed).
+          FirstOrDefault(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
         if(outputSpendable != null)
           OutputsSpentUnconfirmed.Add(outputSpendable);
@@ -329,7 +319,7 @@ namespace BTokenLib
       }
     }
 
-    public override void ReverseTX(TX tX)
+    public override void UndoTXUnconfirmed(TX tX)
     {
       OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
 

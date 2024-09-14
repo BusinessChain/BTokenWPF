@@ -41,7 +41,7 @@ namespace BTokenLib
 
     public abstract bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX);
 
-    public abstract void ReverseTX(TX tX);
+    public abstract void UndoTXUnconfirmed(TX tX);
 
     public static byte[] Base58CheckToPubKeyHash(string base58)
     {
