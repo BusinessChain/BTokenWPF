@@ -669,10 +669,7 @@ namespace BTokenLib
 
       int sequence = tXDataOld.GetSequence() + 1;
 
-      return TryBroadcastTXData(
-        data,
-        feeSatoshiPerByte,
-        sequence);
+      return TryBroadcastTXData(data, feeSatoshiPerByte, sequence);
     }
 
     public bool TryBroadcastTXData(

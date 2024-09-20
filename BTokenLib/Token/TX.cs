@@ -37,6 +37,6 @@ namespace BTokenLib
 
     public abstract bool IsSuccessorTo(TX tX);    
 
-    public abstract bool IsReplacementByFee(TX tX);
+    public abstract bool IsReplacementByFeeFor(TX tX);
   }
 }

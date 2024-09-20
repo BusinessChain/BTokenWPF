@@ -216,12 +216,15 @@ namespace BTokenLib
 
     public override void SaveAnchorTokenUnconfirmedMined(TX tXTokenAnchor)
     {
-      TokensAnchorMinedUnconfirmed.Remove(
-        TokensAnchorMinedUnconfirmed.Find(t => tXTokenAnchor.IsReplacementByFee(t)));
+      TX tXTokenAnchorRBFed = TokensAnchorMinedUnconfirmed.Find(t => tXTokenAnchor.IsReplacementByFeeFor(t));
+
+      if (TokensAnchorMinedUnconfirmed.Remove(tXTokenAnchorRBFed))
+        $"Removed RBF'ed and unconfirmed anchor token {tXTokenAnchorRBFed} from list TokensAnchorMinedUnconfirmed."
+          .Log(this, LogFile, LogEntryNotifier);
 
       TokensAnchorMinedUnconfirmed.Add(tXTokenAnchor);
 
-      $"Included anchor token {tXTokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMined."
+      $"Included anchor token {tXTokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMinedUnconfirmed."
         .Log(this, LogFile, LogEntryNotifier);
     }
 

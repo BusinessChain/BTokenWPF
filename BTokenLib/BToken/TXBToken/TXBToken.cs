@@ -44,7 +44,7 @@ namespace BTokenLib
         && Nonce == tXBToken.Nonce + 1;
     }
 
-    public override bool IsReplacementByFee(TX tX)
+    public override bool IsReplacementByFeeFor(TX tX)
     {
       throw new NotImplementedException();
     }
