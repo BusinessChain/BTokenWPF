@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  partial class DatabaseAccounts
+  partial class DBAccounts
   {
     class FileDB : FileStream
     { 

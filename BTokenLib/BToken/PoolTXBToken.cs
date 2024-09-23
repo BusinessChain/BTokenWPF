@@ -50,7 +50,7 @@ namespace BTokenLib
       {
         TXBToken tXBToken = (TXBToken)tX;
 
-        if (!((TokenBToken)Token).DatabaseAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
+        if (!((TokenBToken)Token).DBAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
           throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
 
         if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)

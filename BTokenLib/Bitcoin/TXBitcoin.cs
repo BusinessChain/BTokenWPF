@@ -31,18 +31,15 @@ namespace BTokenLib
 
     public override bool IsReplacementByFeeFor(TX tX)
     {
-      if (!(tX is TXBitcoin tXBitcoin))
-        return false;
-
-      foreach (TXInputBitcoin tXInput in Inputs)
+      if (tX is TXBitcoin tXBitcoin)
+        foreach (TXInputBitcoin tXInput in Inputs)
           foreach (TXInputBitcoin tXBitcoinInput in tXBitcoin.Inputs)
             if (tXInput.TXIDOutput.IsAllBytesEqual(tXBitcoinInput.TXIDOutput) &&
                 tXInput.OutputIndex == tXBitcoinInput.OutputIndex &&
                 tXInput.Sequence > tXBitcoinInput.Sequence)
               return true;
 
-      return true;
-
+      return false;
     }
 
     public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)

@@ -4,25 +4,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
-
     const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
-    SHA256 SHA256Miner = SHA256.Create();
-    Random RandomGeneratorMiner = new();
-
     double FeeSatoshiPerByteAnchorToken;
-
     List<TX> TokensAnchorMinedUnconfirmed = new();
     List<Block> BlocksMinedCache = new();
     string PathBlocksMined;
@@ -73,7 +66,7 @@ namespace BTokenLib
             timerCreateNextToken = TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            byte[] dataAnchorToken = MineAnchorToken(out Block block);
+            byte[] dataAnchorToken = CreateAnchorToken(out Block block);
 
             if (TokenParent.TryBroadcastTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
             {
@@ -99,7 +92,7 @@ namespace BTokenLib
       $"Exit BToken miner.".Log(this, LogFile, LogEntryNotifier);
     }
 
-    byte[] MineAnchorToken(out Block block)
+    byte[] CreateAnchorToken(out Block block)
     {
       block = new BlockBToken(this);
 
@@ -125,7 +118,7 @@ namespace BTokenLib
         Fee = feeTXs
       };
 
-      block.Header.ComputeHash(SHA256Miner);
+      block.Header.ComputeHash();
 
       return IDENTIFIER_BTOKEN_PROTOCOL
       .Concat(IDToken)
@@ -171,7 +164,7 @@ namespace BTokenLib
 
         FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
 
-        byte[] dataAnchorTokenNew = MineAnchorToken(out Block block);
+        byte[] dataAnchorTokenNew = CreateAnchorToken(out Block block);
 
         if (TokenParent.TryRBFTXData(tXTokenAnchorOld, dataAnchorTokenNew, FeeSatoshiPerByteAnchorToken))
         {

@@ -1,19 +1,19 @@
 ﻿using Org.BouncyCastle.X509;
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  partial class DatabaseAccounts
+  partial class DBAccounts
   {
-    class CacheDatabaseAccounts : Dictionary<byte[], Account>
+    class CacheDB : Dictionary<byte[], Account>
     {
       public byte[] Hash;
       SHA256 SHA256 = SHA256.Create();
 
-      public CacheDatabaseAccounts() 
+      public CacheDB() 
         : base(new EqualityComparerByteArray())
       { }
 

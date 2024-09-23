@@ -91,13 +91,19 @@ namespace BTokenLib
       }
     }
 
+    public void ComputeHash()
+    {
+      SHA256 sHA256 = SHA256.Create();
+      ComputeHash(sHA256);
+    }
+
     public void ComputeHash(SHA256 sHA256)
     {
       Hash = sHA256.ComputeHash(
         sHA256.ComputeHash(Serialize()));
     }
 
-   
+
     public override string ToString()
     {
       return Hash.ToHexString();

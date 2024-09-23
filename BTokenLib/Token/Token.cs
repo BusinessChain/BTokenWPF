@@ -11,6 +11,8 @@ namespace BTokenLib
 {
   public abstract partial class Token
   {
+    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' }; // wird nirgens geprüft
+
     public ILogEntryNotifier LogEntryNotifier;
 
     public Token TokenParent;
@@ -18,7 +20,6 @@ namespace BTokenLib
 
     public Header HeaderGenesis;
     public Header HeaderTip;
-
     Dictionary<int, List<Header>> HeaderIndex = new();
 
     public TXPool TXPool;
@@ -436,10 +437,6 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.SignalParentBlockInsertion());
     }
 
-    protected abstract void StageTXInDatabase(TX tX, Header header);
-    protected abstract void CommitTXsInDatabase();
-    protected abstract void DiscardStagedTXsInDatabase();
-
     protected void InsertInDatabase(Block block)
     {
       byte[] targetValue = SHA256.HashData(block.Header.Hash);
@@ -495,6 +492,10 @@ namespace BTokenLib
 
       CommitTXsInDatabase();
     }
+
+    protected abstract void StageTXInDatabase(TX tX, Header header);
+    protected abstract void CommitTXsInDatabase();
+    protected abstract void DiscardStagedTXsInDatabase();
 
     public void CreateImage()
     {
@@ -559,18 +560,6 @@ namespace BTokenLib
     public abstract Header ParseHeader(Stream stream);
 
     public abstract TX ParseTX(Stream stream, SHA256 sHA256);
-
-    public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
-    {
-      if (Wallet.TryCreateTX(address, value, feePerByte, out tX))
-      {
-        InsertTXUnconfirmed(tX);
-        Network.AdvertizeTX(tX);
-        return true;
-      }
-
-      return false;
-    }
 
     public bool IsMining;
 
@@ -661,6 +650,18 @@ namespace BTokenLib
       if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
           ?.SaveAnchorTokenUnconfirmedMined(tX);
+    }
+
+    public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
+    {
+      if (Wallet.TryCreateTX(address, value, feePerByte, out tX))
+      {
+        InsertTXUnconfirmed(tX);
+        Network.AdvertizeTX(tX);
+        return true;
+      }
+
+      return false;
     }
 
     public bool TryRBFTXData(TX tXDataOld, byte[] data, double feeSatoshiPerByte)

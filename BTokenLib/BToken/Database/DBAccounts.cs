@@ -1,18 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 
 namespace BTokenLib
 {
-  public partial class DatabaseAccounts
+  public partial class DBAccounts
   {
     public const int COUNT_CACHES = 256;
     byte[] HashesCaches = new byte[COUNT_CACHES * 32];
     const int COUNT_MAX_CACHE = 40000; // Read from configuration file
-    List<CacheDatabaseAccounts> Caches = new();
+    List<CacheDB> Caches = new();
     int IndexCache;
 
     const string PathRootDB = "FilesDB";
@@ -26,10 +26,11 @@ namespace BTokenLib
     SHA256 SHA256 = SHA256.Create();
     byte[] Hash;
 
-    public DatabaseAccounts()
+
+    public DBAccounts()
     {
       for (int i = 0; i < COUNT_CACHES; i += 1)
-        Caches.Add(new CacheDatabaseAccounts());
+        Caches.Add(new CacheDB());
 
       Directory.CreateDirectory(
         Path.Combine(Directory.GetCurrentDirectory(), PathRootDB));
@@ -132,7 +133,7 @@ namespace BTokenLib
           $"Invalid prefix {bufferDB[index]} in serialized DB data.");
     }
 
-    bool TryGetCache(byte[] iDAccount, out CacheDatabaseAccounts cache)
+    bool TryGetCache(byte[] iDAccount, out CacheDB cache)
     {
       cache = null;
       int c = IndexCache;
@@ -154,7 +155,7 @@ namespace BTokenLib
 
     public bool TryGetAccount(byte[] iDAccount, out Account account)
     {
-      if (TryGetCache(iDAccount, out CacheDatabaseAccounts cache))
+      if (TryGetCache(iDAccount, out CacheDB cache))
         if (cache.TryGetValue(iDAccount, out account))
           return true;
 
@@ -234,7 +235,7 @@ namespace BTokenLib
 
     public void SpendInput(TXBToken tX)
     {
-      if (TryGetCache(tX.IDAccountSource, out CacheDatabaseAccounts cache))
+      if (TryGetCache(tX.IDAccountSource, out CacheDB cache))
         cache.SpendAccountInCache(tX);
       else
         GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);

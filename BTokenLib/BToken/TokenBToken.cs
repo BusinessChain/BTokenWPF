@@ -16,7 +16,7 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    public DatabaseAccounts DatabaseAccounts = new();
+    public DBAccounts DBAccounts = new();
 
     public enum TypesToken
     {
@@ -65,12 +65,12 @@ namespace BTokenLib
 
     public override void LoadImageDatabase(string pathImage)
     {
-      DatabaseAccounts.LoadImage(pathImage);
+      DBAccounts.LoadImage(pathImage);
     }
 
     public override void CreateImageDatabase(string pathImage)
     {
-      DatabaseAccounts.CreateImage(pathImage);
+      DBAccounts.CreateImage(pathImage);
     }
 
 
@@ -95,7 +95,7 @@ namespace BTokenLib
 
         foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
         {
-          DatabaseAccounts.InsertOutput(tXOutput, header.Height);
+          DBAccounts.InsertOutput(tXOutput, header.Height);
 
           if (Wallet.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
             Wallet.AddTXToHistory(tXCoinbase);
@@ -105,14 +105,14 @@ namespace BTokenLib
       {
         TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
 
-        DatabaseAccounts.SpendInput(tXTokenTransfer);
+        DBAccounts.SpendInput(tXTokenTransfer);
 
         if (tXTokenTransfer.IDAccountSource.IsAllBytesEqual(Wallet.PublicKeyHash160))
           Wallet.AddTXToHistory(tXTokenTransfer);
 
         foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
         {
-          DatabaseAccounts.InsertOutput(tXOutput, header.Height);
+          DBAccounts.InsertOutput(tXOutput, header.Height);
 
           if (Wallet.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
             Wallet.AddTXToHistory(tXTokenTransfer);
@@ -135,13 +135,14 @@ namespace BTokenLib
 
     protected override void CommitTXsInDatabase()
     {
-      DatabaseAccounts.UpdateHashDatabase();
+      DBAccounts.UpdateHashDatabase();
 
-      DiscardStagedTXsInDatabase();
+      TXsStaged.Clear();
     }
 
     protected override void DiscardStagedTXsInDatabase()
     {
+      // Reverse all TXs staged
       TXsStaged.Clear();
     }
 
@@ -149,12 +150,12 @@ namespace BTokenLib
       byte[] bufferDB,
       int lengthDataInBuffer)
     {
-      DatabaseAccounts.InsertDB(bufferDB, lengthDataInBuffer);
+      DBAccounts.InsertDB(bufferDB, lengthDataInBuffer);
     }
 
     public override void DeleteDB()
     { 
-      DatabaseAccounts.Delete(); 
+      DBAccounts.Delete(); 
     }
          
     public override List<byte[]> ParseHashesDB(
@@ -177,7 +178,7 @@ namespace BTokenLib
 
       for (
         int i = 0;
-        i < DatabaseAccounts.COUNT_CACHES + DatabaseAccounts.COUNT_FILES_DB;
+        i < DBAccounts.COUNT_CACHES + DBAccounts.COUNT_FILES_DB;
         i += 32)
       {
         byte[] hashDB = new byte[32];
@@ -249,14 +250,14 @@ namespace BTokenLib
     public override void Reset()
     {
       base.Reset();
-      DatabaseAccounts.ClearCache();
+      DBAccounts.ClearCache();
     }
 
     public override bool TryGetDB(
       byte[] hash,
       out byte[] dataDB)
     {
-      return DatabaseAccounts.TryGetDB(hash, out dataDB);
+      return DBAccounts.TryGetDB(hash, out dataDB);
     }
 
     public override List<string> GetSeedAddresses()
@@ -272,7 +273,7 @@ namespace BTokenLib
       return
         h.HeaderTip != null
         &&
-        (DatabaseAccounts.GetCountBytes() <
+        (DBAccounts.GetCountBytes() <
         h.HeaderTip.CountBytesTXsAccumulated - h.HeaderRoot.CountBytesTXsAccumulated
         ||
         COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX <
@@ -281,7 +282,7 @@ namespace BTokenLib
 
     public Account GetAccountUnconfirmed(byte[] iDAccount)
     {
-      if(!DatabaseAccounts.TryGetAccount(iDAccount, out Account account))
+      if(!DBAccounts.TryGetAccount(iDAccount, out Account account))
         throw new ProtocolException($"Account {iDAccount} not in database.");
 
       return ((PoolTXBToken)TXPool).ApplyTXsOnAccount(account);
