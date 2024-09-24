@@ -1,5 +1,4 @@
-﻿using Org.BouncyCastle.X509;
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -11,12 +10,11 @@ namespace BTokenLib
     class CacheDB : Dictionary<byte[], Account>
     {
       public byte[] Hash;
-      SHA256 SHA256 = SHA256.Create();
+
 
       public CacheDB() 
         : base(new EqualityComparerByteArray())
       { }
-
 
       public void SpendAccountInCache(TXBToken tX)
       {
@@ -38,7 +36,7 @@ namespace BTokenLib
           record.IDAccount.CopyTo(bytesCaches, i);
           i += LENGTH_ID_ACCOUNT;
 
-          BitConverter.GetBytes(record.BlockheightAccountInit).CopyTo(bytesCaches, i);
+          BitConverter.GetBytes(record.BlockHeightAccountInit).CopyTo(bytesCaches, i);
           i += 4;
 
           BitConverter.GetBytes(record.Nonce).CopyTo(bytesCaches, i);
@@ -48,7 +46,7 @@ namespace BTokenLib
           i += 8;
         }
 
-        Hash = SHA256.ComputeHash(bytesCaches);
+        Hash = SHA256.HashData(bytesCaches);
       }
 
       public void CreateImage(string path)

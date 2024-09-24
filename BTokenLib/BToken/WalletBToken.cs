@@ -55,7 +55,7 @@ namespace BTokenLib
       tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer);
 
       tXRaw.AddRange(PublicKey);
-      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockheightAccountInit));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockHeightAccountInit));
       tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce));
 
       tXRaw.AddRange(BitConverter.GetBytes(fee));
@@ -91,7 +91,7 @@ namespace BTokenLib
       tXRaw.Add((byte)TokenBToken.TypesToken.Data);
 
       tXRaw.AddRange(PublicKey);
-      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockheightAccountInit));
+      tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockHeightAccountInit));
       tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce));
 
       tXRaw.AddRange(BitConverter.GetBytes(fee));

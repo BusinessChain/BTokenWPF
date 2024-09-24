@@ -11,7 +11,7 @@ namespace BTokenLib
   {
     public const int COUNT_CACHES = 256;
     byte[] HashesCaches = new byte[COUNT_CACHES * 32];
-    const int COUNT_MAX_CACHE = 40000; // Read from configuration file
+    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 40000; // Read from configuration file
     List<CacheDB> Caches = new();
     int IndexCache;
 
@@ -54,7 +54,7 @@ namespace BTokenLib
             Account record = new()
             {
               IDAccount = bytesRecord.Take(LENGTH_ID_ACCOUNT).ToArray(),
-              BlockheightAccountInit = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT),
+              BlockHeightAccountInit = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT),
               Nonce = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT + 4),
               Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + 8)
             };
@@ -113,7 +113,7 @@ namespace BTokenLib
         {
           Account recordDB = new();
 
-          recordDB.BlockheightAccountInit = BitConverter.ToInt32(bufferDB, index);
+          recordDB.BlockHeightAccountInit = BitConverter.ToInt32(bufferDB, index);
           index += 4;
 
           recordDB.Nonce = BitConverter.ToInt32(bufferDB, index);
@@ -159,9 +159,7 @@ namespace BTokenLib
         if (cache.TryGetValue(iDAccount, out account))
           return true;
 
-      FileDB fileDB = GetFileDB(iDAccount);
-
-      if (fileDB.TryGetAccount(iDAccount, out account))
+      if (FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account))
         return true;
 
       return false;
@@ -193,11 +191,6 @@ namespace BTokenLib
 
       Hash = SHA256.ComputeHash(
         hashCaches.Concat(hashFilesDB).ToArray());
-    }
-
-    FileDB GetFileDB(byte[] iDAccount)
-    {
-      return FilesDB[iDAccount[0]];
     }
 
     public bool TryGetDB(byte[] hash, out byte[] dataDB)
@@ -233,12 +226,12 @@ namespace BTokenLib
       account.Value -= tX.Value;
     }
 
-    public void SpendInput(TXBToken tX)
+    public void SpendInput(TXBToken tX) // Warum wird hier nicht in Cache verschoben?
     {
       if (TryGetCache(tX.IDAccountSource, out CacheDB cache))
         cache.SpendAccountInCache(tX);
       else
-        GetFileDB(tX.IDAccountSource).SpendAccountInFileDB(tX);
+        FilesDB[tX.IDAccountSource[0]].SpendAccountInFileDB(tX);
     }
 
     public void InsertOutput(TXOutputBToken output, int blockHeight)
@@ -250,56 +243,54 @@ namespace BTokenLib
 
       while (true)
       {
-        if (Caches[c].TryGetValue(
-          iDAccount,
-          out Account account))
+        if (Caches[c].TryGetValue(iDAccount, out Account account))
         {
           account.Value += outputValueTX;
 
           if (c != IndexCache)
           {
             Caches[c].Remove(iDAccount);
-            AddToCacheIndexed(iDAccount, account);
+            AddToCacheTopPriority(iDAccount, account);
           }
 
-          break;
+          return;
         }
 
         c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
 
         if (c == IndexCache)
         {
-          if (GetFileDB(iDAccount).TryFetchAccount(iDAccount, out account))
+          if (FilesDB[iDAccount[0]].TryFetchAndRemoveAccount(iDAccount, out account))
             account.Value += outputValueTX;
           else
             account = new Account
             {
-              BlockheightAccountInit = blockHeight,
+              BlockHeightAccountInit = blockHeight,
               Nonce = 0,
               Value = outputValueTX,
               IDAccount = iDAccount
             };
 
-          AddToCacheIndexed(iDAccount, account);
+          AddToCacheTopPriority(iDAccount, account);
 
           break;
         }
       }
     }
 
-    void AddToCacheIndexed(byte[] iDAccount, Account account)
+    void AddToCacheTopPriority(byte[] iDAccount, Account account)
     {
       Caches[IndexCache].Add(iDAccount, account);
 
-      if(Caches[IndexCache].Count > COUNT_MAX_CACHE)
+      if(Caches[IndexCache].Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
         for (int i = 0; i < COUNT_FILES_DB; i += 1)
-          FilesDB[i].Defragment();
+          FilesDB[i].Defragment(); // Statt defragmentieren besser Indexieren in dem beschreibbare Ranges angegeben werden.
 
         IndexCache = (IndexCache + COUNT_CACHES + 1) % COUNT_CACHES;
 
-        foreach(KeyValuePair<byte[], Account> item in Caches[IndexCache])
-          GetFileDB(item.Value.IDAccount).WriteRecordDBAccount(item.Value);
+        foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCache])
+          FilesDB[itemInCache.Value.IDAccount[0]].WriteRecordDBAccount(itemInCache.Value);
 
         Caches[IndexCache].Clear();
       }

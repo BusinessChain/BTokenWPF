@@ -53,8 +53,8 @@ namespace BTokenLib
         if (!((TokenBToken)Token).DBAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
           throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
 
-        if (accountSource.BlockheightAccountInit != tXBToken.BlockheightAccountInit)
-          throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountInit} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockheightAccountInit}.");
+        if (accountSource.BlockHeightAccountInit != tXBToken.BlockheightAccountInit)
+          throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountInit} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockHeightAccountInit}.");
 
         lock (LOCK_TXsPool)
         {
@@ -92,7 +92,7 @@ namespace BTokenLib
     {
       Account accounUnconfirmed = new();
 
-      accounUnconfirmed.BlockheightAccountInit = account.BlockheightAccountInit;
+      accounUnconfirmed.BlockHeightAccountInit = account.BlockHeightAccountInit;
       accounUnconfirmed.Nonce = account.Nonce;
       accounUnconfirmed.IDAccount = account.IDAccount;
       accounUnconfirmed.Value = account.Value;

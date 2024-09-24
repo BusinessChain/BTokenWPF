@@ -30,6 +30,8 @@ namespace BTokenLib
 
       public bool TryGetAccount(byte[] iDAccount, out Account account)
       {
+        Position = 0;
+
         while (Position < Length)
         {
           int i = 0;
@@ -49,7 +51,7 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                BlockheightAccountInit = BitConverter.ToInt32(blockheightAccountInit),
+                BlockHeightAccountInit = BitConverter.ToInt32(blockheightAccountInit),
                 Nonce = BitConverter.ToInt32(nonce),
                 Value = BitConverter.ToInt64(value)
               };
@@ -73,7 +75,7 @@ namespace BTokenLib
           if (account.Value > 0)
           {
             Position -= 4 + 4 + 8;
-            Write(BitConverter.GetBytes(account.BlockheightAccountInit));
+            Write(BitConverter.GetBytes(account.BlockHeightAccountInit));
             Write(BitConverter.GetBytes(account.Nonce));
             Write(BitConverter.GetBytes(account.Value));
           }
@@ -94,7 +96,7 @@ namespace BTokenLib
           $"{tX.Hash.ToHexString()} not found in database.");
       }
 
-      public bool TryFetchAccount(
+      public bool TryFetchAndRemoveAccount(
         byte[] iDAccount,
         out Account account)
       {
@@ -118,7 +120,7 @@ namespace BTokenLib
               account = new()
               {
                 IDAccount = iDAccount,
-                BlockheightAccountInit = BitConverter.ToInt32(nonce),
+                BlockHeightAccountInit = BitConverter.ToInt32(nonce),
                 Nonce = BitConverter.ToInt32(nonce),
                 Value = BitConverter.ToInt64(value)
               };
@@ -144,6 +146,7 @@ namespace BTokenLib
         Seek(Position, SeekOrigin.End);
 
         Write(account.IDAccount);
+        Write(BitConverter.GetBytes(account.BlockHeightAccountInit));
         Write(BitConverter.GetBytes(account.Nonce));
         Write(BitConverter.GetBytes(account.Value));
 

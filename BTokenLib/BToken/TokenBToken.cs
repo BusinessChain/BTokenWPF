@@ -136,7 +136,6 @@ namespace BTokenLib
     protected override void CommitTXsInDatabase()
     {
       DBAccounts.UpdateHashDatabase();
-
       TXsStaged.Clear();
     }
 

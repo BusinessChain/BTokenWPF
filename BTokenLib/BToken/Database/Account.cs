@@ -2,10 +2,10 @@
 {
   public class Account
   {
-    public int BlockheightAccountInit;
+    public byte[] IDAccount;
+    public int BlockHeightAccountInit;
     public int Nonce;
     public long Value;
-    public byte[] IDAccount;
 
 
     public override string ToString()
