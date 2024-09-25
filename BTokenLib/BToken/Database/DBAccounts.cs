@@ -136,11 +136,8 @@ namespace BTokenLib
     {
       if (TryGetAccountCache(iDAccount, out account))
         return true;
-      else if (FilesDB[iDAccount[0]].TryFetchAndRemoveAccount(iDAccount, out account))
-      {
-        AddToCacheTopPriority(account);
+      else if (FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account))
         return true;
-      }
 
       return false;
     }
@@ -196,18 +193,25 @@ namespace BTokenLib
 
     public void SpendInput(TXBToken tX)
     {
-      if (TrySpendAccountCache(tX)) ;
-      else if (FilesDB[tX.IDAccountSource[0]].TryFetchAndRemoveAccount(tX.IDAccountSource, out Account account))
+      if (TrySpendAccountCache(tX))
+        return;
+      
+      if (FilesDB[tX.IDAccountSource[0]].TryGetAccount(
+        tX.IDAccountSource, 
+        out Account account,
+        flagRemoveAccount: true))
       {
         account.SpendTX(tX);
 
         if (account.Value > 0)
           AddToCacheTopPriority(account);
+
+        return;
       }
-      else
-        throw new ProtocolException(
-          $"Account {tX.IDAccountSource.ToHexString()} referenced by TX\n" +
-          $"{tX.Hash.ToHexString()} not found in database.");
+
+      throw new ProtocolException(
+        $"Account {tX.IDAccountSource.ToHexString()} referenced by TX\n" +
+        $"{tX.Hash.ToHexString()} not found in database.");
     }
 
     bool TrySpendAccountCache(TXBToken tX)
@@ -218,7 +222,7 @@ namespace BTokenLib
       {
         account.SpendTX(tX);
 
-        if (account.Value <= 0)
+        if (account.Value == 0)
           Caches[c].Remove(account.IDAccount);
 
         return true;
@@ -244,7 +248,10 @@ namespace BTokenLib
       return false;
     }
 
-    bool TryGetAccountCache(byte[] iDAccount, out Account account, bool flagRaisePriority = true)
+    bool TryGetAccountCache(
+      byte[] iDAccount, 
+      out Account account, 
+      bool flagRaisePriority = false)
     {
       int c = IndexCacheTopPriority;
 
@@ -255,9 +262,14 @@ namespace BTokenLib
 
       while (c != IndexCacheTopPriority)
       {
-        if (Caches[c].Remove(iDAccount, out account))
+        if (Caches[c].TryGetValue(iDAccount, out account))
         {
-          AddToCacheTopPriority(account);
+          if(flagRaisePriority)
+          {
+            Caches[c].Remove(iDAccount);
+            AddToCacheTopPriority(account);
+          }
+
           return true;
         }
 
@@ -269,11 +281,11 @@ namespace BTokenLib
 
     public void InsertOutput(TXOutputBToken output, int blockHeight)
     {
-      if (TryGetAccountCache(output.IDAccount, out Account account))
+      if (TryGetAccountCache(output.IDAccount, out Account account, flagRaisePriority: true))
         account.Value += output.Value;
       else
       {
-        if (FilesDB[output.IDAccount[0]].TryFetchAndRemoveAccount(output.IDAccount, out account))
+        if (FilesDB[output.IDAccount[0]].TryGetAccount(output.IDAccount, out account, flagRemoveAccount: true))
           account.Value += output.Value;
         else
           account = new Account
@@ -297,7 +309,7 @@ namespace BTokenLib
         for (int i = 0; i < COUNT_FILES_DB; i += 1)
           FilesDB[i].Defragment(); // Statt defragmentieren besser Indexieren in dem beschreibbare Ranges angegeben werden.
 
-        IndexCacheTopPriority = (IndexCacheTopPriority + COUNT_CACHES + 1) % COUNT_CACHES;
+        IndexCacheTopPriority = (IndexCacheTopPriority + 1 + COUNT_CACHES) % COUNT_CACHES;
 
         foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCacheTopPriority])
           FilesDB[itemInCache.Value.IDAccount[0]].WriteRecordDBAccount(itemInCache.Value);

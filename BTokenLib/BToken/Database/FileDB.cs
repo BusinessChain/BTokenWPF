@@ -28,60 +28,10 @@ namespace BTokenLib
         Seek(0, SeekOrigin.End);
       }
 
-      public bool TryGetAccount(byte[] iDAccount, out Account account)
-      {
-        Position = 0;
-
-        while (Position < Length)
-        {
-          int i = 0;
-
-          while (ReadByte() == iDAccount[i++])
-            if (i == LENGTH_ID_ACCOUNT)
-            {
-              byte[] blockheightAccountInit = new byte[4];
-              Read(blockheightAccountInit);
-
-              byte[] nonce = new byte[4];
-              Read(nonce);
-
-              byte[] value = new byte[8];
-              Read(value);
-
-              account = new()
-              {
-                IDAccount = iDAccount,
-                BlockHeightAccountInit = BitConverter.ToInt32(blockheightAccountInit),
-                Nonce = BitConverter.ToInt32(nonce),
-                Value = BitConverter.ToInt64(value)
-              };
-
-              return true;
-            }
-
-          Position += LENGTH_RECORD_DB - Position % LENGTH_RECORD_DB; // Set the position to the beginning of next record
-        }
-
-        account = null;
-        return false;
-      }
-
-      public void SpendAccountInFileDB(TXBToken tX)
-      {
-        if(TryFetchAndRemoveAccount(tX.IDAccountSource, out Account account))
-        {
-          FlagHashOutdated = true;
-          return;
-        }
-
-        throw new ProtocolException(
-          $"Account {tX.IDAccountSource.ToHexString()} referenced by TX\n" +
-          $"{tX.Hash.ToHexString()} not found in database.");
-      }
-
-      public bool TryFetchAndRemoveAccount(
+      public bool TryGetAccount(
         byte[] iDAccount,
-        out Account account)
+        out Account account,
+        bool flagRemoveAccount = false)
       {
         Position = 0;
 
@@ -108,11 +58,14 @@ namespace BTokenLib
                 Value = BitConverter.ToInt64(value)
               };
 
-              Position -= LENGTH_RECORD_DB;
-              Write(new byte[LENGTH_RECORD_DB]);
+              if(flagRemoveAccount)
+              {
+                Position -= LENGTH_RECORD_DB;
+                Write(new byte[LENGTH_RECORD_DB]);
 
-              CountRecordsNullyfied += 1;
-              FlagHashOutdated = true;
+                CountRecordsNullyfied += 1;
+                FlagHashOutdated = true;
+              }
 
               return true;
             }

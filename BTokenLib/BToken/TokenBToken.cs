@@ -18,6 +18,8 @@ namespace BTokenLib
 
     public DBAccounts DBAccounts = new();
 
+    List<TX> TXsStaged = new();
+
     public enum TypesToken
     {
       Coinbase = 0,
@@ -72,9 +74,6 @@ namespace BTokenLib
     {
       DBAccounts.CreateImage(pathImage);
     }
-
-
-    List<TX> TXsStaged = new();
 
     protected override void StageTXInDatabase(TX tX, Header header)
     {
