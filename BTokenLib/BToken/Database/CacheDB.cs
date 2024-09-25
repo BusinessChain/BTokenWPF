@@ -20,7 +20,7 @@ namespace BTokenLib
       {
         TryGetValue(tX.IDAccountSource, out Account account);
 
-        SpendAccount(tX, account);
+        account.SpendTX(tX);
 
         if (account.Value == 0)
           Remove(tX.IDAccountSource);

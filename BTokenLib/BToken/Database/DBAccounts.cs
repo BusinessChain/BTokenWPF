@@ -4,7 +4,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-
 namespace BTokenLib
 {
   public partial class DBAccounts
@@ -13,7 +12,7 @@ namespace BTokenLib
     byte[] HashesCaches = new byte[COUNT_CACHES * 32];
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 40000; // Read from configuration file
     List<CacheDB> Caches = new();
-    int IndexCache;
+    int IndexCacheTopPriority;
 
     const string PathRootDB = "FilesDB";
     public const int COUNT_FILES_DB = 256; // file index will be idAccount[0]
@@ -133,34 +132,15 @@ namespace BTokenLib
           $"Invalid prefix {bufferDB[index]} in serialized DB data.");
     }
 
-    bool TryGetCache(byte[] iDAccount, out CacheDB cache)
-    {
-      cache = null;
-      int c = IndexCache;
-
-      while (true)
-      {
-        if (Caches[c].ContainsKey(iDAccount))
-        {
-          cache = Caches[c];
-          return true;
-        }
-
-        c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
-
-        if (c == IndexCache)
-          return false;
-      }
-    }
-
     public bool TryGetAccount(byte[] iDAccount, out Account account)
     {
-      if (TryGetCache(iDAccount, out CacheDB cache))
-        if (cache.TryGetValue(iDAccount, out account))
-          return true;
-
-      if (FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account))
+      if (TryGetAccountCache(iDAccount, out account))
         return true;
+      else if (FilesDB[iDAccount[0]].TryFetchAndRemoveAccount(iDAccount, out account))
+      {
+        AddToCacheTopPriority(account);
+        return true;
+      }
 
       return false;
     }
@@ -214,88 +194,118 @@ namespace BTokenLib
       return false;
     }
 
-    static void SpendAccount(TXBToken tX, Account account)
-    {            
-      if (account.Nonce != tX.Nonce)
-        throw new ProtocolException($"Account {account} referenced by TX {tX} has unequal Nonce.");
+    public void SpendInput(TXBToken tX)
+    {
+      if (TrySpendAccountCache(tX)) ;
+      else if (FilesDB[tX.IDAccountSource[0]].TryFetchAndRemoveAccount(tX.IDAccountSource, out Account account))
+      {
+        account.SpendTX(tX);
 
-      if (account.Value < tX.Value)
-        throw new ProtocolException($"Account {account} referenced by TX {tX} does not have enough fund.");
-
-      account.Nonce += 1;
-      account.Value -= tX.Value;
+        if (account.Value > 0)
+          AddToCacheTopPriority(account);
+      }
+      else
+        throw new ProtocolException(
+          $"Account {tX.IDAccountSource.ToHexString()} referenced by TX\n" +
+          $"{tX.Hash.ToHexString()} not found in database.");
     }
 
-    public void SpendInput(TXBToken tX) // Warum wird hier nicht in Cache verschoben?
+    bool TrySpendAccountCache(TXBToken tX)
     {
-      if (TryGetCache(tX.IDAccountSource, out CacheDB cache))
-        cache.SpendAccountInCache(tX);
-      else
-        FilesDB[tX.IDAccountSource[0]].SpendAccountInFileDB(tX);
+      int c = IndexCacheTopPriority;
+
+      if (Caches[c].TryGetValue(tX.IDAccountSource, out Account account))
+      {
+        account.SpendTX(tX);
+
+        if (account.Value <= 0)
+          Caches[c].Remove(account.IDAccount);
+
+        return true;
+      }
+
+      c = (c - 1 + COUNT_CACHES) % COUNT_CACHES;
+
+      while (c != IndexCacheTopPriority)
+      {
+        if (Caches[c].Remove(tX.IDAccountSource, out account))
+        {
+          account.SpendTX(tX);
+
+          if (account.Value > 0)
+            AddToCacheTopPriority(account);
+
+          return true;
+        }
+
+        c = (c - 1 + COUNT_CACHES) % COUNT_CACHES;
+      }
+
+      return false;
+    }
+
+    bool TryGetAccountCache(byte[] iDAccount, out Account account, bool flagRaisePriority = true)
+    {
+      int c = IndexCacheTopPriority;
+
+      if (Caches[c].TryGetValue(iDAccount, out account))
+        return true;
+
+      c = (c - 1 + COUNT_CACHES) % COUNT_CACHES;
+
+      while (c != IndexCacheTopPriority)
+      {
+        if (Caches[c].Remove(iDAccount, out account))
+        {
+          AddToCacheTopPriority(account);
+          return true;
+        }
+
+        c = (c - 1 + COUNT_CACHES) % COUNT_CACHES;
+      }
+
+      return false;
     }
 
     public void InsertOutput(TXOutputBToken output, int blockHeight)
     {
-      byte[] iDAccount = output.IDAccount;
-      long outputValueTX = output.Value;
-
-      int c = IndexCache;
-
-      while (true)
+      if (TryGetAccountCache(output.IDAccount, out Account account))
+        account.Value += output.Value;
+      else
       {
-        if (Caches[c].TryGetValue(iDAccount, out Account account))
-        {
-          account.Value += outputValueTX;
-
-          if (c != IndexCache)
+        if (FilesDB[output.IDAccount[0]].TryFetchAndRemoveAccount(output.IDAccount, out account))
+          account.Value += output.Value;
+        else
+          account = new Account
           {
-            Caches[c].Remove(iDAccount);
-            AddToCacheTopPriority(iDAccount, account);
-          }
+            BlockHeightAccountInit = blockHeight,
+            Nonce = 0,
+            Value = output.Value,
+            IDAccount = output.IDAccount
+          };
 
-          return;
-        }
-
-        c = (c + COUNT_CACHES - 1) % COUNT_CACHES;
-
-        if (c == IndexCache)
-        {
-          if (FilesDB[iDAccount[0]].TryFetchAndRemoveAccount(iDAccount, out account))
-            account.Value += outputValueTX;
-          else
-            account = new Account
-            {
-              BlockHeightAccountInit = blockHeight,
-              Nonce = 0,
-              Value = outputValueTX,
-              IDAccount = iDAccount
-            };
-
-          AddToCacheTopPriority(iDAccount, account);
-
-          break;
-        }
+        AddToCacheTopPriority(account);
       }
     }
 
-    void AddToCacheTopPriority(byte[] iDAccount, Account account)
+    void AddToCacheTopPriority(Account account)
     {
-      Caches[IndexCache].Add(iDAccount, account);
+      Caches[IndexCacheTopPriority].Add(account.IDAccount, account);
 
-      if(Caches[IndexCache].Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+      if(Caches[IndexCacheTopPriority].Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
         for (int i = 0; i < COUNT_FILES_DB; i += 1)
           FilesDB[i].Defragment(); // Statt defragmentieren besser Indexieren in dem beschreibbare Ranges angegeben werden.
 
-        IndexCache = (IndexCache + COUNT_CACHES + 1) % COUNT_CACHES;
+        IndexCacheTopPriority = (IndexCacheTopPriority + COUNT_CACHES + 1) % COUNT_CACHES;
 
-        foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCache])
+        foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCacheTopPriority])
           FilesDB[itemInCache.Value.IDAccount[0]].WriteRecordDBAccount(itemInCache.Value);
 
-        Caches[IndexCache].Clear();
+        Caches[IndexCacheTopPriority].Clear();
       }
     }
-
+        
     public long GetCountBytes()
     {
       long countBytes = 0;

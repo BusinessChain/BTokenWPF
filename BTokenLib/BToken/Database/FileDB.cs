@@ -68,25 +68,8 @@ namespace BTokenLib
 
       public void SpendAccountInFileDB(TXBToken tX)
       {
-        if(TryGetAccount(tX.IDAccountSource, out Account account))
+        if(TryFetchAndRemoveAccount(tX.IDAccountSource, out Account account))
         {
-          SpendAccount(tX, account);
-
-          if (account.Value > 0)
-          {
-            Position -= 4 + 4 + 8;
-            Write(BitConverter.GetBytes(account.BlockHeightAccountInit));
-            Write(BitConverter.GetBytes(account.Nonce));
-            Write(BitConverter.GetBytes(account.Value));
-          }
-          else
-          {
-            Position -= LENGTH_RECORD_DB;
-            Write(new byte[LENGTH_RECORD_DB]);
-
-            CountRecordsNullyfied += 1;
-          }
-
           FlagHashOutdated = true;
           return;
         }
