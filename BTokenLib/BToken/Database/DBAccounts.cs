@@ -306,9 +306,6 @@ namespace BTokenLib
 
       if(Caches[IndexCacheTopPriority].Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
-        for (int i = 0; i < COUNT_FILES_DB; i += 1)
-          FilesDB[i].Defragment(); // Statt defragmentieren besser Indexieren in dem beschreibbare Ranges angegeben werden.
-
         IndexCacheTopPriority = (IndexCacheTopPriority + 1 + COUNT_CACHES) % COUNT_CACHES;
 
         foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCacheTopPriority])

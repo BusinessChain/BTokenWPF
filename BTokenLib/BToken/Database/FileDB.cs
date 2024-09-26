@@ -9,12 +9,11 @@ namespace BTokenLib
   {
     class FileDB : FileStream
     { 
-      int TresholdRatioDefragmentation = 10;
-      int CountRecords;
-      int CountRecordsNullyfied;
-
       public byte[] Hash;
       bool FlagHashOutdated;
+
+      byte[] TempByteArrayCopyLastRecord = new byte[LENGTH_RECORD_DB];
+
       SHA256 SHA256 = SHA256.Create();
 
 
@@ -60,10 +59,19 @@ namespace BTokenLib
 
               if(flagRemoveAccount)
               {
-                Position -= LENGTH_RECORD_DB;
-                Write(new byte[LENGTH_RECORD_DB]);
+                long positionCurrentRecord = Position - LENGTH_RECORD_DB;
 
-                CountRecordsNullyfied += 1;
+                Position = Length - LENGTH_RECORD_DB;
+                Read(TempByteArrayCopyLastRecord);
+
+                Position = positionCurrentRecord;
+
+                Write(TempByteArrayCopyLastRecord);
+
+                SetLength(Length - LENGTH_RECORD_DB);
+
+                Seek(0, SeekOrigin.End);
+
                 FlagHashOutdated = true;
               }
 
@@ -79,43 +87,12 @@ namespace BTokenLib
 
       public void WriteRecordDBAccount(Account account)
       {
-        Seek(Position, SeekOrigin.End);
-
         Write(account.IDAccount);
         Write(BitConverter.GetBytes(account.BlockHeightAccountInit));
         Write(BitConverter.GetBytes(account.Nonce));
         Write(BitConverter.GetBytes(account.Value));
 
-        CountRecords += 1;
-
         FlagHashOutdated = true;
-      }
-
-      public void Defragment()
-      {
-        if(CountRecords / CountRecordsNullyfied < TresholdRatioDefragmentation)
-        {
-          Position = 0;
-          byte[] bytesFileDB = new byte[Length];
-          Read(bytesFileDB, 0, (int)Length);
-
-          Position = 0;
-          Flush();
-
-          for (int i = 0; i < bytesFileDB.Length; i += LENGTH_RECORD_DB)
-          {
-            int j = 0;
-            while (bytesFileDB[i + j] == 0 && j < LENGTH_ID_ACCOUNT)
-              j += 1;
-
-            if(j < LENGTH_ID_ACCOUNT)
-              Write(bytesFileDB, i, LENGTH_RECORD_DB);
-          }
-
-          Flush();
-
-          FlagHashOutdated = true;
-        }
       }
 
       public void UpdateHash()
