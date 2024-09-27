@@ -9,9 +9,6 @@ namespace BTokenLib
   {
     class FileDB : FileStream
     { 
-      public byte[] Hash;
-      bool FlagHashOutdated;
-
       byte[] TempByteArrayCopyLastRecord = new byte[LENGTH_RECORD_DB];
 
       SHA256 SHA256 = SHA256.Create();
@@ -23,7 +20,6 @@ namespace BTokenLib
         FileAccess.ReadWrite,
         FileShare.ReadWrite)
       {
-        Hash = SHA256.ComputeHash(this);
         Seek(0, SeekOrigin.End);
       }
 
@@ -71,8 +67,6 @@ namespace BTokenLib
                 SetLength(Length - LENGTH_RECORD_DB);
 
                 Seek(0, SeekOrigin.End);
-
-                FlagHashOutdated = true;
               }
 
               return true;
@@ -91,14 +85,6 @@ namespace BTokenLib
         Write(BitConverter.GetBytes(account.BlockHeightAccountInit));
         Write(BitConverter.GetBytes(account.Nonce));
         Write(BitConverter.GetBytes(account.Value));
-
-        FlagHashOutdated = true;
-      }
-
-      public void UpdateHash()
-      {
-        if (FlagHashOutdated)
-          Hash = SHA256.ComputeHash(this);
       }
     }
   }

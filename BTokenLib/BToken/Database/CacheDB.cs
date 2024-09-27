@@ -9,9 +9,6 @@ namespace BTokenLib
   {
     class CacheDB : Dictionary<byte[], Account>
     {
-      public byte[] Hash;
-
-
       public CacheDB() 
         : base(new EqualityComparerByteArray())
       { }
@@ -26,7 +23,7 @@ namespace BTokenLib
           Remove(tX.IDAccountSource);
       }
 
-      public void UpdateHash()
+      public byte[] ComputeHash()
       {
         int i = 0;
         byte[] bytesCaches = new byte[Values.Count * LENGTH_RECORD_DB];
@@ -46,7 +43,7 @@ namespace BTokenLib
           i += 8;
         }
 
-        Hash = SHA256.HashData(bytesCaches);
+        return SHA256.HashData(bytesCaches);
       }
 
       public void CreateImage(string path)

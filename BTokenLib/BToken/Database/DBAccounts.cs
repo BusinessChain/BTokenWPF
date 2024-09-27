@@ -146,22 +146,16 @@ namespace BTokenLib
     {
       for (int i = 0; i < COUNT_CACHES; i += 1)
       {
-        Caches[i].UpdateHash();
-
-        Caches[i].Hash.CopyTo(
-          HashesCaches,
-          i * Caches[i].Hash.Length);
+        byte[] hashCache = Caches[i].ComputeHash();
+        hashCache.CopyTo(HashesCaches, i * hashCache.Length);
       }
 
       byte[] hashCaches = SHA256.ComputeHash(HashesCaches);
 
       for (int i = 0; i < COUNT_FILES_DB; i += 1)
       {
-        FilesDB[i].UpdateHash();
-
-        FilesDB[i].Hash.CopyTo(
-          HashesFilesDB,
-          i * FilesDB[i].Hash.Length);
+        byte[] hashFile = SHA256.ComputeHash(FilesDB[i]);
+        hashFile.CopyTo(HashesFilesDB, i * hashFile.Length);
       }
 
       byte[] hashFilesDB = SHA256.ComputeHash(HashesFilesDB);
