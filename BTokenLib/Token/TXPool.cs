@@ -6,16 +6,6 @@ namespace BTokenLib
 {
   public abstract class TXPool
   {
-    public Token Token;
-
-    protected int SequenceNumberTX;
-
-
-    public TXPool(Token token)
-    {
-      Token = token;
-    }
-
     public abstract void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup);
 
     public abstract bool TryAddTX(TX tX);

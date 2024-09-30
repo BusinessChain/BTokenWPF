@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
-
 namespace BTokenLib
 {
   public class PoolTXBToken : TXPool
@@ -11,16 +10,18 @@ namespace BTokenLib
     class TXBundle
     {
       public byte[] IDAccountSource;
-      public long FeeAveragePerTX;
+      public long FeeAverageTX;
       public List<TXBToken> TXs = new();
 
       public TXBundle(TXBToken tX)
       {
         IDAccountSource = tX.IDAccountSource;
-        FeeAveragePerTX = tX.Fee;
+        FeeAverageTX = tX.Fee;
         TXs = new List<TXBToken> { tX };
       }
     }
+
+    TokenBToken Token;
 
     readonly object LOCK_TXsPool = new();
 
@@ -30,7 +31,7 @@ namespace BTokenLib
     Dictionary<byte[], List<TXBToken>> TXsByIDAccountSource =
       new(new EqualityComparerByteArray());
 
-    Dictionary<byte[], List<TXOutputBToken>> OutputsByIDAccount =
+    Dictionary<byte[], long> OutputValuesByIDAccount =
       new(new EqualityComparerByteArray());
 
     /// <summary>
@@ -40,17 +41,18 @@ namespace BTokenLib
     List<TXBundle> TXBundlesSortedByFee = new();
 
 
-    public PoolTXBToken(Token token)
-      : base(token)
-    { }
+    public PoolTXBToken(TokenBToken token)
+    {
+      Token = token;
+    }
 
     public override bool TryAddTX(TX tX)
     {
       try
       {
-        TXBToken tXBToken = (TXBToken)tX;
+        TXBToken tXBToken = tX as TXBToken;
 
-        if (!((TokenBToken)Token).DBAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
+        if (!Token.DBAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
           throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
 
         if (accountSource.BlockHeightAccountInit != tXBToken.BlockheightAccountInit)
@@ -70,14 +72,27 @@ namespace BTokenLib
           else if (accountSource.Nonce != tXBToken.Nonce)
             throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not equal to nonce {accountSource.Nonce} of account {accountSource}.");
 
-          if (OutputsByIDAccount.TryGetValue(tXBToken.IDAccountSource, out List<TXOutputBToken> outputsInPool))
-            valueAccountNetPool += outputsInPool.Sum(o => o.Value);
+          if (OutputValuesByIDAccount.TryGetValue(tXBToken.IDAccountSource, out long outputValue))
+            valueAccountNetPool += outputValue;
 
           if (valueAccountNetPool < tXBToken.Value)
             throw new ProtocolException($"Value {tXBToken.Value} of tX {tXBToken} bigger than value {valueAccountNetPool} in account {accountSource} considering tXs in pool.");
 
-          InsertTX(tXBToken);
+          TXsByHash.Add(tXBToken.Hash, tXBToken);
+
+          if (tXsInPool == null)
+            TXsByIDAccountSource.Add(tXBToken.IDAccountSource, new List<TXBToken>() { tXBToken });
+          else
+            tXsInPool.Add(tXBToken);
+
+          if (tXBToken is TXBTokenValueTransfer tXValueTransfer)
+            foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
+              if (!OutputValuesByIDAccount.TryAdd(tXOutputBToken.IDAccount, tXOutputBToken.Value))
+                OutputValuesByIDAccount[tXOutputBToken.IDAccount] += tXOutputBToken.Value;
+
+          InsertTXInTXBundlesSortedByFee(tXBToken);
         }
+
         return true;
       }
       catch (ProtocolException ex)
@@ -85,7 +100,6 @@ namespace BTokenLib
         ex.Message.Log(this, Token.LogEntryNotifier);
         return false;
       }
-
     }
 
     public Account ApplyTXsOnAccount(Account account)
@@ -103,31 +117,10 @@ namespace BTokenLib
         accounUnconfirmed.Value -= tXsInPool.Sum(t => t.Value);
       }
 
-      if (OutputsByIDAccount.TryGetValue(account.IDAccount, out List<TXOutputBToken> outputsInPool))
-        accounUnconfirmed.Value += outputsInPool.Sum(o => o.Value);
+      if (OutputValuesByIDAccount.TryGetValue(account.IDAccount, out long valueOutputs))
+        accounUnconfirmed.Value += valueOutputs;
 
       return accounUnconfirmed;
-    }
-
-    void InsertTX(TXBToken tX)
-    {
-      TXsByHash.Add(tX.Hash, tX);
-
-      if (TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsInPool))
-        tXsInPool.Add(tX);
-      else
-        TXsByIDAccountSource.Add(tX.IDAccountSource, new List<TXBToken>() { tX });
-
-      TXBTokenValueTransfer tXValueTransfer = tX as TXBTokenValueTransfer;
-
-      if (tXValueTransfer != null)
-        foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
-          if (OutputsByIDAccount.TryGetValue(tXOutputBToken.IDAccount, out List<TXOutputBToken> tXOutputsBToken))
-            tXOutputsBToken.Add(tXOutputBToken);
-          else
-            OutputsByIDAccount.Add(tXOutputBToken.IDAccount, new List<TXOutputBToken>() { tXOutputBToken });
-
-      InsertTXInTXBundlesSortedByFee(tX);
     }
 
     public override void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup)
@@ -137,27 +130,30 @@ namespace BTokenLib
         if (!TXsByHash.Remove(hashTX, out TXBToken tX))
           continue;
 
-        if(TXsByIDAccountSource.TryGetValue(tX.IDAccountSource, out List<TXBToken> tXsByAccountSource))
-        {
-          if (!tXsByAccountSource[0].Hash.IsAllBytesEqual(hashTX))
-            throw new ProtocolException($"Removal of tX {hashTX.ToHexString()} from pool not in expected order of nonce.");
+        List<TXBToken> tXsByAccountSource = TXsByIDAccountSource[tX.IDAccountSource];
 
-          tXsByAccountSource.RemoveAt(0);
+        if (!tXsByAccountSource[0].Hash.IsAllBytesEqual(hashTX))
+          throw new ProtocolException($"Removal of tX {hashTX.ToHexString()} from pool not in expected order of nonce.");
 
-          if (tXsByAccountSource.Count == 0)
-            TXsByIDAccountSource.Remove(tX.IDAccountSource);
-        }
+        tXsByAccountSource.RemoveAt(0);
 
-        RebuildTXBundlesSortedByFee();
+        if (tXsByAccountSource.Count == 0)
+          TXsByIDAccountSource.Remove(tX.IDAccountSource);
+
+        if (tX is TXBTokenValueTransfer tXValueTransfer)
+          foreach (TXOutputBToken tXOutput in tXValueTransfer.TXOutputs)
+          {
+            OutputValuesByIDAccount[tXOutput.IDAccount] -= tXOutput.Value;
+
+            if (OutputValuesByIDAccount[tXOutput.IDAccount] == 0)
+              OutputValuesByIDAccount.Remove(tXOutput.IDAccount);
+          }
+
+        TXBundlesSortedByFee.Clear();
+
+        foreach (TXBToken tXBToken in TXsByHash.Values)
+          InsertTXInTXBundlesSortedByFee(tXBToken);
       }
-    }
-
-    void RebuildTXBundlesSortedByFee()
-    {
-      TXBundlesSortedByFee.Clear();
-
-      foreach(var tXByHash in TXsByHash)
-        InsertTXInTXBundlesSortedByFee(tXByHash.Value);
     }
 
     void InsertTXInTXBundlesSortedByFee(TXBToken tX)
@@ -170,7 +166,7 @@ namespace BTokenLib
       {
         TXBundle tXBundleNext = TXBundlesSortedByFee[i];
 
-        if(tXBundle.FeeAveragePerTX < tXBundleNext.FeeAveragePerTX)
+        if(tXBundle.FeeAverageTX < tXBundleNext.FeeAverageTX)
         {
           TXBundlesSortedByFee.Insert(i + 1, tXBundle);
           return;
@@ -179,7 +175,7 @@ namespace BTokenLib
         {
           tXBundleNext.TXs.AddRange(tXBundle.TXs);
 
-          tXBundleNext.FeeAveragePerTX = 
+          tXBundleNext.FeeAverageTX = 
             tXBundleNext.TXs.Sum(t => t.Fee) / tXBundleNext.TXs.Count;
 
           tXBundle = tXBundleNext;

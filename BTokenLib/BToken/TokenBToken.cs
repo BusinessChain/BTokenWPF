@@ -16,7 +16,7 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    public DBAccounts DBAccounts = new();
+    public DBAccounts DBAccounts;
 
     List<TX> TXsStaged = new();
 
@@ -29,18 +29,15 @@ namespace BTokenLib
     }
 
 
-    public TokenBToken(ILogEntryNotifier logEntryNotifier, byte[] iDToken, UInt16 port)
+    public TokenBToken(ILogEntryNotifier logEntryNotifier, byte[] iDToken, UInt16 port, Token tokenParent)
       : base(
           port,
           iDToken,
           flagEnableInboundConnections: true,
-          logEntryNotifier)
+          logEntryNotifier,
+          tokenParent)
     {
-      TokenParent = new TokenBitcoin(logEntryNotifier);
-      TokenParent.TokensChild.Add(this);
-
-      HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
-      TokenParent.HeaderGenesis.HashesChild.Add(IDToken, HeaderGenesis.Hash);
+      DBAccounts = new(GetName());
 
       Wallet = new WalletBToken(
         File.ReadAllText($"Wallet{GetName()}/wallet"), 
@@ -79,9 +76,7 @@ namespace BTokenLib
     {
       if(TXsStaged.Count == 0)
       {
-        TXBTokenCoinbase tXCoinbase = tX as TXBTokenCoinbase;
-
-        if (tXCoinbase == null)
+        if (!(tX is TXBTokenCoinbase tXCoinbase))
           throw new ProtocolException($"First tX of block {header} is not coinbase.");
 
         long blockReward = BLOCK_REWARD_INITIAL >>
@@ -100,10 +95,8 @@ namespace BTokenLib
             Wallet.AddTXToHistory(tXCoinbase);
         }
       }
-      else if (tX is TXBTokenValueTransfer)
+      else if (tX is TXBTokenValueTransfer tXTokenTransfer)
       {
-        TXBTokenValueTransfer tXTokenTransfer = tX as TXBTokenValueTransfer;
-
         DBAccounts.SpendInput(tXTokenTransfer);
 
         if (tXTokenTransfer.IDAccountSource.IsAllBytesEqual(Wallet.PublicKeyHash160))
@@ -117,11 +110,11 @@ namespace BTokenLib
             Wallet.AddTXToHistory(tXTokenTransfer);
         }
       }
-      else if (tX is TXBTokenAnchor)
+      else if (tX is TXBTokenAnchor tXBTokenAnchor)
       {
 
       }
-      else if (tX is TXBTokenData)
+      else if (tX is TXBTokenData tXBTokenData)
       {
 
       }
@@ -251,9 +244,7 @@ namespace BTokenLib
       DBAccounts.ClearCache();
     }
 
-    public override bool TryGetDB(
-      byte[] hash,
-      out byte[] dataDB)
+    public override bool TryGetDB(byte[] hash, out byte[] dataDB)
     {
       return DBAccounts.TryGetDB(hash, out dataDB);
     }

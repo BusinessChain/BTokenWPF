@@ -1,8 +1,10 @@
-﻿using BTokenLib;
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Threading.Tasks;
+
+using BTokenLib;
+
 
 namespace BTokenWPF
 {
@@ -18,7 +20,9 @@ namespace BTokenWPF
 
         byte[] iDToken = new byte[4] { (byte)'B', (byte)'C', (byte)'S', (byte)'H' };
 
-        BToken = new(this, iDToken, port: 8777);
+        TokenBitcoin tokenBitcoin = new(this);
+
+        BToken = new(this, iDToken, port: 8777, tokenBitcoin);
         BToken.Start();
 
         UpdateTextBoxStatus();

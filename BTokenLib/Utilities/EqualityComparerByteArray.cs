@@ -12,6 +12,7 @@ namespace BTokenLib
     {
       return arr1.IsAllBytesEqual(arr2);
     }
+
     public int GetHashCode(byte[] arr)
     {
       return BitConverter.ToInt32(arr, 0);

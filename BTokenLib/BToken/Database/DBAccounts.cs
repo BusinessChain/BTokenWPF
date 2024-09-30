@@ -14,8 +14,8 @@ namespace BTokenLib
     List<CacheDB> Caches = new();
     int IndexCacheTopPriority;
 
-    const string PathRootDB = "FilesDB";
-    public const int COUNT_FILES_DB = 256; // file index will be idAccount[0]
+    string PathRootDB;
+    public const int COUNT_FILES_DB = 256;
     List<FileDB> FilesDB = new();
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
 
@@ -26,8 +26,10 @@ namespace BTokenLib
     byte[] Hash;
 
 
-    public DBAccounts()
+    public DBAccounts(string nameToken)
     {
+      PathRootDB = Path.Combine(nameToken, "FilesDB");
+
       for (int i = 0; i < COUNT_CACHES; i += 1)
         Caches.Add(new CacheDB());
 

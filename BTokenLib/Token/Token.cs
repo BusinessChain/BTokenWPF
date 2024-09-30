@@ -13,7 +13,7 @@ namespace BTokenLib
   {
     public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' }; // wird nirgens geprüft
 
-    public ILogEntryNotifier LogEntryNotifier;
+    public byte[] IDToken;
 
     public Token TokenParent;
     public List<Token> TokensChild = new();
@@ -44,10 +44,10 @@ namespace BTokenLib
 
     const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
 
-    public byte[] IDToken;
-
     bool IsLocked;
     static object LOCK_Token = new();
+
+    public ILogEntryNotifier LogEntryNotifier;
 
 
     public Token(
@@ -83,6 +83,24 @@ namespace BTokenLib
       Archiver = new(this);
 
       Network = new(this, port, flagEnableInboundConnections);
+    }
+
+    public Token(
+      UInt16 port,
+      byte[] iDToken,
+      bool flagEnableInboundConnections,
+      ILogEntryNotifier logEntryNotifier,
+      Token tokenParent)
+      : this(
+          port, 
+          iDToken, 
+          flagEnableInboundConnections, 
+          logEntryNotifier)
+    {
+      TokenParent = tokenParent;
+      TokenParent.TokensChild.Add(this);
+      HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
+      TokenParent.HeaderGenesis.HashesChild.Add(IDToken, HeaderGenesis.Hash);
     }
 
     public void Start()

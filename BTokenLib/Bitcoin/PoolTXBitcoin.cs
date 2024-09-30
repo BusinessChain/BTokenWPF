@@ -8,6 +8,8 @@ namespace BTokenLib
 {
   public class PoolTXBitcoin : TXPool
   {
+    TokenBitcoin Token;
+
     readonly object LOCK_TXsPool = new(); 
     const bool FLAG_ENABLE_RBF = true;
 
@@ -22,10 +24,13 @@ namespace BTokenLib
 
     Dictionary<int, bool> FlagTXAddedPerThreadID = new();
 
+    int SequenceNumberTX;
 
-    public PoolTXBitcoin(Token token) 
-      : base(token)
-    { }
+
+    public PoolTXBitcoin(TokenBitcoin token) 
+    {
+      Token = token;
+    }
 
     public override bool TryGetTX(byte[] hashTX, out TX tX)
     {
