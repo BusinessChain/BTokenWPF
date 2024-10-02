@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Linq;
 
 namespace BTokenLib
 {
@@ -55,6 +56,7 @@ namespace BTokenLib
 
       Header.CountTXs = TXs.Count;
       Header.CountBytesTXs = (int)(stream.Position - positionStreamStart);
+      Header.Fee = TXs.Sum(t => t.Fee);
     }
 
     public byte[] ComputeMerkleRoot()

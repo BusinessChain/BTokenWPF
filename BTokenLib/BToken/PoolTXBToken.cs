@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
+
 namespace BTokenLib
 {
   public class PoolTXBToken : TXPool
@@ -150,9 +151,13 @@ namespace BTokenLib
           }
 
         TXBundlesSortedByFee.Clear();
+        fileTXPoolBackup.SetLength(0);
 
         foreach (TXBToken tXBToken in TXsByHash.Values)
+        {
           InsertTXInTXBundlesSortedByFee(tXBToken);
+          tXBToken.WriteToStream(fileTXPoolBackup);
+        }
       }
     }
 
@@ -202,6 +207,8 @@ namespace BTokenLib
             return tXs;
 
           tXs.Add(TXBundlesSortedByFee[i].TXs[j]);
+
+          countBytesCurrent += TXBundlesSortedByFee[i].TXs[j].TXRaw.Count;
           feeTotal += TXBundlesSortedByFee[i].TXs[j].Fee;
         }
 

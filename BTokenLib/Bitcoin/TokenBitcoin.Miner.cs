@@ -105,8 +105,7 @@ namespace BTokenLib
         NBits = nBits,
         Difficulty = difficulty,
         DifficultyAccumulated = HeaderTip.DifficultyAccumulated + difficulty,
-        MerkleRoot = block.ComputeMerkleRoot(),
-        CountBytesTXs = HeaderBitcoin.COUNT_HEADER_BYTES
+        MerkleRoot = block.ComputeMerkleRoot()
       };
 
       header.CountBytesTXs += block.TXs.Sum(t => t.TXRaw.Count);

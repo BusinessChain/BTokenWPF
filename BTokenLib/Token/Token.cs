@@ -437,9 +437,7 @@ namespace BTokenLib
 
       IndexingHeaderTip();
 
-      TXPool.RemoveTXs(
-        block.TXs.Select(tX => tX.Hash), 
-        FileTXPoolBackup);
+      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
 
       Archiver.ArchiveBlock(block);
 
@@ -651,7 +649,7 @@ namespace BTokenLib
     {
       if (TXPool.TryAddTX(tX))
       {
-        FileTXPoolBackup.Write(tX.TXRaw.ToArray(), 0, tX.TXRaw.Count);
+        tX.WriteToStream(FileTXPoolBackup);
         FileTXPoolBackup.Flush();
 
         Wallet.InsertTXUnconfirmed(tX);

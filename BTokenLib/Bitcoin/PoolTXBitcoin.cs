@@ -155,7 +155,7 @@ namespace BTokenLib
       for (int i = 0; i < orderedItems.Count; i++)
       {
         TXPoolDict[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
-        fileTXPoolBackup.Write(orderedItems[i].Value.tX.TXRaw.ToArray(), 0, orderedItems[i].Value.tX.TXRaw.Count);
+        orderedItems[i].Value.tX.WriteToStream(fileTXPoolBackup);
       }
     }
 

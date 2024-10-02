@@ -137,9 +137,7 @@ namespace BTokenLib
       TXsStaged.Clear();
     }
 
-    public override void InsertDB(
-      byte[] bufferDB,
-      int lengthDataInBuffer)
+    public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
     {
       DBAccounts.InsertDB(bufferDB, lengthDataInBuffer);
     }
@@ -148,11 +146,8 @@ namespace BTokenLib
     { 
       DBAccounts.Delete(); 
     }
-         
-    public override List<byte[]> ParseHashesDB(
-      byte[] buffer,
-      int length,
-      Header headerTip)
+
+    public override List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
     {
       SHA256 sHA256 = SHA256.Create();
 
@@ -287,9 +282,7 @@ namespace BTokenLib
       return ParseHeader(buffer, ref index);
     }
 
-    public override HeaderBToken ParseHeader(
-      byte[] buffer,
-      ref int index)
+    public override HeaderBToken ParseHeader(byte[] buffer, ref int index)
     {
       SHA256 sHA256 = SHA256.Create();
 

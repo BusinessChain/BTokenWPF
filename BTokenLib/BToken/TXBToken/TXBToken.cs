@@ -32,8 +32,6 @@ namespace BTokenLib
     /// </summary>
     public long Value;
 
-    public long Fee;
-
 
     public override bool IsSuccessorTo(TX tX)
     {

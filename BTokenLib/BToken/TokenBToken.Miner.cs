@@ -5,11 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
+
 namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    const int COUNT_BYTES_PER_BLOCK_MAX = 4000000;
+    const int COUNT_BYTES_PER_BLOCK_MAX = 400;
     const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
     const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
