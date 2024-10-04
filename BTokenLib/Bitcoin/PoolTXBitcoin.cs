@@ -1,8 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
-using System.IO;
+
 
 namespace BTokenLib
 {
@@ -13,18 +14,18 @@ namespace BTokenLib
     readonly object LOCK_TXsPool = new(); 
     const bool FLAG_ENABLE_RBF = true;
 
-    Dictionary<byte[], List<(TXInputBitcoin, TXBitcoin)>> InputsPool =
-      new(new EqualityComparerByteArray());
+    int SequenceNumberTX;
 
     Dictionary<byte[], (TXBitcoin tX, int sequenceNumberTX)> TXPoolDict =
+      new(new EqualityComparerByteArray());
+
+    Dictionary<byte[], List<(TXInputBitcoin, TXBitcoin)>> InputsPool =
       new(new EqualityComparerByteArray());
 
     List<TX> TXsGet = new();
     int CountMaxTXsGet;
 
     Dictionary<int, bool> FlagTXAddedPerThreadID = new();
-
-    int SequenceNumberTX;
 
 
     public PoolTXBitcoin(TokenBitcoin token) 
@@ -120,34 +121,12 @@ namespace BTokenLib
       }
     }
 
-    public override List<TX> GetTXs(int countMax, out long feeTXs)
-    {
-      feeTXs = 0;
-
-      lock (LOCK_TXsPool)
-      {
-        FlagTXAddedPerThreadID[Thread.CurrentThread.ManagedThreadId] = false;
-
-        TXsGet.Clear();
-        CountMaxTXsGet = countMax;
-
-        foreach (KeyValuePair<byte[], (TXBitcoin tX, int)> itemInPool in TXPoolDict)
-          if (TXsGet.Count < CountMaxTXsGet)
-            ExtractBranch(itemInPool.Value.tX);
-          else
-            break;
-
-        return TXsGet.ToList();
-      }
-    }
-
     public override void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup)
     {
       foreach (byte[] hashTX in hashesTX)
         RemoveTX(hashTX, flagRemoveRecursive: false);
 
       fileTXPoolBackup.SetLength(0);
-
       SequenceNumberTX = 0;
 
       var orderedItems = TXPoolDict.OrderBy(i => i.Value.sequenceNumberTX).ToList();
@@ -157,6 +136,8 @@ namespace BTokenLib
         TXPoolDict[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
         orderedItems[i].Value.tX.WriteToStream(fileTXPoolBackup);
       }
+
+      fileTXPoolBackup.Flush();
     }
 
     void RemoveTX(byte[] hashTX, bool flagRemoveRecursive)
@@ -179,6 +160,27 @@ namespace BTokenLib
             foreach ((TXInputBitcoin input, TXBitcoin tX) tupelInputInPool in tupelInputs.ToList())
               RemoveTX(tupelInputInPool.tX.Hash, flagRemoveRecursive: true);
         }
+    }
+
+    public override List<TX> GetTXs(int countMax, out long feeTXs)
+    {
+      feeTXs = 0;
+
+      lock (LOCK_TXsPool)
+      {
+        FlagTXAddedPerThreadID[Thread.CurrentThread.ManagedThreadId] = false;
+
+        TXsGet.Clear();
+        CountMaxTXsGet = countMax;
+
+        foreach (KeyValuePair<byte[], (TXBitcoin tX, int)> itemInPool in TXPoolDict)
+          if (TXsGet.Count < CountMaxTXsGet)
+            ExtractBranch(itemInPool.Value.tX);
+          else
+            break;
+
+        return TXsGet.ToList();
+      }
     }
 
     void ExtractBranch(TXBitcoin tXRoot)

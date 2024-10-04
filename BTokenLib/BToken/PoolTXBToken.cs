@@ -26,7 +26,9 @@ namespace BTokenLib
 
     readonly object LOCK_TXsPool = new();
 
-    Dictionary<byte[], TXBToken> TXsByHash =
+    int SequenceNumberTX;
+
+    Dictionary<byte[], (TXBToken tX, int sequenceNumberTX)> TXsByHash =
       new(new EqualityComparerByteArray());
 
     Dictionary<byte[], List<TXBToken>> TXsByIDAccountSource =
@@ -79,7 +81,7 @@ namespace BTokenLib
           if (valueAccountNetPool < tXBToken.Value)
             throw new ProtocolException($"Value {tXBToken.Value} of tX {tXBToken} bigger than value {valueAccountNetPool} in account {accountSource} considering tXs in pool.");
 
-          TXsByHash.Add(tXBToken.Hash, tXBToken);
+          TXsByHash.Add(tXBToken.Hash, (tXBToken, SequenceNumberTX++));
 
           if (tXsInPool == null)
             TXsByIDAccountSource.Add(tXBToken.IDAccountSource, new List<TXBToken>() { tXBToken });
@@ -128,8 +130,10 @@ namespace BTokenLib
     {
       foreach (byte[] hashTX in hashesTX)
       {
-        if (!TXsByHash.Remove(hashTX, out TXBToken tX))
+        if (!TXsByHash.Remove(hashTX, out (TXBToken tX, int sequenceNumberTX) tXsByHashItem))
           continue;
+
+        TXBToken tX = tXsByHashItem.tX;
 
         List<TXBToken> tXsByAccountSource = TXsByIDAccountSource[tX.IDAccountSource];
 
@@ -152,12 +156,18 @@ namespace BTokenLib
 
         TXBundlesSortedByFee.Clear();
         fileTXPoolBackup.SetLength(0);
+        SequenceNumberTX = 0;
 
-        foreach (TXBToken tXBToken in TXsByHash.Values)
+        var orderedItems = TXsByHash.OrderBy(i => i.Value.sequenceNumberTX).ToList();
+
+        for (int i = 0; i < orderedItems.Count; i++)
         {
-          InsertTXInTXBundlesSortedByFee(tXBToken);
-          tXBToken.WriteToStream(fileTXPoolBackup);
+          TXsByHash[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
+          InsertTXInTXBundlesSortedByFee(orderedItems[i].Value.tX);
+          orderedItems[i].Value.tX.WriteToStream(fileTXPoolBackup);
         }
+
+        fileTXPoolBackup.Flush();
       }
     }
 
@@ -219,9 +229,9 @@ namespace BTokenLib
     {
       lock (LOCK_TXsPool)
       {
-        if (TXsByHash.TryGetValue(hashTX, out TXBToken tXBToken))
+        if (TXsByHash.TryGetValue(hashTX, out (TXBToken tX, int) itemTXPool))
         {
-          tX = tXBToken;
+          tX = itemTXPool.tX;
           return true;
         }
 
