@@ -212,7 +212,7 @@ namespace BTokenLib
       List<TXOutputWallet> outputsSpendable = OutputsSpendable
         .Where(o => o.Value > feePerTXInput)
         .Concat(OutputsUnconfirmed.Where(o => o.Value > feePerTXInput))
-        .Except(OutputsSpentUnconfirmed)
+        .Except(OutputsSpentUnconfirmed, new EqualityComparerTXOutputWallet())
         .Take(VarInt.PREFIX_UINT16 - 1).ToList();
 
       value = outputsSpendable.Sum(o => o.Value);
