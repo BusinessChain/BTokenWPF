@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Linq;
 using System.Net.Sockets;
-using System.Net;
-using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+
 
 namespace BTokenLib
 {
@@ -29,7 +30,7 @@ namespace BTokenLib
 
     public enum ConnectionType { OUTBOUND, INBOUND };
 
-    List<string> PoolIPAddress = new();
+    List<string> IPAddresses = new();
 
 
 
@@ -107,9 +108,9 @@ namespace BTokenLib
     {
       List<string> iPAddresses = new();
 
-      if (PoolIPAddress.Count == 0)
+      if (IPAddresses.Count == 0)
       {
-        PoolIPAddress = Token.GetSeedAddresses();
+        IPAddresses = Token.GetSeedAddresses();
 
         foreach (FileInfo iPDisposed in DirectoryPeersDisposed.EnumerateFiles())
         {
@@ -123,7 +124,7 @@ namespace BTokenLib
               $"{iPDisposed.Name} is banned for {secondsBanned} seconds."
                 .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-              PoolIPAddress.RemoveAll(iP => iPDisposed.Name.Contains(iP));
+              IPAddresses.RemoveAll(iP => iPDisposed.Name.Contains(iP));
               continue;
             }
 
@@ -137,23 +138,23 @@ namespace BTokenLib
         {
           string iPFromFile = fileIPAddressArchive.Name.GetIPFromFileName();
 
-          if (!PoolIPAddress.Any(ip => ip == iPFromFile))
-            PoolIPAddress.Add(iPFromFile);
+          if (!IPAddresses.Any(ip => ip == iPFromFile))
+            IPAddresses.Add(iPFromFile);
         }
 
         foreach (FileInfo fileIPAddressActive in DirectoryPeersActive.EnumerateFiles())
-          PoolIPAddress.RemoveAll(iP =>
+          IPAddresses.RemoveAll(iP =>
           fileIPAddressActive.Name.GetIPFromFileName() == iP);
       }
 
       while (
         iPAddresses.Count < maxCount &&
-        PoolIPAddress.Count > 0)
+        IPAddresses.Count > 0)
       {
-        int randomIndex = randomGenerator.Next(PoolIPAddress.Count);
+        int randomIndex = randomGenerator.Next(IPAddresses.Count);
 
-        iPAddresses.Add(PoolIPAddress[randomIndex]);
-        PoolIPAddress.RemoveAt(randomIndex);
+        iPAddresses.Add(IPAddresses[randomIndex]);
+        IPAddresses.RemoveAt(randomIndex);
       }
 
       return iPAddresses;
@@ -166,8 +167,8 @@ namespace BTokenLib
       {
         string addressString = address.IPAddress.ToString();
 
-        if (!PoolIPAddress.Contains(addressString))
-          PoolIPAddress.Add(addressString);
+        if (!IPAddresses.Contains(addressString))
+          IPAddresses.Add(addressString);
       }
     }
 

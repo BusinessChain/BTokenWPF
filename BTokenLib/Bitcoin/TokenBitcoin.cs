@@ -16,7 +16,7 @@ namespace BTokenLib
       : base(
           COMPORT_BITCOIN,
           iDToken: new byte[TokenAnchor.LENGTH_IDTOKEN],
-          flagEnableInboundConnections: true,
+          flagEnableInboundConnections: false,
           logEntryNotifier)
     {
       Wallet = new WalletBitcoin(
@@ -205,7 +205,8 @@ namespace BTokenLib
     public override List<string> GetSeedAddresses()
     {
       return new List<string>()
-        {"83.229.86.158"
+        {"83.229.86.158" 
+        // 84.74.69.100
             //"167.179.147.155","95.89.103.28","2.59.236.56", "49.64.10.128", "91.219.25.232",
             //"3.8.174.255", "93.216.78.178", "88.99.209.7", "93.104.126.120", "47.149.50.194",
             //"18.183.139.213", "49.64.10.100", "49.12.82.82", "3.249.250.35", "86.220.37.55",

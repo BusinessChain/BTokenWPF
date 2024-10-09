@@ -46,7 +46,7 @@ namespace BTokenLib
       int lengthScript = VarInt.GetInt(stream);
 
       stream.Position += lengthScript;
-
+      
       Sequence = stream.ReadInt32();
     }
   }

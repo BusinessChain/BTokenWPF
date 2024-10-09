@@ -10,12 +10,12 @@ namespace BTokenLib
   {
     public bool Equals(TXOutputWallet x, TXOutputWallet y)
     {
-      return x.TXID.IsAllBytesEqual(y.TXID);
+      return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
     }
 
     public int GetHashCode(TXOutputWallet x)
     {
-      return BitConverter.ToInt32(x.TXID, 0);
+      return BitConverter.ToInt32(x.TXID, 0) + x.Index;
     }
   }
 

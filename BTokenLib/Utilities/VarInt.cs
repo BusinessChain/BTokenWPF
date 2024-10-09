@@ -95,5 +95,25 @@ namespace BTokenLib
 
       return prefix;
     }
+
+    public static int GetInt(Stream stream, ref int startIndex)
+    {
+      int prefix = stream.ReadByte();
+      startIndex += 1;
+
+      if (prefix == PREFIX_UINT16)
+      {
+        startIndex += 2;
+        return stream.ReadInt16();
+      }
+
+      if (prefix == PREFIX_UINT32)
+      {
+        startIndex += 4;
+        return stream.ReadInt32();
+      }
+
+      return prefix;
+    }
   }
 }

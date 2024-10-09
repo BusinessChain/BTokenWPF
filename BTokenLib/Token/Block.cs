@@ -23,9 +23,9 @@ namespace BTokenLib
 
     public void ParseTXs(Stream stream)
     {
-      long positionStreamStart = stream.Position;
+      int startIndex = 0;
 
-      int tXCount = VarInt.GetInt(stream);
+      int tXCount = VarInt.GetInt(stream, ref startIndex);
 
       if (tXCount == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
@@ -33,6 +33,8 @@ namespace BTokenLib
       if (tXCount == 1)
       {
         TX tX = Token.ParseTX(stream, SHA256);
+        startIndex += tX.TXRaw.Count;
+
         TXs.Add(tX);
       }
       else
@@ -43,7 +45,10 @@ namespace BTokenLib
         for (int t = 0; t < tXCount; t += 1)
         {
           TX tX = Token.ParseTX(stream, SHA256);
+          startIndex += tX.TXRaw.Count;
+
           TXs.Add(tX);
+
           merkleList[t] = tX.Hash;
         }
 
@@ -55,7 +60,7 @@ namespace BTokenLib
         throw new ProtocolException("Payload hash not equal to merkle root.");
 
       Header.CountTXs = TXs.Count;
-      Header.CountBytesTXs = (int)(stream.Position - positionStreamStart);
+      Header.CountBytesTXs = startIndex;
       Header.Fee = TXs.Sum(t => t.Fee);
     }
 

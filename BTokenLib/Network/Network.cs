@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
@@ -18,8 +18,8 @@ namespace BTokenLib
 
     DirectoryInfo DirectoryPeers;
     DirectoryInfo DirectoryPeersActive;
-    DirectoryInfo DirectoryPeersDisposed;
     DirectoryInfo DirectoryPeersArchive;
+    DirectoryInfo DirectoryPeersDisposed;
 
 
     public Network(
@@ -38,14 +38,10 @@ namespace BTokenLib
         Path.Combine(pathRoot, "logPeers"));
 
       DirectoryPeersActive = Directory.CreateDirectory(
-        Path.Combine(
-          DirectoryPeers.FullName,
-          "active"));
+        Path.Combine(DirectoryPeers.FullName, "active"));
 
       DirectoryPeersDisposed = Directory.CreateDirectory(
-        Path.Combine(
-          DirectoryPeers.FullName,
-          "disposed"));
+        Path.Combine(DirectoryPeers.FullName, "disposed"));
 
       DirectoryPeersArchive = Directory.CreateDirectory(
         Path.Combine(DirectoryPeers.FullName, "archive"));
