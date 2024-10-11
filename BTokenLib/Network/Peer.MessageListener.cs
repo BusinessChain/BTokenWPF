@@ -61,7 +61,9 @@ namespace BTokenLib
             }
             else if (Command == "tx")
             {
-              TX tX = Token.ParseTX(NetworkStream, SHA256);
+              await ReadBytes(Payload, LengthDataPayload);
+
+              TX tX = Token.ParseTX(Payload, SHA256);
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -120,7 +122,10 @@ namespace BTokenLib
             }
             else if (Command == "headers")
             {
-              int countHeaders = VarInt.GetInt(NetworkStream);
+              await ReadBytes(Payload, LengthDataPayload);
+
+              int startIndex = 0;
+              int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
               $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -134,7 +139,7 @@ namespace BTokenLib
                   int i = 0;
                   while (i < countHeaders)
                   {
-                    header = Token.ParseHeader(NetworkStream);
+                    header = Token.ParseHeader(Payload, ref startIndex);
 
                     NetworkStream.ReadByte();
 
@@ -160,7 +165,7 @@ namespace BTokenLib
                 if (countHeaders != 1)
                   throw new ProtocolException($"Peer sent unsolicited not exactly one header.");
 
-                Header header = Token.ParseHeader(NetworkStream);
+                Header header = Token.ParseHeader(Payload, ref startIndex);
 
                 if (!Network.TryEnterStateSynchronization(this))
                   continue;
@@ -291,7 +296,7 @@ namespace BTokenLib
                 if (inventory.Type == InventoryType.MSG_TX)
                 {
                   if (Token.TXPool.TryGetTX(inventory.Hash, out TX tXInPool))
-                    await SendMessage(new TXMessage(tXInPool.TXRaw.ToArray()));
+                    await SendMessage(new TXMessage(tXInPool.Serialize()));
                   else
                     await SendMessage(new NotFoundMessage(
                       new List<Inventory>() { inventory }));

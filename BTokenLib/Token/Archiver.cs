@@ -36,15 +36,8 @@ namespace BTokenLib
       while (true)
         try
         {
-          using (FileStream fileStream = new(
-            pathBlockArchive,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.None))
-          {
-            block = Token.ParseBlock(fileStream);
-          }
-
+          byte[] fileBlockMined = File.ReadAllBytes(pathBlockArchive);
+          block = Token.ParseBlock(fileBlockMined);
           return true;
         }
         catch (FileNotFoundException)

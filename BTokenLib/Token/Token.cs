@@ -469,6 +469,7 @@ namespace BTokenLib
       {
         foreach (TX tX in block.TXs)
         {
+          // StageCoinbase machen, dafür bei StageTXInDatabase kein header mehr mitgeben
           StageTXInDatabase(tX, block.Header);
 
           if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
@@ -559,22 +560,28 @@ namespace BTokenLib
 
     public abstract void CreateImageDatabase(string path);
       
-    public Block ParseBlock(Stream stream)
+    public Block ParseBlock(byte[] buffer)
     {
       Block block = new(this);
 
-      block.Header = ParseHeader(stream);
+      int startIndex = 0;
 
-      block.ParseTXs(stream);
+      block.Header = ParseHeader(buffer, ref startIndex);
+
+      block.ParseTXs(buffer, ref startIndex);
 
       return block;
     }
 
-    public abstract Header ParseHeader(Stream stream);
     public abstract TX ParseTX(Stream stream, SHA256 sHA256);
     
     public abstract Header ParseHeader(byte[] buffer, ref int index);
-   
+
+    public TX ParseTX(byte[] buffer, SHA256 sHA256)
+    {
+      int startIndex = 0;
+      return ParseTX(buffer, ref startIndex, sHA256);
+    }
     public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
 
     public bool IsMining;

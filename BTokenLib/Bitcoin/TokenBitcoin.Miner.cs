@@ -109,7 +109,7 @@ namespace BTokenLib
         MerkleRoot = block.ComputeMerkleRoot()
       };
 
-      header.CountBytesTXs += block.TXs.Sum(t => t.TXRaw.Count);
+      header.CountBytesTXs += block.TXs.Sum(t => t.Serialize().Length);
 
       block.Header = header;
 
@@ -158,9 +158,7 @@ namespace BTokenLib
 
       tXRaw.AddRange(new byte[4]);
 
-      MemoryStream stream = new(tXRaw.ToArray());
-
-      return ParseTX(stream, sHA256);
+      return ParseTX(tXRaw.ToArray(), sHA256);
     }
   }
 }

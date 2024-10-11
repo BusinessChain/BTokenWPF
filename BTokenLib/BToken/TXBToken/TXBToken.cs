@@ -94,10 +94,17 @@ namespace BTokenLib
 
     public override void WriteToStream(Stream stream)
     {
-      byte[] lengthTXRaw = VarInt.GetBytes(TXRaw.Count);
+      byte[] tXRaw = Serialize();
+
+      byte[] lengthTXRaw = VarInt.GetBytes(tXRaw.Length);
 
       stream.Write(lengthTXRaw, 0, lengthTXRaw.Length);
-      stream.Write(TXRaw.ToArray(), 0, TXRaw.Count);
+      stream.Write(tXRaw, 0, tXRaw.Length);
+    }
+
+    public override byte[] Serialize()
+    {
+      throw new NotImplementedException();
     }
 
     public override string Print()

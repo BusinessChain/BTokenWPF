@@ -55,18 +55,7 @@ namespace BTokenLib
 
       return header;
     }
-
-   
-    public override Header ParseHeader(Stream stream)
-    {
-      byte[] buffer = new byte[HeaderBitcoin.COUNT_HEADER_BYTES];
-      stream.ReadBuffer(buffer);
-
-      int index = 0;
-
-      return ParseHeader(buffer, ref index);
-    }
-
+       
     public override Header ParseHeader(byte[] buffer, ref int index)
     {
       SHA256 sHA256 = SHA256.Create();

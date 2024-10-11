@@ -21,6 +21,8 @@ namespace BTokenLib
 
     public abstract void WriteToStream(Stream stream);
 
+    public abstract byte[] Serialize();
+
     public abstract List<(string label, string value)> GetLabelsValuePairs();
 
     public override string ToString()

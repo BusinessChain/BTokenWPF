@@ -57,7 +57,13 @@ namespace BTokenLib
 
     public override void WriteToStream(Stream stream)
     {
-      stream.Write(TXRaw.ToArray(), 0, TXRaw.Count);
+      byte[] tXRaw = Serialize();
+      stream.Write(tXRaw, 0, tXRaw.Length);
+    }
+
+    public override byte[] Serialize()
+    {
+      throw new NotImplementedException();
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()
@@ -94,7 +100,7 @@ namespace BTokenLib
         }
       }
 
-      labelValuePairs.Add(($"TXRaw", $"{TXRaw.ToArray().Reverse().ToArray().ToHexString()}"));
+      labelValuePairs.Add(($"TXRaw", $"{Serialize().Reverse().ToArray().ToHexString()}"));
 
       return labelValuePairs;
     }

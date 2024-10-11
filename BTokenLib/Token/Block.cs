@@ -73,49 +73,6 @@ namespace BTokenLib
       Header.Fee = TXs.Sum(t => t.Fee);
     }
 
-    public void ParseTXs(Stream stream)
-    {
-      int startIndex = 0;
-
-      int tXCount = VarInt.GetInt(stream, ref startIndex);
-
-      if (tXCount == 0)
-        throw new ProtocolException($"Block {this} lacks coinbase transaction.");
-
-      if (tXCount == 1)
-      {
-        TX tX = Token.ParseTX(stream, SHA256);
-        startIndex += tX.TXRaw.Count;
-
-        TXs.Add(tX);
-      }
-      else
-      {
-        int tXsLengthMod2 = tXCount & 1;
-        var merkleList = new byte[tXCount + tXsLengthMod2][];
-
-        for (int t = 0; t < tXCount; t += 1)
-        {
-          TX tX = Token.ParseTX(stream, SHA256);
-          startIndex += tX.TXRaw.Count;
-
-          TXs.Add(tX);
-
-          merkleList[t] = tX.Hash;
-        }
-
-        if (tXsLengthMod2 != 0)
-          merkleList[tXCount] = merkleList[tXCount - 1];
-      }
-
-      if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
-        throw new ProtocolException("Payload hash not equal to merkle root.");
-
-      Header.CountTXs = TXs.Count;
-      Header.CountBytesTXs = startIndex;
-      Header.Fee = TXs.Sum(t => t.Fee);
-    }
-
     public byte[] ComputeMerkleRoot()
     {
       const int HASH_BYTE_SIZE = 32;

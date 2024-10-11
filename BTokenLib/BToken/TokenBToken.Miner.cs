@@ -95,7 +95,7 @@ namespace BTokenLib
 
     byte[] CreateAnchorToken(out Block block)
     {
-      block = new BlockBToken(this);
+      block = new Block(this);
 
       block.TXs.AddRange(TXPool.GetTXs(COUNT_BYTES_PER_BLOCK_MAX, out long feeTXs));
 
@@ -234,24 +234,19 @@ namespace BTokenLib
       while (true)
         try
         {
-          using (FileStream fileStream = new(
-            pathBlockMined,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.None))
-          {
-            try
-            {
-              blockMined = ParseBlock(fileStream);
-              return true;
-            }
-            catch (Exception ex)
-            {
-              $"{ex.GetType().Name} when attempting to parse file {pathBlockMined}: {ex.Message}"
-                .Log(this, LogEntryNotifier);
+          byte[] fileBlockMined = File.ReadAllBytes(pathBlockMined);
 
-              break;
-            }
+          try
+          {
+            blockMined = ParseBlock(fileBlockMined);
+            return true;
+          }
+          catch (Exception ex)
+          {
+            $"{ex.GetType().Name} when attempting to parse file {pathBlockMined}: {ex.Message}"
+              .Log(this, LogEntryNotifier);
+
+            break;
           }
         }
         catch (FileNotFoundException)

@@ -100,7 +100,7 @@ namespace BTokenLib
       {
         foreach(TX tX in HistoryTXs)
         {
-          byte[] txRaw = tX.TXRaw.ToArray();
+          byte[] txRaw = tX.Serialize();
           fileWalletHistoryTXs.Write(txRaw, 0, txRaw.Length);
         }
       }
@@ -113,7 +113,7 @@ namespace BTokenLib
       {
         foreach (TX tX in HistoryTXsUnconfirmed)
         {
-          byte[] txRaw = tX.TXRaw.ToArray();
+          byte[] txRaw = tX.Serialize();
           fileWalletHistoryTXsUnconfirmed.Write(txRaw, 0, txRaw.Length);
         }
       }
