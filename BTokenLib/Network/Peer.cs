@@ -37,7 +37,7 @@ namespace BTokenLib
       public DateTime TimeLastSynchronization;
 
       public Header HeaderSync;
-      public Block Block;
+      public Block BlockSync;
 
       public byte[] HashDBDownload;
       public List<byte[]> HashesDB;
@@ -63,7 +63,7 @@ namespace BTokenLib
 
       public string Command;
 
-      const int SIZE_MESSAGE_PAYLOAD_BUFFER = 1 << 24; // 16 MB
+      const int SIZE_MESSAGE_PAYLOAD_BUFFER = 1 << 20; // 1 MB
       public byte[] Payload = new byte[SIZE_MESSAGE_PAYLOAD_BUFFER];
       public int LengthDataPayload;
 
@@ -102,7 +102,7 @@ namespace BTokenLib
         Network = network;
         Token = token;
 
-        Block = Token.CreateBlock();
+        BlockSync = new Block(Token);
 
         TcpClient = tcpClient;
         IPAddress = ip;

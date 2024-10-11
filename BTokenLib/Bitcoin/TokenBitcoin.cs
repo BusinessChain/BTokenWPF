@@ -56,11 +56,7 @@ namespace BTokenLib
       return header;
     }
 
-    public override Block CreateBlock()
-    {
-      return new BlockBitcoin(this);
-    }
-
+   
     public override Header ParseHeader(Stream stream)
     {
       byte[] buffer = new byte[HeaderBitcoin.COUNT_HEADER_BYTES];
@@ -71,9 +67,7 @@ namespace BTokenLib
       return ParseHeader(buffer, ref index);
     }
 
-    public override HeaderBitcoin ParseHeader(
-      byte[] buffer,
-      ref int index)
+    public override Header ParseHeader(byte[] buffer, ref int index)
     {
       SHA256 sHA256 = SHA256.Create();
 
@@ -126,6 +120,46 @@ namespace BTokenLib
         nonce);
     }
 
+    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256)
+    {
+      TXBitcoin tX = new();
+
+      try
+      {
+        int tXStartIndex = index;
+
+        index += 4; // Version
+
+        int countInputs = VarInt.GetInt(buffer, ref index);
+
+        if (countInputs == 0x00)
+          throw new NotImplementedException("Segwit is not implemented.");
+
+        for (int i = 0; i < countInputs; i += 1)
+          tX.Inputs.Add(new TXInputBitcoin(buffer, ref index));
+
+        int countTXOutputs = VarInt.GetInt(buffer, ref index);
+
+        for (int i = 0; i < countTXOutputs; i += 1)
+        {
+          TXOutputBitcoin tXOutputBitcoin = new(buffer, ref index);
+          tX.TXOutputs.Add(tXOutputBitcoin);
+        }
+
+        index += 4; //BYTE_LENGTH_LOCK_TIME
+
+        tX.Hash = sHA256.ComputeHash(
+         sHA256.ComputeHash(buffer, tXStartIndex, index - tXStartIndex));
+
+        return tX;
+      }
+      catch (ArgumentOutOfRangeException)
+      {
+        throw new ProtocolException(
+          "ArgumentOutOfRangeException thrown in ParseTX.");
+      }
+    }
+
     public override TX ParseTX(Stream stream, SHA256 sHA256)
     {
       TXBitcoin tX = new();
@@ -159,8 +193,6 @@ namespace BTokenLib
         byte[] tXRaw = new byte[tXRawLength];
         stream.Position = tXStartIndex;
         stream.Read(tXRaw, 0, tXRaw.Length);
-
-        tX.TXRaw = tXRaw.ToList();
 
         tX.Hash = sHA256.ComputeHash(
          sHA256.ComputeHash(tXRaw, 0, tXRaw.Length));

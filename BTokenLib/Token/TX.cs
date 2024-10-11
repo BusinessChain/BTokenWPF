@@ -9,17 +9,8 @@ namespace BTokenLib
   {
     public byte[] Hash;
 
-    public List<byte> TXRaw = new();
-
     public long Fee;
 
-
-    public string GetStringTXRaw()
-    {
-      return TXRaw.ToArray()
-        .Reverse().ToArray()
-        .ToHexString();
-    }
 
     public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
 

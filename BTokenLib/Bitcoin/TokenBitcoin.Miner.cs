@@ -37,7 +37,7 @@ namespace BTokenLib
 
       while (true)
       {
-        BlockBitcoin block = ComputePoW(sHA256, indexThread);
+        Block block = ComputePoW(sHA256, indexThread);
 
         if (!IsMining)
           return;
@@ -72,13 +72,13 @@ namespace BTokenLib
       }
     }
 
-    BlockBitcoin ComputePoW(SHA256 sHA256, int indexThread)
+    Block ComputePoW(SHA256 sHA256, int indexThread)
     {
     LABEL_StartPoW:
 
       uint seed = (uint)(indexThread * uint.MaxValue / NumberOfProcesses);
 
-      BlockBitcoin block = new(this);
+      Block block = new(this);
 
       while (!TryLock())
         Thread.Sleep(20);

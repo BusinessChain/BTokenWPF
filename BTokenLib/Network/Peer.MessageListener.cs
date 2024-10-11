@@ -29,13 +29,15 @@ namespace BTokenLib
               if (!IsStateBlockSynchronization())
                 throw new ProtocolException($"Received unrequested block message.");
 
-              Block = Token.ParseBlock(NetworkStream);
+              await ReadBytes(BlockSync.Buffer, LengthDataPayload);
 
-              $"Received block {Block}".Log(this, LogFiles, Token.LogEntryNotifier);
+              BlockSync.Parse();
 
-              if (!Block.Header.Hash.IsAllBytesEqual(HeaderSync.Hash))
+              $"Received block {BlockSync}".Log(this, LogFiles, Token.LogEntryNotifier);
+
+              if (!BlockSync.Header.Hash.IsAllBytesEqual(HeaderSync.Hash))
                 throw new ProtocolException(
-                  $"Received unexpected block {Block} at height {Block.Header.Height} from peer {this}.\n" +
+                  $"Received unexpected block {BlockSync} at height {BlockSync.Header.Height} from peer {this}.\n" +
                   $"Requested was {HeaderSync}.");
 
               if (Token.TokenParent == null)
@@ -49,7 +51,7 @@ namespace BTokenLib
               {
                 FlagSingleBlockDownload = false;
 
-                Token.InsertBlock(Block);
+                Token.InsertBlock(BlockSync);
                 Network.ExitSynchronization();
               }
               else if (Network.InsertBlock_FlagContinue(this))
@@ -363,9 +365,7 @@ namespace BTokenLib
           .ToArray()).TrimEnd('\0');
       }
 
-      async Task ReadBytes(
-        byte[] buffer,
-        int bytesToRead)
+      async Task ReadBytes(byte[] buffer, int bytesToRead)
       {
         int offset = 0;
 

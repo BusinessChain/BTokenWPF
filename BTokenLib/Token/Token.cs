@@ -558,12 +558,10 @@ namespace BTokenLib
     }
 
     public abstract void CreateImageDatabase(string path);
-
-    public abstract Block CreateBlock();
-
+      
     public Block ParseBlock(Stream stream)
     {
-      Block block = CreateBlock();
+      Block block = new(this);
 
       block.Header = ParseHeader(stream);
 
@@ -572,10 +570,12 @@ namespace BTokenLib
       return block;
     }
 
-    public abstract Header ParseHeader(byte[] buffer, ref int index);
     public abstract Header ParseHeader(Stream stream);
-
     public abstract TX ParseTX(Stream stream, SHA256 sHA256);
+    
+    public abstract Header ParseHeader(byte[] buffer, ref int index);
+   
+    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
 
     public bool IsMining;
 

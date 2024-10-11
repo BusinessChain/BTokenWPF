@@ -175,11 +175,7 @@ namespace BTokenLib
       return hashesDB;
     }
 
-    public override Block CreateBlock()
-    {
-      return new BlockBToken(this);
-    }
-
+  
     public override TX ParseTX(Stream stream, SHA256 sHA256)
     {
       int lengthTXRaw = VarInt.GetInt(stream);

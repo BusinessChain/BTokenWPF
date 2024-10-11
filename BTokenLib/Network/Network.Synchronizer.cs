@@ -257,7 +257,7 @@ namespace BTokenLib
 
     bool InsertBlock_FlagContinue(Peer peer)
     {
-      Block block = peer.Block;
+      Block block = peer.BlockSync;
 
       lock (LOCK_HeightInsertion)
       {
@@ -267,8 +267,8 @@ namespace BTokenLib
             peer.HeaderSync.Height,
             block);
 
-          if (!PoolBlocks.TryTake(out peer.Block))
-            peer.Block = Token.CreateBlock();
+          if (!PoolBlocks.TryTake(out peer.BlockSync))
+            peer.BlockSync = new Block(Token);
         }
         else if (peer.HeaderSync.Height == HeightInsertion)
         {

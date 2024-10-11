@@ -1,11 +1,11 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Linq;
 
 namespace BTokenLib
 {
-  public abstract class Block
+  public class Block
   {
     Token Token;
 
@@ -15,10 +15,62 @@ namespace BTokenLib
 
     public List<TX> TXs = new();
 
+    public byte[] Buffer; // is only defined when block is read from stream or from file
+    // but is undefined when mined from transactions from pool. Archiver can directly
+    // write Buffer to file.
+
 
     public Block(Token token)
     {
       Token = token;
+    }
+
+    public void Parse()
+    {
+      int startIndex = 0;
+
+      Header = Token.ParseHeader(Buffer, ref startIndex);
+
+      ParseTXs(Buffer, ref startIndex);
+    }
+
+    public void ParseTXs(byte[] buffer, ref int startIndex)
+    {
+      int tXCount = VarInt.GetInt(buffer, ref startIndex);
+
+      int startIndexBeginningOfTXs = startIndex;
+
+      if (tXCount == 0)
+        throw new ProtocolException($"Block {this} lacks coinbase transaction.");
+
+      if (tXCount == 1)
+      {
+        TX tX = Token.ParseTX(buffer, ref startIndex, SHA256);
+        TXs.Add(tX);
+      }
+      else
+      {
+        int tXsLengthMod2 = tXCount & 1;
+        var merkleList = new byte[tXCount + tXsLengthMod2][];
+
+        for (int t = 0; t < tXCount; t += 1)
+        {
+          TX tX = Token.ParseTX(buffer, ref startIndex, SHA256);
+          TXs.Add(tX);
+
+          merkleList[t] = tX.Hash;
+        }
+
+        if (tXsLengthMod2 != 0)
+          merkleList[tXCount] = merkleList[tXCount - 1];
+      }
+
+      if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
+        throw new ProtocolException("Payload hash not equal to merkle root.");
+
+      Header.CountTXs = TXs.Count;
+      Header.CountBytesTXs = startIndex - startIndexBeginningOfTXs;
+      Header.Fee = TXs.Sum(t => t.Fee);
     }
 
     public void ParseTXs(Stream stream)
@@ -111,13 +163,18 @@ namespace BTokenLib
 
     public void Serialize(Stream stream)
     {
-      byte[] bufferHeader = Header.Serialize();
-      stream.Write(bufferHeader, 0, bufferHeader.Length);
+      if(Buffer != null)
+        stream.Write(Buffer, 0, Buffer.Length);
+      else
+      {
+        byte[] bufferHeader = Header.Serialize();
+        stream.Write(bufferHeader, 0, bufferHeader.Length);
 
-      byte[] countTXs = VarInt.GetBytes(TXs.Count);
-      stream.Write(countTXs, 0, countTXs.Length);
+        byte[] countTXs = VarInt.GetBytes(TXs.Count);
+        stream.Write(countTXs, 0, countTXs.Length);
 
-      TXs.ForEach(t => t.WriteToStream(stream));
+        TXs.ForEach(t => t.WriteToStream(stream));
+      }
     }
 
     public override string ToString()
