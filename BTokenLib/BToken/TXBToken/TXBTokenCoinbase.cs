@@ -15,10 +15,8 @@ namespace BTokenLib
     public TXBTokenCoinbase()
     { }
 
-    public TXBTokenCoinbase(byte[] tXRaw, SHA256 sHA256)
+    public TXBTokenCoinbase(byte[] tXRaw, ref int index, SHA256 sHA256)
     {
-      int index = 1;
-
       BlockHeight = BitConverter.ToInt32(tXRaw, index);
       index += 4;
 
@@ -32,7 +30,6 @@ namespace BTokenLib
         Value += tXOutput.Value;
       }
 
-      TXRaw = tXRaw.ToList();
       Hash = sHA256.ComputeHash(sHA256.ComputeHash(tXRaw));
     }
 

@@ -213,12 +213,12 @@ namespace BTokenLib
       for (int i = 0; i < TXBundlesSortedByFee.Count; i += 1)
         for (int j = 0; j < TXBundlesSortedByFee[i].TXs.Count; j += 1)
         {
-          if (countBytesCurrent + TXBundlesSortedByFee[i].TXs[j].TXRaw.Count > countBytesMax)
+          if (countBytesCurrent + TXBundlesSortedByFee[i].TXs[j].CountBytes > countBytesMax)
             return tXs;
 
           tXs.Add(TXBundlesSortedByFee[i].TXs[j]);
 
-          countBytesCurrent += TXBundlesSortedByFee[i].TXs[j].TXRaw.Count;
+          countBytesCurrent += TXBundlesSortedByFee[i].TXs[j].CountBytes;
           feeTotal += TXBundlesSortedByFee[i].TXs[j].Fee;
         }
 

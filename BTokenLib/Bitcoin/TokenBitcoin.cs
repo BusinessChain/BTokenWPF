@@ -149,51 +149,6 @@ namespace BTokenLib
       }
     }
 
-    public override TX ParseTX(Stream stream, SHA256 sHA256)
-    {
-      TXBitcoin tX = new();
-
-      try
-      {
-        long tXStartIndex = stream.Position;
-
-        stream.Position += 4; // Version
-
-        int countInputs = VarInt.GetInt(stream);
-
-        if (countInputs == 0x00)
-          throw new NotImplementedException("Segwit is not implemented.");
-
-        for (int i = 0; i < countInputs; i += 1)
-          tX.Inputs.Add(new TXInputBitcoin(stream));
-
-        int countTXOutputs = VarInt.GetInt(stream);
-
-        for (int i = 0; i < countTXOutputs; i += 1)
-        {
-          TXOutputBitcoin tXOutputBitcoin = new(stream);
-          tX.TXOutputs.Add(tXOutputBitcoin);
-        }
-
-        stream.Position += 4; //BYTE_LENGTH_LOCK_TIME
-
-        long tXRawLength = stream.Position - tXStartIndex;
-
-        byte[] tXRaw = new byte[tXRawLength];
-        stream.Position = tXStartIndex;
-        stream.Read(tXRaw, 0, tXRaw.Length);
-
-        tX.Hash = sHA256.ComputeHash(
-         sHA256.ComputeHash(tXRaw, 0, tXRaw.Length));
-
-        return tX;
-      }
-      catch (ArgumentOutOfRangeException)
-      {
-        throw new ProtocolException(
-          "ArgumentOutOfRangeException thrown in ParseTX.");
-      }
-    }
 
     List<TX> TXsStaged = new();
 

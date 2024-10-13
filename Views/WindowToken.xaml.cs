@@ -171,7 +171,7 @@ namespace BTokenWPF
 
         if (Token.TrySendTX(address, value, fee, out TX tX))
         {
-          TextBoxRawTX.Text = tX.TXRaw.ToArray().Reverse().ToArray().ToHexString();
+          TextBoxRawTX.Text = tX.Serialize().Reverse().ToArray().ToHexString();
           TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
         }
         else

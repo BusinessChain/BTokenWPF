@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -15,10 +11,8 @@ namespace BTokenLib
     public TXBTokenData()
     { }
 
-    public TXBTokenData(byte[] tXRaw, SHA256 sHA256)
+    public TXBTokenData(byte[] tXRaw, ref int index, SHA256 sHA256)
     {
-      int index = 1;
-
       ParseTXBTokenInput(tXRaw, ref index, sHA256);
 
       Data = new byte[VarInt.GetInt(tXRaw, ref index)];
@@ -28,8 +22,6 @@ namespace BTokenLib
       index += Data.Length;
 
       VerifySignatureTX(tXRaw, ref index);
-
-      TXRaw = tXRaw.ToList();
 
       Hash = sHA256.ComputeHash(
        sHA256.ComputeHash(tXRaw));

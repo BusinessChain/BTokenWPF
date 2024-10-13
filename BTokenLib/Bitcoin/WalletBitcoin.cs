@@ -89,11 +89,12 @@ namespace BTokenLib
       else
         tXRaw.Add(0x01);
 
+      tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
+
       byte[] pubScript = PREFIX_P2PKH
         .Concat(Base58CheckToPubKeyHash(addressOutput))
         .Concat(POSTFIX_P2PKH).ToArray();
 
-      tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
       tXRaw.Add((byte)pubScript.Length);
       tXRaw.AddRange(pubScript);
 
@@ -102,9 +103,7 @@ namespace BTokenLib
 
       SignTX(tXRaw);
 
-      MemoryStream stream = new(tXRaw.ToArray());
-
-      tX = Token.ParseTX(stream, SHA256);
+      tX = Token.ParseTX(tXRaw.ToArray(), SHA256);
       return true;
     }
 
@@ -151,9 +150,7 @@ namespace BTokenLib
 
       SignTX(tXRaw);
 
-      MemoryStream stream = new(tXRaw.ToArray());
-
-      tX = Token.ParseTX(stream, SHA256);
+      tX = Token.ParseTX(tXRaw.ToArray(), SHA256);
       return true;
     }
 
@@ -253,14 +250,12 @@ namespace BTokenLib
       //LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
       //LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
 
-      using (FileStream fileStream = new(
-        Path.Combine(path, "walletHistoryTransactions"),
-        FileMode.Open,
-        FileAccess.Read))
-      {
-        while (fileStream.Position < fileStream.Length)
-          HistoryTXs.Add(Token.ParseTX(fileStream, SHA256));
-      }
+      byte[] fileWalletHistoryTXs = File.ReadAllBytes(Path.Combine(path, "walletHistoryTransactions"));
+
+      int startIndex = 0;
+
+      while (startIndex < fileWalletHistoryTXs.Length)
+        HistoryTXs.Add(Token.ParseTX(fileWalletHistoryTXs, ref startIndex, SHA256));
 
       LoadOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
     }

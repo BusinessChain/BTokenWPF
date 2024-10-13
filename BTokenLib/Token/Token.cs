@@ -346,7 +346,12 @@ namespace BTokenLib
 
         try
         {
-          tX = ParseTX(FileTXPoolBackup, sHA256);
+          int lengthTXRaw = VarInt.GetInt(FileTXPoolBackup);
+
+          byte[] tXRaw = new byte[lengthTXRaw];
+          FileTXPoolBackup.Read(tXRaw, 0, lengthTXRaw);
+
+          tX = ParseTX(tXRaw, sHA256);
         }
         catch (Exception ex)
         {
@@ -572,8 +577,6 @@ namespace BTokenLib
 
       return block;
     }
-
-    public abstract TX ParseTX(Stream stream, SHA256 sHA256);
     
     public abstract Header ParseHeader(byte[] buffer, ref int index);
 
@@ -582,6 +585,7 @@ namespace BTokenLib
       int startIndex = 0;
       return ParseTX(buffer, ref startIndex, sHA256);
     }
+
     public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
 
     public bool IsMining;

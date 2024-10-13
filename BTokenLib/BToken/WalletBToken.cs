@@ -16,7 +16,7 @@ namespace BTokenLib
       Token = token;
     }
 
-    public TXBToken CreateTXCoinbase(long blockReward, int blockHeight)
+    public TX CreateTXCoinbase(long blockReward, int blockHeight)
     {
       List<byte> tXRaw = new() 
       { 

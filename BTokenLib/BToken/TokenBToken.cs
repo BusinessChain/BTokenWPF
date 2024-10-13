@@ -174,34 +174,28 @@ namespace BTokenLib
 
       return hashesDB;
     }
-
-  
-    public override TX ParseTX(Stream stream, SHA256 sHA256)
-    {
-      int lengthTXRaw = VarInt.GetInt(stream);
-
-      byte[] tXRaw = new byte[lengthTXRaw];
-      stream.Read(tXRaw, 0, lengthTXRaw);
-
-      return ParseTX(tXRaw, sHA256);
-    }
-
-    public TXBToken ParseTX(byte[] tXRaw, SHA256 sHA256)
+      
+    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256)
     {
       TXBToken tX;
 
-      var typeToken = (TypesToken)tXRaw[0];
+      int indexTxStart = startIndex;
+
+      var typeToken = (TypesToken)buffer[startIndex];
+      startIndex += 1;
 
       if (typeToken == TypesToken.Coinbase)
-        tX = new TXBTokenCoinbase(tXRaw, sHA256);
+        tX = new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
       else if (typeToken == TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(tXRaw, sHA256);
+        tX = new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
       else if (typeToken == TypesToken.AnchorToken)
-        tX = new TXBTokenAnchor(tXRaw, sHA256);
+        tX = new TXBTokenAnchor(buffer, ref startIndex, sHA256);
       else if (typeToken == TypesToken.Data)
-        tX = new TXBTokenData(tXRaw, sHA256);
+        tX = new TXBTokenData(buffer, ref startIndex, sHA256);
       else
         throw new ProtocolException($"Unknown token type {typeToken}.");
+
+      tX.CountBytes = startIndex - indexTxStart;
 
       return tX;
     }

@@ -13,10 +13,8 @@ namespace BTokenLib
     public TXBTokenValueTransfer()
     { }
 
-    public TXBTokenValueTransfer(byte[] tXRaw, SHA256 sHA256)
+    public TXBTokenValueTransfer(byte[] tXRaw, ref int index, SHA256 sHA256)
     {
-      int index = 1;
-
       ParseTXBTokenInput(tXRaw, ref index, sHA256);
 
       int countOutputs = VarInt.GetInt(tXRaw, ref index);
@@ -31,7 +29,6 @@ namespace BTokenLib
 
       VerifySignatureTX(tXRaw, ref index);
 
-      TXRaw = tXRaw.ToList();
       Hash = sHA256.ComputeHash(sHA256.ComputeHash(tXRaw));
     }
 

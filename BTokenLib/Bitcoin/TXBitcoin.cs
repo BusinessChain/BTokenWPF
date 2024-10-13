@@ -11,6 +11,10 @@ namespace BTokenLib
     public List<TXInputBitcoin> Inputs = new();
     public List<TXOutputBitcoin> TXOutputs = new();
 
+    // Wird gebraucht für tx welche gerelayd werden. In Bitcoin womöglich nicht gemacht.
+    // weil nur non- listening node.
+    public List<byte> TXRaw = new();
+
 
     public override int GetSequence()
     {
@@ -63,7 +67,44 @@ namespace BTokenLib
 
     public override byte[] Serialize()
     {
-      throw new NotImplementedException();
+      List<byte> tXRaw = new();
+
+      // Serialize version
+      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 });
+      tXRaw.Add((byte)Inputs.Count);
+
+      foreach (var input in Inputs)
+      {
+        tXRaw.AddRange(input.TXIDOutput);
+        tXRaw.AddRange(BitConverter.GetBytes(input.OutputIndex));
+        tXRaw.Add((byte)0x00);
+        tXRaw.AddRange(BitConverter.GetBytes(input.Sequence));
+      }
+      tXRaw.Add((byte)TXOutputs.Count);
+
+      foreach (TXOutputBitcoin output in TXOutputs)
+      {
+        writer.Write(output.Value);
+
+        if (output.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
+        {
+          writer.Write(WalletBitcoin.LENGTH_SCRIPT_P2PKH);
+          writer.Write(WalletBitcoin.PREFIX_P2PKH);
+          writer.Write(output.PublicKeyHash160);
+          writer.Write(WalletBitcoin.POSTFIX_P2PKH);
+        }
+        else if (output.Type == TXOutputBitcoin.TypesToken.AnchorToken)
+        {
+
+        }
+        else
+        {
+
+        }
+      }
+
+      tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
+      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()
