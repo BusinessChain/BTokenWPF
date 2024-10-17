@@ -11,10 +11,6 @@ namespace BTokenLib
     public List<TXInputBitcoin> Inputs = new();
     public List<TXOutputBitcoin> TXOutputs = new();
 
-    // Wird gebraucht für tx welche gerelayd werden. In Bitcoin womöglich nicht gemacht.
-    // weil nur non- listening node.
-    public List<byte> TXRaw = new();
-
 
     public override int GetSequence()
     {
@@ -84,22 +80,25 @@ namespace BTokenLib
 
       foreach (TXOutputBitcoin output in TXOutputs)
       {
-        writer.Write(output.Value);
+        tXRaw.AddRange(BitConverter.GetBytes(output.Value));
 
         if (output.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
         {
-          writer.Write(WalletBitcoin.LENGTH_SCRIPT_P2PKH);
-          writer.Write(WalletBitcoin.PREFIX_P2PKH);
-          writer.Write(output.PublicKeyHash160);
-          writer.Write(WalletBitcoin.POSTFIX_P2PKH);
+          tXRaw.Add(WalletBitcoin.LENGTH_SCRIPT_P2PKH);
+          tXRaw.AddRange(WalletBitcoin.PREFIX_P2PKH);
+          tXRaw.AddRange(output.PublicKeyHash160);
+          tXRaw.AddRange(WalletBitcoin.POSTFIX_P2PKH);
         }
         else if (output.Type == TXOutputBitcoin.TypesToken.AnchorToken)
         {
 
         }
-        else
+        else // Data token
         {
-
+          tXRaw.Add((byte)(data.Length + 2));
+          tXRaw.Add(OP_RETURN);
+          tXRaw.Add((byte)data.Length);
+          tXRaw.AddRange(data);
         }
       }
 

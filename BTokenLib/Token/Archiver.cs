@@ -136,7 +136,7 @@ namespace BTokenLib
           FileAccess.Write,
           FileShare.None))
           {
-            block.Serialize(fileStreamBlock);
+            block.WriteToStream(fileStreamBlock);
           }
 
           File.Delete(Path.Combine(

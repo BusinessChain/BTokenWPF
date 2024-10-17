@@ -22,6 +22,8 @@ namespace BTokenLib
     public Header HeaderTip;
     Dictionary<int, List<Header>> HeaderIndex = new();
 
+    public int SizeBlockMax;
+
     public TXPool TXPool;
     public FileStream FileTXPoolBackup;
 

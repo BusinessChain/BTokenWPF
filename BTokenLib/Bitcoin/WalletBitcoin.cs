@@ -91,12 +91,10 @@ namespace BTokenLib
 
       tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
 
-      byte[] pubScript = PREFIX_P2PKH
-        .Concat(Base58CheckToPubKeyHash(addressOutput))
-        .Concat(POSTFIX_P2PKH).ToArray();
-
-      tXRaw.Add((byte)pubScript.Length);
-      tXRaw.AddRange(pubScript);
+      tXRaw.Add(LENGTH_SCRIPT_P2PKH);
+      tXRaw.AddRange(PREFIX_P2PKH);
+      tXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
+      tXRaw.AddRange(POSTFIX_P2PKH);
 
       tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
@@ -281,7 +279,7 @@ namespace BTokenLib
       {
         TXOutputBitcoin tXOutput = tX.TXOutputs[i];
 
-        if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
+        if (tXOutput.Type == TXOutputBitcoin.TypesToken.P2PKH &&
           tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
         {
           OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
@@ -314,7 +312,7 @@ namespace BTokenLib
 
       foreach (TXOutputBitcoin tXOutput in tXBitcoin.TXOutputs)
       {
-        if (tXOutput.Type == TXOutputBitcoin.TypesToken.ValueTransfer &&
+        if (tXOutput.Type == TXOutputBitcoin.TypesToken.P2PKH &&
           tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
         {
           OutputsUnconfirmed.Add(new TXOutputWallet

@@ -356,18 +356,14 @@ namespace BTokenLib
 
         await ReadBytes(MessageHeader, MessageHeader.Length);
 
-        LengthDataPayload = BitConverter.ToInt32(
-          MessageHeader,
-          CommandSize);
+        LengthDataPayload = BitConverter.ToInt32(MessageHeader, CommandSize);
 
-        if (LengthDataPayload > SIZE_MESSAGE_PAYLOAD_BUFFER)
+        if (LengthDataPayload > Token.SizeBlockMax)
           throw new ProtocolException(
-            $"Message payload too big exceeding " +
-            $"{SIZE_MESSAGE_PAYLOAD_BUFFER} bytes.");
+            $"Message payload too big exceeding {Token.SizeBlockMax} bytes.");
 
         Command = Encoding.ASCII.GetString(
-          MessageHeader.Take(CommandSize)
-          .ToArray()).TrimEnd('\0');
+          MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
       }
 
       async Task ReadBytes(byte[] buffer, int bytesToRead)

@@ -17,7 +17,6 @@ namespace BTokenLib
     public TXInputBitcoin()
     { }
 
-
     public TXInputBitcoin(byte[] buffer, ref int index)
     {
       TXIDOutput = new byte[HASH_BYTE_SIZE];
@@ -33,21 +32,6 @@ namespace BTokenLib
 
       Sequence = BitConverter.ToInt32(buffer, index);
       index += 4;
-    }
-
-    public TXInputBitcoin(Stream stream)
-    {
-      TXIDOutput = new byte[HASH_BYTE_SIZE];
-
-      stream.Read(TXIDOutput, 0, HASH_BYTE_SIZE);
-
-      OutputIndex = stream.ReadInt32();
-
-      int lengthScript = VarInt.GetInt(stream);
-
-      stream.Position += lengthScript;
-      
-      Sequence = stream.ReadInt32();
     }
   }
 }

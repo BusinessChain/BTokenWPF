@@ -10,6 +10,7 @@ namespace BTokenLib
   public partial class TokenBitcoin : Token
   {
     const UInt16 COMPORT_BITCOIN = 8333;
+    const int SIZE_BLOCK_MAX = 1 << 20; // 1 MB
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -24,6 +25,7 @@ namespace BTokenLib
         this);
 
       TXPool = new PoolTXBitcoin(this);
+      SizeBlockMax = SIZE_BLOCK_MAX;
     }
 
     public override Header CreateHeaderGenesis()

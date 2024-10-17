@@ -8,6 +8,8 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
+    const int SIZE_BLOCK_MAX = 1 << 22; // 4 MB
+
     const int COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX = 300;
 
     const long BLOCK_REWARD_INITIAL = 200000000000000; // 200 BTK
@@ -47,6 +49,8 @@ namespace BTokenLib
 
       PathBlocksMined = Path.Combine(GetName(), "blocksMined");
       Directory.CreateDirectory(PathBlocksMined);
+
+      SizeBlockMax = SIZE_BLOCK_MAX;
     }
 
     public override Header CreateHeaderGenesis()

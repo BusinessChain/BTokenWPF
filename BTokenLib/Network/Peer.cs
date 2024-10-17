@@ -63,8 +63,7 @@ namespace BTokenLib
 
       public string Command;
 
-      const int SIZE_MESSAGE_PAYLOAD_BUFFER = 1 << 20; // 1 MB
-      public byte[] Payload = new byte[SIZE_MESSAGE_PAYLOAD_BUFFER];
+      public byte[] Payload;
       public int LengthDataPayload;
 
       const int HeaderSize = CommandSize + LengthSize + ChecksumSize;
@@ -77,7 +76,6 @@ namespace BTokenLib
       List<StreamWriter> LogFiles = new();
 
       public DateTime TimePeerCreation = DateTime.Now;
-
 
 
       public Peer(
@@ -109,6 +107,8 @@ namespace BTokenLib
         Connection = connection;
 
         CreateLogFile($"{ip}-{Connection}");
+
+        Payload = new byte[Token.SizeBlockMax];
       }
 
       void CreateLogFile(string name)

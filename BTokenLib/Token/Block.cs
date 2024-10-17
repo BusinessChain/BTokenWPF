@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
+
 namespace BTokenLib
 {
   public class Block
@@ -15,14 +16,13 @@ namespace BTokenLib
 
     public List<TX> TXs = new();
 
-    public byte[] Buffer; // is only defined when block is read from stream or from file
-    // but is undefined when mined from transactions from pool. Archiver can directly
-    // write Buffer to file.
+    public byte[] Buffer;
 
 
     public Block(Token token)
     {
       Token = token;
+      Buffer = new byte[Token.SizeBlockMax];
     }
 
     public void Parse()
@@ -118,7 +118,7 @@ namespace BTokenLib
       }
     }
 
-    public void Serialize(Stream stream)
+    public void WriteToStream(Stream stream)
     {
       if(Buffer != null)
         stream.Write(Buffer, 0, Buffer.Length);
