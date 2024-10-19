@@ -201,6 +201,9 @@ namespace BTokenLib
 
       tX.CountBytes = startIndex - indexTxStart;
 
+      tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(
+        buffer, indexTxStart, tX.CountBytes));
+
       return tX;
     }
 

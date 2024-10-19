@@ -24,8 +24,6 @@ namespace BTokenLib
 
         Value += tXOutput.Value;
       }
-
-      Hash = sHA256.ComputeHash(sHA256.ComputeHash(tXRaw));
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()

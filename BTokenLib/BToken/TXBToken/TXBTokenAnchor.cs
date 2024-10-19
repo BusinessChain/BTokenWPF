@@ -36,9 +36,6 @@ namespace BTokenLib
       index += TokenAnchor.HashBlockPreviousReferenced.Length;
 
       VerifySignatureTX(tXRaw, ref index);
-
-      Hash = sHA256.ComputeHash(
-       sHA256.ComputeHash(tXRaw));
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()

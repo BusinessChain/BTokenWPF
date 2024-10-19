@@ -341,26 +341,19 @@ namespace BTokenLib
     {
       SHA256 sHA256 = SHA256.Create();
 
-      while (FileTXPoolBackup.Position < FileTXPoolBackup.Length)
+      byte[] fileData = new byte[FileTXPoolBackup.Length];
+      FileTXPoolBackup.Read(fileData, 0, (int)FileTXPoolBackup.Length);
+
+      int startIndex = 0;
+      while(startIndex < fileData.Length)
       {
-        TX tX;
-        long startIndexTX = FileTXPoolBackup.Position;
+        int indexTxStart = startIndex;
 
-        try
-        {
-          int lengthTXRaw = VarInt.GetInt(FileTXPoolBackup);
+        TX tX = ParseTX(fileData, ref startIndex, sHA256);
 
-          byte[] tXRaw = new byte[lengthTXRaw];
-          FileTXPoolBackup.Read(tXRaw, 0, lengthTXRaw);
+        tX.TXRaw = new byte[startIndex - indexTxStart];
 
-          tX = ParseTX(tXRaw, sHA256);
-        }
-        catch (Exception ex)
-        {
-          $"Invalid TX when loading TXPool: {ex.Message}".Log(this, LogEntryNotifier);
-          FileTXPoolBackup.Position = startIndexTX;
-          break;
-        }
+        Array.Copy(fileData, indexTxStart, tX.TXRaw, 0, tX.TXRaw.Length);
 
         if (TXPool.TryAddTX(tX))
         {
@@ -585,11 +578,13 @@ namespace BTokenLib
     
     public abstract Header ParseHeader(byte[] buffer, ref int index);
 
-    public TX ParseTX(byte[] buffer, SHA256 sHA256)
+    public TX ParseTX(byte[] tXRaw, SHA256 sHA256)
     {
       int startIndex = 0;
-      TX tX = ParseTX(buffer, ref startIndex, sHA256);
-      tX.TXRaw = buffer;
+
+      TX tX = ParseTX(tXRaw, ref startIndex, sHA256);
+
+      tX.TXRaw = tXRaw;
 
       return tX;
     }
