@@ -107,7 +107,7 @@ namespace BTokenLib
         MerkleRoot = block.ComputeMerkleRoot()
       };
 
-      header.CountBytesTXs += block.TXs.Sum(t => t.Serialize().Length);
+      header.CountBytesTXs += block.TXs.Sum(t => t.TXRaw.Length);
 
       block.Header = header;
 
@@ -124,6 +124,8 @@ namespace BTokenLib
         header.IncrementNonce(seed);
         header.ComputeHash(sHA256);
       }
+
+      block.Serialize();
 
       return block;
     }

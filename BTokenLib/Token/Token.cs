@@ -113,7 +113,7 @@ namespace BTokenLib
         token = TokenParent;
 
       token.LoadImage();
-      token.StartNetwork();
+      //token.StartNetwork();
     }
 
     void StartNetwork()
@@ -453,7 +453,10 @@ namespace BTokenLib
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
         CreateImage();
 
-      foreach(var hashBlockChildToken in block.Header.HashesChild)
+
+      // Combine the two functions SignalHashBlockWinnerToChild and SignalParentBlockInsertion
+      
+      foreach (var hashBlockChildToken in block.Header.HashesChild)
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
           .SignalHashBlockWinnerToChild(hashBlockChildToken.Value);
 
@@ -585,7 +588,10 @@ namespace BTokenLib
     public TX ParseTX(byte[] buffer, SHA256 sHA256)
     {
       int startIndex = 0;
-      return ParseTX(buffer, ref startIndex, sHA256);
+      TX tX = ParseTX(buffer, ref startIndex, sHA256);
+      tX.TXRaw = buffer;
+
+      return tX;
     }
 
     public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);

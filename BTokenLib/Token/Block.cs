@@ -17,6 +17,7 @@ namespace BTokenLib
     public List<TX> TXs = new();
 
     public byte[] Buffer;
+    public int LengthBufferPayload;
 
 
     public Block(Token token)
@@ -118,20 +119,31 @@ namespace BTokenLib
       }
     }
 
+    public void Serialize()
+    {
+      int startIndex = 0;
+
+      byte[] bufferHeader = Header.Serialize();
+
+      bufferHeader.CopyTo(Buffer, startIndex);
+      startIndex += bufferHeader.Length;
+
+      byte[] countTXs = VarInt.GetBytes(TXs.Count);
+      countTXs.CopyTo(Buffer, startIndex);
+      startIndex += countTXs.Length;
+
+      for(int i = 0; i < TXs.Count; i += 1)
+      {
+        TXs[i].TXRaw.CopyTo(Buffer, startIndex);
+        startIndex += TXs[i].TXRaw.Length;
+      }
+
+      LengthBufferPayload = startIndex;
+    }
+
     public void WriteToStream(Stream stream)
     {
-      if(Buffer != null)
-        stream.Write(Buffer, 0, Buffer.Length);
-      else
-      {
-        byte[] bufferHeader = Header.Serialize();
-        stream.Write(bufferHeader, 0, bufferHeader.Length);
-
-        byte[] countTXs = VarInt.GetBytes(TXs.Count);
-        stream.Write(countTXs, 0, countTXs.Length);
-
-        TXs.ForEach(t => t.WriteToStream(stream));
-      }
+      stream.Write(Buffer, 0, LengthBufferPayload);
     }
 
     public override string ToString()

@@ -55,57 +55,6 @@ namespace BTokenLib
       return text;
     }
 
-    public override void WriteToStream(Stream stream)
-    {
-      byte[] tXRaw = Serialize();
-      stream.Write(tXRaw, 0, tXRaw.Length);
-    }
-
-    public override byte[] Serialize()
-    {
-      List<byte> tXRaw = new();
-
-      // Serialize version
-      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 });
-      tXRaw.Add((byte)Inputs.Count);
-
-      foreach (var input in Inputs)
-      {
-        tXRaw.AddRange(input.TXIDOutput);
-        tXRaw.AddRange(BitConverter.GetBytes(input.OutputIndex));
-        tXRaw.Add((byte)0x00);
-        tXRaw.AddRange(BitConverter.GetBytes(input.Sequence));
-      }
-      tXRaw.Add((byte)TXOutputs.Count);
-
-      foreach (TXOutputBitcoin output in TXOutputs)
-      {
-        tXRaw.AddRange(BitConverter.GetBytes(output.Value));
-
-        if (output.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
-        {
-          tXRaw.Add(WalletBitcoin.LENGTH_SCRIPT_P2PKH);
-          tXRaw.AddRange(WalletBitcoin.PREFIX_P2PKH);
-          tXRaw.AddRange(output.PublicKeyHash160);
-          tXRaw.AddRange(WalletBitcoin.POSTFIX_P2PKH);
-        }
-        else if (output.Type == TXOutputBitcoin.TypesToken.AnchorToken)
-        {
-
-        }
-        else // Data token
-        {
-          tXRaw.Add((byte)(data.Length + 2));
-          tXRaw.Add(OP_RETURN);
-          tXRaw.Add((byte)data.Length);
-          tXRaw.AddRange(data);
-        }
-      }
-
-      tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
-      tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
-    }
-
     public override List<(string label, string value)> GetLabelsValuePairs()
     {
       List<(string label, string value)> labelValuePairs = new()
@@ -127,7 +76,7 @@ namespace BTokenLib
 
         labelValuePairs.Add(($"Output{i} :: Type", $"{output.Type}"));
 
-        if (output.Type == TXOutputBitcoin.TypesToken.ValueTransfer)
+        if (output.Type == TXOutputBitcoin.TypesToken.P2PKH)
         {
           labelValuePairs.Add(($"Output{i} :: PublicKeyHash160", $"{output.PublicKeyHash160.BinaryToBase58Check()}"));
           labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
@@ -140,7 +89,7 @@ namespace BTokenLib
         }
       }
 
-      labelValuePairs.Add(($"TXRaw", $"{Serialize().Reverse().ToArray().ToHexString()}"));
+      labelValuePairs.Add(($"TXRaw", $"{TXRaw.Reverse().ToArray().ToHexString()}"));
 
       return labelValuePairs;
     }

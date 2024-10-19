@@ -13,6 +13,8 @@ namespace BTokenLib
 
     public long Fee;
 
+    public byte[] TXRaw;
+
 
     public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
 
@@ -21,9 +23,10 @@ namespace BTokenLib
 
     public abstract string Print();
 
-    public abstract void WriteToStream(Stream stream);
-
-    public abstract byte[] Serialize();
+    public void WriteToStream(Stream stream)
+    {
+      stream.Write(TXRaw, 0, TXRaw.Length);
+    }
 
     public abstract List<(string label, string value)> GetLabelsValuePairs();
 

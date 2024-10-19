@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Security.Cryptography;
 
 namespace BTokenLib
@@ -11,9 +9,6 @@ namespace BTokenLib
     public int BlockHeight;
     public List<TXOutputBToken> TXOutputs = new();
 
-
-    public TXBTokenCoinbase()
-    { }
 
     public TXBTokenCoinbase(byte[] tXRaw, ref int index, SHA256 sHA256)
     {

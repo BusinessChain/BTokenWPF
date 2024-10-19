@@ -103,7 +103,6 @@ namespace BTokenLib
         sHA256.ComputeHash(Serialize()));
     }
 
-
     public override string ToString()
     {
       return Hash.ToHexString();

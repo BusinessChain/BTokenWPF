@@ -8,9 +8,6 @@ namespace BTokenLib
     public byte[] Data;
 
 
-    public TXBTokenData()
-    { }
-
     public TXBTokenData(byte[] tXRaw, ref int index, SHA256 sHA256)
     {
       ParseTXBTokenInput(tXRaw, ref index, sHA256);

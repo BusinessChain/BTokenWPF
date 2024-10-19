@@ -121,6 +121,8 @@ namespace BTokenLib
 
       block.Header.ComputeHash();
 
+      block.Serialize();
+
       return IDENTIFIER_BTOKEN_PROTOCOL
       .Concat(IDToken)
       .Concat(block.Header.Hash)
@@ -157,6 +159,7 @@ namespace BTokenLib
         }
     }
 
+    // Combine functions SignalParentBlockInsertion and SignalHashBlockWinnerToChild
     public override void SignalParentBlockInsertion()
     {
       if (TokensAnchorMinedUnconfirmed.Count > 0)

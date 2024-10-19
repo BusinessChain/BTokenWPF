@@ -12,6 +12,8 @@ namespace BTokenLib
     const UInt16 COMPORT_BITCOIN = 8333;
     const int SIZE_BLOCK_MAX = 1 << 20; // 1 MB
 
+    List<TX> TXsStaged = new();
+
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(
@@ -150,9 +152,6 @@ namespace BTokenLib
           "ArgumentOutOfRangeException thrown in ParseTX.");
       }
     }
-
-
-    List<TX> TXsStaged = new();
 
     protected override void StageTXInDatabase(TX tX, Header header)
     {

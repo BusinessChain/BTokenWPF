@@ -30,6 +30,7 @@ namespace BTokenLib
                 throw new ProtocolException($"Received unrequested block message.");
 
               await ReadBytes(BlockSync.Buffer, LengthDataPayload);
+              BlockSync.LengthBufferPayload = LengthDataPayload;
 
               BlockSync.Parse();
 
@@ -61,9 +62,11 @@ namespace BTokenLib
             }
             else if (Command == "tx")
             {
-              await ReadBytes(Payload, LengthDataPayload);
+              byte[] tXRaw = new byte[LengthDataPayload];
 
-              TX tX = Token.ParseTX(Payload, SHA256);
+              await ReadBytes(tXRaw, LengthDataPayload);
+
+              TX tX = Token.ParseTX(tXRaw, SHA256);
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
@@ -296,7 +299,7 @@ namespace BTokenLib
                 if (inventory.Type == InventoryType.MSG_TX)
                 {
                   if (Token.TXPool.TryGetTX(inventory.Hash, out TX tXInPool))
-                    await SendMessage(new TXMessage(tXInPool.Serialize()));
+                    await SendMessage(new TXMessage(tXInPool.TXRaw));
                   else
                     await SendMessage(new NotFoundMessage(
                       new List<Inventory>() { inventory }));

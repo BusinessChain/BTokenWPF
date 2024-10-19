@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -9,9 +8,6 @@ namespace BTokenLib
   {
     public List<TXOutputBToken> TXOutputs = new();
 
-
-    public TXBTokenValueTransfer()
-    { }
 
     public TXBTokenValueTransfer(byte[] tXRaw, ref int index, SHA256 sHA256)
     {

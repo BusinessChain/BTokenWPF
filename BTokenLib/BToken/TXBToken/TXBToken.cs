@@ -92,21 +92,6 @@ namespace BTokenLib
         throw new ProtocolException($"TX {this} contains invalid signature.");
     }
 
-    public override void WriteToStream(Stream stream)
-    {
-      byte[] tXRaw = Serialize();
-
-      byte[] lengthTXRaw = VarInt.GetBytes(tXRaw.Length);
-
-      stream.Write(lengthTXRaw, 0, lengthTXRaw.Length);
-      stream.Write(tXRaw, 0, tXRaw.Length);
-    }
-
-    public override byte[] Serialize()
-    {
-      throw new NotImplementedException();
-    }
-
     public override string Print()
     {
       string text = "";
