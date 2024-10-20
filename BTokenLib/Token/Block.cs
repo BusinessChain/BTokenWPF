@@ -144,6 +144,7 @@ namespace BTokenLib
     public void WriteToStream(Stream stream)
     {
       stream.Write(Buffer, 0, LengthBufferPayload);
+      stream.Flush();
     }
 
     public override string ToString()

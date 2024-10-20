@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -79,16 +78,16 @@ namespace BTokenLib
       Value += Fee;
     }
 
-    public void VerifySignatureTX(byte[] buffer, ref int index)
+    public void VerifySignatureTX(int indexTxStart, byte[] buffer, ref int index)
     {
-      int lengthIndexMessage = index;
+      int lengthMessage = index - indexTxStart;
 
       int lengthSig = buffer[index++];
       byte[] signature = new byte[lengthSig];
       Array.Copy(buffer, index, signature, 0, lengthSig);
       index += lengthSig;
 
-      if (!Crypto.VerifySignature(buffer, 0, lengthIndexMessage, PublicKey, signature))
+      if (!Crypto.VerifySignature(buffer, indexTxStart, lengthMessage, PublicKey, signature))
         throw new ProtocolException($"TX {this} contains invalid signature.");
     }
 

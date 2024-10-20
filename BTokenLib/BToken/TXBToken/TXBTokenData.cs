@@ -8,17 +8,24 @@ namespace BTokenLib
     public byte[] Data;
 
 
-    public TXBTokenData(byte[] tXRaw, ref int index, SHA256 sHA256)
+    public TXBTokenData(byte[] buffer, ref int index, SHA256 sHA256)
     {
-      ParseTXBTokenInput(tXRaw, ref index, sHA256);
+      int indexTxStart = index - 1;
 
-      Data = new byte[VarInt.GetInt(tXRaw, ref index)];
+      ParseTXBTokenInput(buffer, ref index, sHA256);
 
-      Array.Copy(tXRaw, index, Data, 0, Data.Length);
+      Data = new byte[VarInt.GetInt(buffer, ref index)];
+
+      Array.Copy(buffer, index, Data, 0, Data.Length);
 
       index += Data.Length;
 
-      VerifySignatureTX(tXRaw, ref index);
+      CountBytes = index - indexTxStart;
+
+      Hash = sHA256.ComputeHash(sHA256.ComputeHash(
+        buffer, indexTxStart, CountBytes));
+
+      VerifySignatureTX(indexTxStart, buffer, ref index);
     }
   }
 }

@@ -183,12 +183,10 @@ namespace BTokenLib
     {
       TXBToken tX;
 
-      int indexTxStart = startIndex;
-
       var typeToken = (TypesToken)buffer[startIndex];
       startIndex += 1;
 
-      if (typeToken == TypesToken.Coinbase)
+      if (typeToken == TypesToken.Coinbase) // wie wird sichergestellt, dass nur die erste TX im Block Coinbase ist?
         tX = new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
       else if (typeToken == TypesToken.ValueTransfer)
         tX = new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
@@ -198,11 +196,6 @@ namespace BTokenLib
         tX = new TXBTokenData(buffer, ref startIndex, sHA256);
       else
         throw new ProtocolException($"Unknown token type {typeToken}.");
-
-      tX.CountBytes = startIndex - indexTxStart;
-
-      tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(
-        buffer, indexTxStart, tX.CountBytes));
 
       return tX;
     }

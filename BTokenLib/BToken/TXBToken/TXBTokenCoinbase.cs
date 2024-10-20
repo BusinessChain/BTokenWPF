@@ -10,20 +10,27 @@ namespace BTokenLib
     public List<TXOutputBToken> TXOutputs = new();
 
 
-    public TXBTokenCoinbase(byte[] tXRaw, ref int index, SHA256 sHA256)
+    public TXBTokenCoinbase(byte[] buffer, ref int index, SHA256 sHA256)
     {
-      BlockHeight = BitConverter.ToInt32(tXRaw, index);
+      int indexTxStart = index - 1;
+
+      BlockHeight = BitConverter.ToInt32(buffer, index);
       index += 4;
 
-      int countOutputs = VarInt.GetInt(tXRaw, ref index);
+      int countOutputs = VarInt.GetInt(buffer, ref index);
 
       for (int i = 0; i < countOutputs; i += 1)
       {
-        TXOutputBToken tXOutput = new(tXRaw, ref index);
+        TXOutputBToken tXOutput = new(buffer, ref index);
         TXOutputs.Add(tXOutput);
 
         Value += tXOutput.Value;
       }
+
+      CountBytes = index - indexTxStart;
+
+      Hash = sHA256.ComputeHash(sHA256.ComputeHash(
+        buffer, indexTxStart, CountBytes));
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()
