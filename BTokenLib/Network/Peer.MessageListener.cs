@@ -142,9 +142,8 @@ namespace BTokenLib
                   int i = 0;
                   while (i < countHeaders)
                   {
-                    header = Token.ParseHeader(Payload, ref startIndex);
-
-                    NetworkStream.ReadByte();
+                    header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+                    startIndex += 1;
 
                     Network.HeaderDownload.InsertHeader(header);
 
@@ -168,7 +167,7 @@ namespace BTokenLib
                 if (countHeaders != 1)
                   throw new ProtocolException($"Peer sent unsolicited not exactly one header.");
 
-                Header header = Token.ParseHeader(Payload, ref startIndex);
+                Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
 
                 if (!Network.TryEnterStateSynchronization(this))
                   continue;

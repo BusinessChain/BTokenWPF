@@ -88,9 +88,6 @@ namespace BTokenLib
           labelValuePairs.Add(($"Output{i} :: HashBlockPreviousReferenced", $"{output.TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
         }
       }
-
-      labelValuePairs.Add(($"TXRaw", $"{TXRaw.Reverse().ToArray().ToHexString()}"));
-
       return labelValuePairs;
     }
   }

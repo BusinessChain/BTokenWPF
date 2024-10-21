@@ -113,7 +113,7 @@ namespace BTokenLib
         token = TokenParent;
 
       token.LoadImage();
-      //token.StartNetwork();
+      token.StartNetwork();
     }
 
     void StartNetwork()
@@ -141,16 +141,15 @@ namespace BTokenLib
         int index = 0;
         int heightHeader = 0;
 
+        SHA256 sHA256 = SHA256.Create();
+
         while (index < bytesHeaderImage.Length)
         {
-          Header header = ParseHeader(
-            bytesHeaderImage,
-            ref index);
+          Header header = ParseHeader(bytesHeaderImage, ref index, sHA256);
 
           heightHeader += 1;
 
-          header.CountBytesTXs = BitConverter.ToInt32(
-            bytesHeaderImage, index);
+          header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
 
           index += 4;
 
@@ -389,11 +388,11 @@ namespace BTokenLib
 
       $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
 
+      SHA256 sHA256 = SHA256.Create();
+
       while (index < bytesHeaderImage.Length)
       {
-        Header header = ParseHeader(
-          bytesHeaderImage,
-          ref index);
+        Header header = ParseHeader(bytesHeaderImage, ref index, sHA256);
 
         header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
         index += 4;
@@ -569,14 +568,14 @@ namespace BTokenLib
 
       int startIndex = 0;
 
-      block.Header = ParseHeader(buffer, ref startIndex);
+      block.Header = ParseHeader(buffer, ref startIndex, block.SHA256);
 
       block.ParseTXs(buffer, ref startIndex);
 
       return block;
     }
     
-    public abstract Header ParseHeader(byte[] buffer, ref int index);
+    public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 
     public TX ParseTX(byte[] tXRaw, SHA256 sHA256)
     {

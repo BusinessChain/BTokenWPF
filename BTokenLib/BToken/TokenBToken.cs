@@ -263,10 +263,8 @@ namespace BTokenLib
       return ((PoolTXBToken)TXPool).ApplyTXsOnAccount(account);
     }
 
-    public override HeaderBToken ParseHeader(byte[] buffer, ref int index)
+    public override HeaderBToken ParseHeader(byte[] buffer, ref int index, SHA256 sHA256)
     {
-      SHA256 sHA256 = SHA256.Create();
-
       byte[] hash =
         sHA256.ComputeHash(
           sHA256.ComputeHash(

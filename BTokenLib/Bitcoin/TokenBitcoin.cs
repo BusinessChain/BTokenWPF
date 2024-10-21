@@ -60,12 +60,9 @@ namespace BTokenLib
       return header;
     }
        
-    public override Header ParseHeader(byte[] buffer, ref int index)
+    public override Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256)
     {
-      SHA256 sHA256 = SHA256.Create();
-
-      byte[] hash =
-        sHA256.ComputeHash(
+      byte[] hash = sHA256.ComputeHash(
           sHA256.ComputeHash(
             buffer,
             index,
@@ -82,8 +79,7 @@ namespace BTokenLib
       Array.Copy(buffer, index, merkleRootHash, 0, 32);
       index += 32;
 
-      uint unixTimeSeconds = BitConverter.ToUInt32(
-        buffer, index);
+      uint unixTimeSeconds = BitConverter.ToUInt32(buffer, index);
       index += 4;
 
       bool isBlockTimePremature = unixTimeSeconds >

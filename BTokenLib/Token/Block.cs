@@ -8,16 +8,16 @@ namespace BTokenLib
 {
   public class Block
   {
-    Token Token;
-
     public Header Header;
-
-    public SHA256 SHA256 = SHA256.Create();
 
     public List<TX> TXs = new();
 
     public byte[] Buffer;
     public int LengthBufferPayload;
+
+    Token Token;
+
+    public SHA256 SHA256 = SHA256.Create();
 
 
     public Block(Token token)
@@ -30,13 +30,15 @@ namespace BTokenLib
     {
       int startIndex = 0;
 
-      Header = Token.ParseHeader(Buffer, ref startIndex);
+      Header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
 
       ParseTXs(Buffer, ref startIndex);
     }
 
     public void ParseTXs(byte[] buffer, ref int startIndex)
     {
+      TXs.Clear();
+
       int tXCount = VarInt.GetInt(buffer, ref startIndex);
 
       int startIndexBeginningOfTXs = startIndex;
