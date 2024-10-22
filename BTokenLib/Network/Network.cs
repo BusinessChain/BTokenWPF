@@ -54,16 +54,13 @@ namespace BTokenLib
 
     public void Start()
     {
-      if (Token is TokenBToken)
-        return;
-
       $"Start Network {Token.GetName()}"
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       StartPeerConnector();
 
-      if (Token.TokenParent == null)
-        StartSynchronizerLoop();
+      //if (Token.TokenParent == null)
+      //StartSynchronizerLoop();
 
       if (EnableInboundConnections)
         StartPeerInboundConnector();
