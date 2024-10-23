@@ -12,11 +12,6 @@ namespace BTokenLib
     public List<TXOutputBitcoin> TXOutputs = new();
 
 
-    public override int GetSequence()
-    {
-      return Inputs.First().Sequence;
-    }
-
     public override bool IsSuccessorTo(TX tX)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;
@@ -25,19 +20,6 @@ namespace BTokenLib
         foreach (TXInputBitcoin tXInput in Inputs)
           if (tXInput.TXIDOutput.IsAllBytesEqual(tX.Hash))
             return true;
-
-      return false;
-    }
-
-    public override bool IsReplacementByFeeFor(TX tX)
-    {
-      if (tX is TXBitcoin tXBitcoin)
-        foreach (TXInputBitcoin tXInput in Inputs)
-          foreach (TXInputBitcoin tXBitcoinInput in tXBitcoin.Inputs)
-            if (tXInput.TXIDOutput.IsAllBytesEqual(tXBitcoinInput.TXIDOutput) &&
-                tXInput.OutputIndex == tXBitcoinInput.OutputIndex &&
-                tXInput.Sequence > tXBitcoinInput.Sequence)
-              return true;
 
       return false;
     }

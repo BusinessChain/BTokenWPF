@@ -324,15 +324,7 @@ namespace BTokenLib
         }
       }
     }
-
-    public override void UndoTXUnconfirmed(TX tX)
-    {
-      OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
-
-      foreach (TXInputBitcoin tXInput in ((TXBitcoin)tX).Inputs)
-        OutputsSpentUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput));
-    }
-        
+            
     public override void Clear()
     {
       OutputsSpendable.Clear();

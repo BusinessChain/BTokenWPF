@@ -118,9 +118,6 @@ namespace BTokenLib
       throw new NotImplementedException();
     }
 
-    public override void UndoTXUnconfirmed(TX tX)
-    { throw new NotImplementedException(); }
-
     public override long GetBalance()
     {
       try

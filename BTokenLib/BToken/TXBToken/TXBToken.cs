@@ -42,11 +42,6 @@ namespace BTokenLib
         && Nonce == tXBToken.Nonce + 1;
     }
 
-    public override bool IsReplacementByFeeFor(TX tX)
-    {
-      throw new NotImplementedException();
-    }
-
     public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)
     {
       TXBTokenAnchor tXBTokenAnchor = this as TXBTokenAnchor;

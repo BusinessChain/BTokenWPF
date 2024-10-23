@@ -17,7 +17,6 @@ namespace BTokenLib
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
     double FeeSatoshiPerByteAnchorToken;
-    List<TX> TokensAnchorMinedUnconfirmed = new();
     List<Block> BlocksMinedCache = new();
     string PathBlocksMined;
 
@@ -159,26 +158,6 @@ namespace BTokenLib
         }
     }
 
-    // Combine functions SignalParentBlockInsertion and SignalHashBlockWinnerToChild
-    public override void SignalParentBlockInsertion()
-    {
-      if (TokensAnchorMinedUnconfirmed.Count > 0)
-      {
-        TX tXTokenAnchorOld = TokensAnchorMinedUnconfirmed.Last();
-
-        FeeSatoshiPerByteAnchorToken *= FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN;
-
-        byte[] dataAnchorTokenNew = CreateAnchorToken(out Block block);
-
-        if (TokenParent.TryRBFTXData(tXTokenAnchorOld, dataAnchorTokenNew, FeeSatoshiPerByteAnchorToken))
-        {
-          $"RBF old anchor token {tXTokenAnchorOld} with new anchor token referenching {block}.".Log(this, LogFile, LogEntryNotifier);
-
-          SaveBlockMined(block);
-        }
-      }
-    }
-
     public override void SignalHashBlockWinnerToChild(byte[] hashBlockChildToken)
     {
       if (TryGetBlockMined(hashBlockChildToken, out Block block))
@@ -204,25 +183,6 @@ namespace BTokenLib
 
       foreach (string pathFile in Directory.GetFiles(PathBlocksMined))
         File.Delete(pathFile);
-    }
-
-    public override void ReceiveAnchorTokenConfirmed(TX tX)
-    {
-      TokensAnchorMinedUnconfirmed.RemoveAll(t => t.Hash.IsAllBytesEqual(tX.Hash));
-    }
-
-    public override void SaveAnchorTokenUnconfirmedMined(TX tXTokenAnchor)
-    {
-      TX tXTokenAnchorRBFed = TokensAnchorMinedUnconfirmed.Find(t => tXTokenAnchor.IsReplacementByFeeFor(t));
-
-      if (TokensAnchorMinedUnconfirmed.Remove(tXTokenAnchorRBFed))
-        $"Removed RBF'ed and unconfirmed anchor token {tXTokenAnchorRBFed} from list TokensAnchorMinedUnconfirmed."
-          .Log(this, LogFile, LogEntryNotifier);
-
-      TokensAnchorMinedUnconfirmed.Add(tXTokenAnchor);
-
-      $"Included anchor token {tXTokenAnchor}. {TokensAnchorMinedUnconfirmed.Count} anchor tokens in TokensAnchorMinedUnconfirmed."
-        .Log(this, LogFile, LogEntryNotifier);
     }
 
     bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)

@@ -355,10 +355,7 @@ namespace BTokenLib
         Array.Copy(fileData, indexTxStart, tX.TXRaw, 0, tX.TXRaw.Length);
 
         if (TXPool.TryAddTX(tX))
-        {
-          SendAnchorTokenUnconfirmedToChild(tX);
           Wallet.InsertTXUnconfirmed(tX);
-        }
       }
     }
 
@@ -451,20 +448,18 @@ namespace BTokenLib
       foreach (var hashBlockChildToken in block.Header.HashesChild)
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
           .SignalHashBlockWinnerToChild(hashBlockChildToken.Value);
-
-      TokensChild.ForEach(t => t.SignalParentBlockInsertion());
     }
 
     protected void InsertInDatabase(Block block)
     {
       byte[] targetValue = SHA256.HashData(block.Header.Hash);
 
-      Dictionary<byte[], byte[]> biggestDifferencesTemp =
-        new(new EqualityComparerByteArray());
+      Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
+
       byte[] biggestDifferenceTemp;
 
-      Dictionary<byte[], TX> tXAnchorWinners =
-        new(new EqualityComparerByteArray());
+      Dictionary<byte[], TX> tXAnchorWinners =  new(new EqualityComparerByteArray());
+
       TX tXAnchorWinner;
 
       try
@@ -496,9 +491,6 @@ namespace BTokenLib
               tXAnchorWinners[tokenAnchor.IDToken] = tX;
               block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
             }
-
-            TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
-              ?.ReceiveAnchorTokenConfirmed(tX);
           }
         }
       }
@@ -627,19 +619,10 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void ReceiveAnchorTokenConfirmed(TX tX)
-    { throw new NotImplementedException(); }
-
     public virtual void SignalHashBlockWinnerToChild(byte[] hashBlockChildToken)
     { throw new NotImplementedException(); }
 
-    public virtual void SignalParentBlockInsertion()
-    { throw new NotImplementedException(); }
-
     public virtual void DeleteBlocksMinedUnconfirmed() { }
-
-    public virtual void SaveAnchorTokenUnconfirmedMined(TX tXTokenAnchor)
-    { throw new NotImplementedException(); }
 
     public virtual void RevokeBlockInsertion()
     { throw new NotImplementedException(); }
@@ -667,18 +650,9 @@ namespace BTokenLib
 
         Wallet.InsertTXUnconfirmed(tX);
         Wallet.AddTXUnconfirmedToHistory(tX);
-
-        SendAnchorTokenUnconfirmedToChild(tX);
       }
       else
         $"Could not insert tX {tX} to pool.".Log(this, LogEntryNotifier);
-    }
-
-    public void SendAnchorTokenUnconfirmedToChild(TX tX)
-    {
-      if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
-        TokensChild.Find(t => t.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
-          ?.SaveAnchorTokenUnconfirmedMined(tX);
     }
 
     public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
@@ -691,15 +665,6 @@ namespace BTokenLib
       }
 
       return false;
-    }
-
-    public bool TryRBFTXData(TX tXDataOld, byte[] data, double feeSatoshiPerByte)
-    {
-      Wallet.UndoTXUnconfirmed(tXDataOld);
-
-      int sequence = tXDataOld.GetSequence() + 1;
-
-      return TryBroadcastTXData(data, feeSatoshiPerByte, sequence);
     }
 
     public bool TryBroadcastTXData(
