@@ -132,57 +132,37 @@ namespace BTokenLib
 
               $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              if (IsStateHeaderSynchronization())
+              if(!IsStateHeaderSynchronization())
               {
-                if (countHeaders > 0)
-                {
-                  Header header = null;
-                  List<Header> locator = null;
-
-                  int i = 0;
-                  while (i < countHeaders)
-                  {
-                    header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-                    startIndex += 1;
-
-                    Network.HeaderDownload.InsertHeader(header);
-
-                    i += 1;
-
-                    if (i == countHeaders)
-                      locator = new List<Header> { header };
-                  }
-
-                  await SendGetHeaders(locator);
-                }
-                else
-                {
-                  ResetTimer();
-
-                  Network.SyncBlocks();
-                }
-              }
-              else
-              {
-                if (countHeaders != 1)
-                  throw new ProtocolException($"Peer sent unsolicited not exactly one header.");
-
-                Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+                if (countHeaders == 0)
+                  throw new ProtocolException($"Peer sent unsolicited empty headers message.");
 
                 if (!Network.TryEnterStateSynchronization(this))
                   continue;
+              }
 
-                if (header.HashPrevious.IsAllBytesEqual(Token.HeaderTip.Hash))
+              if (countHeaders > 0)
+              {
+                Header header = null;
+
+                int i = 0;
+                while (i < countHeaders)
                 {
-                  header.AppendToHeader(Token.HeaderTip);
+                  header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+                  startIndex += 1;
 
-                  FlagSingleBlockDownload = true;
-                  await RequestBlock(header);
+                  Network.HeaderDownload.InsertHeader(header);
+
+                  i += 1;
                 }
-                else if(header.HashPrevious.IsAllBytesEqual(Token.HeaderTip.HashPrevious))
-                  Network.ExitSynchronization();
-                else
-                  await SendGetHeaders(Token.GetLocator());
+
+                await SendGetHeaders(new List<Header> { header });
+              }
+              else
+              {
+                ResetTimer();
+
+                Network.SyncBlocks();
               }
             }
             else if (Command == "getheaders")

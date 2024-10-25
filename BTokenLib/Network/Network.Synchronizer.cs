@@ -249,8 +249,6 @@ namespace BTokenLib
       $"Synchronization with {PeerSynchronizing} of {Token.GetName()} completed.\n"
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-      Token.RebroadcastTXsUnconfirmed();
-
       foreach (Token token in Token.TokensChild)
         token.Network.TryStartSynchronization();
     }
