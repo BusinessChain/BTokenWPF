@@ -442,12 +442,13 @@ namespace BTokenLib
       if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
         CreateImage();
 
-
-      // Combine the two functions SignalHashBlockWinnerToChild and SignalParentBlockInsertion
-      
       foreach (var hashBlockChildToken in block.Header.HashesChild)
-        TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
-          .SignalHashBlockWinnerToChild(hashBlockChildToken.Value);
+      {
+        Token tokenChild = TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key));
+
+        if(tokenChild != null && tokenChild.TryGetBlockMined(hashBlockChildToken.Value, out block))
+          tokenChild.InsertBlock(block);
+      }
     }
 
     protected void InsertInDatabase(Block block)
@@ -619,7 +620,7 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void SignalHashBlockWinnerToChild(byte[] hashBlockChildToken)
+    public virtual bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
     { throw new NotImplementedException(); }
 
     public virtual void DeleteBlocksMinedUnconfirmed() { }

@@ -385,6 +385,7 @@ namespace BTokenLib
         $"Advertize block {block}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         await SendHeaders(new List<Header>() { block.Header });
+
         SetStateIdle();
       }
 

@@ -45,8 +45,7 @@ namespace BTokenLib
 
         try
         {
-          ($"Bitcoin Miner {indexThread} mined block height " +
-            $"{block.Header.Height} with hash {block}.\n\n")
+          $"Bitcoin Miner {indexThread} mined block height {block.Header.Height} with hash {block}.\n\n"
             .Log(this, LogFile, LogEntryNotifier);
 
           InsertBlock(block);

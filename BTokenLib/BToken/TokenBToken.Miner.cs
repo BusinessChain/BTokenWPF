@@ -158,24 +158,6 @@ namespace BTokenLib
         }
     }
 
-    public override void SignalHashBlockWinnerToChild(byte[] hashBlockChildToken)
-    {
-      if (TryGetBlockMined(hashBlockChildToken, out Block block))
-      {
-        $"Insert self mined block {block}.".Log(this, LogFile, LogEntryNotifier);
-
-        try
-        {
-          InsertBlock(block);
-          Network.AdvertizeBlockToNetwork(block);
-        }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when inserting self mined block {block}:\n" +
-            $"{ex.Message}").Log(this, LogFile, LogEntryNotifier);
-        }
-      }
-    }
 
     public override void DeleteBlocksMinedUnconfirmed()
     {
@@ -185,7 +167,7 @@ namespace BTokenLib
         File.Delete(pathFile);
     }
 
-    bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
+    public override bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
     {
       blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
 
