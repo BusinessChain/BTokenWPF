@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
@@ -9,7 +9,7 @@ namespace BTokenLib
     public List<Header> Locator;
 
     public Header HeaderTip;
-    public Header HeaderRoot;
+    public Header HeaderRoot; // The first header that is inserted into HeaderDownload
     public Header HeaderAncestor;
 
 
@@ -22,24 +22,12 @@ namespace BTokenLib
     {
       if (HeaderRoot == null)
       {
-        if (HeaderAncestor == null)
+        HeaderAncestor ??= Locator.Find(h => h.Hash.IsAllBytesEqual(header.HashPrevious))
+          ?? throw new ProtocolException($"Header {header} does not connect to locator.");
+
+        if (HeaderAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
         {
-          HeaderAncestor = Locator.Find(
-            h => h.Hash.IsAllBytesEqual(header.HashPrevious));
-
-          if (HeaderAncestor == null)
-            throw new ProtocolException(
-              $"Header {header} does not connect to locator.");
-        }
-
-        if (HeaderAncestor.HeaderNext != null &&
-          HeaderAncestor.HeaderNext.Hash.IsAllBytesEqual(header.Hash))
-        {
-          if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
-            throw new ProtocolException(
-              "Received redundant headers from peer.");
-
-          HeaderAncestor = HeaderAncestor.HeaderNext;
+          HeaderAncestor = HeaderAncestor.HeaderNext; 
           return;
         }
 

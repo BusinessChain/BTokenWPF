@@ -246,7 +246,7 @@ namespace BTokenLib
 
       ExitSynchronization();
 
-      $"Synchronization with {PeerSynchronizing} of {Token.GetName()} completed.\n"
+      $"\nSynchronization of {Token.GetName()} completed."
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       foreach (Token token in Token.TokensChild)

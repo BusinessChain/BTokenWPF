@@ -57,7 +57,7 @@ namespace BTokenLib
       $"Start Network {Token.GetName()}"
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-      //StartPeerConnector();
+      StartPeerConnector();
 
       //if (Token.TokenParent == null)
       //StartSynchronizerLoop();

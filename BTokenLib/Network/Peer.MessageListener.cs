@@ -14,8 +14,6 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      bool FlagSingleBlockDownload;
-
       public async Task StartMessageListener()
       {
         try
@@ -48,14 +46,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              if (FlagSingleBlockDownload)
-              {
-                FlagSingleBlockDownload = false;
-
-                Token.InsertBlock(BlockSync);
-                Network.ExitSynchronization();
-              }
-              else if (Network.InsertBlock_FlagContinue(this))
+              if (Network.InsertBlock_FlagContinue(this))
                 RequestBlock();
               else
                 SetStateIdle();
@@ -134,18 +125,30 @@ namespace BTokenLib
 
               if(!IsStateHeaderSynchronization())
               {
-                if (countHeaders == 0)
-                  throw new ProtocolException($"Peer sent unsolicited empty headers message.");
+                if (countHeaders != 1)
+                  throw new ProtocolException($"Peer sent unsolicited not exactly one header.");
 
                 if (!Network.TryEnterStateSynchronization(this))
                   continue;
+
+                Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+
+                try
+                {
+                  Network.HeaderDownload.InsertHeader(header);
+                }
+                catch (ProtocolException)
+                {
+                  await SendGetHeaders(Token.GetLocator());
+                  continue;
+                }
               }
 
-              if (countHeaders > 0)
+              if (countHeaders - 1 > 0)
               {
                 Header header = null;
 
-                int i = 0;
+                int i = 1;
                 while (i < countHeaders)
                 {
                   header = Token.ParseHeader(Payload, ref startIndex, SHA256);

@@ -239,9 +239,8 @@ namespace BTokenLib
 
         try
         {
-          await SendMessage(new GetHeadersMessage(
-            locator,
-            ProtocolVersion));
+          await SendMessage(
+            new GetHeadersMessage(locator, ProtocolVersion));
 
           ($"Send getheaders.\n" +
             $"locator: {locator.First()} ... {locator.Last()}")
