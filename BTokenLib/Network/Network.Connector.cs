@@ -243,11 +243,9 @@ namespace BTokenLib
 
       while (true)
       {
-        TcpClient tcpClient = await tcpListener.AcceptTcpClientAsync()
-          .ConfigureAwait(false);
+        TcpClient tcpClient = await tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
 
-        IPAddress remoteIP =
-          ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
+        IPAddress remoteIP = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
 
         if (remoteIP.ToString() != "84.74.69.100")
           continue;
@@ -272,13 +270,12 @@ namespace BTokenLib
         lock (LOCK_Peers)
           peer = Peers.Find(p => p.IPAddress.Equals(remoteIP));
 
-        if (peer != null && TryEnterStateSynchronization(peer))
+        if (peer != null)
         {
-          $"Peer {peer} is already connected but received inbount connection request, therefore initiate synchronization."
+          $"Peer {peer} is already connected but received inbound connection request, therefore initiate synchronization."
             .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-          if (TryEnterStateSynchronization(peer))
-            await peer.SendGetHeaders(Token.GetLocator());
+          await peer.SendGetHeaders(Token.GetLocator());
 
           continue;
         }

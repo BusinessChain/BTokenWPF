@@ -86,8 +86,6 @@ namespace BTokenLib
           peerSync.SetStateIdle();
           return false;
         }
-
-        EnterStateSynchronization(peerSync);
       }
 
       peerSync.SendGetHeaders(HeaderDownload.Locator);

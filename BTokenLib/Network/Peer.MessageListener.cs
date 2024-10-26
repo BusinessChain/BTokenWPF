@@ -229,7 +229,7 @@ namespace BTokenLib
 
               Token.ReleaseLock();
 
-              if (flagInitiateSynchronization && Network.TryEnterStateSynchronization(this))
+              if (flagInitiateSynchronization)
                 await SendGetHeaders(Token.GetLocator());
             }
             else if (Command == "hashesDB")
