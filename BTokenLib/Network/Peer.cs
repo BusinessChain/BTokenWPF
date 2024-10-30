@@ -177,8 +177,7 @@ namespace BTokenLib
 
         await SendMessage(new VerAckMessage());
 
-        $"Await verack.".Log(this, LogFiles, Token.LogEntryNotifier);
-        ResetTimer(TIMEOUT_VERACK_MILLISECONDS);
+        ResetTimer("Await verack", TIMEOUT_VERACK_MILLISECONDS);
 
         do
           await ListenForNextMessage();
@@ -235,7 +234,7 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
-        ResetTimer(TIMEOUT_RESPONSE_MILLISECONDS);
+        ResetTimer("receive headers", TIMEOUT_RESPONSE_MILLISECONDS);
 
         try
         {
@@ -253,11 +252,6 @@ namespace BTokenLib
 
           throw ex;
         }
-      }
-
-      void ResetTimer(int millisecondsTimer = int.MaxValue)
-      {
-        Cancellation.CancelAfter(millisecondsTimer);
       }
 
       public async Task<bool> TryAdvertizeTX(TX tX)
@@ -314,7 +308,7 @@ namespace BTokenLib
 
         State = StateProtocol.DBDownload;
 
-        ResetTimer(TIMEOUT_RESPONSE_MILLISECONDS);
+        ResetTimer("receive DB", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
@@ -335,7 +329,7 @@ namespace BTokenLib
 
         State = StateProtocol.BlockSynchronization;
 
-        ResetTimer(TIMEOUT_RESPONSE_MILLISECONDS);
+        ResetTimer("receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()

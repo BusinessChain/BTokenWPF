@@ -72,6 +72,8 @@ namespace BTokenLib
               int startIndex = 0;
               int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
+              ResetTimer();
+
               if (countHeaders == 0)
               {
                 if (!IsStateHeaderSync())
@@ -80,7 +82,6 @@ namespace BTokenLib
                   goto LABEL_ListenForNextMessage;
                 }
 
-                ResetTimer();
                 Network.SyncBlocks();
               }
               else
@@ -344,6 +345,15 @@ namespace BTokenLib
 
         Command = Encoding.ASCII.GetString(
           MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
+      }
+
+
+      void ResetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
+      {
+        if (descriptionTimeOut != "")
+          $"Set timeout for '{descriptionTimeOut}' to {millisecondsTimer} ms.".Log(this, LogFiles, Token.LogEntryNotifier);
+
+        Cancellation.CancelAfter(millisecondsTimer);
       }
 
       async Task ReadBytes(byte[] buffer, int bytesToRead)
