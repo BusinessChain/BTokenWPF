@@ -217,14 +217,14 @@ namespace BTokenLib
 
     public abstract List<string> GetSeedAddresses();
 
-    public bool TryStartSynchronization()
+    public void StartSync()
     {
       Token token = this;
 
       while (token.TokenParent != null)
         token = token.TokenParent;
 
-      return token.Network.TryStartSynchronization();
+      token.Network.StartSync();
     }
 
     public bool TryLock()

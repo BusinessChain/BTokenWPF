@@ -65,7 +65,7 @@ namespace BTokenWPF
 
       LabelCountPeers.Content = $"Number of peers: {peers.Count}";
       LabelStateNetworkConnector.Content = $"State network connector: {Token.Network.State}";
-      LabelIsStateSynchronizing.Content = $"Network synchronizing: {Token.Network.IsStateSynchronizing}";
+      LabelIsStateSynchronizing.Content = $"Network synchronizing: {Token.Network.IsStateSync}";
       Token.Network.FlagEnableOutboundConnections = (bool)CheckBoxEnableOutboundConnections.IsChecked;
 
       ListBoxPeers.Items.Clear();

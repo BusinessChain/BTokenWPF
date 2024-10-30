@@ -119,7 +119,7 @@ namespace BTokenWPF
 
     void ButtonStartSynchronizationNode_Click(object sender, RoutedEventArgs e)
     {
-      BToken.TryStartSynchronization();
+      BToken.StartSync();
     }
 
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)

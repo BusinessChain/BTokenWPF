@@ -20,11 +20,13 @@ namespace BTokenLib
         {
           while (true)
           {
+          LABEL_ListenForNextMessage:
+
             await ListenForNextMessage();
 
             if (Command == "block")
             {
-              if (!IsStateBlockSynchronization())
+              if (!IsStateBlockSync())
                 throw new ProtocolException($"Received unrequested block message.");
 
               await ReadBytes(BlockSync.Buffer, LengthDataPayload);
@@ -63,57 +65,6 @@ namespace BTokenLib
 
               Token.InsertTXUnconfirmed(tX);
             }
-            else if (Command == "dataDB")
-            {
-              await ReadBytes(Payload, LengthDataPayload);
-
-              if (IsStateDBDownload())
-              {
-                byte[] hashDataDB = SHA256.ComputeHash(
-                  Payload,
-                  0,
-                  LengthDataPayload);
-
-                if (!hashDataDB.IsAllBytesEqual(HashDBDownload))
-                  throw new ProtocolException(
-                    $"Unexpected dataDB with hash {hashDataDB.ToHexString()}.\n" +
-                    $"Excpected hash {HashDBDownload.ToHexString()}.");
-
-                ResetTimer();
-
-                if (Network.InsertDB_FlagContinue(this))
-                  await RequestDB();
-                else
-                  SetStateIdle();
-              }
-            }
-            else if (Command == "ping")
-            {
-              $"Received ping message.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-              await ReadBytes(Payload, LengthDataPayload);
-
-              await SendMessage(new PongMessage(Payload));
-            }
-            else if (Command == "addr")
-            {
-              await ReadBytes(Payload, LengthDataPayload);
-              AddressMessage addressMessage = new(Payload);
-
-              Network.AddNetworkAddressesAdvertized(
-                addressMessage.NetworkAddresses);
-            }
-            else if (Command == "sendheaders")
-            {
-              await SendMessage(new SendHeadersMessage());
-            }
-            else if (Command == "feefilter")
-            {
-              await ReadBytes(Payload, LengthDataPayload);
-
-              FeeFilterMessage feeFilterMessage = new(Payload);
-              FeeFilterValue = feeFilterMessage.FeeFilterValue;
-            }
             else if (Command == "headers")
             {
               await ReadBytes(Payload, LengthDataPayload);
@@ -121,51 +72,44 @@ namespace BTokenLib
               int startIndex = 0;
               int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
-              $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-              if(!IsStateHeaderSynchronization())
+              if (countHeaders == 0)
               {
-                if (countHeaders != 1)
-                  throw new ProtocolException($"Peer sent unsolicited not exactly one header.");
-
-                if (!Network.TryEnterStateSynchronization(this))
-                  continue;
-
-                Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-
-                try
+                if (!IsStateHeaderSync())
                 {
-                  Network.HeaderDownload.InsertHeader(header);
-                }
-                catch (ProtocolException)
-                {
-                  await SendGetHeaders(Token.GetLocator());
-                  continue;
-                }
-              }
-
-              if (countHeaders - 1 > 0)
-              {
-                Header header = null;
-
-                int i = 1;
-                while (i < countHeaders)
-                {
-                  header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-                  startIndex += 1;
-
-                  Network.HeaderDownload.InsertHeader(header);
-
-                  i += 1;
+                  $"Receiving {countHeaders} headers. Appears to be in sync.".Log(this, LogFiles, Token.LogEntryNotifier);
+                  goto LABEL_ListenForNextMessage;
                 }
 
-                await SendGetHeaders(new List<Header> { header });
+                ResetTimer();
+                Network.SyncBlocks();
               }
               else
               {
-                ResetTimer();
+                int i = 0;
+                bool isHeadersReceivedWhenStateHeaderSync = IsStateHeaderSync();
 
-                Network.SyncBlocks();
+                if (IsStateHeaderSync() || Network.TryEnterStateSync(this))
+                {
+                  while (i < countHeaders)
+                  {
+                    Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+                    startIndex += 1;
+
+                    try
+                    {
+                      Network.HeaderDownload.InsertHeader(header);
+                    }
+                    catch (ProtocolException) when (!isHeadersReceivedWhenStateHeaderSync && i == 0)
+                    {
+                      await SendGetHeaders(Network.HeaderDownload.Locator);
+                      goto LABEL_ListenForNextMessage;
+                    }
+
+                    i += 1;
+                  }
+
+                  await SendGetHeaders(new List<Header> { Network.HeaderDownload.HeaderTip });
+                }
               }
             }
             else if (Command == "getheaders")
@@ -184,7 +128,7 @@ namespace BTokenLib
               if (!Token.TryLock())
               {
                 $"... but Token is locked.".Log(this, LogFiles, Token.LogEntryNotifier);
-                continue;
+                goto LABEL_ListenForNextMessage;
               }
 
               int i = 0;
@@ -256,7 +200,7 @@ namespace BTokenLib
               notFoundMessage.Inventories.ForEach(
                 i => $"Did not find {i.Hash.ToHexString()}".Log(this, LogFiles, Token.LogEntryNotifier));
 
-              if (IsStateBlockSynchronization())
+              if (IsStateBlockSync())
                 Network.ReturnPeerBlockDownloadIncomplete(this);
             }
             else if (Command == "inv")
@@ -304,6 +248,57 @@ namespace BTokenLib
                 }
                 else
                   await SendMessage(new RejectMessage(inventory.Hash));
+            }
+            else if (Command == "dataDB")
+            {
+              await ReadBytes(Payload, LengthDataPayload);
+
+              if (IsStateDBDownload())
+              {
+                byte[] hashDataDB = SHA256.ComputeHash(
+                  Payload,
+                  0,
+                  LengthDataPayload);
+
+                if (!hashDataDB.IsAllBytesEqual(HashDBDownload))
+                  throw new ProtocolException(
+                    $"Unexpected dataDB with hash {hashDataDB.ToHexString()}.\n" +
+                    $"Excpected hash {HashDBDownload.ToHexString()}.");
+
+                ResetTimer();
+
+                if (Network.InsertDB_FlagContinue(this))
+                  await RequestDB();
+                else
+                  SetStateIdle();
+              }
+            }
+            else if (Command == "ping")
+            {
+              $"Received ping message.".Log(this, LogFiles, Token.LogEntryNotifier);
+
+              await ReadBytes(Payload, LengthDataPayload);
+
+              await SendMessage(new PongMessage(Payload));
+            }
+            else if (Command == "addr")
+            {
+              await ReadBytes(Payload, LengthDataPayload);
+              AddressMessage addressMessage = new(Payload);
+
+              Network.AddNetworkAddressesAdvertized(
+                addressMessage.NetworkAddresses);
+            }
+            else if (Command == "sendheaders")
+            {
+              await SendMessage(new SendHeadersMessage());
+            }
+            else if (Command == "feefilter")
+            {
+              await ReadBytes(Payload, LengthDataPayload);
+
+              FeeFilterMessage feeFilterMessage = new(Payload);
+              FeeFilterValue = feeFilterMessage.FeeFilterValue;
             }
             else if (Command == "reject")
             {

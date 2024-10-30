@@ -24,7 +24,7 @@ namespace BTokenLib
       {
         NotConnected,
         Idle,
-        HeaderSynchronization,
+        HeaderSync,
         BlockSynchronization,
         DBDownload,
         GetData,
@@ -34,7 +34,7 @@ namespace BTokenLib
 
       public StateProtocol State = StateProtocol.NotConnected;
       public DateTime TimeLastStateTransition;
-      public DateTime TimeLastSynchronization;
+      public DateTime TimeLastSync;
 
       public Header HeaderSync;
       public Block BlockSync;
@@ -378,7 +378,7 @@ namespace BTokenLib
             return;
           }
 
-          State = StateProtocol.HeaderSynchronization;
+          State = StateProtocol.HeaderSync;
         }
 
         $"Advertize block {block}.".Log(this, LogFiles, Token.LogEntryNotifier);
@@ -388,18 +388,16 @@ namespace BTokenLib
         SetStateIdle();
       }
 
-      public bool TrySync(Peer peerSyncCurrent = null)
+      public bool TrySync(DateTime timeStartLastSyncNetwork)
       {
         lock (this)
         {
-          if ((peerSyncCurrent == null || TimeLastSynchronization < peerSyncCurrent.TimeLastSynchronization)
-            && State == StateProtocol.Idle)
-          {
-            State = StateProtocol.HeaderSynchronization;
-            return true;
-          }
+          if ((timeStartLastSyncNetwork <= TimeLastSync) || State != StateProtocol.Idle)
+            return false;
 
-          return false;
+          TimeLastSync = DateTime.Now;
+          State = StateProtocol.HeaderSync;
+          return true;
         }
       }
 
@@ -418,19 +416,19 @@ namespace BTokenLib
         }
       }
       
-      public void SetStateHeaderSynchronization()
+      public void SetStateHeaderSync()
       {
         lock (this)
         {
           TimeLastStateTransition = DateTime.Now;
-          State = StateProtocol.HeaderSynchronization;
+          State = StateProtocol.HeaderSync;
         }
       }
 
-      public bool IsStateHeaderSynchronization()
+      public bool IsStateHeaderSync()
       {
         lock (this)
-          return State == StateProtocol.HeaderSynchronization;
+          return State == StateProtocol.HeaderSync;
       }
 
       bool IsStateAwaitingGetDataTX()
@@ -439,7 +437,7 @@ namespace BTokenLib
           return State == StateProtocol.GetData;
       }
 
-      public bool IsStateBlockSynchronization()
+      public bool IsStateBlockSync()
       {
         lock (this)
           return State == StateProtocol.BlockSynchronization;
