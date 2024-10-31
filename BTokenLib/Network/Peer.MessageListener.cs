@@ -72,15 +72,14 @@ namespace BTokenLib
               int startIndex = 0;
               int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
+              $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
+
               ResetTimer();
 
               if (countHeaders == 0)
               {
                 if (!IsStateHeaderSync())
-                {
-                  $"Receiving {countHeaders} headers. Appears to be in sync.".Log(this, LogFiles, Token.LogEntryNotifier);
                   goto LABEL_ListenForNextMessage;
-                }
 
                 Network.SyncBlocks();
               }

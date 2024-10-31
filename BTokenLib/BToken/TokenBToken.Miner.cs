@@ -11,8 +11,8 @@ namespace BTokenLib
   public partial class TokenBToken : Token
   {
     const int COUNT_BYTES_PER_BLOCK_MAX = 1000;
-    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 5;
-    const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 10;
+    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 4;
+    const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 5;
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
@@ -71,15 +71,7 @@ namespace BTokenLib
             if (TokenParent.TryBroadcastTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
             {
               $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
-
               SaveBlockMined(block);
-
-              // timeMSLoop = (int)(tokenAnchor.TX.Fee * TIMESPAN_DAY_SECONDS * 1000 /
-              // COUNT_SATOSHIS_PER_DAY_MINING);
-
-              // timeMSLoop = RandomGeneratorMiner.Next(
-              // timeMSCreateNextAnchorToken / 2,
-              // timeMSCreateNextAnchorToken * 3 / 2);
             }
           }
 

@@ -46,30 +46,11 @@ namespace BTokenLib
       if (tXCount == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
 
-      if (tXCount == 1)
-      {
-        TX tX = Token.ParseTX(buffer, ref startIndex, SHA256);
-        TXs.Add(tX);
-      }
-      else
-      {
-        int tXsLengthMod2 = tXCount & 1;
-        var merkleList = new byte[tXCount + tXsLengthMod2][];
-
-        for (int t = 0; t < tXCount; t += 1)
-        {
-          TX tX = Token.ParseTX(buffer, ref startIndex, SHA256);
-          TXs.Add(tX);
-
-          merkleList[t] = tX.Hash;
-        }
-
-        if (tXsLengthMod2 != 0)
-          merkleList[tXCount] = merkleList[tXCount - 1];
-      }
+      for (int t = 0; t < tXCount; t += 1)
+        TXs.Add(Token.ParseTX(buffer, ref startIndex, SHA256));
 
       if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
-        throw new ProtocolException("Payload hash not equal to merkle root.");
+        throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");
 
       Header.CountTXs = TXs.Count;
       Header.CountBytesTXs = startIndex - startIndexBeginningOfTXs;
@@ -105,9 +86,7 @@ namespace BTokenLib
           merkleList[i2].CopyTo(leafPair, 0);
           merkleList[i2 + 1].CopyTo(leafPair, HASH_BYTE_SIZE);
 
-          merkleList[i] =
-            SHA256.ComputeHash(
-              SHA256.ComputeHash(leafPair));
+          merkleList[i] = SHA256.ComputeHash(SHA256.ComputeHash(leafPair));
         }
 
         if (merkleIndex == 1)
