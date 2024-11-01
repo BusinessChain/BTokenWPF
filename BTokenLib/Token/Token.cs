@@ -307,11 +307,11 @@ namespace BTokenLib
 
       int heightBlock = HeaderTip.Height + 1;
 
-      try
+      while (
+        heightBlock <= heightMax &&
+        Archiver.TryLoadBlock(heightBlock, out Block block))
       {
-        while (
-          heightBlock <= heightMax &&
-          Archiver.TryLoadBlock(heightBlock, out Block block))
+        try
         {
           block.Header.AppendToHeader(HeaderTip);
 
@@ -324,11 +324,13 @@ namespace BTokenLib
 
           heightBlock += 1;
         }
-      }
-      finally
-      {
-        $"{this} completed loading from disk with block tip {HeaderTip} at height {HeaderTip.Height}."
-          .Log(this, LogFile, LogEntryNotifier);
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          .Log(this, LogEntryNotifier);
+
+          Archiver.DeleteBlock(heightBlock);
+        }
       }
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
@@ -606,12 +608,20 @@ namespace BTokenLib
 
     public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
     {
-      if (TryGetHeader(hash, out Header header))
-        if (Archiver.TryLoadBlockBytes(header.Height, out buffer))
-          return true;
-
       buffer = null;
-      return false;
+
+      if (TryGetHeader(hash, out Header header))
+        try
+        {
+          buffer = Archiver.LoadBlockBytes(header.Height);
+        }
+        catch (Exception ex)
+        {
+          $"{ex.GetType().Name} when loading block {hash.ToHexString()} from disk."
+          .Log(this, LogEntryNotifier);
+        }
+
+      return buffer != null;
     }
 
     public virtual void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
@@ -741,23 +751,15 @@ namespace BTokenLib
 
     public bool TryGetHeader(byte[] headerHash, out Header header)
     {
+      header = null;
+
       int key = BitConverter.ToInt32(headerHash, 0);
 
       lock (HeaderIndex)
-        if (HeaderIndex.TryGetValue(
-          key,
-          out List<Header> headers))
-        {
-          foreach (Header h in headers)
-            if (headerHash.IsAllBytesEqual(h.Hash))
-            {
-              header = h;
-              return true;
-            }
-        }
+        if (HeaderIndex.TryGetValue(key, out List<Header> headers))
+          header = headers.FirstOrDefault(h => headerHash.IsAllBytesEqual(h.Hash));
 
-      header = null;
-      return false;
+      return header != null;
     }
 
     public void IndexingHeaderTip()

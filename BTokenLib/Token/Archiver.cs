@@ -28,16 +28,22 @@ namespace BTokenLib
       PathBlockArchive = PathBlockArchiveMain;
     }
 
+    public void DeleteBlock(int blockHeight)
+    {
+      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+      File.Delete(pathBlock);
+    }
+
     public bool TryLoadBlock(int blockHeight, out Block block)
     {
       block = null;
-      string pathBlockArchive = Path.Combine(PathBlockArchive, blockHeight.ToString());
+      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
 
       while (true)
         try
         {
-          byte[] fileBlockMined = File.ReadAllBytes(pathBlockArchive);
-          block = Token.ParseBlock(fileBlockMined);
+          byte[] buffer = File.ReadAllBytes(pathBlock);
+          block = Token.ParseBlock(buffer);
           return true;
         }
         catch (FileNotFoundException)
@@ -46,45 +52,25 @@ namespace BTokenLib
         }
         catch (IOException ex)
         {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
+          ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
             $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
 
           Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS * 1000);
         }
         catch (Exception ex)
         {
-            $"{ex.GetType().Name} when trying to load block height {blockHeight} from archive."
-            .Log(this, Token.LogEntryNotifier);
+          $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
+          .Log(this, Token.LogEntryNotifier);
+
+          DeleteBlock(blockHeight);
 
           return false;
         }
     }
 
-    public bool TryLoadBlockBytes(int blockHeight, out byte[] buffer)
+    public byte[] LoadBlockBytes(int blockHeight)
     {
-      buffer = null;
-
-      string pathBlockArchive = Path.Combine(PathBlockArchive, blockHeight.ToString());
-
-      while (true)
-      {
-        try
-        {
-          buffer = File.ReadAllBytes(pathBlockArchive);
-          return true;
-        }
-        catch (FileNotFoundException)
-        {
-          return false;
-        }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlockArchive}: {ex.Message}.\n" +
-            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
-
-          Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS);
-        }
-      }
+      return File.ReadAllBytes(Path.Combine(PathBlockArchive, blockHeight.ToString()));
     }
 
     public void SetBlockPathToFork()
@@ -155,6 +141,5 @@ namespace BTokenLib
           Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS);
         }
     }
-
   }
 }

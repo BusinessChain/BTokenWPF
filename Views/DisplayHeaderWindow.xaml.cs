@@ -54,7 +54,7 @@ namespace BTokenWPF
         foreach (TX tX in block.TXs)
           ListBoxTXs.Items.Add(new ListBoxItemTX(tX));
       else
-        MessageBox.Show("Block not found in archive, no transaction data shown.");
+        MessageBox.Show("Could not load block from disk.");
     }
 
     void ListBoxTXs_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
