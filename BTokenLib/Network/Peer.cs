@@ -234,15 +234,11 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
-        ResetTimer("receive headers", TIMEOUT_RESPONSE_MILLISECONDS);
-
         try
         {
-          await SendMessage(
-            new GetHeadersMessage(locator, ProtocolVersion));
+          await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
 
-          ($"Send getheaders.\n" +
-            $"locator: {locator.First()} ... {locator.Last()}")
+          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}"
             .Log(this, LogFiles, Token.LogEntryNotifier);
         }
         catch (Exception ex)
@@ -252,6 +248,8 @@ namespace BTokenLib
 
           throw ex;
         }
+
+        ResetTimer("receive headers", TIMEOUT_RESPONSE_MILLISECONDS);
       }
 
       public async Task<bool> TryAdvertizeTX(TX tX)

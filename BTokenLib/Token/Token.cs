@@ -113,6 +113,7 @@ namespace BTokenLib
         token = TokenParent;
 
       token.LoadImage();
+      token.LoadTXPool();
       token.StartNetwork();
     }
 
@@ -334,8 +335,6 @@ namespace BTokenLib
       }
 
       TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
-
-      LoadTXPool();
     }
 
     public void LoadTXPool()
@@ -359,6 +358,8 @@ namespace BTokenLib
         if (TXPool.TryAddTX(tX))
           Wallet.InsertTXUnconfirmed(tX);
       }
+
+      TokensChild.ForEach(t => t.LoadTXPool());
     }
 
     public async Task RebroadcastTXsUnconfirmed()
@@ -448,10 +449,12 @@ namespace BTokenLib
       {
         Token tokenChild = TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key));
 
-        if(tokenChild != null && tokenChild.TryGetBlockMined(hashBlockChildToken.Value, out block))
+        if(tokenChild?.TryGetBlockMined(hashBlockChildToken.Value, out block) == true)
           tokenChild.InsertBlock(block);
       }
     }
+    public virtual bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
+    { throw new NotImplementedException(); }
 
     protected void InsertInDatabase(Block block)
     {
@@ -628,9 +631,6 @@ namespace BTokenLib
     { throw new NotImplementedException(); }
 
     public virtual void DeleteDB()
-    { throw new NotImplementedException(); }
-
-    public virtual bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
     { throw new NotImplementedException(); }
 
     public virtual void DeleteBlocksMinedUnconfirmed() { }

@@ -163,43 +163,21 @@ namespace BTokenLib
     {
       blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
 
-      if (blockMined != null)
-        return true;
+      if (blockMined == null)
+      {
+        string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
 
-      string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
-
-      while (true)
         try
         {
-          byte[] fileBlockMined = File.ReadAllBytes(pathBlockMined);
-
-          try
-          {
-            blockMined = ParseBlock(fileBlockMined);
-            return true;
-          }
-          catch (Exception ex)
-          {
-            $"{ex.GetType().Name} when attempting to parse file {pathBlockMined}: {ex.Message}"
-              .Log(this, LogEntryNotifier);
-
-            break;
-          }
+          blockMined = ParseBlock(File.ReadAllBytes(pathBlockMined));
         }
-        catch (FileNotFoundException)
+        catch (Exception ex)
         {
-          break;
+          $"{ex.GetType().Name} when attempting to load block {pathBlockMined}: {ex.Message}.\n".Log(this, LogEntryNotifier);
         }
-        catch (IOException ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlockMined}: {ex.Message}.\n" +
-            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+      }
 
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-          continue;
-        }
-
-      return false;
+      return blockMined != null;
     }
   }
 }

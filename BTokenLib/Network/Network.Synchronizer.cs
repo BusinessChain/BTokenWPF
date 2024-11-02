@@ -203,7 +203,7 @@ namespace BTokenLib
 
       ExitSync();
 
-      $"\nSynchronization of {Token.GetName()} completed."
+      $"Synchronization of {Token.GetName()} completed."
         .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       foreach (Token token in Token.TokensChild)
