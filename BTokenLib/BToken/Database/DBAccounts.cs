@@ -19,7 +19,7 @@ namespace BTokenLib
     List<FileDB> FilesDB = new();
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
 
-    const int LENGTH_RECORD_DB = 41;
+    const int LENGTH_ACCOUNT = 41;
     const int LENGTH_ID_ACCOUNT = 25;
 
     SHA256 SHA256 = SHA256.Create();
@@ -33,34 +33,32 @@ namespace BTokenLib
       for (int i = 0; i < COUNT_CACHES; i += 1)
         Caches.Add(new CacheDB());
 
-      Directory.CreateDirectory(
-        Path.Combine(Directory.GetCurrentDirectory(), PathRootDB));
+      Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), PathRootDB));
 
       for (int i = 0; i < COUNT_FILES_DB; i += 1)
-        FilesDB.Add(new FileDB(
-          Path.Combine(PathRootDB, i.ToString())));
+        FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
     }
 
     public void LoadImage(string path)
     {
-      byte[] bytesRecord = new byte[LENGTH_RECORD_DB];
+      byte[] bytesAccount = new byte[LENGTH_ACCOUNT];
 
       for (int i = 0; i < COUNT_CACHES; i += 1)
         using (FileStream fileCache = new(
           Path.Combine(path, "cache", i.ToString()),
           FileMode.Open))
         {
-          while(fileCache.Read(bytesRecord) == LENGTH_RECORD_DB)
+          while(fileCache.Read(bytesAccount) == LENGTH_ACCOUNT)
           {
-            Account record = new()
+            Account account = new()
             {
-              IDAccount = bytesRecord.Take(LENGTH_ID_ACCOUNT).ToArray(),
-              BlockHeightAccountInit = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT),
-              Nonce = BitConverter.ToInt32(bytesRecord, LENGTH_ID_ACCOUNT + 4),
-              Value = BitConverter.ToInt64(bytesRecord, LENGTH_ID_ACCOUNT + 8)
+              ID = bytesAccount.Take(LENGTH_ID_ACCOUNT).ToArray(),
+              BlockHeightAccountInit = BitConverter.ToInt32(bytesAccount, LENGTH_ID_ACCOUNT),
+              Nonce = BitConverter.ToInt32(bytesAccount, LENGTH_ID_ACCOUNT + 4),
+              Value = BitConverter.ToInt64(bytesAccount, LENGTH_ID_ACCOUNT + 8)
             };
 
-            Caches[i].Add(record.IDAccount, record);
+            Caches[i].Add(account.ID, account);
           }
         }
     }
@@ -72,8 +70,7 @@ namespace BTokenLib
       Directory.CreateDirectory(pathDirectoryCache);
 
       for (int i = 0; i < COUNT_CACHES; i += 1)
-        Caches[i].CreateImage(
-          Path.Combine(pathDirectoryCache, i.ToString()));
+        Caches[i].CreateImage(Path.Combine(pathDirectoryCache, i.ToString()));
     }
 
     public void ClearCache()
@@ -112,21 +109,21 @@ namespace BTokenLib
 
         while (index < lengthDataInBuffer)
         {
-          Account recordDB = new();
+          Account account = new();
 
-          recordDB.BlockHeightAccountInit = BitConverter.ToInt32(bufferDB, index);
+          account.BlockHeightAccountInit = BitConverter.ToInt32(bufferDB, index);
           index += 4;
 
-          recordDB.Nonce = BitConverter.ToInt32(bufferDB, index);
+          account.Nonce = BitConverter.ToInt32(bufferDB, index);
           index += 4;
 
-          recordDB.Value = BitConverter.ToUInt32(bufferDB, index);
+          account.Value = BitConverter.ToUInt32(bufferDB, index);
           index += 8;
 
-          Array.Copy(bufferDB, index, recordDB.IDAccount, 0, 32);
+          Array.Copy(bufferDB, index, account.ID, 0, 32);
           index += 32;
 
-          Caches[indexCache].Add(recordDB.IDAccount, recordDB);
+          Caches[indexCache].Add(account.ID, account);
         }
       }
       else
@@ -219,7 +216,7 @@ namespace BTokenLib
         account.SpendTX(tX);
 
         if (account.Value == 0)
-          Caches[c].Remove(account.IDAccount);
+          Caches[c].Remove(account.ID);
 
         return true;
       }
@@ -244,10 +241,7 @@ namespace BTokenLib
       return false;
     }
 
-    bool TryGetAccountCache(
-      byte[] iDAccount, 
-      out Account account, 
-      bool flagRaisePriority = false)
+    bool TryGetAccountCache(byte[] iDAccount, out Account account, bool flagRaisePriority = false)
     {
       int c = IndexCacheTopPriority;
 
@@ -260,7 +254,7 @@ namespace BTokenLib
       {
         if (Caches[c].TryGetValue(iDAccount, out account))
         {
-          if(flagRaisePriority)
+          if (flagRaisePriority)
           {
             Caches[c].Remove(iDAccount);
             AddToCacheTopPriority(account);
@@ -289,7 +283,7 @@ namespace BTokenLib
             BlockHeightAccountInit = blockHeight,
             Nonce = 0,
             Value = output.Value,
-            IDAccount = output.IDAccount
+            ID = output.IDAccount
           };
 
         AddToCacheTopPriority(account);
@@ -298,14 +292,14 @@ namespace BTokenLib
 
     void AddToCacheTopPriority(Account account)
     {
-      Caches[IndexCacheTopPriority].Add(account.IDAccount, account);
+      Caches[IndexCacheTopPriority].Add(account.ID, account);
 
       if(Caches[IndexCacheTopPriority].Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
         IndexCacheTopPriority = (IndexCacheTopPriority + 1 + COUNT_CACHES) % COUNT_CACHES;
 
         foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCacheTopPriority])
-          FilesDB[itemInCache.Value.IDAccount[0]].WriteRecordDBAccount(itemInCache.Value);
+          FilesDB[itemInCache.Value.ID[0]].WriteRecordDBAccount(itemInCache.Value);
 
         Caches[IndexCacheTopPriority].Clear();
       }
@@ -315,10 +309,25 @@ namespace BTokenLib
     {
       long countBytes = 0;
 
-      Caches.ForEach(c => countBytes += c.Count * LENGTH_RECORD_DB);
+      Caches.ForEach(c => countBytes += c.Count * LENGTH_ACCOUNT);
       FilesDB.ForEach(f => countBytes += f.Length);
 
       return countBytes;
+    }
+
+    public List<(Account account, string locationAccount, int indexSource)> GetAccounts()
+    {
+      List<(Account account, string sourceObject, int indexCache)> itemsAccount = new();
+
+      for (int i = 0; i < COUNT_CACHES; i += 1)
+        foreach (Account accountInCache in Caches[i].Values)
+          itemsAccount.Add((accountInCache, Caches[i].GetType().Name, i));
+
+      for (int i = 0; i < COUNT_FILES_DB; i += 1)
+        foreach (Account accountInFile in FilesDB[i].GetAccounts())
+          itemsAccount.Add((accountInFile, FilesDB[i].GetType().Name, i));
+
+      return itemsAccount;
     }
   }
 }

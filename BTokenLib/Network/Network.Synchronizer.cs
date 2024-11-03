@@ -203,11 +203,9 @@ namespace BTokenLib
 
       ExitSync();
 
-      $"Synchronization of {Token.GetName()} completed."
-        .Log(this, Token.LogFile, Token.LogEntryNotifier);
+      $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-      foreach (Token token in Token.TokensChild)
-        token.Network.StartSync();
+      Token.TokensChild.ForEach(t => t.Network.StartSync());
     }
 
     bool InsertBlock_FlagContinue(Peer peer)

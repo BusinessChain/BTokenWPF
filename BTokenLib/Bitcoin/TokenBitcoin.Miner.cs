@@ -16,6 +16,7 @@ namespace BTokenLib
     const int COUNT_TXS_PER_BLOCK_MAX = 3;
     int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);
 
+
     protected override void RunMining()
     {
       Parallel.For(

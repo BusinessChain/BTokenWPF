@@ -37,9 +37,11 @@ namespace BTokenWPF
           {
             UpdateListBoxHeaderchain();
 
+            UpdateListBoxTXPool();
+
             UpdateTextBoxWallet();
 
-            UpdateListBoxTXPool();
+            UpdateDBEntries();
 
             Token.ReleaseLock();
           }
@@ -81,9 +83,9 @@ namespace BTokenWPF
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
-      if (Token.Wallet is WalletBitcoin)
+      if (Token.Wallet is WalletBitcoin walletBitcoin)
       {
-        foreach (TXOutputWallet tXOutputWallet in ((WalletBitcoin)Token.Wallet).OutputsSpendable)
+        foreach (TXOutputWallet tXOutputWallet in walletBitcoin.OutputsSpendable)
           if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
             ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "confirmed"));
 
@@ -93,14 +95,23 @@ namespace BTokenWPF
       }
     }
 
+    void UpdateDBEntries()
+    {
+      if(Token is TokenBToken tokenBToken)
+      {
+        ListDBEntries.Items.Clear();
+
+        tokenBToken.DBAccounts.GetAccounts()
+        .ForEach(t => ListDBEntries.Items.Add(new ListBoxItemDBEntry(t.account, t.locationAccount, t.indexSource)));
+      }
+    }
+
     void UpdateListBoxTXPool()
     {
-      List<TX> tXs = Token.TXPool.GetTXs(countMax: int.MaxValue, out long feeTXs);
-
       ListBoxTXPool.Items.Clear();
 
-      foreach (TX tX in tXs)
-        ListBoxTXPool.Items.Add(new ListBoxItemTX(tX));
+      Token.TXPool.GetTXs(countMax: int.MaxValue, out long feeTXs)
+        .ForEach(t => ListBoxTXPool.Items.Add(new ListBoxItemTX(t)));
     }
 
     void ListBoxTXPool_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

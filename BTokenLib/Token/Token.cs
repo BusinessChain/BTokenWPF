@@ -477,8 +477,6 @@ namespace BTokenLib
 
           if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
           {
-            $"Detected anchor token {tX} in block {block} referencing {tokenAnchor.HashBlockReferenced.ToHexString()}.".Log(this, LogEntryNotifier);
-
             if (!biggestDifferencesTemp.TryGetValue(tokenAnchor.IDToken, out biggestDifferenceTemp))
               biggestDifferenceTemp = new byte[32];
 

@@ -35,31 +35,52 @@
             <ListBox Name="ListBoxPeers" FontSize="10"/>
         </StackPanel>
 
-        <Label Content="Wallet" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
-        <StackPanel Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal">
-                <Label Name="LabelAccount" Content="Account:" FontWeight="Bold"/>
-                <TextBox Name="TextBoxAccount" BorderThickness="0" VerticalAlignment="Center"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <Label Name="LabelBalanceSatoshies" Content="Balance:" FontWeight= "Bold"/>
-                <TextBox Name="TextBoxBalanceSatoshies" BorderThickness="0" VerticalAlignment="Center"/>
-                <TextBox Name="TextBoxBalanceSatoshiesUnconfirmed" BorderThickness="0" Foreground="Red" VerticalAlignment="Center"/>
-            </StackPanel>
-            <Label Name="LabelAddress" Content="Address"/>
-            <TextBox Name="TextBoxAddress"/>
-            <Label Name="LabelValue" Content="Value"/>
-            <TextBox Name="TextBoxValue"/>
-            <Label Name="LabelFee" Content="Fee"/>
-            <TextBox Name="TextBoxFee"/>
-            <Label Name="LabelTXID" Content="TXID"/>
-            <TextBox Name="TextBoxTXID"/>
-            <Label Name="LabelRawTX" Content="RawTX"/>
-            <TextBox Name="TextBoxRawTX"/>
-            <Button Name="ButtonMakeTX" Content="Make TX" Click="ButtonMakeTX_Click" Margin="0,5,0,5"/>
-            <ListBox Name="ListBoxWallet" FontSize="10"/>
+        <Label Content="Wallet / Database" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" FontSize="14" FontWeight="Bold"/>
 
-        </StackPanel>
+        <Grid ShowGridLines="True" Grid.Row="2" Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0"  HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelAccount" Content="Account:" FontWeight="Bold"/>
+                    <TextBox Name="TextBoxAccount" BorderThickness="0" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelBalanceSatoshies" Content="Balance:" FontWeight= "Bold"/>
+                    <TextBox Name="TextBoxBalanceSatoshies" BorderThickness="0" VerticalAlignment="Center"/>
+                    <TextBox Name="TextBoxBalanceSatoshiesUnconfirmed" BorderThickness="0" Foreground="Red" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelAddress" Content="Address"/>
+                    <TextBox Name="TextBoxAddress" Width="250"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelValue" Content="Value"/>
+                    <TextBox Name="TextBoxValue" Width="50"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelFee" Content="Fee"/>
+                    <TextBox Name="TextBoxFee" Width="50"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelTXID" Content="TXID"/>
+                    <TextBox Name="TextBoxTXID" Width="250"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Name="LabelRawTX" Content="RawTX"/>
+                    <TextBox Name="TextBoxRawTX" Width="250"/>
+                </StackPanel>
+
+                <Button Name="ButtonMakeTX" Content="Make TX" Click="ButtonMakeTX_Click" Margin="0,5,0,5"/>
+                <ListBox Name="ListBoxWallet" FontSize="10"/>
+
+            </StackPanel>
+
+            <ListBox Grid.Row="1" Name="ListDBEntries" FontSize="10"/>
+        </Grid>
 
         <Label Content="Blockchain / TXPool" Grid.Row="1" Grid.Column="2"  HorizontalAlignment="Center" FontWeight="Bold" FontSize="14"/>
 

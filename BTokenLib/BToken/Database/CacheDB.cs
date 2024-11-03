@@ -26,20 +26,20 @@ namespace BTokenLib
       public byte[] ComputeHash()
       {
         int i = 0;
-        byte[] bytesCaches = new byte[Values.Count * LENGTH_RECORD_DB];
+        byte[] bytesCaches = new byte[Values.Count * LENGTH_ACCOUNT];
 
-        foreach (Account record in Values)
+        foreach (Account account in Values)
         {
-          record.IDAccount.CopyTo(bytesCaches, i);
+          account.ID.CopyTo(bytesCaches, i);
           i += LENGTH_ID_ACCOUNT;
 
-          BitConverter.GetBytes(record.BlockHeightAccountInit).CopyTo(bytesCaches, i);
+          BitConverter.GetBytes(account.BlockHeightAccountInit).CopyTo(bytesCaches, i);
           i += 4;
 
-          BitConverter.GetBytes(record.Nonce).CopyTo(bytesCaches, i);
+          BitConverter.GetBytes(account.Nonce).CopyTo(bytesCaches, i);
           i += 4;
 
-          BitConverter.GetBytes(record.Value).CopyTo(bytesCaches, i);
+          BitConverter.GetBytes(account.Value).CopyTo(bytesCaches, i);
           i += 8;
         }
 
@@ -49,28 +49,28 @@ namespace BTokenLib
       public void CreateImage(string path)
       {
         using (FileStream file = new(path, FileMode.Create))
-          foreach (Account record in Values)
+          foreach (Account account in Values)
           {
-            file.Write(record.IDAccount);
-            file.Write(BitConverter.GetBytes(record.Nonce));
-            file.Write(BitConverter.GetBytes(record.Value));
+            file.Write(account.ID);
+            file.Write(BitConverter.GetBytes(account.Nonce));
+            file.Write(BitConverter.GetBytes(account.Value));
           }
       }
     
       public byte[] GetBytes()
       {
-        byte[] dataDB = new byte[LENGTH_RECORD_DB * Count];
+        byte[] dataDB = new byte[LENGTH_ACCOUNT * Count];
         int index = 0;
 
-        foreach(Account recordDB in Values)
+        foreach(Account account in Values)
         {
-          BitConverter.GetBytes(recordDB.Nonce).CopyTo(dataDB, index);
+          BitConverter.GetBytes(account.Nonce).CopyTo(dataDB, index);
           index += 8;
 
-          BitConverter.GetBytes(recordDB.Value).CopyTo(dataDB, index);
+          BitConverter.GetBytes(account.Value).CopyTo(dataDB, index);
           index += 8;
 
-          recordDB.IDAccount.CopyTo(dataDB, index);
+          account.ID.CopyTo(dataDB, index);
           index += 32;
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
+using System.Windows.Documents;
 
 
 namespace BTokenLib
@@ -9,9 +10,7 @@ namespace BTokenLib
   {
     class FileDB : FileStream
     { 
-      byte[] TempByteArrayCopyLastRecord = new byte[LENGTH_RECORD_DB];
-
-      SHA256 SHA256 = SHA256.Create();
+      byte[] TempByteArrayCopyLastRecord = new byte[LENGTH_ACCOUNT];
 
 
       public FileDB(string path) : base(
@@ -28,7 +27,7 @@ namespace BTokenLib
         out Account account,
         bool flagRemoveAccount = false)
       {
-        Position = 0;
+        Seek(0, SeekOrigin.Begin);
 
         while (Position < Length)
         {
@@ -47,7 +46,7 @@ namespace BTokenLib
 
               account = new()
               {
-                IDAccount = iDAccount,
+                ID = iDAccount,
                 BlockHeightAccountInit = BitConverter.ToInt32(nonce),
                 Nonce = BitConverter.ToInt32(nonce),
                 Value = BitConverter.ToInt64(value)
@@ -55,16 +54,16 @@ namespace BTokenLib
 
               if(flagRemoveAccount)
               {
-                long positionCurrentRecord = Position - LENGTH_RECORD_DB;
+                long positionCurrentRecord = Position - LENGTH_ACCOUNT;
 
-                Position = Length - LENGTH_RECORD_DB;
+                Position = Length - LENGTH_ACCOUNT;
                 Read(TempByteArrayCopyLastRecord);
 
                 Position = positionCurrentRecord;
 
                 Write(TempByteArrayCopyLastRecord);
 
-                SetLength(Length - LENGTH_RECORD_DB);
+                SetLength(Length - LENGTH_ACCOUNT);
 
                 Seek(0, SeekOrigin.End);
               }
@@ -72,7 +71,7 @@ namespace BTokenLib
               return true;
             }
 
-          Position += LENGTH_RECORD_DB - Position % LENGTH_RECORD_DB;
+          Position += LENGTH_ACCOUNT - Position % LENGTH_ACCOUNT;
         }
 
         account = null;
@@ -81,10 +80,42 @@ namespace BTokenLib
 
       public void WriteRecordDBAccount(Account account)
       {
-        Write(account.IDAccount);
+        Write(account.ID);
         Write(BitConverter.GetBytes(account.BlockHeightAccountInit));
         Write(BitConverter.GetBytes(account.Nonce));
         Write(BitConverter.GetBytes(account.Value));
+      }
+
+      public List<Account> GetAccounts()
+      {
+        List<Account> account = new();
+
+        Seek(0, SeekOrigin.Begin);
+
+        while (Position < Length)
+        {
+          byte[] iDAccount = new byte[32];
+          Read(iDAccount);
+
+          byte[] blockheightAccountInit = new byte[4];
+          Read(blockheightAccountInit);
+
+          byte[] nonce = new byte[4];
+          Read(nonce);
+
+          byte[] value = new byte[8];
+          Read(value);
+
+          account.Add(new()
+          {
+            ID = iDAccount,
+            BlockHeightAccountInit = BitConverter.ToInt32(nonce),
+            Nonce = BitConverter.ToInt32(nonce),
+            Value = BitConverter.ToInt64(value)
+          });
+        }
+
+        return account;
       }
     }
   }

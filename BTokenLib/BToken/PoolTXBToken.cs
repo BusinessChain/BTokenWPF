@@ -111,16 +111,16 @@ namespace BTokenLib
 
       accounUnconfirmed.BlockHeightAccountInit = account.BlockHeightAccountInit;
       accounUnconfirmed.Nonce = account.Nonce;
-      accounUnconfirmed.IDAccount = account.IDAccount;
+      accounUnconfirmed.ID = account.ID;
       accounUnconfirmed.Value = account.Value;
 
-      if (TXsByIDAccountSource.TryGetValue(account.IDAccount, out List<TXBToken> tXsInPool))
+      if (TXsByIDAccountSource.TryGetValue(account.ID, out List<TXBToken> tXsInPool))
       {
         accounUnconfirmed.Nonce = tXsInPool.Last().Nonce + 1;
         accounUnconfirmed.Value -= tXsInPool.Sum(t => t.Value);
       }
 
-      if (OutputValuesByIDAccount.TryGetValue(account.IDAccount, out long valueOutputs))
+      if (OutputValuesByIDAccount.TryGetValue(account.ID, out long valueOutputs))
         accounUnconfirmed.Value += valueOutputs;
 
       return accounUnconfirmed;

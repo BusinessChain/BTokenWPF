@@ -54,8 +54,7 @@ namespace BTokenLib
 
       SHA256 sHA256 = SHA256.Create();
 
-      byte[] checksum = sHA256.ComputeHash(
-        sHA256.ComputeHash(pubKey.ToArray()));
+      byte[] checksum = SHA256.HashData(SHA256.HashData(pubKey.ToArray()));
 
       pubKey.AddRange(checksum.Take(4));
 
