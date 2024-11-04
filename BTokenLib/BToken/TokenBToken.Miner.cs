@@ -150,7 +150,6 @@ namespace BTokenLib
         }
     }
 
-
     public override void DeleteBlocksMinedUnconfirmed()
     {
       BlocksMinedCache.Clear();

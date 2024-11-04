@@ -19,9 +19,6 @@ namespace BTokenLib
     List<FileDB> FilesDB = new();
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
 
-    const int LENGTH_ACCOUNT = 41;
-    const int LENGTH_ID_ACCOUNT = 25;
-
     SHA256 SHA256 = SHA256.Create();
     byte[] Hash;
 
@@ -41,26 +38,13 @@ namespace BTokenLib
 
     public void LoadImage(string path)
     {
-      byte[] bytesAccount = new byte[LENGTH_ACCOUNT];
-
       for (int i = 0; i < COUNT_CACHES; i += 1)
-        using (FileStream fileCache = new(
-          Path.Combine(path, "cache", i.ToString()),
-          FileMode.Open))
-        {
-          while(fileCache.Read(bytesAccount) == LENGTH_ACCOUNT)
+        using (FileStream file = new(Path.Combine(path, "cache", i.ToString()), FileMode.Open))
+          while (file.Position < file.Length)
           {
-            Account account = new()
-            {
-              ID = bytesAccount.Take(LENGTH_ID_ACCOUNT).ToArray(),
-              BlockHeightAccountInit = BitConverter.ToInt32(bytesAccount, LENGTH_ID_ACCOUNT),
-              Nonce = BitConverter.ToInt32(bytesAccount, LENGTH_ID_ACCOUNT + 4),
-              Value = BitConverter.ToInt64(bytesAccount, LENGTH_ID_ACCOUNT + 8)
-            };
-
+            Account account = new(file);
             Caches[i].Add(account.ID, account);
           }
-        }
     }
 
     public void CreateImage(string path)
@@ -88,54 +72,39 @@ namespace BTokenLib
       ClearCache();
     }
 
-    public void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
+    public void InsertDB(byte[] buffer, int lengthDataInBuffer)
     {
-      int index = 0;
+      int startIndex = 0;
 
-      if (bufferDB[index++] == 0x00)
+      byte dBType = buffer[startIndex++];
+
+      if (dBType == 0x00)
       {
-        FileDB fileDB = new(
-          Path.Combine(
-            PathRootDB,
-            bufferDB[index].ToString()));
+        FileDB fileDB = new(Path.Combine(PathRootDB, buffer[startIndex++].ToString()));
 
         FilesDB.Add(fileDB);
 
-        fileDB.Write(bufferDB, index, lengthDataInBuffer - 1);
+        fileDB.Write(buffer, startIndex, lengthDataInBuffer - 1);
       }
-      else if (bufferDB[index++] == 0x01)
+      else if (dBType == 0x01)
       {
-        int indexCache = bufferDB[index++];
+        int indexCache = buffer[startIndex++];
 
-        while (index < lengthDataInBuffer)
+        while (startIndex < lengthDataInBuffer)
         {
-          Account account = new();
-
-          account.BlockHeightAccountInit = BitConverter.ToInt32(bufferDB, index);
-          index += 4;
-
-          account.Nonce = BitConverter.ToInt32(bufferDB, index);
-          index += 4;
-
-          account.Value = BitConverter.ToUInt32(bufferDB, index);
-          index += 8;
-
-          Array.Copy(bufferDB, index, account.ID, 0, 32);
-          index += 32;
-
+          Account account = new(buffer, ref startIndex);
           Caches[indexCache].Add(account.ID, account);
         }
       }
       else
         throw new ProtocolException(
-          $"Invalid prefix {bufferDB[index]} in serialized DB data.");
+          $"Invalid prefix {buffer[startIndex]} in serialized DB data.");
     }
 
     public bool TryGetAccount(byte[] iDAccount, out Account account)
     {
-      if (TryGetAccountCache(iDAccount, out account))
-        return true;
-      else if (FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account))
+      if (TryGetAccountCache(iDAccount, out account) || 
+        FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account))
         return true;
 
       return false;
@@ -145,7 +114,7 @@ namespace BTokenLib
     {
       for (int i = 0; i < COUNT_CACHES; i += 1)
       {
-        byte[] hashCache = Caches[i].ComputeHash();
+        byte[] hashCache = SHA256.ComputeHash(Caches[i].GetBytes());
         hashCache.CopyTo(HashesCaches, i * hashCache.Length);
       }
 
@@ -159,8 +128,7 @@ namespace BTokenLib
 
       byte[] hashFilesDB = SHA256.ComputeHash(HashesFilesDB);
 
-      Hash = SHA256.ComputeHash(
-        hashCaches.Concat(hashFilesDB).ToArray());
+      Hash = SHA256.ComputeHash(hashCaches.Concat(hashFilesDB).ToArray());
     }
 
     public bool TryGetDB(byte[] hash, out byte[] dataDB)
@@ -203,8 +171,8 @@ namespace BTokenLib
       }
 
       throw new ProtocolException(
-        $"Account {tX.IDAccountSource.ToHexString()} referenced by TX\n" +
-        $"{tX.Hash.ToHexString()} not found in database.");
+        $"Account {tX.IDAccountSource.ToHexString()} referenced by\n" +
+        $"TX {tX} not found in database.");
     }
 
     bool TrySpendAccountCache(TXBToken tX)
@@ -280,10 +248,10 @@ namespace BTokenLib
         else
           account = new Account
           {
+            ID = output.IDAccount,
             BlockHeightAccountInit = blockHeight,
             Nonce = 0,
-            Value = output.Value,
-            ID = output.IDAccount
+            Value = output.Value
           };
 
         AddToCacheTopPriority(account);
@@ -299,7 +267,7 @@ namespace BTokenLib
         IndexCacheTopPriority = (IndexCacheTopPriority + 1 + COUNT_CACHES) % COUNT_CACHES;
 
         foreach(KeyValuePair<byte[], Account> itemInCache in Caches[IndexCacheTopPriority])
-          FilesDB[itemInCache.Value.ID[0]].WriteRecordDBAccount(itemInCache.Value);
+          itemInCache.Value.Serialize(FilesDB[itemInCache.Value.ID[0]]);
 
         Caches[IndexCacheTopPriority].Clear();
       }
@@ -309,7 +277,7 @@ namespace BTokenLib
     {
       long countBytes = 0;
 
-      Caches.ForEach(c => countBytes += c.Count * LENGTH_ACCOUNT);
+      Caches.ForEach(c => countBytes += c.Count * Account.LENGTH_ACCOUNT);
       FilesDB.ForEach(f => countBytes += f.Length);
 
       return countBytes;

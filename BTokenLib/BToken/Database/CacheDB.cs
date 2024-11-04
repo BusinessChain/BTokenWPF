@@ -23,58 +23,22 @@ namespace BTokenLib
           Remove(tX.IDAccountSource);
       }
 
-      public byte[] ComputeHash()
+      public byte[] GetBytes()
       {
-        int i = 0;
-        byte[] bytesCaches = new byte[Values.Count * LENGTH_ACCOUNT];
+        int startIndex = 0;
+        byte[] buffer = new byte[Account.LENGTH_ACCOUNT * Count];
 
         foreach (Account account in Values)
-        {
-          account.ID.CopyTo(bytesCaches, i);
-          i += LENGTH_ID_ACCOUNT;
+          account.Serialize(buffer, ref startIndex);
 
-          BitConverter.GetBytes(account.BlockHeightAccountInit).CopyTo(bytesCaches, i);
-          i += 4;
-
-          BitConverter.GetBytes(account.Nonce).CopyTo(bytesCaches, i);
-          i += 4;
-
-          BitConverter.GetBytes(account.Value).CopyTo(bytesCaches, i);
-          i += 8;
-        }
-
-        return SHA256.HashData(bytesCaches);
+        return buffer;
       }
 
       public void CreateImage(string path)
       {
         using (FileStream file = new(path, FileMode.Create))
           foreach (Account account in Values)
-          {
-            file.Write(account.ID);
-            file.Write(BitConverter.GetBytes(account.Nonce));
-            file.Write(BitConverter.GetBytes(account.Value));
-          }
-      }
-    
-      public byte[] GetBytes()
-      {
-        byte[] dataDB = new byte[LENGTH_ACCOUNT * Count];
-        int index = 0;
-
-        foreach(Account account in Values)
-        {
-          BitConverter.GetBytes(account.Nonce).CopyTo(dataDB, index);
-          index += 8;
-
-          BitConverter.GetBytes(account.Value).CopyTo(dataDB, index);
-          index += 8;
-
-          account.ID.CopyTo(dataDB, index);
-          index += 32;
-        }
-
-        return dataDB;
+            file.Write(account.Serialize());
       }
     }
   }
