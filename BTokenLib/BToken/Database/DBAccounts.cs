@@ -39,12 +39,16 @@ namespace BTokenLib
     public void LoadImage(string path)
     {
       for (int i = 0; i < COUNT_CACHES; i += 1)
-        using (FileStream file = new(Path.Combine(path, "cache", i.ToString()), FileMode.Open))
-          while (file.Position < file.Length)
-          {
-            Account account = new(file);
-            Caches[i].Add(account.ID, account);
-          }
+      {
+        int startIndex = 0;
+        byte[] buffer = File.ReadAllBytes(Path.Combine(path, "cache", i.ToString()));
+
+        while (startIndex < buffer.Length)
+        {
+          Account account = new(buffer, ref startIndex);
+          Caches[i].Add(account.ID, account);
+        }
+      }
     }
 
     public void CreateImage(string path)

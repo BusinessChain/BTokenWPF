@@ -346,7 +346,6 @@ namespace BTokenLib
           MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
       }
 
-
       void ResetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
       {
         if (descriptionTimeOut != "")

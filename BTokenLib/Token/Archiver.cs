@@ -109,9 +109,7 @@ namespace BTokenLib
 
     public void ArchiveBlock(Block block)
     {
-      string pathFile = Path.Combine(
-        PathBlockArchive, 
-        block.Header.Height.ToString());
+      string pathFile = Path.Combine(PathBlockArchive, block.Header.Height.ToString());
 
       while (true)
         try

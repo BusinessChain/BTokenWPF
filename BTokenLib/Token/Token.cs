@@ -253,9 +253,9 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void ForkChain(int heightFork)
+    public void ForkChain(int heightForkAncestor)
     {
-      LoadImage(heightFork);
+      LoadImage(heightForkAncestor);
       Archiver.SetBlockPathToFork();
     }
 
@@ -278,12 +278,13 @@ namespace BTokenLib
             .Log(this, LogFile, LogEntryNotifier);
 
           LoadImageHeaderchain(pathImage);
-          LoadImageDatabase(pathImage);
-          Wallet.LoadImage(pathImage);
 
           if (HeaderTip.Height > heightMax)
             throw new ProtocolException(
               $"Image height of {GetName()} higher than desired height {heightMax}.");
+
+          LoadImageDatabase(pathImage);
+          Wallet.LoadImage(pathImage);
 
           break;
         }

@@ -163,8 +163,7 @@ namespace BTokenLib
                   await Task.Delay(1000).ConfigureAwait(false);
                 }
 
-                "Terminate synchronization process."
-                  .Log(this, Token.LogFile, Token.LogEntryNotifier);
+                "Terminate synchronization process.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
                 return;
               }
