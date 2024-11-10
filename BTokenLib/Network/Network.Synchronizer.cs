@@ -122,11 +122,12 @@ namespace BTokenLib
           {
             if (HeaderDownload.HeaderAncestor != Token.HeaderTip)
             {
-              ($"Forking chain at height {HeaderDownload.HeaderAncestor.Height + 1} " +
-                $"after common ancestor {HeaderDownload.HeaderAncestor}.")
+              ($"Forking chain after common ancestor {HeaderDownload.HeaderAncestor} with height {HeaderDownload.HeaderAncestor.Height}.")
                 .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-              Token.ForkChain(HeaderDownload.HeaderAncestor.Height);
+              // Muss hier vorgängig die DB runtergeholt werden?
+              Token.LoadImage(HeaderDownload.HeaderAncestor.Height);
+              Token.Archiver.SetBlockPathToFork();
             }
 
             FlagSyncAbort = false;

@@ -5,7 +5,7 @@ namespace BTokenLib
 {
   partial class Network
   {
-    public class MessageNetwork
+    class MessageNetwork
     {
       public string Command;
 
@@ -14,16 +14,11 @@ namespace BTokenLib
       public int LengthDataPayload;
 
 
-
       public MessageNetwork(string command)
-        : this(
-            command,
-            new byte[0])
+        : this(command, new byte[0])
       { }
 
-      public MessageNetwork(
-        string command,
-        byte[] payload)
+      public MessageNetwork(string command, byte[] payload)
         : this(
             command,
             payload,

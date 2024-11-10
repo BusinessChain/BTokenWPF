@@ -76,40 +76,38 @@ namespace BTokenLib
 
               ResetTimer();
 
+              bool isHeadersUnsolicited = !IsStateHeaderSync();
+
               if (countHeaders == 0)
               {
-                if (!IsStateHeaderSync())
+                if (isHeadersUnsolicited)
                   goto LABEL_ListenForNextMessage;
 
                 Network.SyncBlocks();
               }
-              else
+              else if (!isHeadersUnsolicited || Network.TryEnterStateSync(this))
               {
                 int i = 0;
-                bool isHeadersReceivedWhenStateHeaderSync = IsStateHeaderSync();
 
-                if (IsStateHeaderSync() || Network.TryEnterStateSync(this))
+                while (i < countHeaders)
                 {
-                  while (i < countHeaders)
+                  Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+                  startIndex += 1;
+
+                  try
                   {
-                    Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-                    startIndex += 1;
-
-                    try
-                    {
-                      Network.HeaderDownload.InsertHeader(header);
-                    }
-                    catch (ProtocolException) when (!isHeadersReceivedWhenStateHeaderSync && i == 0)
-                    {
-                      await SendGetHeaders(Network.HeaderDownload.Locator);
-                      goto LABEL_ListenForNextMessage;
-                    }
-
-                    i += 1;
+                    Network.HeaderDownload.InsertHeader(header);
+                  }
+                  catch (ProtocolException) when (isHeadersUnsolicited && i == 0)
+                  {
+                    await SendGetHeaders(Network.HeaderDownload.Locator);
+                    goto LABEL_ListenForNextMessage;
                   }
 
-                  await SendGetHeaders(new List<Header> { Network.HeaderDownload.HeaderTip });
+                  i += 1;
                 }
+
+                await SendGetHeaders(new List<Header> { Network.HeaderDownload.HeaderTip });
               }
             }
             else if (Command == "getheaders")

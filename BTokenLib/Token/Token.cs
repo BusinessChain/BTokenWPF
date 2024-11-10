@@ -253,12 +253,6 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void ForkChain(int heightForkAncestor)
-    {
-      LoadImage(heightForkAncestor);
-      Archiver.SetBlockPathToFork();
-    }
-
     public void Reorganize()
     {
       Archiver.Reorganize();
@@ -271,6 +265,7 @@ namespace BTokenLib
       string pathImage = Path.Combine(GetName(), NameImage);
 
       while (true)
+      {
         try
         {
           ($"Load image of token {pathImage}" +
@@ -297,15 +292,14 @@ namespace BTokenLib
 
           try
           {
-            Directory.Move(
-              Path.Combine(GetName(), NameImageOld),
-              pathImage);
+            Directory.Move(Path.Combine(GetName(), NameImageOld), pathImage);
           }
           catch (DirectoryNotFoundException)
           {
             break;
           }
         }
+      }
 
       int heightBlock = HeaderTip.Height + 1;
 
@@ -454,6 +448,7 @@ namespace BTokenLib
           tokenChild.InsertBlock(block);
       }
     }
+
     public virtual bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
     { throw new NotImplementedException(); }
 

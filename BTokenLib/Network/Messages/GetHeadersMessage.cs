@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Collections.Generic;
 
 
 namespace BTokenLib
@@ -10,9 +9,7 @@ namespace BTokenLib
   {
     class GetHeadersMessage : MessageNetwork
     {
-      public GetHeadersMessage(
-        List<Header> headerLocator,
-        uint versionProtocol)
+      public GetHeadersMessage(List<Header> headerLocator, uint versionProtocol)
         : base("getheaders")
       {
         List<byte> payload = new();
@@ -24,8 +21,7 @@ namespace BTokenLib
           payload.AddRange(headerLocator.ElementAt(i).Hash);
 
         payload.AddRange((
-          "00000000000000000000000000000000" +
-          "00000000000000000000000000000000").ToBinary());
+          "0000000000000000000000000000000000000000000000000000000000000000").ToBinary());
 
         Payload = payload.ToArray();
         LengthDataPayload = Payload.Length;

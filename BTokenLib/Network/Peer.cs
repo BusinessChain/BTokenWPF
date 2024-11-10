@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
+
 namespace BTokenLib
 {
   partial class Network
@@ -249,7 +250,7 @@ namespace BTokenLib
           throw ex;
         }
 
-        ResetTimer("receive headers", TIMEOUT_RESPONSE_MILLISECONDS);
+        ResetTimer("Receive headers", TIMEOUT_RESPONSE_MILLISECONDS);
       }
 
       public async Task<bool> TryAdvertizeTX(TX tX)

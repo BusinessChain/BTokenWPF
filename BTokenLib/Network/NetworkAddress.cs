@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace BTokenLib
 {
@@ -42,11 +40,7 @@ namespace BTokenLib
         UInt16 port = BitConverter.ToUInt16(buffer, startIndex);
         startIndex += 2;
 
-        return new NetworkAddress(
-          unixTimeSeconds,
-          networkServices,
-          iPAddress,
-          port);
+        return new NetworkAddress(unixTimeSeconds, networkServices, iPAddress, port);
       }
     }
   }
