@@ -76,39 +76,40 @@ namespace BTokenLib
 
               ResetTimer();
 
-              bool isHeadersUnsolicited = !IsStateHeaderSync();
-
-              if (countHeaders == 0)
+              if (!IsStateHeaderSync())
               {
-                if (isHeadersUnsolicited)
+                if (countHeaders != 1)
+                  throw new ProtocolException($"Unsolicited headersMessage must contain exactly one header, but received {countHeaders}.");
+
+                Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+
+                SetStateHeaderSync();
+
+                try
+                {
+                  HeaderDownload.InsertHeader(header);
+                }
+                catch (ProtocolException)
+                {
+                  await SendGetHeaders(HeaderDownload.Locator);
                   goto LABEL_ListenForNextMessage;
-
-                Network.SyncBlocks();
+                }
               }
-              else if (!isHeadersUnsolicited || Network.TryEnterStateSync(this))
-              {
-                int i = 0;
-
-                while (i < countHeaders)
+              else if (countHeaders > 0)
+                for (int i = 0; i < countHeaders; i += 1)
                 {
                   Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
                   startIndex += 1;
 
-                  try
-                  {
-                    Network.HeaderDownload.InsertHeader(header);
-                  }
-                  catch (ProtocolException) when (isHeadersUnsolicited && i == 0)
-                  {
-                    await SendGetHeaders(Network.HeaderDownload.Locator);
-                    goto LABEL_ListenForNextMessage;
-                  }
-
-                  i += 1;
+                  HeaderDownload.InsertHeader(header);
                 }
-
-                await SendGetHeaders(new List<Header> { Network.HeaderDownload.HeaderTip });
+              else if(countHeaders == 0)
+              {
+                Network.SyncBlocks(this);
+                goto LABEL_ListenForNextMessage;
               }
+
+              await SendGetHeaders(new List<Header> { HeaderDownload.HeaderTip });
             }
             else if (Command == "getheaders")
             {
@@ -183,7 +184,7 @@ namespace BTokenLib
               HashesDB = Token.ParseHashesDB(
                 Payload,
                 LengthDataPayload,
-                Network.HeaderDownload.HeaderTip);
+                HeaderDownload.HeaderTip);
 
               ResetTimer();
 

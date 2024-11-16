@@ -258,7 +258,7 @@ namespace BTokenLib
       Archiver.Reorganize();
     }
 
-    public void LoadImage(int heightMax = int.MaxValue)
+    public bool TryLoadImage(int height)
     {
       Reset();
 
@@ -268,16 +268,77 @@ namespace BTokenLib
       {
         try
         {
-          ($"Load image of token {pathImage}" +
-            $"{(heightMax < int.MaxValue ? $" with maximal height {heightMax}" : "")}.")
+          $"Load image of token {pathImage} {(height < int.MaxValue ? $" with maximal height {height}" : "")}."
             .Log(this, LogFile, LogEntryNotifier);
 
           LoadImageHeaderchain(pathImage);
 
-          if (HeaderTip.Height > heightMax)
-            throw new ProtocolException(
-              $"Image height of {GetName()} higher than desired height {heightMax}.");
+          if (HeaderTip.Height > height)
+            throw new ProtocolException($"Image height of {GetName()} higher than desired height {height}.");
 
+          LoadImageDatabase(pathImage);
+          Wallet.LoadImage(pathImage);
+
+          break;
+        }
+        catch
+        {
+          Reset();
+
+          if (Directory.Exists(pathImage))
+            Directory.Delete(pathImage, recursive: true);
+
+          try
+          {
+            Directory.Move(Path.Combine(GetName(), NameImageOld), pathImage);
+          }
+          catch (DirectoryNotFoundException)
+          {
+            break;
+          }
+        }
+      }
+
+      while (
+        HeaderTip.Height < height &&
+        Archiver.TryLoadBlock(HeaderTip.Height + 1, out Block block))
+      {
+        try
+        {
+          block.Header.AppendToHeader(HeaderTip);
+
+          InsertInDatabase(block);
+
+          HeaderTip.HeaderNext = block.Header;
+          HeaderTip = block.Header;
+
+          IndexingHeaderTip();
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when inserting block {block}, height {HeaderTip.Height + 1} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          .Log(this, LogEntryNotifier);
+
+          Archiver.DeleteBlock(HeaderTip.Height + 1);
+        }
+      }
+
+      return HeaderTip.Height == height;
+    }
+
+    public void LoadImage()
+    {
+      Reset();
+
+      string pathImage = Path.Combine(GetName(), NameImage);
+
+      while (true)
+      {
+        try
+        {
+          $"Load image of token {pathImage}.".Log(this, LogFile, LogEntryNotifier);
+
+          LoadImageHeaderchain(pathImage);
           LoadImageDatabase(pathImage);
           Wallet.LoadImage(pathImage);
 
@@ -303,9 +364,7 @@ namespace BTokenLib
 
       int heightBlock = HeaderTip.Height + 1;
 
-      while (
-        heightBlock <= heightMax &&
-        Archiver.TryLoadBlock(heightBlock, out Block block))
+      while (Archiver.TryLoadBlock(heightBlock, out Block block))
       {
         try
         {
@@ -329,7 +388,7 @@ namespace BTokenLib
         }
       }
 
-      TokensChild.ForEach(t => t.LoadImage(HeaderTip.Height));
+      TokensChild.ForEach(t => t.LoadImage());
     }
 
     public void LoadTXPool()

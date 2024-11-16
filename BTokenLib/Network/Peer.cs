@@ -37,6 +37,7 @@ namespace BTokenLib
       public DateTime TimeLastStateTransition;
       public DateTime TimeLastSync;
 
+      public HeaderDownload HeaderDownload;
       public Header HeaderSync;
       public Block BlockSync;
 
@@ -235,18 +236,17 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
+        if (!IsStateHeaderSync())
+          SetStateHeaderSync();
+
         try
         {
           await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
-
-          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}"
-            .Log(this, LogFiles, Token.LogEntryNotifier);
+          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}".Log(this, LogFiles, Token.LogEntryNotifier);
         }
         catch (Exception ex)
         {
-          $"Exception {ex.GetType().Name} when sending getheaders message."
-            .Log(this, LogFiles, Token.LogEntryNotifier);
-
+          $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFiles, Token.LogEntryNotifier);
           throw ex;
         }
 
@@ -318,13 +318,9 @@ namespace BTokenLib
           }));
       }
 
-      public async Task RequestBlock(Header header = null)
+      public async Task RequestBlock()
       {
-        if (header != null)
-          HeaderSync = header;
-
-        $"Start downloading block {HeaderSync}."
-          .Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Start downloading block {HeaderSync}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         State = StateProtocol.BlockSynchronization;
 
@@ -381,18 +377,6 @@ namespace BTokenLib
         SetStateIdle();
       }
 
-      public bool TrySync(DateTime timeStartLastSyncNetwork)
-      {
-        lock (this)
-        {
-          if ((timeStartLastSyncNetwork <= TimeLastSync) || State != StateProtocol.Idle)
-            return false;
-
-          TimeLastSync = DateTime.Now;
-          State = StateProtocol.HeaderSync;
-          return true;
-        }
-      }
 
       public bool IsStateIdle()
       {
@@ -413,9 +397,14 @@ namespace BTokenLib
       {
         lock (this)
         {
+          if (State == StateProtocol.HeaderSync)
+            return;
+
           TimeLastStateTransition = DateTime.Now;
           State = StateProtocol.HeaderSync;
         }
+
+        HeaderDownload = new HeaderDownload(Token.GetLocator());
       }
 
       public bool IsStateHeaderSync()

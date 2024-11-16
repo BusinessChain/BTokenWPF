@@ -54,8 +54,7 @@ namespace BTokenLib
 
     public void Start()
     {
-      $"Start Network {Token.GetName()}"
-        .Log(this, Token.LogFile, Token.LogEntryNotifier);
+      $"Start Network {Token.GetName()}".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       StartPeerConnector();
 

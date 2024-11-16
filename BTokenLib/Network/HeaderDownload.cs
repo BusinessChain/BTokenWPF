@@ -20,16 +20,10 @@ namespace BTokenLib
 
     public virtual void InsertHeader(Header header)
     {
-      if (HeaderRoot == null)
+      if (HeaderAncestor == null)
       {
         HeaderAncestor ??= Locator.Find(h => h.Hash.IsAllBytesEqual(header.HashPrevious))
           ?? throw new ProtocolException($"Header {header} does not connect to locator.");
-
-        if (HeaderAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
-        {
-          HeaderAncestor = HeaderAncestor.HeaderNext; 
-          return;
-        }
 
         header.AppendToHeader(HeaderAncestor);
         HeaderRoot = header;
@@ -37,6 +31,8 @@ namespace BTokenLib
       }
       else
       {
+        // Falls header schon dran ist, testen ob duplikat nicht erlaubt ist anhand Locator
+        // und HeaderAncestor/Root überschreiben.
         header.AppendToHeader(HeaderTip);
         HeaderTip.HeaderNext = header;
         HeaderTip = header;
