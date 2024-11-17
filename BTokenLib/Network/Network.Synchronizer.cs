@@ -82,7 +82,7 @@ namespace BTokenLib
       HeaderDownload headerDownload = peer.HeaderDownload;
       double difficultyAccumulatedOld = Token.HeaderTip.DifficultyAccumulated;
 
-      if (headerDownload.HeaderTip.DifficultyAccumulated > Token.HeaderTip.DifficultyAccumulated)
+      if (headerDownload.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
         try
         {
           if (headerDownload.HeaderAncestor != Token.HeaderTip)
@@ -153,7 +153,7 @@ namespace BTokenLib
           ($"Unexpected exception {ex.GetType().Name} occured during SyncBlocks.\n" +
             $"{ex.Message}").Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
-      else if (headerDownload.HeaderTip.DifficultyAccumulated < Token.HeaderTip.DifficultyAccumulated)
+      else if (headerDownload.HeaderTip.DifficultyAccumulated < difficultyAccumulatedOld)
         PeerSync.SendHeaders(new List<Header>() { Token.HeaderTip });
 
       ExitStateSync();
