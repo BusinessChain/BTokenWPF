@@ -90,7 +90,7 @@ namespace BTokenLib
             $"Forking chain after common ancestor {headerDownload.HeaderAncestor} with height {headerDownload.HeaderAncestor.Height}."
               .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-            if (Token.TryLoadImage(headerDownload.HeaderAncestor.Height))
+            if (Token.TryLoadImage(headerDownload.HeaderAncestor.Height)) // Blocks reversen, Immer die letzten 50 Blöcke behalten
               Token.Archiver.SetBlockPathToFork();
           }
 

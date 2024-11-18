@@ -31,7 +31,6 @@ namespace BTokenLib
 
               await ReadBytes(BlockSync.Buffer, LengthDataPayload);
               BlockSync.LengthBufferPayload = LengthDataPayload;
-
               BlockSync.Parse();
 
               $"Received block {BlockSync}".Log(this, LogFiles, Token.LogEntryNotifier);

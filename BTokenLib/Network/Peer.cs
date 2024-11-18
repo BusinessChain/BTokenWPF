@@ -377,7 +377,6 @@ namespace BTokenLib
         SetStateIdle();
       }
 
-
       public bool IsStateIdle()
       {
         lock (this)
