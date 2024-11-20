@@ -25,12 +25,11 @@ namespace BTokenLib
     /// </summary>
     public int BlockheightAccountInit;
 
-    /// <summary>
-    /// This is the total transaction value that will be deducted from the source account
-    /// in order to pay the transaction outputs plus fee.
-    /// </summary>
-    public long Value;
 
+    public virtual long GetValue()
+    {
+      return Fee;
+    }
 
     public override bool IsSuccessorTo(TX tX)
     {
@@ -69,8 +68,6 @@ namespace BTokenLib
 
       Fee = BitConverter.ToInt64(buffer, index);
       index += 8;
-
-      Value += Fee;
     }
 
     public void VerifySignatureTX(int indexTxStart, byte[] buffer, ref int index)
@@ -102,7 +99,7 @@ namespace BTokenLib
         ("IDAccountSource", $"{IDAccountSource.BinaryToBase58Check()}"),
         ("BlockheightAccountInit", $"{BlockheightAccountInit}"),
         ("Nonce", $"{Nonce}"),
-        ("Value", $"{Value}"),
+        ("Value", $"{GetValue()}"),
         ("Fee", $"{Fee}")
       };
     }

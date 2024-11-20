@@ -12,8 +12,6 @@ namespace BTokenLib
     const UInt16 COMPORT_BITCOIN = 8333;
     const int SIZE_BLOCK_MAX = 1 << 20; // 1 MB
 
-    List<TX> TXsStaged = new();
-
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(
@@ -149,30 +147,30 @@ namespace BTokenLib
       }
     }
 
-    protected override void StageTXInDatabase(TX tX, Header header)
+    protected override void StageTXToDatabase(TX tX, Header header, bool isCoinbase)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;
 
-      if (TXsStaged.Count == 0)
+      if (isCoinbase)
       {
         long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
         header.Fee = tXBitcoin.TXOutputs.Sum(o => o.Value) - blockReward;
         header.FeePerByte = (double)header.Fee / header.CountBytesTXs;
       }
-      
+    }
+
+    protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
+    {
+    }
+
+    protected override void CommitTXToDatabase(TX tX)
+    {
+      TXBitcoin tXBitcoin = tX as TXBitcoin;
       ((WalletBitcoin)Wallet).InsertTX(tXBitcoin);
-
-      TXsStaged.Add(tXBitcoin);
     }
 
-    protected override void CommitTXsInDatabase()
-    {
-      DiscardStagedTXsInDatabase();
-    }
-
-    protected override void DiscardStagedTXsInDatabase()
-    {
-      TXsStaged.Clear();
+    protected override void CommitTXReverseToDatabase(TX tX) 
+    { 
     }
 
     public override List<string> GetSeedAddresses()

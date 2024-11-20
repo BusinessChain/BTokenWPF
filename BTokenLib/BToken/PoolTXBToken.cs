@@ -67,7 +67,7 @@ namespace BTokenLib
 
           if (TXsByIDAccountSource.TryGetValue(tXBToken.IDAccountSource, out List<TXBToken> tXsInPool))
           {
-            valueAccountNetPool -= tXsInPool.Sum(t => t.Value);
+            valueAccountNetPool -= tXsInPool.Sum(t => t.GetValue());
 
             if (tXsInPool.Last().Nonce + 1 != tXBToken.Nonce)
               throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not in succession with nonce {tXsInPool.Last().Nonce} of last tX in pool.");
@@ -78,8 +78,8 @@ namespace BTokenLib
           if (OutputValuesByIDAccount.TryGetValue(tXBToken.IDAccountSource, out long outputValue))
             valueAccountNetPool += outputValue;
 
-          if (valueAccountNetPool < tXBToken.Value)
-            throw new ProtocolException($"Value {tXBToken.Value} of tX {tXBToken} bigger than value {valueAccountNetPool} in account {accountSource} considering tXs in pool.");
+          if (valueAccountNetPool < tXBToken.GetValue())
+            throw new ProtocolException($"Value {tXBToken.GetValue()} of tX {tXBToken} bigger than value {valueAccountNetPool} in account {accountSource} considering tXs in pool.");
 
           TXsByHash.Add(tXBToken.Hash, (tXBToken, SequenceNumberTX++));
 
@@ -117,7 +117,7 @@ namespace BTokenLib
       if (TXsByIDAccountSource.TryGetValue(account.ID, out List<TXBToken> tXsInPool))
       {
         accounUnconfirmed.Nonce = tXsInPool.Last().Nonce + 1;
-        accounUnconfirmed.Value -= tXsInPool.Sum(t => t.Value);
+        accounUnconfirmed.Value -= tXsInPool.Sum(t => t.GetValue());
       }
 
       if (OutputValuesByIDAccount.TryGetValue(account.ID, out long valueOutputs))

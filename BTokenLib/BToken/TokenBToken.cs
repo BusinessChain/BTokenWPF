@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -20,7 +21,6 @@ namespace BTokenLib
 
     public DBAccounts DBAccounts;
 
-    List<TX> TXsStaged = new();
 
     public enum TypesToken
     {
@@ -76,17 +76,16 @@ namespace BTokenLib
       DBAccounts.CreateImage(pathImage);
     }
 
-    protected override void StageTXInDatabase(TX tX, Header header)
+    protected override void StageTXInDatabase(TX tX, Header header, bool isCoinbase)
     {
-      if(TXsStaged.Count == 0)
+      if(isCoinbase)
       {
         if (!(tX is TXBTokenCoinbase tXCoinbase))
           throw new ProtocolException($"First tX of block {header} is not coinbase.");
 
-        long blockReward = BLOCK_REWARD_INITIAL >>
-          header.Height / PERIOD_HALVENING_BLOCK_REWARD;
+        long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
 
-        if (blockReward + header.Fee != tXCoinbase.Value)
+        if (blockReward + header.Fee != tXCoinbase.TXOutputs.Sum(o => o.Value))
           throw new ProtocolException(
             $"Output value of Coinbase TX {tXCoinbase}\n" +
             $"does not add up to block reward {blockReward} plus block fee {header.Fee}.");
@@ -123,22 +122,12 @@ namespace BTokenLib
 
       }
       else
-        throw new ProtocolException(
-          $"Invalid token type {tX.GetType().Name} at TX index {TXsStaged.Count}.");
-
-      TXsStaged.Add(tX);
+        throw new ProtocolException($"Invalid token type {tX.GetType().Name}.");
     }
 
-    protected override void CommitTXsInDatabase()
+    protected override void CommitTXsToDatabase()
     {
       DBAccounts.UpdateHashDatabase();
-      TXsStaged.Clear();
-    }
-
-    protected override void DiscardStagedTXsInDatabase()
-    {
-      // Reverse all TXs staged
-      TXsStaged.Clear();
     }
 
     public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)

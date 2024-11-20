@@ -55,6 +55,7 @@ namespace BTokenLib
       Header.CountTXs = TXs.Count;
       Header.CountBytesTXs = startIndex - startIndexBeginningOfTXs;
       Header.Fee = TXs.Sum(t => t.Fee);
+      Header.FeePerByte = (double)Header.Fee / Header.CountBytesTXs;
     }
 
     public byte[] ComputeMerkleRoot()

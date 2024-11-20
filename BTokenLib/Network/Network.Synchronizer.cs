@@ -90,8 +90,10 @@ namespace BTokenLib
             $"Forking chain after common ancestor {headerDownload.HeaderAncestor} with height {headerDownload.HeaderAncestor.Height}."
               .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-            if (Token.TryLoadImage(headerDownload.HeaderAncestor.Height)) // Blocks reversen, Immer die letzten 50 Blöcke behalten
+            if (Token.TryReverseBlockchainToHeight(headerDownload.HeaderAncestor.Height))
               Token.Archiver.SetBlockPathToFork();
+            else
+              Token.Reset(); //Restart Sync as if cold start.
           }
 
           HeaderRoot = headerDownload.HeaderRoot;
@@ -202,7 +204,7 @@ namespace BTokenLib
       Token.ReleaseLock();
     }
 
-    bool InsertBlock_FlagContinue(Peer peer)
+    void InsertBlock(Peer peer)
     {
       Block block = peer.BlockSync;
 
@@ -225,19 +227,15 @@ namespace BTokenLib
           {
             try
             {
+              $"Insert block {Token.HeaderTip.Height}, {block}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
               Token.InsertBlock(block);
-
               block.Clear();
-
-              $"Inserted block {Token.HeaderTip.Height}, {block}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
             }
             catch (Exception ex)
             {
-              $"Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
+              $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
               FlagSyncAbort = true;
-
-              return false;
+              return;
             }
 
             HeightInsertion += 1;
@@ -254,7 +252,10 @@ namespace BTokenLib
         }
       }
 
-      return TryChargeHeader(peer);
+      if (TryChargeHeader(peer))
+        peer.RequestBlock();
+      else
+        peer.SetStateIdle();
     }
 
     bool TryChargeHeader(Peer peer)

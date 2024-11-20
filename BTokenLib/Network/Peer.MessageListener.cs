@@ -47,10 +47,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              if (Network.InsertBlock_FlagContinue(this))
-                RequestBlock();
-              else
-                SetStateIdle();
+              Network.InsertBlock(this);
             }
             else if (Command == "tx")
             {

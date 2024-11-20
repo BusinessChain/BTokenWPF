@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -18,12 +19,7 @@ namespace BTokenLib
       int countOutputs = VarInt.GetInt(buffer, ref index);
 
       for (int i = 0; i < countOutputs; i += 1)
-      {
-        TXOutputBToken tXOutput = new(buffer, ref index);
-        TXOutputs.Add(tXOutput);
-
-        Value += tXOutput.Value;
-      }
+        TXOutputs.Add(new(buffer, ref index));
 
       CountBytes = index - indexTxStart;
 
@@ -31,6 +27,11 @@ namespace BTokenLib
         buffer, indexTxStart, CountBytes));
 
       VerifySignatureTX(indexTxStart, buffer, ref index);
+    }
+
+    public override long GetValue()
+    {
+      return base.GetValue() + TXOutputs.Sum(t => t.Value);
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()
@@ -42,7 +43,7 @@ namespace BTokenLib
         TXOutputBToken output = TXOutputs[i];
 
         labelValuePairs.Add(($"Output{i} :: IDAccount", $"{output.IDAccount.BinaryToBase58Check()}"));
-        labelValuePairs.Add(($"Output{i} :: Value", $"{Value}"));
+        labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
       }
 
       return labelValuePairs;

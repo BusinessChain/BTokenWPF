@@ -51,6 +51,8 @@ namespace BTokenLib
 
     public ILogEntryNotifier LogEntryNotifier;
 
+    List<TX> TXsStaged = new();
+
 
     public Token(
       UInt16 port,
@@ -258,72 +260,33 @@ namespace BTokenLib
       Archiver.Reorganize();
     }
 
-    public bool TryLoadImage(int height)
+    public bool TryReverseBlockchainToHeight(int height)
     {
-      Reset();
-
       string pathImage = Path.Combine(GetName(), NameImage);
 
-      while (true)
-      {
-        try
-        {
-          $"Load image of token {pathImage} {(height < int.MaxValue ? $" with maximal height {height}" : "")}."
-            .Log(this, LogFile, LogEntryNotifier);
-
-          LoadImageHeaderchain(pathImage);
-
-          if (HeaderTip.Height > height)
-            throw new ProtocolException($"Image height of {GetName()} higher than desired height {height}.");
-
-          LoadImageDatabase(pathImage);
-          Wallet.LoadImage(pathImage);
-
-          break;
-        }
-        catch
-        {
-          Reset();
-
-          if (Directory.Exists(pathImage))
-            Directory.Delete(pathImage, recursive: true);
-
-          try
-          {
-            Directory.Move(Path.Combine(GetName(), NameImageOld), pathImage);
-          }
-          catch (DirectoryNotFoundException)
-          {
-            break;
-          }
-        }
-      }
-
       while (
-        HeaderTip.Height < height &&
-        Archiver.TryLoadBlock(HeaderTip.Height + 1, out Block block))
+        height < HeaderTip.Height && 
+        Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
       {
         try
         {
-          block.Header.AppendToHeader(HeaderTip);
+          ReverseInDatabase(block);
 
-          InsertInDatabase(block);
+          RemoveIndexHeaderTip();
 
-          HeaderTip.HeaderNext = block.Header;
-          HeaderTip = block.Header;
-
-          IndexingHeaderTip();
+          HeaderTip = HeaderTip.HeaderPrevious;
+          HeaderTip.HeaderNext = null;
         }
         catch (ProtocolException ex)
         {
-          $"{ex.GetType().Name} when inserting block {block}, height {HeaderTip.Height + 1} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
           .Log(this, LogEntryNotifier);
 
-          Archiver.DeleteBlock(HeaderTip.Height + 1);
+          break;
         }
       }
 
-      return HeaderTip.Height == height;
+      return height == HeaderTip.Height;
     }
 
     public void LoadImage()
@@ -362,6 +325,13 @@ namespace BTokenLib
         }
       }
 
+      LoadBlocksFromArchive();
+
+      TokensChild.ForEach(t => t.LoadImage());
+    }
+
+    void LoadBlocksFromArchive()
+    {
       int heightBlock = HeaderTip.Height + 1;
 
       while (Archiver.TryLoadBlock(heightBlock, out Block block))
@@ -387,8 +357,6 @@ namespace BTokenLib
           Archiver.DeleteBlock(heightBlock);
         }
       }
-
-      TokensChild.ForEach(t => t.LoadImage());
     }
 
     public void LoadTXPool()
@@ -527,8 +495,8 @@ namespace BTokenLib
       {
         foreach (TX tX in block.TXs)
         {
-          // StageCoinbase machen, dafür bei StageTXInDatabase kein header mehr mitgeben
-          StageTXInDatabase(tX, block.Header);
+          StageTXToDatabase(tX, block.Header, isCoinbase: TXsStaged.Count == 0);
+          TXsStaged.Add(tX);
 
           if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
           {
@@ -550,22 +518,45 @@ namespace BTokenLib
               tXAnchorWinners[tokenAnchor.IDToken] = tX;
               block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
             }
-          }
+          } // ?muss vielleicht im Stage gemacht werden?
         }
       }
       catch(Exception ex)
       {
-        DiscardStagedTXsInDatabase();
+        TXsStaged.Clear();
 
         throw ex;
       }
 
-      CommitTXsInDatabase();
+      TXsStaged.ForEach(tX => CommitTXToDatabase(tX));
+      TXsStaged.Clear();
     }
 
-    protected abstract void StageTXInDatabase(TX tX, Header header);
-    protected abstract void CommitTXsInDatabase();
-    protected abstract void DiscardStagedTXsInDatabase();
+    protected void ReverseInDatabase(Block block)
+    {
+      try
+      {
+        foreach (TX tX in block.TXs)
+        {
+          StageTXReverseToDatabase(tX, block.Header);
+          TXsStaged.Add(tX);
+        }
+      }
+      catch (Exception ex)
+      {
+        TXsStaged.Clear();
+
+        throw ex;
+      }
+
+      TXsStaged.ForEach(tX => CommitTXReverseToDatabase(tX));
+      TXsStaged.Clear();
+    }
+
+    protected abstract void StageTXToDatabase(TX tX, Header header, bool isCoinbase = false);
+    protected abstract void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase = false);
+    protected abstract void CommitTXToDatabase(TX tX);
+    protected abstract void CommitTXReverseToDatabase(TX tX);
 
     public void CreateImage()
     {
@@ -815,7 +806,7 @@ namespace BTokenLib
       return header != null;
     }
 
-    public void IndexingHeaderTip()
+    void IndexingHeaderTip()
     {
       int keyHeader = BitConverter.ToInt32(HeaderTip.Hash, 0);
 
@@ -829,6 +820,10 @@ namespace BTokenLib
 
         headers.Add(HeaderTip);
       }
+    }
+
+    void RemoveIndexHeaderTip()
+    {
     }
   }
 }

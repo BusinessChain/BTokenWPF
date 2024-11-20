@@ -45,8 +45,7 @@ namespace BTokenLib
 
     public static double ComputeDifficultyFromNBits(uint nBits)
     {
-      return MAX_TARGET /
-        (double)UInt256.ParseFromCompact(nBits);
+      return MAX_TARGET / (double)UInt256.ParseFromCompact(nBits);
     }
 
     public override void AppendToHeader(Header headerPrevious)

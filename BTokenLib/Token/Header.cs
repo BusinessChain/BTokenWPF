@@ -61,15 +61,12 @@ namespace BTokenLib
     {
       Height = headerPrevious.Height + 1;
 
-      HeaderPrevious = headerPrevious;
+      if (!HashPrevious.IsAllBytesEqual(headerPrevious.Hash))
+        throw new ProtocolException($"Header {this} references header previous {HashPrevious.ToHexString()} but attempts to append to {headerPrevious}.");
 
+      HeaderPrevious = headerPrevious;
       DifficultyAccumulated = headerPrevious.DifficultyAccumulated + Difficulty;
       CountBytesTXsAccumulated = headerPrevious.CountBytesTXsAccumulated + CountBytesTXs;
-
-      if (!HashPrevious.IsAllBytesEqual(headerPrevious.Hash))
-        throw new ProtocolException(
-          $"Header {this} references header previous " +
-          $"{HashPrevious.ToHexString()} but attempts to append to {headerPrevious}.");
 
       if (headerPrevious.HeaderParent != null)
       {
@@ -78,12 +75,12 @@ namespace BTokenLib
         while (true)
         {
           if (headerParent == null)
-            throw new ProtocolException($"Header {this} not anchored in parent chain.");
+            throw new ProtocolException($"Cannot append header {this} to header {headerPrevious} because it is not anchored in parent chain.");
 
           if(headerParent.HashesChild.Any(h => h.Value.IsAllBytesEqual(Hash)))
           {
             HeaderParent = headerParent;
-            return;
+            break;
           }
 
           headerParent = headerParent.HeaderNext;

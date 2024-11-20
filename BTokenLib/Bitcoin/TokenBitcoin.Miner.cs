@@ -10,8 +10,8 @@ namespace BTokenLib
 {
   partial class TokenBitcoin : Token
   {
-    const long BLOCK_REWARD_INITIAL = 5000000000;
-    const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
+    public const long BLOCK_REWARD_INITIAL = 5000000000;
+    public const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
     const int COUNT_TXS_PER_BLOCK_MAX = 3;
     int NumberOfProcesses = Math.Max(Environment.ProcessorCount - 1, 1);

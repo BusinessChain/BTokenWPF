@@ -85,11 +85,11 @@ namespace BTokenLib
       if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
         throw new ProtocolException($"Account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
 
-      if (Value < tX.Value)
+      if (Value < tX.GetValue())
         throw new ProtocolException($"Account {this} referenced by TX {tX} does not have enough fund.");
 
       Nonce += 1;
-      Value -= tX.Value;
+      Value -= tX.GetValue();
     }
   }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
+
 
 namespace BTokenLib
 {
@@ -20,17 +22,17 @@ namespace BTokenLib
       int countOutputs = VarInt.GetInt(buffer, ref index);
 
       for (int i = 0; i < countOutputs; i += 1)
-      {
-        TXOutputBToken tXOutput = new(buffer, ref index);
-        TXOutputs.Add(tXOutput);
-
-        Value += tXOutput.Value;
-      }
+        TXOutputs.Add(new(buffer, ref index));
 
       CountBytes = index - indexTxStart;
 
       Hash = sHA256.ComputeHash(sHA256.ComputeHash(
         buffer, indexTxStart, CountBytes));
+    }
+
+    public override long GetValue()
+    {
+      return base.GetValue() + TXOutputs.Sum(t => t.Value);
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()
@@ -42,7 +44,7 @@ namespace BTokenLib
         TXOutputBToken output = TXOutputs[i];
 
         labelValuePairs.Add(($"Output{i} :: IDAccount", $"{output.IDAccount.BinaryToBase58Check()}"));
-        labelValuePairs.Add(($"Output{i} :: Value", $"{Value}"));
+        labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
       }
 
       return labelValuePairs;
