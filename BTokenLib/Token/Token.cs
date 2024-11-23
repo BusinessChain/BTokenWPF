@@ -51,8 +51,6 @@ namespace BTokenLib
 
     public ILogEntryNotifier LogEntryNotifier;
 
-    List<TX> TXsStaged = new();
-
 
     public Token(
       UInt16 port,
@@ -255,40 +253,6 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void Reorganize()
-    {
-      Archiver.Reorganize();
-    }
-
-    public bool TryReverseBlockchainToHeight(int height)
-    {
-      string pathImage = Path.Combine(GetName(), NameImage);
-
-      while (
-        height < HeaderTip.Height && 
-        Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
-      {
-        try
-        {
-          ReverseInDatabase(block);
-
-          RemoveIndexHeaderTip();
-
-          HeaderTip = HeaderTip.HeaderPrevious;
-          HeaderTip.HeaderNext = null;
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
-          .Log(this, LogEntryNotifier);
-
-          break;
-        }
-      }
-
-      return height == HeaderTip.Height;
-    }
-
     public void LoadImage()
     {
       Reset();
@@ -482,81 +446,89 @@ namespace BTokenLib
     protected void InsertInDatabase(Block block)
     {
       byte[] targetValue = SHA256.HashData(block.Header.Hash);
-
       Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
-
       byte[] biggestDifferenceTemp;
-
       Dictionary<byte[], TX> tXAnchorWinners =  new(new EqualityComparerByteArray());
-
       TX tXAnchorWinner;
 
-      try
+      for (int i = 0; i < block.TXs.Count; i++)
       {
-        foreach (TX tX in block.TXs)
+        TX tX = block.TXs[i];
+
+        StageTXToDatabase(tX, block.Header, isCoinbase: i == 0);
+
+        if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
         {
-          StageTXToDatabase(tX, block.Header, isCoinbase: TXsStaged.Count == 0);
-          TXsStaged.Add(tX);
+          if (!biggestDifferencesTemp.TryGetValue(tokenAnchor.IDToken, out biggestDifferenceTemp))
+            biggestDifferenceTemp = new byte[32];
 
-          if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+          tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out tXAnchorWinner);
+
+          byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
+
+          if (differenceHash.IsGreaterThan(biggestDifferenceTemp))
           {
-            if (!biggestDifferencesTemp.TryGetValue(tokenAnchor.IDToken, out biggestDifferenceTemp))
-              biggestDifferenceTemp = new byte[32];
-
-            tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out tXAnchorWinner);
-
-            byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
-
-            if (differenceHash.IsGreaterThan(biggestDifferenceTemp))
-            {
-              biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
-              tXAnchorWinners[tokenAnchor.IDToken] = tX;
-              block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
-            }
-            else if(tX.IsSuccessorTo(tXAnchorWinner))
-            {
-              tXAnchorWinners[tokenAnchor.IDToken] = tX;
-              block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
-            }
-          } // ?muss vielleicht im Stage gemacht werden?
+            biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
+            tXAnchorWinners[tokenAnchor.IDToken] = tX;
+            block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
+          }
+          else if (tX.IsSuccessorTo(tXAnchorWinner))
+          {
+            tXAnchorWinners[tokenAnchor.IDToken] = tX;
+            block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
+          }
         }
       }
-      catch(Exception ex)
-      {
-        TXsStaged.Clear();
 
-        throw ex;
+      CommitTXsToDatabase(block.TXs);
+    }
+
+    public bool TryReverseBlockchainToHeight(int height)
+    {
+      string pathImage = Path.Combine(GetName(), NameImage);
+
+      while (
+        height < HeaderTip.Height &&
+        Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
+      {
+        try
+        {
+          ReverseInDatabase(block);
+
+          RemoveIndexHeaderTip();
+
+          HeaderTip = HeaderTip.HeaderPrevious;
+          HeaderTip.HeaderNext = null;
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
+          .Log(this, LogEntryNotifier);
+
+          break;
+        }
       }
 
-      TXsStaged.ForEach(tX => CommitTXToDatabase(tX));
-      TXsStaged.Clear();
+      return height == HeaderTip.Height;
     }
 
     protected void ReverseInDatabase(Block block)
     {
-      try
-      {
-        foreach (TX tX in block.TXs)
-        {
-          StageTXReverseToDatabase(tX, block.Header);
-          TXsStaged.Add(tX);
-        }
-      }
-      catch (Exception ex)
-      {
-        TXsStaged.Clear();
+      for (int i = block.TXs.Count - 1; i >= 0; i--)
+        StageTXReverseToDatabase(block.TXs[i], block.Header);
 
-        throw ex;
-      }
-
-      TXsStaged.ForEach(tX => CommitTXReverseToDatabase(tX));
-      TXsStaged.Clear();
+      CommitTXsReverseToDatabase(block.TXs);
     }
 
     protected abstract void StageTXToDatabase(TX tX, Header header, bool isCoinbase = false);
     protected abstract void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase = false);
-    protected abstract void CommitTXToDatabase(TX tX);
-    protected abstract void CommitTXReverseToDatabase(TX tX);
+    protected abstract void CommitTXsToDatabase(List<TX> tXs);
+    protected abstract void CommitTXsReverseToDatabase(List<TX> tXs);
+
+    public void Reorganize()
+    {
+      Archiver.Reorganize();
+    }
 
     public void CreateImage()
     {
@@ -630,7 +602,7 @@ namespace BTokenLib
       return tX;
     }
 
-    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
+    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool isCoinbase = false);
 
     public bool IsMining;
 

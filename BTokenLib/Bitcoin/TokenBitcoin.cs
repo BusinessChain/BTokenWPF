@@ -107,7 +107,7 @@ namespace BTokenLib
         nonce);
     }
 
-    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256)
+    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool isCoinbase = false)
     {
       TXBitcoin tX = new();
 
@@ -159,18 +159,19 @@ namespace BTokenLib
       }
     }
 
+    protected override void CommitTXsToDatabase(List<TX> tXs)
+    {
+      foreach(TXBitcoin tXBitcoin in tXs)
+        ((WalletBitcoin)Wallet).InsertTX(tXBitcoin);
+    }
+
     protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
-    {
-    }
+    { }
 
-    protected override void CommitTXToDatabase(TX tX)
+    protected override void CommitTXsReverseToDatabase(List<TX> tXs)
     {
-      TXBitcoin tXBitcoin = tX as TXBitcoin;
-      ((WalletBitcoin)Wallet).InsertTX(tXBitcoin);
-    }
-
-    protected override void CommitTXReverseToDatabase(TX tX) 
-    { 
+      for (int i = tXs.Count - 1; i >= 0; i--)
+        ((WalletBitcoin)Wallet).ReverseTX(tXs[i] as TXBitcoin);
     }
 
     public override List<string> GetSeedAddresses()

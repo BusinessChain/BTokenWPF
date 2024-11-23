@@ -212,9 +212,7 @@ namespace BTokenLib
       {
         if (peer.HeaderSync.Height > HeightInsertion)
         {
-          QueueBlockInsertion.Add(
-            peer.HeaderSync.Height,
-            block);
+          QueueBlockInsertion.Add(peer.HeaderSync.Height, block);
 
           if (!PoolBlocks.TryTake(out peer.BlockSync))
             peer.BlockSync = new Block(Token);
@@ -235,7 +233,7 @@ namespace BTokenLib
             {
               $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
               FlagSyncAbort = true;
-              return;
+              return; // do something bad to peer
             }
 
             HeightInsertion += 1;

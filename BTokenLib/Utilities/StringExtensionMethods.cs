@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Diagnostics;
-using System.Threading;
 using System.Linq;
+using System.Threading;
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
   public static class StringExtensionMethods
   {
-    public static bool TryMoveDirectoryTo(
-      this string pathSource, 
-      string pathDest)
+    public static bool TryMoveDirectoryTo(this string pathSource, string pathDest)
     {
       if (!Directory.Exists(pathSource))
         return false;
@@ -35,7 +32,6 @@ namespace BTokenLib
           Thread.Sleep(10000);
         }
     }
-
 
     public static byte[] Base58ToByteArray(this string base58)
     {
@@ -348,11 +344,7 @@ namespace BTokenLib
       { "FF", 0xFF }
     };
 
-
-    public static void Log(
-      this string message,
-      object module,
-      ILogEntryNotifier logEntryNotifier)
+    public static void Log(this string message, object module, ILogEntryNotifier logEntryNotifier)
     {
       Log(
         message,
@@ -396,17 +388,6 @@ namespace BTokenLib
     public static string GetIPFromFileName(this string fileName)
     {
       return new string(fileName.TakeWhile(c => c != '-').ToArray());
-    }
-
-    public static int CountSubstring(this string text, string value)
-    {
-      int count = 0, minIndex = text.IndexOf(value, 0);
-      while (minIndex != -1)
-      {
-        minIndex = text.IndexOf(value, minIndex + value.Length);
-        count++;
-      }
-      return count;
     }
   }
 }

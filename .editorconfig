@@ -2,3 +2,6 @@
 
 # IDE0058: Expression value is never used
 dotnet_diagnostic.IDE0058.severity = none
+
+# CA2200: Rethrow to preserve stack details
+dotnet_diagnostic.CA2200.severity = none

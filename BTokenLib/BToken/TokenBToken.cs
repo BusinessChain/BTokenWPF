@@ -76,9 +76,9 @@ namespace BTokenLib
       DBAccounts.CreateImage(pathImage);
     }
 
-    protected override void StageTXInDatabase(TX tX, Header header, bool isCoinbase)
+    protected override void StageTXToDatabase(TX tX, Header header, bool isCoinbase)
     {
-      if(isCoinbase)
+      if (isCoinbase)
       {
         if (!(tX is TXBTokenCoinbase tXCoinbase))
           throw new ProtocolException($"First tX of block {header} is not coinbase.");
@@ -86,9 +86,7 @@ namespace BTokenLib
         long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
 
         if (blockReward + header.Fee != tXCoinbase.TXOutputs.Sum(o => o.Value))
-          throw new ProtocolException(
-            $"Output value of Coinbase TX {tXCoinbase}\n" +
-            $"does not add up to block reward {blockReward} plus block fee {header.Fee}.");
+          throw new ProtocolException($"Output value of Coinbase TX {tXCoinbase} too high.");
 
         foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
         {
@@ -121,13 +119,25 @@ namespace BTokenLib
       {
 
       }
-      else
-        throw new ProtocolException($"Invalid token type {tX.GetType().Name}.");
+      else throw new ProtocolException($"Unsupported type of transaction {tX}.");
     }
 
-    protected override void CommitTXsToDatabase()
+    protected override void CommitTXsToDatabase(List<TX> tXs)
     {
+      tXs.ForEach(tX => CommitTXToDatabase(tX));
       DBAccounts.UpdateHashDatabase();
+    }
+
+    void CommitTXToDatabase(TX tX)
+    {
+    }
+
+    protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
+    {
+    }
+
+    protected override void CommitTXsReverseToDatabase(List<TX> tXs)
+    {
     }
 
     public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
@@ -168,14 +178,14 @@ namespace BTokenLib
       return hashesDB;
     }
       
-    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256)
+    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256, bool isCoinbase = false)
     {
       TXBToken tX;
 
       var typeToken = (TypesToken)buffer[startIndex];
       startIndex += 1;
 
-      if (typeToken == TypesToken.Coinbase) // wie wird sichergestellt, dass nur die erste TX im Block Coinbase ist?
+      if (typeToken == TypesToken.Coinbase && isCoinbase)
         tX = new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
       else if (typeToken == TypesToken.ValueTransfer)
         tX = new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);

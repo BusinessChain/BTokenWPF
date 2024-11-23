@@ -269,10 +269,10 @@ namespace BTokenLib
     {
       foreach (TXInputBitcoin tXInput in tX.Inputs)
       {
-        if (0 < OutputsSpendable.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex))
+        if (TryRemoveOutputs(OutputsSpendable, tXInput))
           AddTXToHistory(tX);
 
-        OutputsSpentUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+        TryRemoveOutputs(OutputsSpentUnconfirmed, tXInput);
       }
 
       for (int i = 0; i < tX.TXOutputs.Count; i += 1)
@@ -295,6 +295,16 @@ namespace BTokenLib
           AddTXToHistory(tX);
         }
       }
+    }
+
+    public void ReverseTX(TXBitcoin tX)
+    {
+
+    }
+
+    static bool TryRemoveOutputs(List<TXOutputWallet> outputs, TXInputBitcoin tXInput)
+    {
+      return 0 < outputs.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
     }
 
     public override void InsertTXUnconfirmed(TX tX)
