@@ -455,7 +455,7 @@ namespace BTokenLib
       {
         TX tX = block.TXs[i];
 
-        StageTXToDatabase(tX, block.Header, isCoinbase: i == 0);
+        StageTXToDatabase(tX, block.Header);
 
         if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
         {
@@ -520,7 +520,7 @@ namespace BTokenLib
       CommitTXsReverseToDatabase(block.TXs);
     }
 
-    protected abstract void StageTXToDatabase(TX tX, Header header, bool isCoinbase = false);
+    protected abstract void StageTXToDatabase(TX tX, Header header);
     protected abstract void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase = false);
     protected abstract void CommitTXsToDatabase(List<TX> tXs);
     protected abstract void CommitTXsReverseToDatabase(List<TX> tXs);

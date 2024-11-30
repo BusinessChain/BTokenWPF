@@ -143,11 +143,11 @@ namespace BTokenLib
       }
     }
 
-    protected override void StageTXToDatabase(TX tX, Header header, bool isCoinbase)
+    protected override void StageTXToDatabase(TX tX, Header header)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;
 
-      if (isCoinbase)
+      if (tXBitcoin.Inputs[0].TXIDOutput.IsAllBytesEqual(new byte[32])) // coinbase
       {
         long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
         header.Fee = tXBitcoin.TXOutputs.Sum(o => o.Value) - blockReward;

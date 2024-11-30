@@ -76,13 +76,36 @@ namespace BTokenLib
       DBAccounts.CreateImage(pathImage);
     }
 
-    protected override void StageTXToDatabase(TX tX, Header header, bool isCoinbase)
+    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256, bool isCoinbase = false)
     {
+      TXBToken tX;
+
+      TypesToken typeToken = (TypesToken)buffer[startIndex];
+      startIndex += 1;
+
       if (isCoinbase)
       {
-        if (!(tX is TXBTokenCoinbase tXCoinbase))
-          throw new ProtocolException($"First tX of block {header} is not coinbase.");
+        if (typeToken != TypesToken.Coinbase)
+          throw new ProtocolException($"First tX of block is not of type coinbase.");
 
+        tX = new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
+      }
+      else if (typeToken == TypesToken.ValueTransfer)
+        tX = new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
+      else if (typeToken == TypesToken.AnchorToken)
+        tX = new TXBTokenAnchor(buffer, ref startIndex, sHA256);
+      else if (typeToken == TypesToken.Data)
+        tX = new TXBTokenData(buffer, ref startIndex, sHA256);
+      else
+        throw new ProtocolException($"Unknown token type {typeToken}.");
+
+      return tX;
+    }
+
+    protected override void StageTXToDatabase(TX tX, Header header)
+    {
+      if (tX is TXBTokenCoinbase tXCoinbase)
+      {
         long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
 
         if (blockReward + header.Fee != tXCoinbase.TXOutputs.Sum(o => o.Value))
@@ -178,27 +201,6 @@ namespace BTokenLib
       return hashesDB;
     }
       
-    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256, bool isCoinbase = false)
-    {
-      TXBToken tX;
-
-      TypesToken typeToken = (TypesToken)buffer[startIndex];
-      startIndex += 1;
-
-      if (typeToken == TypesToken.Coinbase && isCoinbase)
-        tX = new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
-      else if (typeToken == TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
-      else if (typeToken == TypesToken.AnchorToken)
-        tX = new TXBTokenAnchor(buffer, ref startIndex, sHA256);
-      else if (typeToken == TypesToken.Data)
-        tX = new TXBTokenData(buffer, ref startIndex, sHA256);
-      else
-        throw new ProtocolException($"Unknown token type {typeToken}.");
-
-      return tX;
-    }
-
     byte[] GetGenesisBlockBytes()
     {
       return new byte[285]{

@@ -20,8 +20,7 @@ namespace BTokenLib
         for (int i = 0; i < headerLocator.Count(); i++)
           payload.AddRange(headerLocator.ElementAt(i).Hash);
 
-        payload.AddRange((
-          "0000000000000000000000000000000000000000000000000000000000000000").ToBinary());
+        payload.AddRange("0000000000000000000000000000000000000000000000000000000000000000".ToBinary());
 
         Payload = payload.ToArray();
         LengthDataPayload = Payload.Length;
