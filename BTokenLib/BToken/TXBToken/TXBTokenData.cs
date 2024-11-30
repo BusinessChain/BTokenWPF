@@ -22,8 +22,7 @@ namespace BTokenLib
 
       CountBytes = index - indexTxStart;
 
-      Hash = sHA256.ComputeHash(sHA256.ComputeHash(
-        buffer, indexTxStart, CountBytes));
+      Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, CountBytes));
 
       VerifySignatureTX(indexTxStart, buffer, ref index);
     }

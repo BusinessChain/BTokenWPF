@@ -182,7 +182,7 @@ namespace BTokenLib
     {
       TXBToken tX;
 
-      var typeToken = (TypesToken)buffer[startIndex];
+      TypesToken typeToken = (TypesToken)buffer[startIndex];
       startIndex += 1;
 
       if (typeToken == TypesToken.Coinbase && isCoinbase)

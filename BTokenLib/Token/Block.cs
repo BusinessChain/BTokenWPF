@@ -46,8 +46,8 @@ namespace BTokenLib
       if (tXCount == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
 
-      for (int t = 0; t < tXCount; t += 1)
-        TXs.Add(Token.ParseTX(buffer, ref startIndex, SHA256, isCoinbase: true));
+      for (int t = 0; t < tXCount; t++)
+        TXs.Add(Token.ParseTX(buffer, ref startIndex, SHA256, isCoinbase: t == 0));
 
       if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
         throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 
 
 namespace BTokenLib
@@ -10,8 +9,9 @@ namespace BTokenLib
 
     public byte[] TXIDOutput;
     public int OutputIndex;
-
     public int Sequence;
+
+    public TXOutputWallet tXOutputWalletBeingSpent;
 
 
     public TXInputBitcoin()

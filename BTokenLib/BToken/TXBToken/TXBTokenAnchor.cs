@@ -19,28 +19,15 @@ namespace BTokenLib
       Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
       index += TokenAnchor.LENGTH_IDTOKEN;
 
-      Array.Copy(
-        buffer,
-        index,
-        TokenAnchor.HashBlockReferenced,
-        0,
-        TokenAnchor.HashBlockReferenced.Length);
+      Array.Copy(buffer, index, TokenAnchor.HashBlockReferenced, 0, TokenAnchor.HashBlockReferenced.Length);
+      index += TokenAnchor.HashBlockReferenced.Length;
 
-      index += 32;
-
-      Array.Copy(
-        buffer,
-        index,
-        TokenAnchor.HashBlockPreviousReferenced,
-        0,
-        TokenAnchor.HashBlockPreviousReferenced.Length);
-
+      Array.Copy(buffer, index, TokenAnchor.HashBlockPreviousReferenced, 0, TokenAnchor.HashBlockPreviousReferenced.Length);
       index += TokenAnchor.HashBlockPreviousReferenced.Length;
 
       CountBytes = index - indexTxStart;
 
-      Hash = sHA256.ComputeHash(sHA256.ComputeHash(
-        buffer, indexTxStart, CountBytes));
+      Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, CountBytes));
 
       VerifySignatureTX(indexTxStart, buffer, ref index);
     }

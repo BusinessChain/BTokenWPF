@@ -128,15 +128,11 @@ namespace BTokenLib
         int countTXOutputs = VarInt.GetInt(buffer, ref index);
 
         for (int i = 0; i < countTXOutputs; i += 1)
-        {
-          TXOutputBitcoin tXOutputBitcoin = new(buffer, ref index);
-          tX.TXOutputs.Add(tXOutputBitcoin);
-        }
+          tX.TXOutputs.Add(new TXOutputBitcoin(buffer, ref index));
 
         index += 4; //BYTE_LENGTH_LOCK_TIME
 
-        tX.Hash = sHA256.ComputeHash(
-         sHA256.ComputeHash(buffer, tXStartIndex, index - tXStartIndex));
+        tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, tXStartIndex, index - tXStartIndex));
 
         return tX;
       }
