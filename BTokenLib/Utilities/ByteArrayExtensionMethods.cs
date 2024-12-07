@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public static class ByteArray2HexString
+  public static class ByteArrayExtensionMethods
   {
     static readonly string[] BYTE2HEX = new string[] 
     { 
@@ -52,18 +52,15 @@ namespace BTokenLib
       List<byte> pubKey = byteArray.ToList();
       pubKey.Insert(0, 0x00);
 
-      SHA256 sHA256 = SHA256.Create();
-
       byte[] checksum = SHA256.HashData(SHA256.HashData(pubKey.ToArray()));
 
       pubKey.AddRange(checksum.Take(4));
 
       byte[] ba = pubKey.ToArray();
 
-      Org.BouncyCastle.Math.BigInteger addrremain = new Org.BouncyCastle.Math.BigInteger(1, ba);
-
-      Org.BouncyCastle.Math.BigInteger big0 = new Org.BouncyCastle.Math.BigInteger("0");
-      Org.BouncyCastle.Math.BigInteger big58 = new Org.BouncyCastle.Math.BigInteger("58");
+      Org.BouncyCastle.Math.BigInteger addrremain = new(1, ba);
+      Org.BouncyCastle.Math.BigInteger big0 = new("0");
+      Org.BouncyCastle.Math.BigInteger big58 = new("58");
 
       string b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -76,7 +73,6 @@ namespace BTokenLib
         rv = b58.Substring(d, 1) + rv;
       }
 
-      // handle leading zeroes
       foreach (byte b in ba)
       {
         if (b != 0) break;

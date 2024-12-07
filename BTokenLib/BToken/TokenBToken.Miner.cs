@@ -168,7 +168,8 @@ namespace BTokenLib
 
         try
         {
-          blockMined = ParseBlock(File.ReadAllBytes(pathBlockMined));
+          blockMined = new(this, File.ReadAllBytes(pathBlockMined));
+          blockMined.Parse();
         }
         catch (Exception ex)
         {

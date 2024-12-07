@@ -74,24 +74,16 @@ namespace BTokenLib
     {
     LABEL_StartPoW:
 
-      uint seed = (uint)(indexThread * uint.MaxValue / NumberOfProcesses);
+      int height = HeaderTip.Height + 1;
 
       Block block = new(this);
 
-      while (!TryLock())
-        Thread.Sleep(20);
-
+      block.TXs.Add(CreateCoinbaseTX(height, sHA256));
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX, out long feeTXs));
-      int height = HeaderTip.Height + 1;
-
-      ReleaseLock();
-
-      long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
-
-      block.TXs.Insert(0, CreateCoinbaseTX(height, blockReward, sHA256));
 
       uint nBits = HeaderBitcoin.GetNextTarget((HeaderBitcoin)HeaderTip);
       double difficulty = HeaderBitcoin.ComputeDifficultyFromNBits(nBits);
+      uint seed = (uint)(indexThread * uint.MaxValue / NumberOfProcesses);
 
       HeaderBitcoin header = new()
       {
@@ -109,11 +101,9 @@ namespace BTokenLib
 
       header.CountBytesTXs += block.TXs.Sum(t => t.TXRaw.Length);
 
-      block.Header = header;
-
       header.ComputeHash(sHA256);
 
-      while (header.Hash.IsGreaterThan(header.NBits))
+      while (block.Header.Hash.IsGreaterThan(header.NBits))
       {
         if (HeaderTip.Height >= height || ((PoolTXBitcoin)TXPool).GetFlagTXAddedSinceLastInquiry())
           goto LABEL_StartPoW;
@@ -125,12 +115,13 @@ namespace BTokenLib
         header.ComputeHash(sHA256);
       }
 
+      block.Header = header;
       block.Serialize();
 
       return block;
     }
 
-    public TX CreateCoinbaseTX(int height, long blockReward, SHA256 sHA256)
+    public TX CreateCoinbaseTX(int height, SHA256 sHA256)
     {
       List<byte> tXRaw = new();
 
@@ -150,6 +141,7 @@ namespace BTokenLib
 
       tXRaw.Add(0x01); // #TxOut
 
+      long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
       tXRaw.AddRange(BitConverter.GetBytes(blockReward));
 
       WalletBitcoin wallet = (WalletBitcoin)Wallet;

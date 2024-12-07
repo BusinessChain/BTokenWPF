@@ -415,6 +415,9 @@ namespace BTokenLib
 
       block.Header.AppendToHeader(HeaderTip);
 
+      //StageBlockToDatabase(block);
+      //CommitToDatabase();
+
       InsertInDatabase(block);
 
       HeaderTip.HeaderNext = block.Header;
@@ -445,50 +448,18 @@ namespace BTokenLib
 
     protected void InsertInDatabase(Block block)
     {
-      byte[] targetValue = SHA256.HashData(block.Header.Hash);
-      Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
-      byte[] biggestDifferenceTemp;
-      Dictionary<byte[], TX> tXAnchorWinners =  new(new EqualityComparerByteArray());
-      TX tXAnchorWinner;
-
       for (int i = 0; i < block.TXs.Count; i++)
-      {
-        TX tX = block.TXs[i];
+        StageTXToDatabase(block.TXs[i], block.Header); // Besser wäre wenn die height schon beim parsen bekannt ist, dann könnte bereits dort der Blockreward berechnet werden.
 
-        StageTXToDatabase(tX, block.Header);
-
-        if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
-        {
-          if (!biggestDifferencesTemp.TryGetValue(tokenAnchor.IDToken, out biggestDifferenceTemp))
-            biggestDifferenceTemp = new byte[32];
-
-          tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out tXAnchorWinner);
-
-          byte[] differenceHash = targetValue.SubtractByteWise(tX.Hash);
-
-          if (differenceHash.IsGreaterThan(biggestDifferenceTemp))
-          {
-            biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
-            tXAnchorWinners[tokenAnchor.IDToken] = tX;
-            block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
-          }
-          else if (tX.IsSuccessorTo(tXAnchorWinner))
-          {
-            tXAnchorWinners[tokenAnchor.IDToken] = tX;
-            block.Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
-          }
-        }
-      }
-
-      CommitTXsToDatabase(block.TXs);
+      CommitTXsToDatabase(block.TXs); // Allenfalls sollte der Stager eine eigene Datenstruktur aufbauen
+      // so das hier nur noch Commit aufgerufen wird, ohne etwas zu übergeben.
     }
 
     public bool TryReverseBlockchainToHeight(int height)
     {
       string pathImage = Path.Combine(GetName(), NameImage);
 
-      while (
-        height < HeaderTip.Height &&
+      while (height < HeaderTip.Height && 
         Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
       {
         try
@@ -575,20 +546,7 @@ namespace BTokenLib
     }
 
     public abstract void CreateImageDatabase(string path);
-      
-    public Block ParseBlock(byte[] buffer)
-    {
-      Block block = new(this);
-
-      int startIndex = 0;
-
-      block.Header = ParseHeader(buffer, ref startIndex, block.SHA256);
-
-      block.ParseTXs(buffer, ref startIndex);
-
-      return block;
-    }
-    
+          
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 
     public TX ParseTX(byte[] tXRaw, SHA256 sHA256)
@@ -662,11 +620,8 @@ namespace BTokenLib
       return GetType().Name;
     }
 
-    public virtual bool TryGetDB(
-      byte[] hash,
-      out byte[] dataDB)
+    public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotImplementedException(); }
-
 
     public void InsertTXUnconfirmed(TX tX)
     {
@@ -694,10 +649,7 @@ namespace BTokenLib
       return false;
     }
 
-    public bool TryBroadcastTXData(
-      byte[] data, 
-      double feeSatoshiPerByte, 
-      int sequence = 0)
+    public bool TryBroadcastTXData(byte[] data, double feeSatoshiPerByte, int sequence = 0)
     {
       if (Wallet.TryCreateTXData(data, sequence, feeSatoshiPerByte, out TX tX))
       {
@@ -735,10 +687,7 @@ namespace BTokenLib
       return locator;
     }
 
-    public List<Header> GetHeaders(
-      IEnumerable<byte[]> locatorHashes,
-      int count,
-      byte[] stopHash)
+    public List<Header> GetHeaders(IEnumerable<byte[]> locatorHashes, int count, byte[] stopHash)
     {
       foreach (byte[] hash in locatorHashes)
       {
@@ -795,7 +744,6 @@ namespace BTokenLib
     }
 
     void RemoveIndexHeaderTip()
-    {
-    }
+    { }
   }
 }

@@ -42,8 +42,9 @@ namespace BTokenLib
       while (true)
         try
         {
-          byte[] buffer = File.ReadAllBytes(pathBlock);
-          block = Token.ParseBlock(buffer);
+          block = new(Token, File.ReadAllBytes(pathBlock));
+          block.Parse();
+
           return true;
         }
         catch (FileNotFoundException)

@@ -162,7 +162,9 @@ namespace BTokenLib
     }
 
     protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
-    { }
+    {
+      // take undo data for reversal. Validate undo data with block (correct TXID, sequence)
+    }
 
     protected override void CommitTXsReverseToDatabase(List<TX> tXs)
     {

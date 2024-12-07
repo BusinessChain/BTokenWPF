@@ -31,6 +31,7 @@ namespace BTokenLib
 
               await ReadBytes(BlockSync.Buffer, LengthDataPayload);
               BlockSync.LengthBufferPayload = LengthDataPayload;
+
               BlockSync.Parse();
 
               $"Received block {BlockSync}".Log(this, LogFiles, Token.LogEntryNotifier);
@@ -39,6 +40,8 @@ namespace BTokenLib
                 throw new ProtocolException(
                   $"Received unexpected block {BlockSync} at height {BlockSync.Header.Height} from peer {this}.\n" +
                   $"Requested was {HeaderSync}.");
+
+              // Hier die BlockReward prüfen, da height vorhanden mit HeaderSync.Height
 
               if (Token.TokenParent == null)
                 Console.Beep(1200, 100);

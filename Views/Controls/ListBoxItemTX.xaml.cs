@@ -15,17 +15,13 @@ namespace BTokenWPF
 
       LabelTXHash.Content = tX.Hash.ToHexString();
 
-      if(tX is TXBitcoin)
+      if(tX is TXBitcoin tXBitcoin)
       {
-        TXBitcoin tXBitcoin = (TXBitcoin)tX;
         LabelCountInputs.Content = $"Number of Inputs: {tXBitcoin.Inputs.Count}";
         LabelCountOutputs.Content = $"Number of Outputs: {tXBitcoin.TXOutputs.Count}";
       }
-      if(tX is TXBToken)
-      {
-        TXBToken tXBToken = (TXBToken)tX;
+      if(tX is TXBToken tXBToken)
         LabelFee.Content = $"Fee: {tXBToken.Fee}";
-      }
     }
   }
 }

@@ -12,9 +12,7 @@ namespace BTokenLib
 
     public override bool IsSuccessorTo(TX tX)
     {
-      TXBitcoin tXBitcoin = tX as TXBitcoin;
-
-      if(tXBitcoin != null)
+      if(tX is TXBitcoin tXBitcoin)
         foreach (TXInputBitcoin tXInput in Inputs)
           if (tXInput.TXIDOutput.IsAllBytesEqual(tX.Hash))
             return true;
