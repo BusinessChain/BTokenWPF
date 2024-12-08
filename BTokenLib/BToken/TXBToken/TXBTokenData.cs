@@ -26,5 +26,10 @@ namespace BTokenLib
 
       VerifySignatureTX(indexTxStart, buffer, ref index);
     }
+
+    public override long GetValueOutputs()
+    {
+      return 0;
+    }
   }
 }

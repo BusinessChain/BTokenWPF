@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 
 namespace BTokenLib
@@ -18,6 +19,11 @@ namespace BTokenLib
             return true;
 
       return false;
+    }
+
+    public override long GetValueOutputs()
+    {
+      return TXOutputs.Sum(o => o.Value);
     }
 
     public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)

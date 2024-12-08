@@ -22,6 +22,9 @@ namespace BTokenLib
     public Header HeaderTip;
     Dictionary<int, List<Header>> HeaderIndex = new();
 
+    public long BlockRewardInitial;
+    public int PeriodHalveningBlockReward;
+
     public int SizeBlockMax;
 
     public TXPool TXPool;
@@ -435,15 +438,11 @@ namespace BTokenLib
         CreateImage();
 
       foreach (var hashBlockChildToken in block.Header.HashesChild)
-      {
-        Token tokenChild = TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key));
-
-        if(tokenChild?.TryGetBlockMined(hashBlockChildToken.Value, out block) == true)
-          tokenChild.InsertBlock(block);
-      }
+        TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
+          .InsertBlock(hashBlockChildToken.Value);
     }
 
-    public virtual bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
+    public virtual void InsertBlock(byte[] hashBlock)
     { throw new NotImplementedException(); }
 
     protected void InsertInDatabase(Block block)
@@ -560,7 +559,8 @@ namespace BTokenLib
       return tX;
     }
 
-    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool isCoinbase = false);
+    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
+    public abstract TX ParseTXCoinbase(byte[] buffer, ref int index, SHA256 sHA256, long blockReward);
 
     public bool IsMining;
 

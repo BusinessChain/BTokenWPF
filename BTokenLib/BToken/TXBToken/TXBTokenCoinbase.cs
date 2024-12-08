@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 
@@ -30,9 +30,9 @@ namespace BTokenLib
         buffer, indexTxStart, CountBytes));
     }
 
-    public override long GetValue()
+    public override long GetValueOutputs()
     {
-      return base.GetValue() + TXOutputs.Sum(t => t.Value);
+      return TXOutputs.Sum(t => t.Value);
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()

@@ -32,6 +32,11 @@ namespace BTokenLib
       VerifySignatureTX(indexTxStart, buffer, ref index);
     }
 
+    public override long GetValueOutputs()
+    {
+      return 0;
+    }
+
     public override List<(string label, string value)> GetLabelsValuePairs()
     {
       List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();

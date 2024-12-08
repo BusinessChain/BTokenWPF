@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -11,6 +10,9 @@ namespace BTokenLib
   {
     const UInt16 COMPORT_BITCOIN = 8333;
     const int SIZE_BLOCK_MAX = 1 << 20; // 1 MB
+
+    public const long BLOCK_REWARD_INITIAL = 5000000000;
+    public const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -26,6 +28,9 @@ namespace BTokenLib
 
       TXPool = new PoolTXBitcoin(this);
       SizeBlockMax = SIZE_BLOCK_MAX;
+
+      BlockRewardInitial = BLOCK_REWARD_INITIAL;
+      PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
     }
 
     public override Header CreateHeaderGenesis()
@@ -107,7 +112,16 @@ namespace BTokenLib
         nonce);
     }
 
-    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool isCoinbase = false)
+    public override TX ParseTXCoinbase(byte[] buffer, ref int index, SHA256 sHA256, long blockReward)
+    {
+      TXBitcoin tX = ParseTX(buffer, ref index, sHA256) as TXBitcoin;
+
+      tX.Fee = tX.GetValueOutputs() - blockReward;
+
+      return tX;
+    }
+
+    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256)
     {
       TXBitcoin tX = new();
 
@@ -146,13 +160,6 @@ namespace BTokenLib
     protected override void StageTXToDatabase(TX tX, Header header)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;
-
-      if (tXBitcoin.Inputs[0].TXIDOutput.IsAllBytesEqual(new byte[32])) // coinbase
-      {
-        long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
-        header.Fee = tXBitcoin.TXOutputs.Sum(o => o.Value) - blockReward;
-        header.FeePerByte = (double)header.Fee / header.CountBytesTXs;
-      }
     }
 
     protected override void CommitTXsToDatabase(List<TX> tXs)

@@ -31,11 +31,6 @@ namespace BTokenLib
     public int BlockheightAccountInit;
 
 
-    public virtual long GetValue()
-    {
-      return Fee;
-    }
-
     public override bool IsSuccessorTo(TX tX)
     {
       TXBToken tXBToken = tX as TXBToken;
@@ -104,7 +99,7 @@ namespace BTokenLib
         ("IDAccountSource", $"{IDAccountSource.BinaryToBase58Check()}"),
         ("BlockheightAccountInit", $"{BlockheightAccountInit}"),
         ("Nonce", $"{Nonce}"),
-        ("Value", $"{GetValue()}"),
+        ("ValueOutputs", $"{GetValueOutputs()}"),
         ("Fee", $"{Fee}")
       };
     }

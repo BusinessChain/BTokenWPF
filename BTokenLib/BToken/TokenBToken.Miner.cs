@@ -157,10 +157,10 @@ namespace BTokenLib
       foreach (string pathFile in Directory.GetFiles(PathBlocksMined))
         File.Delete(pathFile);
     }
-
-    public override bool TryGetBlockMined(byte[] hashBlock, out Block blockMined)
+    
+    public override void InsertBlock(byte[] hashBlock)
     {
-      blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
+      Block blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
 
       if (blockMined == null)
       {
@@ -169,7 +169,7 @@ namespace BTokenLib
         try
         {
           blockMined = new(this, File.ReadAllBytes(pathBlockMined));
-          blockMined.Parse();
+          blockMined.Parse(HeaderTip.Height + 1);
         }
         catch (Exception ex)
         {
@@ -177,7 +177,7 @@ namespace BTokenLib
         }
       }
 
-      return blockMined != null;
+      InsertBlock(blockMined);
     }
   }
 }

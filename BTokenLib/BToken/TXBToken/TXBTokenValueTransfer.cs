@@ -28,9 +28,9 @@ namespace BTokenLib
       VerifySignatureTX(indexTxStart, buffer, ref index);
     }
 
-    public override long GetValue()
+    public override long GetValueOutputs()
     {
-      return base.GetValue() + TXOutputs.Sum(t => t.Value);
+      return TXOutputs.Sum(t => t.Value);
     }
 
     public override List<(string label, string value)> GetLabelsValuePairs()

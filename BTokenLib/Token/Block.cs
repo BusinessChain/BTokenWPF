@@ -29,27 +29,30 @@ namespace BTokenLib
       Buffer = buffer;
     }
 
-    public void Parse()
+    public void Parse(int heightBlock)
     {
       Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
       Dictionary<byte[], TX> tXAnchorWinners = new(new EqualityComparerByteArray());
 
+      TXs.Clear();
       int startIndex = 0;
 
       Header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
 
-      TXs.Clear();
-
       int tXCount = VarInt.GetInt(Buffer, ref startIndex);
-
-      int startIndexBeginningOfTXs = startIndex;
 
       if (tXCount == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
 
-      for (int t = 0; t < tXCount; t++)
+      int startIndexBeginningOfTXs = startIndex;
+
+      long blockReward = Token.BlockRewardInitial >> Header.Height / Token.PeriodHalveningBlockReward;
+
+      TXs.Add(Token.ParseTXCoinbase(Buffer, ref startIndex, SHA256, blockReward));
+
+      for (int t = 1; t < tXCount; t++)
       {
-        TX tX = Token.ParseTX(Buffer, ref startIndex, SHA256, isCoinbase: t == 0);
+        TX tX = Token.ParseTX(Buffer, ref startIndex, SHA256);
         TXs.Add(tX);
 
         if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
@@ -84,6 +87,9 @@ namespace BTokenLib
       Header.CountBytesTXs = startIndex - startIndexBeginningOfTXs;
       Header.Fee = TXs.Sum(t => t.Fee);
       Header.FeePerByte = (double)Header.Fee / Header.CountBytesTXs;
+
+      if (blockReward + Header.Fee != TXs[0].GetValueOutputs())
+        throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
     }
 
     public byte[] ComputeMerkleRoot()

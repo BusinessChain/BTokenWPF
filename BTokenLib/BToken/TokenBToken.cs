@@ -51,6 +51,9 @@ namespace BTokenLib
       Directory.CreateDirectory(PathBlocksMined);
 
       SizeBlockMax = SIZE_BLOCK_MAX;
+
+      BlockRewardInitial = BLOCK_REWARD_INITIAL;
+      PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
     }
 
     public override Header CreateHeaderGenesis()
@@ -76,41 +79,38 @@ namespace BTokenLib
       DBAccounts.CreateImage(pathImage);
     }
 
-    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256, bool isCoinbase = false)
+    public override TX ParseTXCoinbase(byte[] buffer, ref int startIndex, SHA256 sHA256, long blockReward)
     {
-      TXBToken tX;
-
       TypesToken typeToken = (TypesToken)buffer[startIndex];
       startIndex += 1;
 
-      if (isCoinbase)
-      {
-        if (typeToken != TypesToken.Coinbase)
-          throw new ProtocolException($"First tX of block is not of type coinbase.");
+      if (typeToken != TypesToken.Coinbase)
+        throw new ProtocolException($"First tX of block is not of type coinbase.");
 
-        tX = new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
-      }
-      else if (typeToken == TypesToken.ValueTransfer)
-        tX = new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
-      else if (typeToken == TypesToken.AnchorToken)
-        tX = new TXBTokenAnchor(buffer, ref startIndex, sHA256);
-      else if (typeToken == TypesToken.Data)
-        tX = new TXBTokenData(buffer, ref startIndex, sHA256);
-      else
-        throw new ProtocolException($"Unknown token type {typeToken}.");
+      return new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
+    }
 
-      return tX;
+    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256)
+    {
+      TypesToken typeToken = (TypesToken)buffer[startIndex];
+      startIndex += 1;
+
+      if (typeToken == TypesToken.ValueTransfer)
+        return new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
+      
+      if (typeToken == TypesToken.AnchorToken)
+        return new TXBTokenAnchor(buffer, ref startIndex, sHA256);
+      
+      if (typeToken == TypesToken.Data)
+        return new TXBTokenData(buffer, ref startIndex, sHA256);
+
+      throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
 
     protected override void StageTXToDatabase(TX tX, Header header)
     {
       if (tX is TXBTokenCoinbase tXCoinbase)
       {
-        long blockReward = BLOCK_REWARD_INITIAL >> header.Height / PERIOD_HALVENING_BLOCK_REWARD;
-
-        if (blockReward + header.Fee != tXCoinbase.TXOutputs.Sum(o => o.Value))
-          throw new ProtocolException($"Output value of Coinbase TX {tXCoinbase} too high.");
-
         foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
         {
           DBAccounts.InsertOutput(tXOutput, header.Height);

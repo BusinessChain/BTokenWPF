@@ -43,7 +43,7 @@ namespace BTokenLib
         try
         {
           block = new(Token, File.ReadAllBytes(pathBlock));
-          block.Parse();
+          block.Parse(blockHeight);
 
           return true;
         }

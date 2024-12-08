@@ -18,6 +18,8 @@ namespace BTokenLib
 
     public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
 
+    public abstract long GetValueOutputs();
+
     public abstract string Print();
 
     public void WriteToStream(Stream stream)
