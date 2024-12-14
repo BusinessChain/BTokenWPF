@@ -158,26 +158,24 @@ namespace BTokenLib
         File.Delete(pathFile);
     }
     
-    public override void InsertBlock(byte[] hashBlock)
+    public override void InsertBlockMined(byte[] hashBlock)
     {
-      Block blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
-
-      if (blockMined == null)
+      try
       {
-        string pathBlockMined = Path.Combine(PathBlocksMined, hashBlock.ToHexString());
+        Block blockMined = BlocksMinedCache.Find(b => b.Header.Hash.IsAllBytesEqual(hashBlock));
 
-        try
+        if (blockMined == null)
         {
-          blockMined = new(this, File.ReadAllBytes(pathBlockMined));
+          blockMined = new(this, File.ReadAllBytes(Path.Combine(PathBlocksMined, hashBlock.ToHexString())));
           blockMined.Parse(HeaderTip.Height + 1);
         }
-        catch (Exception ex)
-        {
-          $"{ex.GetType().Name} when attempting to load block {pathBlockMined}: {ex.Message}.\n".Log(this, LogEntryNotifier);
-        }
-      }
 
-      InsertBlock(blockMined);
+        InsertBlock(blockMined);
+      }
+      catch (Exception ex)
+      {
+        $"{ex.GetType().Name} when attempting to load mined block {hashBlock.ToHexString()}: {ex.Message}.\n".Log(this, LogEntryNotifier);
+      }
     }
   }
 }

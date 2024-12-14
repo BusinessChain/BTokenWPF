@@ -93,7 +93,7 @@ namespace BTokenLib
 
       tXRaw.Add(LENGTH_SCRIPT_P2PKH);
       tXRaw.AddRange(PREFIX_P2PKH);
-      tXRaw.AddRange(Base58CheckToPubKeyHash(addressOutput));
+      tXRaw.AddRange(addressOutput.Base58CheckToPubKeyHash());
       tXRaw.AddRange(POSTFIX_P2PKH);
 
       tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
@@ -291,6 +291,11 @@ namespace BTokenLib
           });
         }
       }
+    }
+
+    public override bool TryStageTX(TX tX)
+    {
+
     }
 
     public void InsertTX(TXBitcoin tX)

@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+
 
 namespace BTokenLib
 {
@@ -82,6 +84,23 @@ namespace BTokenLib
       }
 
       return result;
+    }
+
+    public static byte[] Base58CheckToPubKeyHash(this string base58)
+    {
+      byte[] bb = base58.Base58ToByteArray();
+
+      using SHA256 sha256 = SHA256.Create();
+      byte[] checksum = sha256.ComputeHash(bb, 0, bb.Length - 4);
+      checksum = sha256.ComputeHash(checksum);
+
+      for (int i = 0; i < 4; i++)
+        if (checksum[i] != bb[bb.Length - 4 + i])
+          throw new Exception($"Invalid checksum in address {base58}.");
+
+      byte[] rv = new byte[bb.Length - 5];
+      Array.Copy(bb, 1, rv, 0, bb.Length - 5);
+      return rv;
     }
 
     static readonly Dictionary<string, byte> HEX2BYTE = new()

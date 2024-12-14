@@ -157,15 +157,26 @@ namespace BTokenLib
       }
     }
 
-    protected override void StageTXToDatabase(TX tX, Header header)
-    {
-      TXBitcoin tXBitcoin = tX as TXBitcoin;
-    }
 
-    protected override void CommitTXsToDatabase(List<TX> tXs)
+    public override void InsertBlockInDB(Block block)
     {
-      foreach(TXBitcoin tXBitcoin in tXs)
-        ((WalletBitcoin)Wallet).InsertTX(tXBitcoin);
+      // Initialize staging data structer !
+      Header headerStaged;
+      List<(TX, bool flagPrune)> tXsBlockPruned = new();
+
+      foreach(TXBitcoin tX in block.TXs)
+      {
+        if(Wallet.TryStageTX(tX))
+        {
+          tXsBlockPruned.Add((tX, flagPrune: false));
+        }
+        else
+        {
+          tXsBlockPruned.Add((tX, flagPrune: true));
+        }
+      }
+
+      Wallet.Commit();
     }
 
     protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)

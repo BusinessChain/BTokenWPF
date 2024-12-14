@@ -4,9 +4,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-// Remove this
-using Org.BouncyCastle.Crypto.Digests;
-
 
 namespace BTokenLib
 {
@@ -40,27 +37,6 @@ namespace BTokenLib
     public abstract bool TryCreateTX(string address, long value, double feePerByte, out TX tX);
 
     public abstract bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX);
-
-    public static byte[] Base58CheckToPubKeyHash(string base58)
-    {
-      byte[] bb = base58.Base58ToByteArray();
-
-      Sha256Digest bcsha256a = new();
-      bcsha256a.BlockUpdate(bb, 0, bb.Length - 4);
-
-      byte[] checksum = new byte[32];
-      bcsha256a.DoFinal(checksum, 0);
-      bcsha256a.BlockUpdate(checksum, 0, 32);
-      bcsha256a.DoFinal(checksum, 0);
-
-      for (int i = 0; i < 4; i++)
-        if (checksum[i] != bb[bb.Length - 4 + i])
-          throw new Exception($"Invalid checksum in address {base58}.");
-
-      byte[] rv = new byte[bb.Length - 5];
-      Array.Copy(bb, 1, rv, 0, bb.Length - 5);
-      return rv;
-    }
 
     public abstract void LoadImage(string path);
 
@@ -142,6 +118,8 @@ namespace BTokenLib
     }
 
     public abstract void InsertTXUnconfirmed(TX tX);
+
+    public abstract bool TryStageTX(TX tX);
 
     public void AddTXToHistory(TX tX)
     {

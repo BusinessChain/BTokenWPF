@@ -307,7 +307,7 @@ namespace BTokenLib
         {
           block.Header.AppendToHeader(HeaderTip);
 
-          InsertInDatabase(block);
+          InsertBlockInDB(block);
 
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;
@@ -412,16 +412,15 @@ namespace BTokenLib
 
     public abstract void LoadImageDatabase(string path);
 
+    public abstract void InsertBlockInDB(Block block);
+
     public void InsertBlock(Block block)
     {
       $"Insert block {block} in {this}.".Log(this, LogEntryNotifier);
 
       block.Header.AppendToHeader(HeaderTip);
 
-      //StageBlockToDatabase(block);
-      //CommitToDatabase();
-
-      InsertInDatabase(block);
+      InsertBlockInDB(block);
 
       HeaderTip.HeaderNext = block.Header;
       HeaderTip = block.Header;
@@ -439,20 +438,12 @@ namespace BTokenLib
 
       foreach (var hashBlockChildToken in block.Header.HashesChild)
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
-          .InsertBlock(hashBlockChildToken.Value);
+          .InsertBlockMined(hashBlockChildToken.Value);
     }
 
-    public virtual void InsertBlock(byte[] hashBlock)
+    public virtual void InsertBlockMined(byte[] hashBlock)
     { throw new NotImplementedException(); }
 
-    protected void InsertInDatabase(Block block)
-    {
-      for (int i = 0; i < block.TXs.Count; i++)
-        StageTXToDatabase(block.TXs[i], block.Header); // Besser wäre wenn die height schon beim parsen bekannt ist, dann könnte bereits dort der Blockreward berechnet werden.
-
-      CommitTXsToDatabase(block.TXs); // Allenfalls sollte der Stager eine eigene Datenstruktur aufbauen
-      // so das hier nur noch Commit aufgerufen wird, ohne etwas zu übergeben.
-    }
 
     public bool TryReverseBlockchainToHeight(int height)
     {
@@ -490,9 +481,7 @@ namespace BTokenLib
       CommitTXsReverseToDatabase(block.TXs);
     }
 
-    protected abstract void StageTXToDatabase(TX tX, Header header);
     protected abstract void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase = false);
-    protected abstract void CommitTXsToDatabase(List<TX> tXs);
     protected abstract void CommitTXsReverseToDatabase(List<TX> tXs);
 
     public void Reorganize()
@@ -560,6 +549,7 @@ namespace BTokenLib
     }
 
     public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
+    
     public abstract TX ParseTXCoinbase(byte[] buffer, ref int index, SHA256 sHA256, long blockReward);
 
     public bool IsMining;
