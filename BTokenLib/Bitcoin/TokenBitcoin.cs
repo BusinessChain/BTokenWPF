@@ -157,25 +157,9 @@ namespace BTokenLib
       }
     }
 
-
     public override void InsertBlockInDB(Block block)
     {
-      // Initialize staging data structer !
-      Header headerStaged;
-      List<(TX, bool flagPrune)> tXsBlockPruned = new();
-
-      foreach(TXBitcoin tX in block.TXs)
-      {
-        if(Wallet.TryStageTX(tX))
-        {
-          tXsBlockPruned.Add((tX, flagPrune: false));
-        }
-        else
-        {
-          tXsBlockPruned.Add((tX, flagPrune: true));
-        }
-      }
-
+      Wallet.StageBlock(block);
       Wallet.Commit();
     }
 

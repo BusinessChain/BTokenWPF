@@ -293,9 +293,47 @@ namespace BTokenLib
       }
     }
 
-    public override bool TryStageTX(TX tX)
-    {
+    List<TXOutputWallet> OutputsSpendableStage;
+    List<TXOutputWallet> OutputsSpentUnconfirmedStage;
 
+    public override void StageBlock(Block block)
+    {
+      OutputsSpendableStage = OutputsSpendable.ToList();
+      OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
+
+      foreach (TXBitcoin tX in block.TXs)
+      {
+        foreach (TXInputBitcoin tXInput in tX.Inputs)
+        {
+          TryRemoveOutput(OutputsSpendableStage, tXInput);
+          TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput);
+        }
+
+        for (int i = 0; i < tX.TXOutputs.Count; i += 1)
+        {
+          TXOutputBitcoin tXOutput = tX.TXOutputs[i];
+
+          if (tXOutput.Type == TXOutputBitcoin.TypesToken.P2PKH &&
+            tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
+          {
+            OutputsSpentUnconfirmedStage.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
+
+            OutputsSpendableStage.Add(
+              new TXOutputWallet
+              {
+                TXID = tX.Hash,
+                Index = i,
+                Value = tXOutput.Value
+              });
+          }
+        }
+      }
+    }
+
+    public override void Commit()
+    {
+      OutputsSpendable = OutputsSpendableStage;
+      OutputsSpentUnconfirmed = OutputsSpentUnconfirmedStage;
     }
 
     public void InsertTX(TXBitcoin tX)
@@ -332,10 +370,10 @@ namespace BTokenLib
 
     static bool TryRemoveOutput(List<TXOutputWallet> outputs, TXInputBitcoin tXInput)
     {
-      tXInput.tXOutputWalletBeingSpent = 
+      tXInput.tXOutputReferenced = 
         outputs.Find(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
 
-      return outputs.Remove(tXInput.tXOutputWalletBeingSpent);
+      return outputs.Remove(tXInput.tXOutputReferenced);
     }
 
     public void ReverseTX(TXBitcoin tX)

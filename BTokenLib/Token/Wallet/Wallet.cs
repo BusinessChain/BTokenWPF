@@ -119,7 +119,8 @@ namespace BTokenLib
 
     public abstract void InsertTXUnconfirmed(TX tX);
 
-    public abstract bool TryStageTX(TX tX);
+    public abstract void StageBlock(Block block);
+    public abstract void Commit();
 
     public void AddTXToHistory(TX tX)
     {

@@ -11,7 +11,7 @@ namespace BTokenLib
     public int OutputIndex;
     public int Sequence;
 
-    public TXOutputWallet tXOutputWalletBeingSpent;
+    public TXOutputWallet tXOutputReferenced;
 
 
     public TXInputBitcoin()

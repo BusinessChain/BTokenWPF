@@ -15,6 +15,8 @@ namespace BTokenLib
 
     public byte[] TXRaw;
 
+    public bool FlagPruneWhenArchived;
+
 
     public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
 
