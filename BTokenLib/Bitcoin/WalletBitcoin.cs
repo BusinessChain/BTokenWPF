@@ -304,10 +304,8 @@ namespace BTokenLib
       foreach (TXBitcoin tX in block.TXs)
       {
         foreach (TXInputBitcoin tXInput in tX.Inputs)
-        {
-          TryRemoveOutput(OutputsSpendableStage, tXInput);
-          TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput);
-        }
+          if (TryRemoveOutput(OutputsSpendableStage, tXInput) || TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput))
+            tX.FlagPruneWhenArchived = false;
 
         for (int i = 0; i < tX.TXOutputs.Count; i += 1)
         {
@@ -325,6 +323,8 @@ namespace BTokenLib
                 Index = i,
                 Value = tXOutput.Value
               });
+
+            tX.FlagPruneWhenArchived = false;
           }
         }
       }
@@ -334,38 +334,6 @@ namespace BTokenLib
     {
       OutputsSpendable = OutputsSpendableStage;
       OutputsSpentUnconfirmed = OutputsSpentUnconfirmedStage;
-    }
-
-    public void InsertTX(TXBitcoin tX)
-    {
-      foreach (TXInputBitcoin tXInput in tX.Inputs)
-      {
-        if (TryRemoveOutput(OutputsSpendable, tXInput))
-          AddTXToHistory(tX);
-
-        TryRemoveOutput(OutputsSpentUnconfirmed, tXInput);
-      }
-
-      for (int i = 0; i < tX.TXOutputs.Count; i += 1)
-      {
-        TXOutputBitcoin tXOutput = tX.TXOutputs[i];
-
-        if (tXOutput.Type == TXOutputBitcoin.TypesToken.P2PKH &&
-          tXOutput.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
-        {
-          OutputsUnconfirmed.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
-
-          OutputsSpendable.Add(
-            new TXOutputWallet
-            {
-              TXID = tX.Hash,
-              Index = i,
-              Value = tXOutput.Value
-            });
-
-          AddTXToHistory(tX);
-        }
-      }
     }
 
     static bool TryRemoveOutput(List<TXOutputWallet> outputs, TXInputBitcoin tXInput)
@@ -378,7 +346,8 @@ namespace BTokenLib
 
     public void ReverseTX(TXBitcoin tX)
     {
-
+      // There has to be a TX Index so that input tXs can be searched in order to restore its outputs in the wallet DB.
+      // The index could be danoe by the archiver for TXs that are not pruned.
     }
       
     public override void Clear()
