@@ -73,7 +73,7 @@ namespace BTokenLib
 
       byte[] result = new byte[hexString.Length / 2];
 
-      for(int i = 0; i < result.Length; i += 1)
+      for(int i = 0; i < result.Length; i++)
       {
         string hexChar = hexString.Substring(i * 2, 2);
 

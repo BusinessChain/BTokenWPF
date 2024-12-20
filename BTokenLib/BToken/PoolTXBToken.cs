@@ -210,8 +210,8 @@ namespace BTokenLib
       int countBytesCurrent = 0;
       feeTotal = 0;
 
-      for (int i = 0; i < TXBundlesSortedByFee.Count; i += 1)
-        for (int j = 0; j < TXBundlesSortedByFee[i].TXs.Count; j += 1)
+      for (int i = 0; i < TXBundlesSortedByFee.Count; i++)
+        for (int j = 0; j < TXBundlesSortedByFee[i].TXs.Count; j++)
         {
           if (countBytesCurrent + TXBundlesSortedByFee[i].TXs[j].CountBytes > countBytesMax)
             return tXs;

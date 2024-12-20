@@ -158,7 +158,7 @@ namespace BTokenLib
       int countInputs = tXRaw[4];
       int indexFirstInput = 5;
 
-      for (int i = 0; i < countInputs; i += 1)
+      for (int i = 0; i < countInputs; i++)
       {
         List<byte> tXRawSign = tXRaw.ToList();
         int indexRawSign = indexFirstInput + 36 * (i + 1) + 5 * i;
@@ -307,7 +307,7 @@ namespace BTokenLib
           if (TryRemoveOutput(OutputsSpendableStage, tXInput) || TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput))
             tX.FlagPruneWhenArchived = false;
 
-        for (int i = 0; i < tX.TXOutputs.Count; i += 1)
+        for (int i = 0; i < tX.TXOutputs.Count; i++)
         {
           TXOutputBitcoin tXOutput = tX.TXOutputs[i];
 
@@ -330,6 +330,40 @@ namespace BTokenLib
       }
     }
 
+    bool TryGetTXFromIndex(byte[] hashTX, out TXBitcoin tX)
+    {
+
+    }
+
+    public override void StageBlockReversal(Block block)
+    {
+      OutputsSpendableStage = OutputsSpendable.ToList();
+      OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
+
+      foreach (TXBitcoin tX in block.TXs)
+      {
+        foreach (TXInputBitcoin tXInput in tX.Inputs)
+          if (TryGetTXFromIndex(tXInput.TXIDOutput, out TXBitcoin tXReferenced))
+          {
+            TXOutputBitcoin tXOutputReferenced = tXReferenced.TXOutputs[tXInput.OutputIndex];
+
+            if (tXOutputReferenced.Type == TXOutputBitcoin.TypesToken.P2PKH && tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
+              OutputsSpendableStage.Add(
+                new TXOutputWallet
+                {
+                  TXID = tXReferenced.Hash,
+                  Index = tXInput.OutputIndex,
+                  Value = tXOutputReferenced.Value
+                });
+          }
+
+        for (int i = 0; i < tX.TXOutputs.Count; i++)
+        {
+
+        }
+      }
+    }
+
     public override void Commit()
     {
       OutputsSpendable = OutputsSpendableStage;
@@ -343,13 +377,7 @@ namespace BTokenLib
 
       return outputs.Remove(tXInput.tXOutputReferenced);
     }
-
-    public void ReverseTX(TXBitcoin tX)
-    {
-      // There has to be a TX Index so that input tXs can be searched in order to restore its outputs in the wallet DB.
-      // The index could be danoe by the archiver for TXs that are not pruned.
-    }
-      
+          
     public override void Clear()
     {
       OutputsSpendable.Clear();

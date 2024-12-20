@@ -27,18 +27,18 @@ namespace BTokenLib
     {
       PathRootDB = Path.Combine(nameToken, "FilesDB");
 
-      for (int i = 0; i < COUNT_CACHES; i += 1)
+      for (int i = 0; i < COUNT_CACHES; i++)
         Caches.Add(new CacheDB());
 
       Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), PathRootDB));
 
-      for (int i = 0; i < COUNT_FILES_DB; i += 1)
+      for (int i = 0; i < COUNT_FILES_DB; i++)
         FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
     }
 
     public void LoadImage(string path)
     {
-      for (int i = 0; i < COUNT_CACHES; i += 1)
+      for (int i = 0; i < COUNT_CACHES; i++)
       {
         int startIndex = 0;
         byte[] buffer = File.ReadAllBytes(Path.Combine(path, "cache", i.ToString()));
@@ -57,7 +57,7 @@ namespace BTokenLib
 
       Directory.CreateDirectory(pathDirectoryCache);
 
-      for (int i = 0; i < COUNT_CACHES; i += 1)
+      for (int i = 0; i < COUNT_CACHES; i++)
         Caches[i].CreateImage(Path.Combine(pathDirectoryCache, i.ToString()));
     }
 
@@ -116,7 +116,7 @@ namespace BTokenLib
 
     public void UpdateHashDatabase()
     {
-      for (int i = 0; i < COUNT_CACHES; i += 1)
+      for (int i = 0; i < COUNT_CACHES; i++)
       {
         byte[] hashCache = SHA256.ComputeHash(Caches[i].GetBytes());
         hashCache.CopyTo(HashesCaches, i * hashCache.Length);
@@ -124,7 +124,7 @@ namespace BTokenLib
 
       byte[] hashCaches = SHA256.ComputeHash(HashesCaches);
 
-      for (int i = 0; i < COUNT_FILES_DB; i += 1)
+      for (int i = 0; i < COUNT_FILES_DB; i++)
       {
         byte[] hashFile = SHA256.ComputeHash(FilesDB[i]);
         hashFile.CopyTo(HashesFilesDB, i * hashFile.Length);
@@ -137,7 +137,7 @@ namespace BTokenLib
 
     public bool TryGetDB(byte[] hash, out byte[] dataDB)
     {
-      for (int i = 0; i < HashesFilesDB.Length; i += 1)
+      for (int i = 0; i < HashesFilesDB.Length; i++)
         if (hash.IsAllBytesEqual(HashesFilesDB, i * 32))
         {
           dataDB = new byte[FilesDB[i].Length];
@@ -145,7 +145,7 @@ namespace BTokenLib
           return true;
         }
 
-      for (int i = 0; i < HashesCaches.Length; i += 1)
+      for (int i = 0; i < HashesCaches.Length; i++)
         if (hash.IsAllBytesEqual(HashesCaches, i * 32))
         {
           dataDB = Caches[i].GetBytes();
@@ -291,11 +291,11 @@ namespace BTokenLib
     {
       List<(Account account, string sourceObject, int indexCache)> itemsAccount = new();
 
-      for (int i = 0; i < COUNT_CACHES; i += 1)
+      for (int i = 0; i < COUNT_CACHES; i++)
         foreach (Account accountInCache in Caches[i].Values)
           itemsAccount.Add((accountInCache, Caches[i].GetType().Name, i));
 
-      for (int i = 0; i < COUNT_FILES_DB; i += 1)
+      for (int i = 0; i < COUNT_FILES_DB; i++)
         foreach (Account accountInFile in FilesDB[i].GetAccounts())
           itemsAccount.Add((accountInFile, FilesDB[i].GetType().Name, i));
 

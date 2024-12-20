@@ -103,7 +103,7 @@ namespace BTokenLib
       var merkleList = new byte[TXs.Count + tXsLengthMod2][];
       int merkleIndex = merkleList.Length;
 
-      for (int i = 0; i < TXs.Count; i += 1)
+      for (int i = 0; i < TXs.Count; i++)
         merkleList[i] = TXs[i].Hash;
 
       if (tXsLengthMod2 != 0)
@@ -148,7 +148,7 @@ namespace BTokenLib
       countTXs.CopyTo(Buffer, startIndex);
       startIndex += countTXs.Length;
 
-      for(int i = 0; i < TXs.Count; i += 1)
+      for(int i = 0; i < TXs.Count; i++)
       {
         TXs[i].TXRaw.CopyTo(Buffer, startIndex);
         startIndex += TXs[i].TXRaw.Length;

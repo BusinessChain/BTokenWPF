@@ -34,7 +34,7 @@ namespace BTokenLib
 
       string[] stringArrayHex = new string[array.Length];
 
-      for (int i = 0; i < array.Length; i += 1)
+      for (int i = 0; i < array.Length; i++)
         stringArrayHex[array.Length - i - 1] = BYTE2HEX[array[i]];
 
       return string.Join(
@@ -84,7 +84,7 @@ namespace BTokenLib
 
     public static bool IsAllBytesEqual(this byte[] arr1, byte[] arr2, int startIndex2 = 0)
     {
-      for (int i = 0; i < arr1.Length; i += 1)
+      for (int i = 0; i < arr1.Length; i++)
         if (arr1[i] != arr2[startIndex2 + i])
           return false;
 
@@ -152,7 +152,7 @@ namespace BTokenLib
     {
       byte[] difference = new byte[array1.Length];
 
-      for (int i = 0; i < array1.Length; i += 1)
+      for (int i = 0; i < array1.Length; i++)
         difference[i] = (byte)(array1[i] - array2[i]);
 
       return difference;

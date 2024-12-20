@@ -46,7 +46,7 @@ namespace BTokenLib
         ("Hash", $"{this}")
       };
 
-      for (int i = 0; i < Inputs.Count; i += 1)
+      for (int i = 0; i < Inputs.Count; i++)
       {
         TXInputBitcoin tXInput = Inputs[i];
         labelValuePairs.Add(($"Input{i} :: TXIDOutput", $"{tXInput.TXIDOutput.ToHexString()}"));
@@ -54,7 +54,7 @@ namespace BTokenLib
         labelValuePairs.Add(($"Input{i} :: Sequence", $"{tXInput.Sequence}"));
       }
 
-      for (int i = 0; i < TXOutputs.Count; i += 1)
+      for (int i = 0; i < TXOutputs.Count; i++)
       {
         TXOutputBitcoin output = TXOutputs[i];
 

@@ -24,7 +24,7 @@ namespace BTokenLib
           Payload,
           ref startIndex);
 
-        for (int i = 0; i < inventoryCount; i += 1)
+        for (int i = 0; i < inventoryCount; i++)
           Inventories.Add(Inventory.Parse(
             Payload,
             ref startIndex));

@@ -122,6 +122,8 @@ namespace BTokenLib
     public abstract void StageBlock(Block block);
     public abstract void Commit();
 
+    public abstract void StageBlockReversal(Block block);
+
     public void AddTXToHistory(TX tX)
     {
       if (!HistoryTXs.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))

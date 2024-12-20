@@ -388,7 +388,7 @@ namespace BTokenLib
 
         int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref index);
         
-        for(int i = 0; i < countHashesChild; i += 1)
+        for(int i = 0; i < countHashesChild; i++)
         {
           byte[] iDToken = new byte[IDToken.Length];
           Array.Copy(bytesHeaderImage, index, iDToken, 0, iDToken.Length);
@@ -444,17 +444,17 @@ namespace BTokenLib
     public virtual void InsertBlockMined(byte[] hashBlock)
     { throw new NotImplementedException(); }
 
-
     public bool TryReverseBlockchainToHeight(int height)
     {
       string pathImage = Path.Combine(GetName(), NameImage);
 
-      while (height < HeaderTip.Height && 
-        Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
+      while (height < HeaderTip.Height && Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
       {
         try
         {
-          ReverseInDatabase(block);
+          ReverseInDB(block);
+
+          // Reverse transaction to TXPool
 
           RemoveIndexHeaderTip();
 
@@ -473,16 +473,7 @@ namespace BTokenLib
       return height == HeaderTip.Height;
     }
 
-    protected void ReverseInDatabase(Block block)
-    {
-      for (int i = block.TXs.Count - 1; i >= 0; i--)
-        StageTXReverseToDatabase(block.TXs[i], block.Header);
-
-      CommitTXsReverseToDatabase(block.TXs);
-    }
-
-    protected abstract void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase = false);
-    protected abstract void CommitTXsReverseToDatabase(List<TX> tXs);
+    public abstract void ReverseInDB(Block block);
 
     public void Reorganize()
     {

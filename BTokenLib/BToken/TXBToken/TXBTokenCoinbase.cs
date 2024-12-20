@@ -21,7 +21,7 @@ namespace BTokenLib
 
       int countOutputs = VarInt.GetInt(buffer, ref index);
 
-      for (int i = 0; i < countOutputs; i += 1)
+      for (int i = 0; i < countOutputs; i++)
         TXOutputs.Add(new(buffer, ref index));
 
       CountBytes = index - indexTxStart;
@@ -39,7 +39,7 @@ namespace BTokenLib
     {
       List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();
 
-      for (int i = 0; i < TXOutputs.Count; i += 1)
+      for (int i = 0; i < TXOutputs.Count; i++)
       {
         TXOutputBToken output = TXOutputs[i];
 

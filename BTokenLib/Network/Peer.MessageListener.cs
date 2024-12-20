@@ -93,7 +93,7 @@ namespace BTokenLib
                 }
               }
               else if (countHeaders > 0)
-                for (int i = 0; i < countHeaders; i += 1)
+                for (int i = 0; i < countHeaders; i++)
                 {
                   Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
                   startIndex += 1;

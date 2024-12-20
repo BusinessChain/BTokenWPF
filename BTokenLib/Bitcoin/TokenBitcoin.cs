@@ -125,36 +125,28 @@ namespace BTokenLib
     {
       TXBitcoin tX = new();
 
-      try
-      {
-        int tXStartIndex = index;
+      int tXStartIndex = index;
 
-        index += 4; // Version
+      index += 4; // Version
 
-        int countInputs = VarInt.GetInt(buffer, ref index);
+      int countInputs = VarInt.GetInt(buffer, ref index);
 
-        if (countInputs == 0x00)
-          throw new NotImplementedException("Segwit is not implemented.");
+      if (countInputs == 0x00)
+        throw new NotImplementedException("Segwit is not implemented.");
 
-        for (int i = 0; i < countInputs; i += 1)
-          tX.Inputs.Add(new TXInputBitcoin(buffer, ref index));
+      for (int i = 0; i < countInputs; i++)
+        tX.Inputs.Add(new TXInputBitcoin(buffer, ref index));
 
-        int countTXOutputs = VarInt.GetInt(buffer, ref index);
+      int countTXOutputs = VarInt.GetInt(buffer, ref index);
 
-        for (int i = 0; i < countTXOutputs; i += 1)
-          tX.TXOutputs.Add(new TXOutputBitcoin(buffer, ref index));
+      for (int i = 0; i < countTXOutputs; i++)
+        tX.TXOutputs.Add(new TXOutputBitcoin(buffer, ref index));
 
-        index += 4; //BYTE_LENGTH_LOCK_TIME
+      index += 4; //BYTE_LENGTH_LOCK_TIME
 
-        tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, tXStartIndex, index - tXStartIndex));
+      tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, tXStartIndex, index - tXStartIndex));
 
-        return tX;
-      }
-      catch (ArgumentOutOfRangeException)
-      {
-        throw new ProtocolException(
-          "ArgumentOutOfRangeException thrown in ParseTX.");
-      }
+      return tX;
     }
 
     public override void InsertBlockInDB(Block block)
@@ -163,15 +155,11 @@ namespace BTokenLib
       Wallet.Commit();
     }
 
-    protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
-    {
-      // take undo data for reversal. Validate undo data with block (correct TXID, sequence)
-    }
 
-    protected override void CommitTXsReverseToDatabase(List<TX> tXs)
+    public override void ReverseInDB(Block block)
     {
-      for (int i = tXs.Count - 1; i >= 0; i--)
-        ((WalletBitcoin)Wallet).ReverseTX(tXs[i] as TXBitcoin);
+      Wallet.StageBlockReversal(block);
+      Wallet.Commit();
     }
 
     public override List<string> GetSeedAddresses()
