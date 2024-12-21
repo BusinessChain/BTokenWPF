@@ -304,7 +304,7 @@ namespace BTokenLib
       foreach (TXBitcoin tX in block.TXs)
       {
         foreach (TXInputBitcoin tXInput in tX.Inputs)
-          if (TryRemoveOutput(OutputsSpendableStage, tXInput) || TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput))
+          if (TryRemoveOutput(OutputsSpendableStage, tXInput.TXIDOutput, tXInput.OutputIndex) || TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput.TXIDOutput, tXInput.OutputIndex))
             tX.FlagPruneWhenArchived = false;
 
         for (int i = 0; i < tX.TXOutputs.Count; i++)
@@ -335,19 +335,31 @@ namespace BTokenLib
 
     }
 
+    void RemoveFromTXIndex(TX tX)
+    {
+
+    }
+
     public override void StageBlockReversal(Block block)
     {
       OutputsSpendableStage = OutputsSpendable.ToList();
       OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
 
-      foreach (TXBitcoin tX in block.TXs)
+      for (int t = block.TXs.Count - 1; t >= 0; t--)
       {
+        TXBitcoin tX = block.TXs[t] as TXBitcoin;
+
         foreach (TXInputBitcoin tXInput in tX.Inputs)
-          if (TryGetTXFromIndex(tXInput.TXIDOutput, out TXBitcoin tXReferenced))
+        {
+          TXBitcoin tXReferenced = block.TXs.Find(t => t.Hash.IsAllBytesEqual(tXInput.TXIDOutput)) as TXBitcoin;
+          
+          if (tXReferenced != null || TryGetTXFromIndex(tXInput.TXIDOutput, out tXReferenced))
           {
             TXOutputBitcoin tXOutputReferenced = tXReferenced.TXOutputs[tXInput.OutputIndex];
 
-            if (tXOutputReferenced.Type == TXOutputBitcoin.TypesToken.P2PKH && tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
+            if (tXOutputReferenced.Type == TXOutputBitcoin.TypesToken.P2PKH &&
+              tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
+            {
               OutputsSpendableStage.Add(
                 new TXOutputWallet
                 {
@@ -355,12 +367,14 @@ namespace BTokenLib
                   Index = tXInput.OutputIndex,
                   Value = tXOutputReferenced.Value
                 });
+            }
           }
+        }
 
         for (int i = 0; i < tX.TXOutputs.Count; i++)
-        {
+          OutputsSpendableStage.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash) && o.Index == i);
 
-        }
+        RemoveFromTXIndex(tX);
       }
     }
 
@@ -370,12 +384,9 @@ namespace BTokenLib
       OutputsSpentUnconfirmed = OutputsSpentUnconfirmedStage;
     }
 
-    static bool TryRemoveOutput(List<TXOutputWallet> outputs, TXInputBitcoin tXInput)
+    static bool TryRemoveOutput(List<TXOutputWallet> outputs, byte[] hashTX, int outputIndex)
     {
-      tXInput.tXOutputReferenced = 
-        outputs.Find(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
-
-      return outputs.Remove(tXInput.tXOutputReferenced);
+      return 0 < outputs.RemoveAll(o => o.TXID.IsAllBytesEqual(hashTX) && o.Index == outputIndex);
     }
           
     public override void Clear()

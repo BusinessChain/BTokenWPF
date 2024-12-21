@@ -14,20 +14,15 @@ namespace BTokenLib
       public List<Inventory> Inventories = new();
 
 
-
       public NotFoundMessage(byte[] buffer)
         : base("notfound", buffer)
       {
         int startIndex = 0;
 
-        int inventoryCount = VarInt.GetInt(
-          Payload,
-          ref startIndex);
+        int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
 
         for (int i = 0; i < inventoryCount; i++)
-          Inventories.Add(Inventory.Parse(
-            Payload,
-            ref startIndex));
+          Inventories.Add(Inventory.Parse(Payload, ref startIndex));
       }
 
 
