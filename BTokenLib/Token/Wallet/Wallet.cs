@@ -120,6 +120,7 @@ namespace BTokenLib
     public abstract void InsertTXUnconfirmed(TX tX);
 
     public abstract void StageBlock(Block block);
+
     public abstract void Commit();
 
     public abstract void StageBlockReversal(Block block);

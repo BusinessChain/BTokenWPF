@@ -137,7 +137,7 @@ namespace BTokenLib
                 if (Peers.All(p => !p.IsStateBlockSync()))
                 {
                   if (Token.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
-                    Token.Reorganize();
+                    Token.Archiver.Reorganize();
                   else
                     Token.LoadImage();
 

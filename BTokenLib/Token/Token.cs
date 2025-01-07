@@ -20,7 +20,7 @@ namespace BTokenLib
 
     public Header HeaderGenesis;
     public Header HeaderTip;
-    Dictionary<int, List<Header>> HeaderIndex = new();
+    Dictionary<int, List<Header>> IndexHeaders = new();
 
     public long BlockRewardInitial;
     public int PeriodHalveningBlockReward;
@@ -362,7 +362,7 @@ namespace BTokenLib
       Archiver.ResetBlockPath();
 
       HeaderTip = HeaderGenesis;
-      HeaderIndex.Clear();
+      IndexHeaders.Clear();
       IndexingHeaderTip();
 
       Wallet.Clear();
@@ -454,12 +454,12 @@ namespace BTokenLib
         {
           ReverseInDB(block);
 
-          // Reverse transaction to TXPool
-
           RemoveIndexHeaderTip();
 
           HeaderTip = HeaderTip.HeaderPrevious;
           HeaderTip.HeaderNext = null;
+
+          block.TXs.ForEach(t => InsertTXUnconfirmed(t));
         }
         catch (ProtocolException ex)
         {
@@ -474,11 +474,6 @@ namespace BTokenLib
     }
 
     public abstract void ReverseInDB(Block block);
-
-    public void Reorganize()
-    {
-      Archiver.Reorganize();
-    }
 
     public void CreateImage()
     {
@@ -701,8 +696,8 @@ namespace BTokenLib
 
       int key = BitConverter.ToInt32(headerHash, 0);
 
-      lock (HeaderIndex)
-        if (HeaderIndex.TryGetValue(key, out List<Header> headers))
+      lock (IndexHeaders)
+        if (IndexHeaders.TryGetValue(key, out List<Header> headers))
           header = headers.FirstOrDefault(h => headerHash.IsAllBytesEqual(h.Hash));
 
       return header != null;
@@ -712,12 +707,12 @@ namespace BTokenLib
     {
       int keyHeader = BitConverter.ToInt32(HeaderTip.Hash, 0);
 
-      lock (HeaderIndex)
+      lock (IndexHeaders)
       {
-        if (!HeaderIndex.TryGetValue(keyHeader, out List<Header> headers))
+        if (!IndexHeaders.TryGetValue(keyHeader, out List<Header> headers))
         {
           headers = new List<Header>();
-          HeaderIndex.Add(keyHeader, headers);
+          IndexHeaders.Add(keyHeader, headers);
         }
 
         headers.Add(HeaderTip);
@@ -725,6 +720,12 @@ namespace BTokenLib
     }
 
     void RemoveIndexHeaderTip()
-    { }
+    {
+      int keyHeader = BitConverter.ToInt32(HeaderTip.Hash, 0);
+
+      lock (IndexHeaders)
+        if (IndexHeaders.TryGetValue(BitConverter.ToInt32(HeaderTip.Hash, 0), out List<Header> headers))
+          headers.RemoveAll(h => h.Hash.IsAllBytesEqual(HeaderTip.Hash));
+    }
   }
 }
