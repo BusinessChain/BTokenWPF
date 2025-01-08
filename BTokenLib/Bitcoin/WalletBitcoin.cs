@@ -46,7 +46,7 @@ namespace BTokenLib
     List<TXOutputWallet> OutputsSpentUnconfirmedStage;
 
     Dictionary<byte[], TXBitcoin> IndexTXs = new(new EqualityComparerByteArray());
-    Dictionary<byte[], TXBitcoin> IndexTXsStaged = new(new EqualityComparerByteArray());
+    Dictionary<byte[], TXBitcoin> IndexTXsStaged;
 
 
     public WalletBitcoin(string privKeyDec, TokenBitcoin token)
@@ -291,7 +291,7 @@ namespace BTokenLib
     {
       OutputsSpendableStage = OutputsSpendable.ToList();
       OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
-      IndexTXsStaged.Clear();
+      IndexTXsStaged = new(IndexTXs, new EqualityComparerByteArray());
 
       foreach (TXBitcoin tX in block.TXs)
       {
@@ -311,6 +311,7 @@ namespace BTokenLib
     {
       OutputsSpendableStage = OutputsSpendable.ToList();
       OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
+      IndexTXsStaged = new(IndexTXs, new EqualityComparerByteArray());
 
       for (int t = block.TXs.Count - 1; t >= 0; t--)
       {
@@ -326,7 +327,7 @@ namespace BTokenLib
             AddTXOutputWallet(OutputsSpendableStage, tXReferenced, tXInput.OutputIndex);
         }
 
-        IndexTXs.Remove(tX.Hash);
+        IndexTXsStaged.Remove(tX.Hash);
       }
     }
 
@@ -353,9 +354,7 @@ namespace BTokenLib
     {
       OutputsSpendable = OutputsSpendableStage;
       OutputsSpentUnconfirmed = OutputsSpentUnconfirmedStage;
-
-      foreach (var tXStaged in IndexTXsStaged)
-        IndexTXs[tXStaged.Key] = tXStaged.Value;
+      IndexTXs = IndexTXsStaged;
     }
 
     static bool TryRemoveOutput(List<TXOutputWallet> outputs, TXInputBitcoin tXInput)
