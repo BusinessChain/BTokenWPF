@@ -89,7 +89,7 @@ namespace BTokenWPF
           if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
             ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "confirmed"));
 
-        foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsUnconfirmed)
+        foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsSpendableUnconfirmed)
           if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
             ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "unconfirmed"));
       }

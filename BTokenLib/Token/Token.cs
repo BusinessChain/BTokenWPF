@@ -29,6 +29,7 @@ namespace BTokenLib
 
     public TXPool TXPool;
     public FileStream FileTXPoolBackup;
+    public List<TX> TXsPoolBackup = new();
 
     public BlockArchiver Archiver;
 
@@ -428,6 +429,7 @@ namespace BTokenLib
       IndexingHeaderTip();
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
+      TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
 
       Archiver.ArchiveBlock(block);
 
@@ -448,6 +450,13 @@ namespace BTokenLib
     {
       string pathImage = Path.Combine(GetName(), NameImage);
 
+      List<Block> blocksReversed = new();
+      List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
+
+      TXsPoolBackup.Clear();
+      TXPool.Clear();
+      Wallet.ClearTXsUnconfirmed();
+
       while (height < HeaderTip.Height && Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
       {
         try
@@ -459,7 +468,7 @@ namespace BTokenLib
           HeaderTip = HeaderTip.HeaderPrevious;
           HeaderTip.HeaderNext = null;
 
-          block.TXs.ForEach(t => InsertTXUnconfirmed(t));
+          blocksReversed.Add(block);
         }
         catch (ProtocolException ex)
         {
@@ -469,6 +478,15 @@ namespace BTokenLib
           break;
         }
       }
+
+      blocksReversed.Reverse();
+
+      foreach(Block block in blocksReversed)
+        foreach (TX tX in block.TXs)
+          InsertTXUnconfirmed(tX);
+
+      foreach(TX tX in tXsPoolBackup)
+        InsertTXUnconfirmed(tX);
 
       return height == HeaderTip.Height;
     }
@@ -605,6 +623,8 @@ namespace BTokenLib
       {
         tX.WriteToStream(FileTXPoolBackup);
         FileTXPoolBackup.Flush();
+
+        TXsPoolBackup.Add(tX);
 
         Wallet.InsertTXUnconfirmed(tX);
         Wallet.AddTXUnconfirmedToHistory(tX);

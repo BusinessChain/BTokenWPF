@@ -13,5 +13,7 @@ namespace BTokenLib
     public abstract bool TryGetTX(byte[] hashTX, out TX tX);
 
     public abstract List<TX> GetTXs(int countMax, out long feeTXs);
+
+    public abstract void Clear();
   }
 }

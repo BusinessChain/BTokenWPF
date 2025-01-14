@@ -218,5 +218,11 @@ namespace BTokenLib
           return;
         }
     }
+
+    public override void Clear()
+    {
+      TXPoolDict.Clear();
+      InputsPool.Clear();
+    }
   }
 }
