@@ -80,16 +80,5 @@ namespace BTokenLib
       stream.Write(BitConverter.GetBytes(Value));
     }
 
-    public void SpendTX(TXBToken tX)
-    {
-      if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
-        throw new ProtocolException($"Account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
-
-      if (Value < tX.GetValueOutputs() + tX.Fee)
-        throw new ProtocolException($"Account {this} referenced by TX {tX} does not have enough fund.");
-
-      Nonce += 1;
-      Value -= tX.GetValueOutputs() + tX.Fee;
-    }
   }
 }

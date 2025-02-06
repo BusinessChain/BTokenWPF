@@ -1,45 +1,31 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  partial class DBAccounts
+  public class CacheDB : Dictionary<byte[], Account>
   {
-    class CacheDB : Dictionary<byte[], Account>
+    public CacheDB()
+      : base(new EqualityComparerByteArray())
+    { }
+
+    public byte[] GetBytes()
     {
-      public CacheDB() 
-        : base(new EqualityComparerByteArray())
-      { }
+      int startIndex = 0;
+      byte[] buffer = new byte[Account.LENGTH_ACCOUNT * Count];
 
-      public void SpendAccountInCache(TXBToken tX)
-      {
-        TryGetValue(tX.IDAccountSource, out Account account);
+      foreach (Account account in Values)
+        account.Serialize(buffer, ref startIndex);
 
-        account.SpendTX(tX);
+      return buffer;
+    }
 
-        if (account.Value == 0)
-          Remove(tX.IDAccountSource);
-      }
-
-      public byte[] GetBytes()
-      {
-        int startIndex = 0;
-        byte[] buffer = new byte[Account.LENGTH_ACCOUNT * Count];
-
+    public void CreateImage(string path)
+    {
+      using (FileStream file = new(path, FileMode.Create))
         foreach (Account account in Values)
-          account.Serialize(buffer, ref startIndex);
-
-        return buffer;
-      }
-
-      public void CreateImage(string path)
-      {
-        using (FileStream file = new(path, FileMode.Create))
-          foreach (Account account in Values)
-            file.Write(account.Serialize());
-      }
+          file.Write(account.Serialize());
     }
   }
 }

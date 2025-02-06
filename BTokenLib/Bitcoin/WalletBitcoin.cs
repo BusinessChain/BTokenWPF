@@ -53,9 +53,7 @@ namespace BTokenLib
     {
       Token = token;
 
-      PublicScript = PREFIX_P2PKH
-        .Concat(PublicKeyHash160)
-        .Concat(POSTFIX_P2PKH).ToArray();
+      PublicScript = PREFIX_P2PKH.Concat(PublicKeyHash160).Concat(POSTFIX_P2PKH).ToArray();
     }
 
     public override bool TryCreateTX(

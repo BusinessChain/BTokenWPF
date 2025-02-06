@@ -33,11 +33,7 @@ namespace BTokenLib
       return Token.ParseTX(tXRaw.ToArray(), SHA256);
     }
 
-    public override bool TryCreateTX(
-      string addressOutput,
-      long valueOutput,
-      double feePerByte,
-      out TX tX)
+    public override bool TryCreateTX(string addressOutput, long valueOutput, double feePerByte, out TX tX)
     {
       tX = null;
 

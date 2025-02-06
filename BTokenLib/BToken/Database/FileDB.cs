@@ -1,76 +1,112 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 
 namespace BTokenLib
 {
-  partial class DBAccounts
+  public class FileDB : FileStream
   {
-    class FileDB : FileStream
-    { 
-      byte[] TempByteArrayCopyLastRecord = new byte[Account.LENGTH_ACCOUNT];
+    byte[] TempByteArrayCopyLastRecord = new byte[Account.LENGTH_ACCOUNT];
+
+    List<long> StartIndexesAccountsStaged = new();
+
+    SHA256 SHA256 = SHA256.Create();
+    public byte[] Hash = new byte[32];
 
 
-      public FileDB(string path) : base(
-        path,
-        FileMode.OpenOrCreate,
-        FileAccess.ReadWrite,
-        FileShare.ReadWrite)
+    public FileDB(string path) : base(
+      path,
+      FileMode.OpenOrCreate,
+      FileAccess.ReadWrite,
+      FileShare.ReadWrite)
+    {
+      Seek(0, SeekOrigin.End);
+    }
+
+    public bool TryGetAccountStaged(byte[] iDAccount, out AccountStaged accountStaged)
+    {
+      if(TryGetAccount(iDAccount, out Account account, out long startIndexAccount))
       {
-        Seek(0, SeekOrigin.End);
-      }
-
-      public bool TryGetAccount(byte[] iDAccount, out Account account, bool flagRemoveAccount = false)
-      {
-        Seek(0, SeekOrigin.Begin);
-
-        while (Position < Length)
+        accountStaged = new AccountStaged
         {
-          int i = 0;
-          while (ReadByte() == iDAccount[i++])
-            if (i == Account.LENGTH_ID)
-            {
-              Position -= Account.LENGTH_ID;
+          Account = account,
+          Value = account.Value,
+          Nonce = account.Nonce
+        };
 
-              account = new(this);
+        StartIndexesAccountsStaged.Add(startIndexAccount);
 
-              if (flagRemoveAccount)
-              {
-                long positionCurrentRecord = Position - Account.LENGTH_ACCOUNT;
-
-                Position = Length - Account.LENGTH_ACCOUNT;
-                Read(TempByteArrayCopyLastRecord);
-
-                Position = positionCurrentRecord;
-
-                Write(TempByteArrayCopyLastRecord);
-
-                SetLength(Length - Account.LENGTH_ACCOUNT);
-                Seek(0, SeekOrigin.End);
-              }
-
-              return true;
-            }
-
-          Position += Account.LENGTH_ACCOUNT - Position % Account.LENGTH_ACCOUNT;
-        }
-
-        account = null;
-        return false;
+        return true;
       }
 
-      public List<Account> GetAccounts()
+      accountStaged = null;
+      return false;
+    }
+
+    public bool TryGetAccount(byte[] iDAccount, out Account account, out long startIndexAccount)
+    {
+      Seek(0, SeekOrigin.Begin);
+
+      while (Position < Length)
       {
-        Seek(0, SeekOrigin.Begin);
+        int i = 0;
+        while (ReadByte() == iDAccount[i++])
+          if (i == Account.LENGTH_ID)
+          {
+            Position -= Account.LENGTH_ID;
 
-        List<Account> accounts = new();
+            startIndexAccount = Position;
 
-        while (Position < Length)
-          accounts.Add(new(this));
+            account = new(this);
 
-        return accounts;
+            return true;
+          }
+
+        Position += Account.LENGTH_ACCOUNT - Position % Account.LENGTH_ACCOUNT;
       }
+
+      account = null;
+      startIndexAccount = 0;
+
+      return false;
+    }
+
+    public List<Account> GetAccounts()
+    {
+      Seek(0, SeekOrigin.Begin);
+
+      List<Account> accounts = new();
+
+      while (Position < Length)
+        accounts.Add(new(this));
+
+      return accounts;
+    }
+
+    public void Commit()
+    {
+      foreach(long positionStartAccount in StartIndexesAccountsStaged)
+      {
+        Position = Length - Account.LENGTH_ACCOUNT;
+
+        if(positionStartAccount != Position)
+        {
+          Read(TempByteArrayCopyLastRecord);
+
+          Position = positionStartAccount;
+
+          Write(TempByteArrayCopyLastRecord);
+        }
+      }
+
+      SetLength(Length - Account.LENGTH_ACCOUNT * StartIndexesAccountsStaged.Count);
+      Position = Length;
+
+      Hash = SHA256.ComputeHash(this);
+
+      StartIndexesAccountsStaged.Clear();
     }
   }
 }

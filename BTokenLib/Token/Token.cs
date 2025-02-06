@@ -310,6 +310,8 @@ namespace BTokenLib
 
           InsertBlockInDB(block);
 
+          Wallet.Insert(block); // braucht kein Stager, sondern macht einfach rein wenn DB - insert erfolgreich war.
+
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;
 
@@ -422,6 +424,8 @@ namespace BTokenLib
       block.Header.AppendToHeader(HeaderTip);
 
       InsertBlockInDB(block);
+
+      Wallet.Insert(block);
 
       HeaderTip.HeaderNext = block.Header;
       HeaderTip = block.Header;
@@ -602,9 +606,6 @@ namespace BTokenLib
     { throw new NotImplementedException(); }
 
     public virtual void DeleteBlocksMinedUnconfirmed() { }
-
-    public virtual void RevokeBlockInsertion()
-    { throw new NotImplementedException(); }
 
     public virtual List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
     { throw new NotImplementedException(); }

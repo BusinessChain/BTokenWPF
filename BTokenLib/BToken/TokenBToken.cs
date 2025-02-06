@@ -107,53 +107,41 @@ namespace BTokenLib
       throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
 
-    protected override void StageBlockToDB(Block block)
+    public override void InsertBlockInDB(Block block)
     {
-      foreach (TX tX in block.TXs)
-        if (tX is TXBTokenCoinbase tXCoinbase)
-        {
-          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+      try
+      {
+        foreach (TX tX in block.TXs)
+          if (tX is TXBTokenCoinbase tXCoinbase)
           {
-            DBAccounts.InsertOutput(tXOutput, block.Header.Height);
-
-            if (Wallet.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
-              Wallet.AddTXToHistory(tXCoinbase);
+            foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+              DBAccounts.InsertOutput(tXOutput, block.Header.Height);
           }
-        }
-        else if (tX is TXBTokenValueTransfer tXTokenTransfer)
-        {
-          DBAccounts.SpendInput(tXTokenTransfer);
-
-          if (tXTokenTransfer.IDAccountSource.IsAllBytesEqual(Wallet.PublicKeyHash160))
-            Wallet.AddTXToHistory(tXTokenTransfer);
-
-          foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+          else if (tX is TXBTokenValueTransfer tXTokenTransfer)
           {
-            DBAccounts.InsertOutput(tXOutput, block.Header.Height);
+            DBAccounts.SpendInput(tXTokenTransfer);
 
-            if (Wallet.PublicKeyHash160.IsAllBytesEqual(tXOutput.IDAccount))
-              Wallet.AddTXToHistory(tXTokenTransfer);
+            foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+              DBAccounts.InsertOutput(tXOutput, block.Header.Height);
           }
-        }
-        else if (tX is TXBTokenAnchor tXBTokenAnchor)
-        {
+          else if (tX is TXBTokenAnchor tXBTokenAnchor)
+          {
 
-        }
-        else if (tX is TXBTokenData tXBTokenData)
-        {
+          }
+          else if (tX is TXBTokenData tXBTokenData)
+          {
 
-        }
-        else throw new ProtocolException($"Unsupported type of transaction {tX}.");
-    }
+          }
+          else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
+      }
+      catch (Exception ex)
+      {
+        DBAccounts.PurgeStagedData();
 
-    protected override void CommitStagedBlockToDB()
-    {
-      tXs.ForEach(tX => CommitTXToDatabase(tX));
-      DBAccounts.UpdateHashDatabase();
-    }
+        throw ex;
+      }
 
-    void CommitTXToDatabase(TX tX)
-    {
+      DBAccounts.Commit();
     }
 
     protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
