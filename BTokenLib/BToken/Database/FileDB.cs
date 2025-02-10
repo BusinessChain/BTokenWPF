@@ -25,7 +25,7 @@ namespace BTokenLib
       Seek(0, SeekOrigin.End);
     }
 
-    public bool TryGetAccountStaged(byte[] iDAccount, out AccountStaged accountStaged)
+    public bool TryGetAccountStaged(byte[] iDAccount, out Account accountStaged)
     {
       if(TryGetAccount(iDAccount, out Account account, out long startIndexAccount))
       {

@@ -118,7 +118,7 @@ namespace BTokenLib
               DBAccounts.InsertOutput(tXOutput, block.Header.Height);
           }
           else if (tX is TXBTokenValueTransfer tXTokenTransfer)
-          {
+          { 
             DBAccounts.SpendInput(tXTokenTransfer);
 
             foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
@@ -231,18 +231,6 @@ namespace BTokenLib
         "83.229.86.158" 
         //84.74.69.100
       };
-    }
-
-    public bool FlagDownloadDBWhenSync(HeaderDownload h)
-    {
-      return
-        h.HeaderTip != null
-        &&
-        (DBAccounts.GetCountBytes() <
-        h.HeaderTip.CountBytesTXsAccumulated - h.HeaderRoot.CountBytesTXsAccumulated
-        ||
-        COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX <
-        h.HeaderTip.Height - h.HeaderRoot.Height);
     }
 
     public Account GetAccountUnconfirmed(byte[] iDAccount)

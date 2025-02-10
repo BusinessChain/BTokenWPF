@@ -22,7 +22,7 @@ namespace BTokenLib
     SHA256 SHA256 = SHA256.Create();
     byte[] Hash;
 
-    Dictionary<byte[], AccountStaged> AccountsStaged = new(new EqualityComparerByteArray());
+    Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
 
 
     public DBAccounts(string nameToken)
@@ -109,13 +109,15 @@ namespace BTokenLib
 
     public bool TryGetAccount(byte[] iDAccount, out Account account)
     {
-      if (TryGetCacheContainingAccount(iDAccount, out CacheDB cache))
-      {
-        account = cache[iDAccount];
-        return true;
-      }
+      account = null;
 
-      return FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account, out long startIndexAccount);
+      if (!TryPopAccountFromCache(iDAccount, out account))
+        if (!FilesDB[iDAccount[0]].TryGetAccount(iDAccount, out account, out long startIndexAccount))
+          return false;
+
+
+      AddToCacheTopPriority(account);
+      return true;
     }
 
     public void UpdateHashDatabase()
@@ -159,9 +161,9 @@ namespace BTokenLib
 
     public void SpendInput(TXBToken tX)
     {
-      if(!AccountsStaged.TryGetValue(tX.IDAccountSource, out AccountStaged accountStaged))
+      if(!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountStaged))
       {
-        if (!TryGetAccountStagedFromCache(tX.IDAccountSource, out accountStaged))
+        if (!TryPopAccountFromCache(tX.IDAccountSource, out accountStaged))
           if (!FilesDB[tX.IDAccountSource[0]].TryGetAccountStaged(tX.IDAccountSource, out accountStaged))
             throw new ProtocolException(
               $"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
@@ -172,65 +174,45 @@ namespace BTokenLib
       accountStaged.SpendTX(tX);
     }
 
-    bool TryGetAccountStagedFromCache(byte[] iDAccount, out AccountStaged accountStaged)
-    {
-      if(TryGetCacheContainingAccount(iDAccount, out CacheDB cache))
-      {
-        Account account = cache[iDAccount];
-
-        accountStaged = new AccountStaged
-        {
-          Account = account,
-          CacheDB = cache,
-          Value = account.Value,
-          Nonce = account.Nonce
-        };
-
-        return true;
-      }
-
-      accountStaged = null;
-      return false;
-    }
-
-    bool TryGetCacheContainingAccount(byte[] iDAccount, out CacheDB cache)
-    {
-      int c = IndexCacheTopPriority;
-
-      do
-      {
-        cache = Caches[c];
-
-        if (cache.ContainsKey(iDAccount))
-          return true;
-
-        c = (c - 1 + COUNT_CACHES) % COUNT_CACHES;
-      } while (c != IndexCacheTopPriority);
-
-      cache = null;
-      return false;
-    }
-
     public void InsertOutput(TXOutputBToken output, int blockHeight)
     {
-      if(!AccountsStaged.TryGetValue(output.IDAccount, out AccountStaged accountStaged))
+      if(!AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
       {
-        if (!TryGetAccountStagedFromCache(output.IDAccount, out accountStaged))
+        if (!TryPopAccountFromCache(output.IDAccount, out accountStaged))
           if (!FilesDB[output.IDAccount[0]].TryGetAccountStaged(output.IDAccount, out accountStaged))
-            accountStaged = new AccountStaged
+            accountStaged = new()
             {
-              Account = new Account
-              {
-                ID = output.IDAccount,
-                BlockHeightAccountInit = blockHeight,
-                Value = output.Value
-              }
+              ID = output.IDAccount,
+              BlockHeightAccountInit = blockHeight,
+              Value = output.Value
             };
 
         AccountsStaged.Add(output.IDAccount, accountStaged);
       }
 
       accountStaged.AddValue(output.Value);
+    }
+
+
+    bool TryPopAccountFromCache(byte[] iDAccount, out Account account)
+    {
+      int c = IndexCacheTopPriority;
+
+      do
+      {
+        CacheDB cache = Caches[c];
+
+        if (cache.TryGetValue(iDAccount, out account))
+        {
+          cache.Remove(iDAccount);
+          return true;
+        }
+
+        c = (c - 1 + COUNT_CACHES) % COUNT_CACHES;
+      } while (c != IndexCacheTopPriority);
+
+      account = null;
+      return false;
     }
 
     public void PurgeStagedData()
@@ -241,18 +223,11 @@ namespace BTokenLib
     public void Commit()
     {
       FilesDB.ForEach(f => f.Commit());
-      Caches.ForEach(c => c.Commit());
 
-      foreach (AccountStaged accountStaged in AccountsStaged.Values)
+      foreach (Account accountStaged in AccountsStaged.Values)
       {
-        Account account = accountStaged.Account;
-
-        accountStaged.CacheDB?.Remove(account.ID);
-
-        accountStaged.FileDB?.Commit();
-
-        if (account.Value > 0)
-          AddToCacheTopPriority(account);
+        if (accountStaged.Value > 0)
+          AddToCacheTopPriority(accountStaged);
       }
 
       UpdateHashDatabase();
@@ -279,16 +254,6 @@ namespace BTokenLib
       }
     }
         
-    public long GetCountBytes()
-    {
-      long countBytes = 0;
-
-      Caches.ForEach(c => countBytes += c.Count * Account.LENGTH_ACCOUNT);
-      FilesDB.ForEach(f => countBytes += f.Length);
-
-      return countBytes;
-    }
-
     public List<(Account account, string locationAccount, int indexSource)> GetAccounts()
     {
       List<(Account account, string sourceObject, int indexCache)> itemsAccount = new();

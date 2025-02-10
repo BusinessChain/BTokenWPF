@@ -42,11 +42,6 @@ namespace BTokenLib
       Value = fileStream.ReadInt64();
     }
 
-    public override string ToString()
-    {
-      return ID.BinaryToBase58Check();
-    }
-
     public byte[] Serialize()
     {
       int startIndex = 0;
@@ -80,5 +75,26 @@ namespace BTokenLib
       stream.Write(BitConverter.GetBytes(Value));
     }
 
+    public void AddValue(long value)
+    {
+      Value += value;
+    }
+
+    public void SpendTX(TXBToken tX)
+    {
+      if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
+        throw new ProtocolException($"Staged account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
+
+      if (Value < tX.GetValueOutputs() + tX.Fee)
+        throw new ProtocolException($"Staged account {this} referenced by TX {tX} does not have enough fund.");
+
+      Nonce += 1;
+      Value -= tX.GetValueOutputs() + tX.Fee;
+    }
+
+    public override string ToString()
+    {
+      return ID.BinaryToBase58Check();
+    }
   }
 }
