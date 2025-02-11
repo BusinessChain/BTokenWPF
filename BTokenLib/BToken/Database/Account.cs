@@ -9,10 +9,13 @@ namespace BTokenLib
     public const int LENGTH_ACCOUNT = 36;
     public const int LENGTH_ID = 20;
 
-    public byte[] ID;
+    public byte[] ID = new byte[LENGTH_ID];
     public int BlockHeightAccountInit;
     public int Nonce;
     public long Value;
+
+    public FileDB FileDBOrigin;
+    public long StartIndexFileDBOrigin;
 
 
     public Account() { }
@@ -30,16 +33,6 @@ namespace BTokenLib
 
       Value = BitConverter.ToInt64(buffer, startIndex);
       startIndex += 8;
-    }
-
-    public Account(FileStream fileStream)
-    {
-      ID = new byte[LENGTH_ID];
-      fileStream.Read(ID, 0, LENGTH_ID);
-
-      BlockHeightAccountInit = fileStream.ReadInt32();
-      Nonce = fileStream.ReadInt32();
-      Value = fileStream.ReadInt64();
     }
 
     public byte[] Serialize()

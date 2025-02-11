@@ -10,8 +10,6 @@ namespace BTokenLib
   {
     byte[] TempByteArrayCopyLastRecord = new byte[Account.LENGTH_ACCOUNT];
 
-    List<long> StartIndexesAccountsStaged = new();
-
     SHA256 SHA256 = SHA256.Create();
     public byte[] Hash = new byte[32];
 
@@ -25,27 +23,7 @@ namespace BTokenLib
       Seek(0, SeekOrigin.End);
     }
 
-    public bool TryGetAccountStaged(byte[] iDAccount, out Account accountStaged)
-    {
-      if(TryGetAccount(iDAccount, out Account account, out long startIndexAccount))
-      {
-        accountStaged = new AccountStaged
-        {
-          Account = account,
-          Value = account.Value,
-          Nonce = account.Nonce
-        };
-
-        StartIndexesAccountsStaged.Add(startIndexAccount);
-
-        return true;
-      }
-
-      accountStaged = null;
-      return false;
-    }
-
-    public bool TryGetAccount(byte[] iDAccount, out Account account, out long startIndexAccount)
+    public bool TryGetAccount(byte[] iDAccount, out Account account)
     {
       Seek(0, SeekOrigin.Begin);
 
@@ -56,11 +34,7 @@ namespace BTokenLib
           if (i == Account.LENGTH_ID)
           {
             Position -= Account.LENGTH_ID;
-
-            startIndexAccount = Position;
-
-            account = new(this);
-
+            account = ParseAccount();
             return true;
           }
 
@@ -68,8 +42,6 @@ namespace BTokenLib
       }
 
       account = null;
-      startIndexAccount = 0;
-
       return false;
     }
 
@@ -80,12 +52,27 @@ namespace BTokenLib
       List<Account> accounts = new();
 
       while (Position < Length)
-        accounts.Add(new(this));
+        accounts.Add(ParseAccount());
 
       return accounts;
     }
 
-    public void Commit()
+    Account ParseAccount()
+    {
+      Account account = new();
+
+      account.FileDBOrigin = this;
+      account.StartIndexFileDBOrigin = Position;
+
+      Read(account.ID, 0, account.ID.Length);
+      account.BlockHeightAccountInit = ReadInt32();
+      account.Nonce = ReadInt32();
+      account.Value = ReadInt64();
+
+      return account;
+    }
+
+    public void Commit(List<Account> accounts)
     {
       foreach(long positionStartAccount in StartIndexesAccountsStaged)
       {
@@ -107,6 +94,20 @@ namespace BTokenLib
       Hash = SHA256.ComputeHash(this);
 
       StartIndexesAccountsStaged.Clear();
+    }
+
+    int ReadInt32()
+    {
+      byte[] buffer = new byte[4];
+      Read(buffer, 0, buffer.Length);
+      return BitConverter.ToInt32(buffer);
+    }
+
+    long ReadInt64()
+    {
+      byte[] buffer = new byte[8];
+      Read(buffer, 0, buffer.Length);
+      return BitConverter.ToInt64(buffer);
     }
   }
 }

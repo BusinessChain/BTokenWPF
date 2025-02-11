@@ -37,10 +37,7 @@ namespace BTokenLib
       return valueBytes;
     }
     
-    static void AssignPrefixAndLength(
-      ulong value, 
-      out byte prefix, 
-      out int length)
+    static void AssignPrefixAndLength(ulong value, out byte prefix, out int length)
     {
       if (value < PREFIX_UINT16)
       {
@@ -78,39 +75,6 @@ namespace BTokenLib
       {
         prefix = BitConverter.ToInt32(buffer, startIndex);
         startIndex += 4;
-      }
-
-      return prefix;
-    }
-
-    public static int GetInt(Stream stream)
-    {
-      int prefix = stream.ReadByte();
-
-      if (prefix == PREFIX_UINT16)
-        return stream.ReadInt16();
-
-      if (prefix == PREFIX_UINT32)
-        return stream.ReadInt32();
-
-      return prefix;
-    }
-
-    public static int GetInt(Stream stream, ref int startIndex)
-    {
-      int prefix = stream.ReadByte();
-      startIndex += 1;
-
-      if (prefix == PREFIX_UINT16)
-      {
-        startIndex += 2;
-        return stream.ReadInt16();
-      }
-
-      if (prefix == PREFIX_UINT32)
-      {
-        startIndex += 4;
-        return stream.ReadInt32();
       }
 
       return prefix;

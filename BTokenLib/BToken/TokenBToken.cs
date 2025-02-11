@@ -166,21 +166,14 @@ namespace BTokenLib
     {
       SHA256 sHA256 = SHA256.Create();
 
-      byte[] hashRootHashesDB = sHA256.ComputeHash(
-        buffer,
-        0,
-        length);
+      byte[] hashRootHashesDB = sHA256.ComputeHash(buffer, 0, length);
 
       if (!((HeaderBToken)headerTip).HashDatabase.IsAllBytesEqual(hashRootHashesDB))
-        throw new ProtocolException(
-          $"Root hash of hashesDB not equal to database hash in header tip");
+        throw new ProtocolException($"Root hash of hashesDB not equal to database hash in header tip");
 
       List<byte[]> hashesDB = new();
 
-      for (
-        int i = 0;
-        i < DBAccounts.COUNT_CACHES + DBAccounts.COUNT_FILES_DB;
-        i += 32)
+      for (int i = 0; i < DBAccounts.COUNT_CACHES + DBAccounts.COUNT_FILES_DB; i += 32)
       {
         byte[] hashDB = new byte[32];
         Array.Copy(buffer, i, hashDB, 0, 32);
