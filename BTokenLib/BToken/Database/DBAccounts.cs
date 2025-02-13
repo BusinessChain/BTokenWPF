@@ -182,13 +182,13 @@ namespace BTokenLib
     {
       for (int i = 0; i < COUNT_FILES_DB; i++)
       {
-        List<Account> accounts = AccountsStaged[i].Values.ToList();
+        List<Account> accountsPerFileDB = AccountsStaged[i].Values.ToList();
         AccountsStaged[i].Clear();
 
-        FilesDB[i].Commit(accounts);
+        FilesDB[i].Commit(accountsPerFileDB);
         FilesDB[i].Hash.CopyTo(HashesFilesDB, i * 32);
 
-        foreach (Account account in accounts)
+        foreach (Account account in accountsPerFileDB)
           if (account.Value > 0)
             AddToCacheTopPriority(account);
       }
@@ -200,19 +200,16 @@ namespace BTokenLib
     {
       CacheDB cacheTopPriority = Caches[IndexCacheTopPriority];
 
-      cacheTopPriority.Add(account.ID, account);
-
-      if(cacheTopPriority.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+      if(cacheTopPriority.Count == COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
         IndexCacheTopPriority = (IndexCacheTopPriority + 1 + COUNT_CACHES) % COUNT_CACHES;
 
         cacheTopPriority = Caches[IndexCacheTopPriority];
 
-        foreach (KeyValuePair<byte[], Account> itemInCache in cacheTopPriority)
-          itemInCache.Value.Serialize(FilesDB[itemInCache.Value.ID[0]]);
-
         cacheTopPriority.Clear();
       }
+
+      cacheTopPriority.Add(account.ID, account);
     }
         
     public List<(Account account, string locationAccount, int indexSource)> GetAccounts()

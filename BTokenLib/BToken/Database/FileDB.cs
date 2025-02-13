@@ -2,6 +2,8 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Diagnostics.Eventing.Reader;
+using System.Linq;
 
 
 namespace BTokenLib
@@ -61,7 +63,6 @@ namespace BTokenLib
     {
       Account account = new();
 
-      account.FileDBOrigin = this;
       account.StartIndexFileDBOrigin = Position;
 
       Read(account.ID, 0, account.ID.Length);
@@ -74,26 +75,68 @@ namespace BTokenLib
 
     public void Commit(List<Account> accounts)
     {
-      foreach(long positionStartAccount in StartIndexesAccountsStaged)
-      {
-        Position = Length - Account.LENGTH_ACCOUNT;
+      List<Account> accountsUpdate = new();
+      List<Account> accountsRemove = new();
+      List<Account> accountsNew = new();
 
-        if(positionStartAccount != Position)
+      foreach (Account account in accounts)
+      {
+        if (account.Value > 0)
+        {
+          if (account.StartIndexFileDBOrigin > 0)
+            accountsUpdate.Add(account);
+          else
+            accountsNew.Add(account);
+        }
+        else
+          accountsRemove.Add(account);
+      }
+
+      foreach(Account accountUpdate in accountsUpdate)
+      {
+        Position = accountUpdate.StartIndexFileDBOrigin;
+        Write(accountUpdate.ByteArraySerialized);
+      }
+
+      int i = 0;
+
+      while (i < accountsNew.Count)
+      {
+        if (accountsRemove.Count > i)
+          Position = accountsRemove[i].StartIndexFileDBOrigin;
+        else
+          Position = Length;
+
+        accountsNew[i].StartIndexFileDBOrigin = Position;
+        Write(accountsNew[i].ByteArraySerialized);
+
+        i += 1;
+      }
+
+      long lengthFileStream = Length;
+
+      while (i < accountsRemove.Count)
+      {
+        Position = lengthFileStream - Account.LENGTH_ACCOUNT;
+
+        if (accountsRemove[i].StartIndexFileDBOrigin != Position)
         {
           Read(TempByteArrayCopyLastRecord);
 
-          Position = positionStartAccount;
+          Position = accountsRemove[i].StartIndexFileDBOrigin;
 
           Write(TempByteArrayCopyLastRecord);
         }
+
+        lengthFileStream -= Account.LENGTH_ACCOUNT;
+
+        i += 1;
       }
 
-      SetLength(Length - Account.LENGTH_ACCOUNT * StartIndexesAccountsStaged.Count);
+      SetLength(lengthFileStream);
       Position = Length;
 
       Hash = SHA256.ComputeHash(this);
-
-      StartIndexesAccountsStaged.Clear();
     }
 
     int ReadInt32()
