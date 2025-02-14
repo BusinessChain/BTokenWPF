@@ -9,7 +9,8 @@ namespace BTokenLib
     public const int LENGTH_ACCOUNT = 36;
     public const int LENGTH_ID = 20;
 
-    public byte[] ByteArraySerialized = new byte[LENGTH_ACCOUNT];
+    byte[] ByteArraySerialized = new byte[LENGTH_ACCOUNT];
+
     public byte[] ID = new byte[LENGTH_ID];
     public int BlockHeightAccountInit;
     public int Nonce;
@@ -20,45 +21,25 @@ namespace BTokenLib
 
     public Account() { }
 
-    public Account(byte[] buffer, ref int startIndex)
+    public Account(FileStream fileStream)
     {
-      Array.Copy(buffer, startIndex, ID, 0, LENGTH_ID);
-      startIndex += LENGTH_ID;
+      StartIndexFileDBOrigin = fileStream.Position;
+      fileStream.Read(ByteArraySerialized, 0, LENGTH_ACCOUNT);
 
-      BlockHeightAccountInit = BitConverter.ToInt32(buffer, startIndex);
-      startIndex += 4;
+      int index = 0;
 
-      Nonce = BitConverter.ToInt32(buffer, startIndex);
-      startIndex += 4;
+      Array.Copy(ByteArraySerialized, ID, LENGTH_ID);
+      index += LENGTH_ID;
 
-      Value = BitConverter.ToInt64(buffer, startIndex);
-      startIndex += 8;
+      BlockHeightAccountInit = BitConverter.ToInt32(ByteArraySerialized, index);
+      index += 4;
+
+      Nonce = BitConverter.ToInt32(ByteArraySerialized, index);
+      index += 4;
+
+      Value = BitConverter.ToInt64(ByteArraySerialized, index);
     }
 
-    public byte[] Serialize()
-    {
-      int startIndex = 0;
-      byte[] buffer = new byte[LENGTH_ACCOUNT];
-
-      Serialize(buffer, ref startIndex);
-
-      return buffer;
-    }
-
-    public void Serialize(byte[] buffer, ref int startIndex)
-    {
-      ID.CopyTo(buffer, startIndex);
-      startIndex += LENGTH_ID;
-
-      BitConverter.GetBytes(BlockHeightAccountInit).CopyTo(buffer, startIndex);
-      startIndex += 4;
-
-      BitConverter.GetBytes(Nonce).CopyTo(buffer, startIndex);
-      startIndex += 4;
-
-      BitConverter.GetBytes(Value).CopyTo(buffer, startIndex);
-      startIndex += 8;
-    }
 
     public void AddValue(long value)
     {
@@ -80,6 +61,24 @@ namespace BTokenLib
     public override string ToString()
     {
       return ID.BinaryToBase58Check();
+    }
+
+    public byte[] Serialize()
+    {
+      int index = 0;
+
+      ID.CopyTo(ByteArraySerialized, index);
+      index += LENGTH_ID;
+
+      BitConverter.GetBytes(BlockHeightAccountInit).CopyTo(ByteArraySerialized, index);
+      index += 4;
+
+      BitConverter.GetBytes(Nonce).CopyTo(ByteArraySerialized, index);
+      index += 4;
+
+      BitConverter.GetBytes(Value).CopyTo(ByteArraySerialized, index);
+
+      return ByteArraySerialized;
     }
   }
 }

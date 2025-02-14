@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     public const int COUNT_CACHES = 256;
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 40000; // Read from configuration file
-    List<CacheDB> Caches = new();
+    List<Dictionary<byte[], Account>> Caches = new();
     int IndexCacheTopPriority;
 
     string PathRootDB;
@@ -28,9 +28,6 @@ namespace BTokenLib
     {
       PathRootDB = Path.Combine(nameToken, "FilesDB");
 
-      for (int i = 0; i < COUNT_CACHES; i++)
-        Caches.Add(new CacheDB());
-
       Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), PathRootDB));
 
       for (int i = 0; i < COUNT_FILES_DB; i++)
@@ -38,32 +35,16 @@ namespace BTokenLib
         FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
         AccountsStaged[i] = new(new EqualityComparerByteArray());
       }
+
+      for (int i = 0; i < COUNT_CACHES; i++)
+        Caches.Add(new Dictionary<byte[], Account>(new EqualityComparerByteArray()));
     }
 
     public void LoadImage(string path)
-    {
-      for (int i = 0; i < COUNT_CACHES; i++)
-      {
-        int startIndex = 0;
-        byte[] buffer = File.ReadAllBytes(Path.Combine(path, "cache", i.ToString()));
-
-        while (startIndex < buffer.Length)
-        {
-          Account account = new(buffer, ref startIndex);
-          Caches[i].Add(account.ID, account);
-        }
-      }
-    }
+    { }
 
     public void CreateImage(string path)
-    {
-      string pathDirectoryCache = Path.Combine(path, "cache");
-
-      Directory.CreateDirectory(pathDirectoryCache);
-
-      for (int i = 0; i < COUNT_CACHES; i++)
-        Caches[i].CreateImage(Path.Combine(pathDirectoryCache, i.ToString()));
-    }
+    { }
 
     public void ClearCache()
     {
@@ -158,7 +139,7 @@ namespace BTokenLib
 
       do
       {
-        CacheDB cache = Caches[c];
+        Dictionary<byte[], Account> cache = Caches[c];
 
         if (cache.TryGetValue(iDAccount, out account))
         {
@@ -198,7 +179,7 @@ namespace BTokenLib
 
     void AddToCacheTopPriority(Account account)
     {
-      CacheDB cacheTopPriority = Caches[IndexCacheTopPriority];
+      Dictionary<byte[], Account> cacheTopPriority = Caches[IndexCacheTopPriority];
 
       if(cacheTopPriority.Count == COUNT_MAX_ACCOUNTS_IN_CACHE)
       {

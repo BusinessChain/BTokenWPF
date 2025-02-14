@@ -36,7 +36,7 @@ namespace BTokenLib
           if (i == Account.LENGTH_ID)
           {
             Position -= Account.LENGTH_ID;
-            account = ParseAccount();
+            account = new(this);
             return true;
           }
 
@@ -54,23 +54,9 @@ namespace BTokenLib
       List<Account> accounts = new();
 
       while (Position < Length)
-        accounts.Add(ParseAccount());
+        accounts.Add(new(this));
 
       return accounts;
-    }
-
-    Account ParseAccount()
-    {
-      Account account = new();
-
-      account.StartIndexFileDBOrigin = Position;
-
-      Read(account.ID, 0, account.ID.Length);
-      account.BlockHeightAccountInit = ReadInt32();
-      account.Nonce = ReadInt32();
-      account.Value = ReadInt64();
-
-      return account;
     }
 
     public void Commit(List<Account> accounts)
@@ -95,7 +81,7 @@ namespace BTokenLib
       foreach(Account accountUpdate in accountsUpdate)
       {
         Position = accountUpdate.StartIndexFileDBOrigin;
-        Write(accountUpdate.ByteArraySerialized);
+        Write(accountUpdate.Serialize());
       }
 
       int i = 0;
@@ -108,7 +94,7 @@ namespace BTokenLib
           Position = Length;
 
         accountsNew[i].StartIndexFileDBOrigin = Position;
-        Write(accountsNew[i].ByteArraySerialized);
+        Write(accountsNew[i].Serialize());
 
         i += 1;
       }
@@ -137,6 +123,8 @@ namespace BTokenLib
       Position = Length;
 
       Hash = SHA256.ComputeHash(this);
+
+      Flush();
     }
 
     int ReadInt32()
