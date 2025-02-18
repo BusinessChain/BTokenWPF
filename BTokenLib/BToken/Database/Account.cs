@@ -40,12 +40,6 @@ namespace BTokenLib
       Value = BitConverter.ToInt64(ByteArraySerialized, index);
     }
 
-
-    public void AddValue(long value)
-    {
-      Value += value;
-    }
-
     public void SpendTX(TXBToken tX)
     {
       if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
@@ -56,6 +50,12 @@ namespace BTokenLib
 
       Nonce += 1;
       Value -= tX.GetValueOutputs() + tX.Fee;
+    }
+
+    public void ReverseSpendTX(TXBToken tX)
+    {
+      Nonce -= 1;
+      Value += tX.GetValueOutputs() + tX.Fee;
     }
 
     public override string ToString()

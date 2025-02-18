@@ -111,28 +111,27 @@ namespace BTokenLib
     {
       try
       {
-        foreach (TX tX in block.TXs)
+        foreach (TXBToken tX in block.TXs)
           if (tX is TXBTokenCoinbase tXCoinbase)
           {
             foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
               DBAccounts.InsertOutput(tXOutput, block.Header.Height);
           }
-          else if (tX is TXBTokenValueTransfer tXTokenTransfer)
-          { 
-            DBAccounts.SpendInput(tXTokenTransfer);
-
-            foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
-              DBAccounts.InsertOutput(tXOutput, block.Header.Height);
-          }
-          else if (tX is TXBTokenAnchor tXBTokenAnchor)
+          else
           {
+            DBAccounts.SpendInput(tX);
 
+            if (tX is TXBTokenValueTransfer tXTokenTransfer)
+            {
+              foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+                DBAccounts.InsertOutput(tXOutput, block.Header.Height);
+            }
+            else if (tX is TXBTokenAnchor tXBTokenAnchor)
+            { }
+            else if (tX is TXBTokenData tXBTokenData)
+            { }
+            else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
           }
-          else if (tX is TXBTokenData tXBTokenData)
-          {
-
-          }
-          else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
       }
       catch (Exception ex)
       {
@@ -144,12 +143,33 @@ namespace BTokenLib
       DBAccounts.Commit();
     }
 
-    protected override void StageTXReverseToDatabase(TX tX, Header header, bool isCoinbase)
+    public override void ReverseBlockInDB(Block block)
     {
-    }
+      for (int i = block.TXs.Count - 1; i >= 0; i--)
+      {
+        TXBToken tX = block.TXs[i] as TXBToken;
 
-    protected override void CommitTXsReverseToDatabase(List<TX> tXs)
-    {
+        if (tX is TXBTokenCoinbase tXCoinbase)
+        {
+          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+            DBAccounts.ReverseOutput(tXOutput);
+        }
+        else
+        {
+          DBAccounts.ReverseSpendInput(tX);
+
+          if (tX is TXBTokenValueTransfer tXTokenTransfer)
+          {
+            foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+              DBAccounts.ReverseOutput(tXOutput);
+          }
+          else if (tX is TXBTokenAnchor tXBTokenAnchor)
+          { }
+          else if (tX is TXBTokenData tXBTokenData)
+          { }
+          else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
+        }
+      }
     }
 
     public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)

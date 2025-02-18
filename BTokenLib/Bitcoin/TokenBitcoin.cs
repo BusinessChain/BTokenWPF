@@ -155,7 +155,7 @@ namespace BTokenLib
       Wallet.Commit();
     }
 
-    public override void ReverseInDB(Block block)
+    public override void ReverseBlockInDB(Block block)
     {
       Wallet.StageBlockReversal(block);
       Wallet.Commit();

@@ -114,7 +114,7 @@ namespace BTokenLib
     public void InsertOutput(TXOutputBToken output, int blockHeight)
     {
       if(output.Value <= 0)
-        throw new ProtocolException($"Value of TX output funding {output.IDAccount} is not greater than zero.");
+        throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
 
       if (!AccountsStaged[output.IDAccount[0]].TryGetValue(output.IDAccount, out Account accountStaged))
       {
@@ -130,7 +130,40 @@ namespace BTokenLib
         AccountsStaged[output.IDAccount[0]].Add(output.IDAccount, accountStaged);
       }
 
-      accountStaged.AddValue(output.Value);
+      accountStaged.Value += output.Value;
+    }
+
+    public void ReverseSpendInput(TXBToken tX)
+    {
+      if (!AccountsStaged[tX.IDAccountSource[0]].TryGetValue(tX.IDAccountSource, out Account accountStaged))
+      {
+        if (!TryPopAccountFromCache(tX.IDAccountSource, out accountStaged))
+          if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out accountStaged))
+            accountStaged = new()
+            {
+              ID = tX.IDAccountSource,
+              BlockHeightAccountInit = tX.BlockheightAccountInit,
+              Nonce = tX.Nonce,
+            };
+
+        AccountsStaged[tX.IDAccountSource[0]].Add(tX.IDAccountSource, accountStaged);
+      }
+
+      accountStaged.ReverseSpendTX(tX);
+    }
+
+    public void ReverseOutput(TXOutputBToken output)
+    {
+      if (!AccountsStaged[output.IDAccount[0]].TryGetValue(output.IDAccount, out Account accountStaged))
+      {
+        if (!TryPopAccountFromCache(output.IDAccount, out accountStaged))
+          if (!FilesDB[output.IDAccount[0]].TryGetAccount(output.IDAccount, out accountStaged))
+            throw new ProtocolException($"TX Output cannot be reversed because account {output.IDAccount.ToHexString()} does not exist in database.");
+
+        AccountsStaged[output.IDAccount[0]].Add(output.IDAccount, accountStaged);
+      }
+
+      accountStaged.Value -= output.Value;
     }
 
     bool TryPopAccountFromCache(byte[] iDAccount, out Account account)

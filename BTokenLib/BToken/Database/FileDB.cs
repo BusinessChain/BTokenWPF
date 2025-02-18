@@ -2,8 +2,6 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Diagnostics.Eventing.Reader;
-using System.Linq;
 
 
 namespace BTokenLib

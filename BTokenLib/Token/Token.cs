@@ -465,7 +465,7 @@ namespace BTokenLib
       {
         try
         {
-          ReverseInDB(block);
+          ReverseBlockInDB(block);
 
           RemoveIndexHeaderTip();
 
@@ -495,7 +495,7 @@ namespace BTokenLib
       return height == HeaderTip.Height;
     }
 
-    public abstract void ReverseInDB(Block block);
+    public abstract void ReverseBlockInDB(Block block);
 
     public void CreateImage()
     {
