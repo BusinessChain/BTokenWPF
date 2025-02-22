@@ -310,7 +310,7 @@ namespace BTokenLib
 
           InsertBlockInDB(block);
 
-          Wallet.Insert(block);
+          Wallet.InsertBlock(block);
 
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;
@@ -425,7 +425,7 @@ namespace BTokenLib
 
       InsertBlockInDB(block);
 
-      Wallet.Insert(block);
+      Wallet.InsertBlock(block);
 
       HeaderTip.HeaderNext = block.Header;
       HeaderTip = block.Header;
@@ -466,6 +466,8 @@ namespace BTokenLib
         try
         {
           ReverseBlockInDB(block);
+
+          Wallet.ReverseBlock(block);
 
           RemoveIndexHeaderTip();
 

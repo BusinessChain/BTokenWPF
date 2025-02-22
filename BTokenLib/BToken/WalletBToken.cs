@@ -104,7 +104,7 @@ namespace BTokenLib
       return true;
     }
 
-    public override void Insert(Block block)
+    public override void InsertBlock(Block block)
     {
       foreach (TXBToken tX in block.TXs)
       {
@@ -118,6 +118,11 @@ namespace BTokenLib
         if (!tX.FlagPruneWhenArchived)
           IndexTXs.Add(tX.Hash, tX);
       }
+    }
+
+    public override void ReverseBlock(Block block)
+    {
+
     }
 
     public override void InsertTXUnconfirmed(TX tX)

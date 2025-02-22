@@ -280,7 +280,7 @@ namespace BTokenLib
         TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
     }
 
-    public override void Insert(Block block)
+    public override void InsertBlock(Block block)
     {
       foreach (TXBitcoin tX in block.TXs)
       {
@@ -303,7 +303,7 @@ namespace BTokenLib
       }
     }
 
-    public override void StageBlockReversal(Block block)
+    public override void ReverseBlock(Block block)
     {
       for (int t = block.TXs.Count - 1; t >= 0; t--)
       {

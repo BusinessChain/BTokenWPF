@@ -28,14 +28,11 @@ namespace BTokenLib
 
     int SequenceNumberTX;
 
-    Dictionary<byte[], (TXBToken tX, int sequenceNumberTX)> TXsByHash =
-      new(new EqualityComparerByteArray());
+    Dictionary<byte[], (TXBToken tX, int sequenceNumberTX)> TXsByHash = new(new EqualityComparerByteArray());
 
-    Dictionary<byte[], List<TXBToken>> TXsByIDAccountSource =
-      new(new EqualityComparerByteArray());
+    Dictionary<byte[], List<TXBToken>> TXsByIDAccountSource = new(new EqualityComparerByteArray());
 
-    Dictionary<byte[], long> OutputValuesByIDAccount =
-      new(new EqualityComparerByteArray());
+    Dictionary<byte[], long> OutputValuesByIDAccount = new(new EqualityComparerByteArray());
 
     /// <summary>
     /// A bundle conains tXs with the same source account with consecutive nonce.
@@ -238,6 +235,13 @@ namespace BTokenLib
         tX = null;
         return false;
       }
+    }
+
+    public override void Clear()
+    {
+      TXsByHash.Clear();
+      TXsByIDAccountSource.Clear();
+      OutputValuesByIDAccount.Clear();
     }
   }
 }

@@ -131,9 +131,9 @@ namespace BTokenLib
       OutputsSpentUnconfirmed.Clear();
     }
 
-    public abstract void Insert(Block block);
+    public abstract void InsertBlock(Block block);
 
-    public abstract void StageBlockReversal(Block block);
+    public abstract void ReverseBlock(Block block);
 
     public void AddTXToHistory(TX tX)
     {

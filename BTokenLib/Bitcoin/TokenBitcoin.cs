@@ -152,12 +152,11 @@ namespace BTokenLib
     public override void InsertBlockInDB(Block block)
     {
       // In Bitcoin we simply assume that everything is ok.
+      // Actually, we could also use a UTXO database but only for our address
     }
 
     public override void ReverseBlockInDB(Block block)
     {
-      Wallet.StageBlockReversal(block);
-      Wallet.Commit();
     }
 
     public override List<string> GetSeedAddresses()
