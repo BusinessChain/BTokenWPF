@@ -7,12 +7,14 @@ namespace BTokenLib
   public abstract class TXBToken : TX
   {
     const int LENGTH_PUBKEYCOMPRESSED = 33;
+
     /// <summary>
     /// The PublicKey specifies from which account the funds are sourced.
     /// </summary>
-    byte[] PublicKey = new byte[LENGTH_PUBKEYCOMPRESSED];
+    public byte[] PublicKey = new byte[LENGTH_PUBKEYCOMPRESSED];
 
     public const int LENGTH_IDACCOUNT = 20;
+
     /// <summary>
     /// IDAccountSource is derived from the PublicKey and is used to address the account in the database.
     /// </summary>
@@ -82,6 +84,9 @@ namespace BTokenLib
       if (!Crypto.VerifySignature(buffer, indexTxStart, lengthMessage, PublicKey, signature))
         throw new ProtocolException($"TX {this} contains invalid signature.");
     }
+
+    public virtual List<TXOutputBToken> GetOutputs()
+    { return new(); }
 
     public override string Print()
     {

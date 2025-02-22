@@ -33,6 +33,9 @@ namespace BTokenLib
       return TXOutputs.Sum(t => t.Value);
     }
 
+    public override List<TXOutputBToken> GetOutputs()
+    { return TXOutputs; }
+
     public override List<(string label, string value)> GetLabelsValuePairs()
     {
       List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();

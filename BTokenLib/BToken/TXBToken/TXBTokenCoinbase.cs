@@ -49,5 +49,8 @@ namespace BTokenLib
 
       return labelValuePairs;
     }
+
+    public override List<TXOutputBToken> GetOutputs()
+    { return TXOutputs; }
   }
 }

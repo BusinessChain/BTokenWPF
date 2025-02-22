@@ -42,10 +42,6 @@ namespace BTokenLib
       PREFIX_ANCHOR_TOKEN.Length + TokenAnchor.LENGTH_IDTOKEN + 32 + 32;
 
     public List<TXOutputWallet> OutputsSpendable = new();
-    List<TXOutputWallet> OutputsSpendableStage;
-
-    Dictionary<byte[], TXBitcoin> IndexTXs = new(new EqualityComparerByteArray());
-    Dictionary<byte[], TXBitcoin> IndexTXsStaged;
 
 
     public WalletBitcoin(string privKeyDec, TokenBitcoin token)
@@ -284,58 +280,46 @@ namespace BTokenLib
         TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
     }
 
-    public override void StageBlock(Block block)
+    public override void Insert(Block block)
     {
-      IndexTXsStaged = new(IndexTXs, new EqualityComparerByteArray());
-
-      OutputsSpendableStage = OutputsSpendable.ToList();
-      OutputsSpendableUnconfirmedStage = OutputsSpendableUnconfirmed.ToList();
-      OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
-
       foreach (TXBitcoin tX in block.TXs)
       {
         foreach (TXInputBitcoin tXInput in tX.Inputs)
-          if (TryRemoveOutput(OutputsSpendableStage, tXInput))
+          if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
           {
             tX.FlagPruneWhenArchived = false;
-            TryRemoveOutput(OutputsSpentUnconfirmedStage, tXInput);
+            TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
           }
 
         for (int i = 0; i < tX.TXOutputs.Count; i++)
-          if (TryAddTXOutputWallet(OutputsSpendableStage, tX, i))
+          if (TryAddTXOutputWallet(OutputsSpendable, tX, i))
           {
             tX.FlagPruneWhenArchived = false;
-            TryRemoveOutput(OutputsSpendableUnconfirmedStage, tX.Hash, i);
+            TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
           }
 
         if (!tX.FlagPruneWhenArchived)
-          IndexTXsStaged.Add(tX.Hash, tX);
+          IndexTXs.Add(tX.Hash, tX);
       }
     }
 
     public override void StageBlockReversal(Block block)
     {
-      IndexTXsStaged = new(IndexTXs, new EqualityComparerByteArray());
-
-      OutputsSpendableStage = OutputsSpendable.ToList();
-      OutputsSpendableUnconfirmedStage = OutputsSpendableUnconfirmed.ToList();
-      OutputsSpentUnconfirmedStage = OutputsSpentUnconfirmed.ToList();
-
       for (int t = block.TXs.Count - 1; t >= 0; t--)
       {
         TXBitcoin tX = block.TXs[t] as TXBitcoin;
 
-        OutputsSpendableStage.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
+        OutputsSpendable.RemoveAll(o => o.TXID.IsAllBytesEqual(tX.Hash));
 
         foreach (TXInputBitcoin tXInput in tX.Inputs)
         {
-          TXBitcoin tXReferenced = block.TXs.Find(t => t.Hash.IsAllBytesEqual(tXInput.TXIDOutput)) as TXBitcoin;
+          TX tXReferenced = block.TXs.Find(t => t.Hash.IsAllBytesEqual(tXInput.TXIDOutput));
           
-          if (tXReferenced != null || IndexTXsStaged.TryGetValue(tXInput.TXIDOutput, out tXReferenced))
-            TryAddTXOutputWallet(OutputsSpendableStage, tXReferenced, tXInput.OutputIndex);
+          if (tXReferenced != null || IndexTXs.TryGetValue(tXInput.TXIDOutput, out tXReferenced))
+            TryAddTXOutputWallet(OutputsSpendable, tXReferenced as TXBitcoin, tXInput.OutputIndex);
         }
 
-        IndexTXsStaged.Remove(tX.Hash);
+        IndexTXs.Remove(tX.Hash);
       }
     }
 
@@ -358,20 +342,6 @@ namespace BTokenLib
       }
 
       return false;
-    }
-
-    public override void Commit()
-    {
-      OutputsSpendable = OutputsSpendableStage;
-      OutputsSpendableUnconfirmed = OutputsSpendableUnconfirmedStage;
-      OutputsSpentUnconfirmed = OutputsSpentUnconfirmedStage;
-
-      IndexTXs = IndexTXsStaged;
-    }
-
-    static bool TryRemoveOutput(List<TXOutputWallet> outputs, TXInputBitcoin tXInput)
-    {
-      return TryRemoveOutput(outputs, tXInput.TXIDOutput, tXInput.OutputIndex);
     }
 
     static bool TryRemoveOutput(List<TXOutputWallet> outputs, byte[] tXID, int outputIndex)

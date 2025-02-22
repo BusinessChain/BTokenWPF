@@ -310,7 +310,7 @@ namespace BTokenLib
 
           InsertBlockInDB(block);
 
-          Wallet.Insert(block); // braucht kein Stager, sondern macht einfach rein wenn DB - insert erfolgreich war.
+          Wallet.Insert(block);
 
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;

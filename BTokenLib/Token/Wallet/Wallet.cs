@@ -19,14 +19,14 @@ namespace BTokenLib
     public List<TX> HistoryTXs = new();
     public List<TX> HistoryTXsUnconfirmed = new();
 
+    public Dictionary<byte[], TX> IndexTXs = new(new EqualityComparerByteArray());
+
     public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
-    public List<TXOutputWallet> OutputsSpendableUnconfirmedStage = new();
 
     /// <summary>
     /// Contains outputs that are spent by unconfirmed transactions. The outputs themselves might origin from confirmed and unconfirmed transactions.
     /// </summary>
     public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
-    public List<TXOutputWallet> OutputsSpentUnconfirmedStage;
 
 
     public Wallet(string privKeyDec)
@@ -131,9 +131,7 @@ namespace BTokenLib
       OutputsSpentUnconfirmed.Clear();
     }
 
-    public abstract void StageBlock(Block block);
-
-    public abstract void Commit();
+    public abstract void Insert(Block block);
 
     public abstract void StageBlockReversal(Block block);
 

@@ -104,6 +104,22 @@ namespace BTokenLib
       return true;
     }
 
+    public override void Insert(Block block)
+    {
+      foreach (TXBToken tX in block.TXs)
+      {
+        if (tX.PublicKey.IsAllBytesEqual(PublicKey))
+          tX.FlagPruneWhenArchived = false;
+
+        foreach(TXOutputBToken output in tX.GetOutputs())
+          if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
+            tX.FlagPruneWhenArchived = false;
+
+        if (!tX.FlagPruneWhenArchived)
+          IndexTXs.Add(tX.Hash, tX);
+      }
+    }
+
     public override void InsertTXUnconfirmed(TX tX)
     {
 

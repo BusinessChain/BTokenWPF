@@ -151,8 +151,7 @@ namespace BTokenLib
 
     public override void InsertBlockInDB(Block block)
     {
-      Wallet.StageBlock(block);
-      Wallet.Commit();
+      // In Bitcoin we simply assume that everything is ok.
     }
 
     public override void ReverseBlockInDB(Block block)
