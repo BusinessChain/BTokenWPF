@@ -26,10 +26,9 @@ namespace BTokenLib
       return TXOutputs.Sum(o => o.Value);
     }
 
-    public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)
+    public override List<TokenAnchor> GetTokenAnchors()
     {
-      tokenAnchor = TXOutputs[0].TokenAnchor;
-      return tokenAnchor != null;
+      return TXOutputs.Where(t => t.TokenAnchor != null).Select(t => t.TokenAnchor).ToList();
     }
 
     public override string Print()

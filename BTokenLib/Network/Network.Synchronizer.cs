@@ -105,7 +105,7 @@ namespace BTokenLib
             {
               $"Synchronization with {PeerSync} is aborted.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-              Token.LoadImage();
+              Token.LoadState();
 
               foreach (Peer p in Peers.Where(p => p.IsStateBlockSync()))
                 p.SetStateIdle();
@@ -139,7 +139,7 @@ namespace BTokenLib
                   if (Token.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
                     Token.Archiver.Reorganize();
                   else
-                    Token.LoadImage();
+                    Token.LoadState();
 
                   break;
                 }
@@ -358,7 +358,7 @@ namespace BTokenLib
           $"Synchronization with {peerSync} was abort."
             .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-          Token.LoadImage();
+          Token.LoadState();
 
           lock (LOCK_Peers)
             Peers

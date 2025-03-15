@@ -37,6 +37,11 @@ namespace BTokenLib
       return 0;
     }
 
+    public override List<TokenAnchor> GetTokenAnchors()
+    {
+      return new() { TokenAnchor };
+    }
+
     public override List<(string label, string value)> GetLabelsValuePairs()
     {
       List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();

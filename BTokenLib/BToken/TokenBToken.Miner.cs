@@ -135,7 +135,7 @@ namespace BTokenLib
           FileAccess.Write,
           FileShare.None))
           {
-            block.WriteToStream(fileStreamBlock);
+            block.WriteToDisk(fileStreamBlock);
           }
 
           return;

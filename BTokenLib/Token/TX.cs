@@ -15,10 +15,10 @@ namespace BTokenLib
 
     public byte[] TXRaw;
 
-    public bool FlagPruneWhenArchived = true;
+    public bool FlagPrune = true;
 
 
-    public abstract bool TryGetAnchorToken(out TokenAnchor tokenAnchor);
+    public abstract List<TokenAnchor> GetTokenAnchors();
 
     public abstract long GetValueOutputs();
 

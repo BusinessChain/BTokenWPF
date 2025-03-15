@@ -116,7 +116,7 @@ namespace BTokenLib
       while (token.TokenParent != null)
         token = TokenParent;
 
-      token.LoadImage();
+      token.LoadState();
       token.LoadTXPool();
       token.StartNetwork();
     }
@@ -257,7 +257,7 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void LoadImage()
+    public void LoadState()
     {
       Reset();
 
@@ -295,7 +295,7 @@ namespace BTokenLib
 
       LoadBlocksFromArchive();
 
-      TokensChild.ForEach(t => t.LoadImage());
+      TokensChild.ForEach(t => t.LoadState());
     }
 
     void LoadBlocksFromArchive()

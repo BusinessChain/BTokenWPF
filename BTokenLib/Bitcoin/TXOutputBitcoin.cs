@@ -64,11 +64,6 @@ namespace BTokenLib
 
         Type = TypesToken.AnchorToken;
       }
-      else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
-        WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
-      {
-
-      }
       else
         Type = TypesToken.Unspecified;
     }

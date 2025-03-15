@@ -48,16 +48,22 @@ namespace BTokenLib
 
       long blockReward = Token.BlockRewardInitial >> Header.Height / Token.PeriodHalveningBlockReward;
 
-      TXs.Add(Token.ParseTXCoinbase(Buffer, ref startIndex, SHA256, blockReward));
+      TX tX;
 
-      for (int t = 1; t < tXCount; t++)
+      for (int t = 0; t < tXCount; t += 1)
       {
-        TX tX = Token.ParseTX(Buffer, ref startIndex, SHA256);
+        if(t == 0)
+          tX = Token.ParseTXCoinbase(Buffer, ref startIndex, SHA256, blockReward);
+        else
+          tX = Token.ParseTX(Buffer, ref startIndex, SHA256);
+
         TXs.Add(tX);
 
-        if (tX.TryGetAnchorToken(out TokenAnchor tokenAnchor))
+        foreach(TokenAnchor tokenAnchor in tX.GetTokenAnchors())
         {
-          byte[] differenceHash = SHA256.HashData(Header.Hash).SubtractByteWise(tX.Hash);
+          tX.FlagPrune = false;
+
+          byte[] differenceHash = SHA256.HashData(Header.Hash).SubtractByteWise(tokenAnchor.HashBlockReferenced);
 
           if (tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out TX tXAnchorWinner))
           {
@@ -157,10 +163,19 @@ namespace BTokenLib
       LengthBufferPayload = startIndex;
     }
 
-    public void WriteToStream(Stream stream)
+    public void WriteToDisk(FileStream fileStream)
     {
-      stream.Write(Buffer, 0, LengthBufferPayload);
-      stream.Flush();
+      byte[] bufferHeader = Header.Serialize();
+      fileStream.Write(bufferHeader, 0, bufferHeader.Length);
+
+      byte[] countTXs = VarInt.GetBytes(TXs.Count(t => !t.FlagPrune));
+      fileStream.Write(countTXs, 0, countTXs.Length);
+
+      for (int i = 0; i < TXs.Count; i++)
+        if (!TXs[i].FlagPrune)
+          fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+
+      fileStream.Flush();
     }
 
     public override string ToString()

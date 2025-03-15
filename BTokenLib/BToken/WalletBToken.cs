@@ -109,13 +109,13 @@ namespace BTokenLib
       foreach (TXBToken tX in block.TXs)
       {
         if (tX.PublicKey.IsAllBytesEqual(PublicKey))
-          tX.FlagPruneWhenArchived = false;
+          tX.FlagPrune = false;
 
         foreach(TXOutputBToken output in tX.GetOutputs())
           if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
-            tX.FlagPruneWhenArchived = false;
+            tX.FlagPrune = false;
 
-        if (!tX.FlagPruneWhenArchived)
+        if (!tX.FlagPrune)
           IndexTXs.Add(tX.Hash, tX);
       }
     }

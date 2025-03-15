@@ -287,18 +287,18 @@ namespace BTokenLib
         foreach (TXInputBitcoin tXInput in tX.Inputs)
           if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
           {
-            tX.FlagPruneWhenArchived = false;
+            tX.FlagPrune = false;
             TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
           }
 
         for (int i = 0; i < tX.TXOutputs.Count; i++)
           if (TryAddTXOutputWallet(OutputsSpendable, tX, i))
           {
-            tX.FlagPruneWhenArchived = false;
+            tX.FlagPrune = false;
             TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
           }
 
-        if (!tX.FlagPruneWhenArchived)
+        if (!tX.FlagPrune)
           IndexTXs.Add(tX.Hash, tX);
       }
     }

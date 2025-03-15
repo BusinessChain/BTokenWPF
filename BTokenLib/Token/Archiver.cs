@@ -11,7 +11,6 @@ namespace BTokenLib
     string PathBlockArchive;
     string PathBlockArchiveMain;
     string PathBlockArchiveFork;
-    const int COUNT_MAX_BLOCKS_ARCHIVED = 2016;
 
     Token Token;
 
@@ -121,12 +120,8 @@ namespace BTokenLib
           FileAccess.Write,
           FileShare.None))
           {
-            block.WriteToStream(fileStreamBlock);
+            block.WriteToDisk(fileStreamBlock);
           }
-
-          File.Delete(Path.Combine(
-            PathBlockArchive,
-            (block.Header.Height - COUNT_MAX_BLOCKS_ARCHIVED).ToString()));
 
           break;
         }
