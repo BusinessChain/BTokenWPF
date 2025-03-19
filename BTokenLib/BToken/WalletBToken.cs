@@ -104,20 +104,19 @@ namespace BTokenLib
       return true;
     }
 
-    public override void InsertBlock(Block block)
+    public override void InsertTX(TX tX)
     {
-      foreach (TXBToken tX in block.TXs)
-      {
-        if (tX.PublicKey.IsAllBytesEqual(PublicKey))
+      TXBToken tXBToken = tX as TXBToken;
+
+      if (tXBToken.PublicKey.IsAllBytesEqual(PublicKey))
+        tX.FlagPrune = false;
+
+      foreach (TXOutputBToken output in tXBToken.GetOutputs())
+        if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
           tX.FlagPrune = false;
 
-        foreach(TXOutputBToken output in tX.GetOutputs())
-          if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
-            tX.FlagPrune = false;
-
-        if (!tX.FlagPrune)
-          IndexTXs.Add(tX.Hash, tX);
-      }
+      if (!tX.FlagPrune)
+        IndexTXs.Add(tX.Hash, tX);
     }
 
     public override void ReverseBlock(Block block)

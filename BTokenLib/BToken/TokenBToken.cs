@@ -69,11 +69,6 @@ namespace BTokenLib
       return header;
     }
 
-    public override void LoadImageDatabase(string pathImage)
-    {
-      DBAccounts.LoadImage(pathImage);
-    }
-
     public override void CreateImageDatabase(string pathImage)
     {
       DBAccounts.CreateImage(pathImage);

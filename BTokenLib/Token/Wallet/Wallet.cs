@@ -131,7 +131,13 @@ namespace BTokenLib
       OutputsSpentUnconfirmed.Clear();
     }
 
-    public abstract void InsertBlock(Block block);
+    public void InsertBlock(Block block)
+    {
+      for (int t = 0; t < block.TXs.Count; t += 1)
+        InsertTX(block.TXs[t]);
+    }
+
+    public abstract void InsertTX(TX tX);
 
     public abstract void ReverseBlock(Block block);
 

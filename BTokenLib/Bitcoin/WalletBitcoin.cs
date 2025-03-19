@@ -280,27 +280,26 @@ namespace BTokenLib
         TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
     }
 
-    public override void InsertBlock(Block block)
+    public override void InsertTX(TX tX)
     {
-      foreach (TXBitcoin tX in block.TXs)
-      {
-        foreach (TXInputBitcoin tXInput in tX.Inputs)
-          if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
-          {
-            tX.FlagPrune = false;
-            TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
-          }
+      TXBitcoin tXBitcoin = tX as TXBitcoin;
 
-        for (int i = 0; i < tX.TXOutputs.Count; i++)
-          if (TryAddTXOutputWallet(OutputsSpendable, tX, i))
-          {
-            tX.FlagPrune = false;
-            TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
-          }
+      foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
+        if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
+        {
+          tX.FlagPrune = false;
+          TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
+        }
 
-        if (!tX.FlagPrune)
-          IndexTXs.Add(tX.Hash, tX);
-      }
+      for (int i = 0; i < tXBitcoin.TXOutputs.Count; i++)
+        if (TryAddTXOutputWallet(OutputsSpendable, tXBitcoin, i))
+        {
+          tX.FlagPrune = false;
+          TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
+        }
+
+      if (!tX.FlagPrune)
+        IndexTXs.Add(tX.Hash, tX);
     }
 
     public override void ReverseBlock(Block block)

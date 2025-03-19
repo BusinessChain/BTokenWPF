@@ -257,7 +257,7 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void LoadState()
+    public virtual void LoadState()
     {
       Reset();
 
@@ -270,7 +270,6 @@ namespace BTokenLib
           $"Load image of token {pathImage}.".Log(this, LogFile, LogEntryNotifier);
 
           LoadImageHeaderchain(pathImage);
-          LoadImageDatabase(pathImage);
           Wallet.LoadImage(pathImage);
 
           break;
@@ -298,7 +297,7 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.LoadState());
     }
 
-    void LoadBlocksFromArchive()
+    protected void LoadBlocksFromArchive()
     {
       int heightBlock = HeaderTip.Height + 1;
 
@@ -412,8 +411,6 @@ namespace BTokenLib
         IndexingHeaderTip();
       }
     }
-
-    public abstract void LoadImageDatabase(string path);
 
     public abstract void InsertBlockInDB(Block block);
 
@@ -726,7 +723,7 @@ namespace BTokenLib
       return header != null;
     }
 
-    void IndexingHeaderTip()
+    protected void IndexingHeaderTip()
     {
       int keyHeader = BitConverter.ToInt32(HeaderTip.Hash, 0);
 

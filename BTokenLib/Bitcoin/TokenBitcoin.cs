@@ -156,8 +156,7 @@ namespace BTokenLib
     }
 
     public override void ReverseBlockInDB(Block block)
-    {
-    }
+    { }
 
     public override List<string> GetSeedAddresses()
     {
@@ -199,7 +198,56 @@ namespace BTokenLib
     public override void CreateImageDatabase(string pathDirectory)
     { }
 
-    public override void LoadImageDatabase(string path)
-    { }
+    public override void LoadState()
+    {
+      // In Bitcoin, simply load all blocks from the archive, as those blocks are completely pruned,
+      // only containing the txs that are of interest to our wallet. In a sense they are the wallet
+      // history plus the headers.
+
+      SHA256 sHA256 = SHA256.Create();
+
+      string pathBlockArchive = Path.Combine(GetName(), "blocks");
+
+
+      int heightBlock = HeaderTip.Height + 1;
+
+      while (true)
+      {
+        try
+        {
+          byte[] bytesBlock = File.ReadAllBytes(
+            Path.Combine(pathBlockArchive, heightBlock.ToString()));
+
+          int startIndex = 0;
+
+          Header header = ParseHeader(bytesBlock, ref startIndex, sHA256);
+
+          header.AppendToHeader(HeaderTip);
+
+          HeaderTip.HeaderNext = header;
+          HeaderTip = header;
+
+          IndexingHeaderTip();
+
+          int tXCount = VarInt.GetInt(bytesBlock, ref startIndex);
+
+          for (int t = 0; t < tXCount; t += 1)
+          {
+            TX tX = ParseTX(bytesBlock, ref startIndex, sHA256);
+            Wallet.InsertTX(tX);
+          }
+
+          heightBlock += 1;
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when inserting blockheight {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          .Log(this, LogEntryNotifier);
+
+          File.Delete(Path.Combine(pathBlockArchive, heightBlock.ToString()));
+        }
+      }
+    }
+
   }
 }

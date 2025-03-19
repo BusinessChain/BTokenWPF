@@ -40,9 +40,6 @@ namespace BTokenLib
         Caches.Add(new Dictionary<byte[], Account>(new EqualityComparerByteArray()));
     }
 
-    public void LoadImage(string path)
-    { }
-
     public void CreateImage(string path)
     { }
 
