@@ -241,20 +241,6 @@ namespace BTokenLib
       return true;
     }
 
-    public override void LoadImage(string path)
-    {
-      //LoadOutputs(OutputsUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
-      //LoadOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
-
-      byte[] fileWalletHistoryTXs = File.ReadAllBytes(Path.Combine(path, "walletHistoryTransactions"));
-
-      int startIndex = 0;
-
-      while (startIndex < fileWalletHistoryTXs.Length)
-        HistoryTXs.Add(Token.ParseTX(fileWalletHistoryTXs, ref startIndex, SHA256));
-
-      LoadOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
-    }
 
     public override void CreateImage(string path)
     {

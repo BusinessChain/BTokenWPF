@@ -44,8 +44,6 @@ namespace BTokenLib
 
     public abstract bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX);
 
-    public abstract void LoadImage(string path);
-
     protected static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
     {
       int index = 0;

@@ -257,76 +257,7 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public virtual void LoadState()
-    {
-      Reset();
-
-      string pathImage = Path.Combine(GetName(), NameImage);
-
-      while (true)
-      {
-        try
-        {
-          $"Load image of token {pathImage}.".Log(this, LogFile, LogEntryNotifier);
-
-          LoadImageHeaderchain(pathImage);
-          Wallet.LoadImage(pathImage);
-
-          break;
-        }
-        catch
-        {
-          Reset();
-
-          if (Directory.Exists(pathImage))
-            Directory.Delete(pathImage, recursive: true);
-
-          try
-          {
-            Directory.Move(Path.Combine(GetName(), NameImageOld), pathImage);
-          }
-          catch (DirectoryNotFoundException)
-          {
-            break;
-          }
-        }
-      }
-
-      LoadBlocksFromArchive();
-
-      TokensChild.ForEach(t => t.LoadState());
-    }
-
-    protected void LoadBlocksFromArchive()
-    {
-      int heightBlock = HeaderTip.Height + 1;
-
-      while (Archiver.TryLoadBlock(heightBlock, out Block block))
-      {
-        try
-        {
-          block.Header.AppendToHeader(HeaderTip);
-
-          InsertBlockInDB(block);
-
-          Wallet.InsertBlock(block);
-
-          HeaderTip.HeaderNext = block.Header;
-          HeaderTip = block.Header;
-
-          IndexingHeaderTip();
-
-          heightBlock += 1;
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-          .Log(this, LogEntryNotifier);
-
-          Archiver.DeleteBlock(heightBlock);
-        }
-      }
-    }
+    public abstract void LoadState();
 
     public void LoadTXPool()
     {
@@ -368,48 +299,6 @@ namespace BTokenLib
       IndexingHeaderTip();
 
       Wallet.Clear();
-    }
-
-    public void LoadImageHeaderchain(string pathImage)
-    {
-      byte[] bytesHeaderImage = File.ReadAllBytes(
-        Path.Combine(pathImage, "ImageHeaderchain"));
-
-      int index = 0;
-
-      $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
-
-      SHA256 sHA256 = SHA256.Create();
-
-      while (index < bytesHeaderImage.Length)
-      {
-        Header header = ParseHeader(bytesHeaderImage, ref index, sHA256);
-
-        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
-        index += 4;
-
-        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref index);
-        
-        for(int i = 0; i < countHashesChild; i++)
-        {
-          byte[] iDToken = new byte[IDToken.Length];
-          Array.Copy(bytesHeaderImage, index, iDToken, 0, iDToken.Length);
-          index += iDToken.Length;
-
-          byte[] hashesChild = new byte[32];
-          Array.Copy(bytesHeaderImage, index, hashesChild, 0, 32);
-          index += 32;
-
-          header.HashesChild.Add(iDToken, hashesChild);
-        }
-
-        header.AppendToHeader(HeaderTip);
-
-        HeaderTip.HeaderNext = header;
-        HeaderTip = header;
-
-        IndexingHeaderTip();
-      }
     }
 
     public abstract void InsertBlockInDB(Block block);
@@ -504,8 +393,6 @@ namespace BTokenLib
 
       CreateImageHeaderchain(PathImage);
 
-      CreateImageDatabase(PathImage);
-
       Wallet.CreateImage(PathImage);
     }
 
@@ -539,9 +426,7 @@ namespace BTokenLib
         }
       }
     }
-
-    public abstract void CreateImageDatabase(string path);
-          
+              
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 
     public TX ParseTX(byte[] tXRaw, SHA256 sHA256)

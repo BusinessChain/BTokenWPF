@@ -195,19 +195,11 @@ namespace BTokenLib
         };
     }
 
-    public override void CreateImageDatabase(string pathDirectory)
-    { }
-
     public override void LoadState()
     {
-      // In Bitcoin, simply load all blocks from the archive, as those blocks are completely pruned,
-      // only containing the txs that are of interest to our wallet. In a sense they are the wallet
-      // history plus the headers.
-
       SHA256 sHA256 = SHA256.Create();
 
       string pathBlockArchive = Path.Combine(GetName(), "blocks");
-
 
       int heightBlock = HeaderTip.Height + 1;
 

@@ -129,11 +129,6 @@ namespace BTokenLib
 
     }
 
-    public override void LoadImage(string path)
-    {
-      throw new NotImplementedException();
-    }
-
     public override long GetBalance()
     {
       try

@@ -56,6 +56,89 @@ namespace BTokenLib
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
     }
 
+    public override void LoadState()
+    {
+      Reset();
+
+      LoadImageHeaderchain();
+
+      LoadBlocksFromArchive();
+
+      TokensChild.ForEach(t => t.LoadState());
+    }
+
+    protected void LoadBlocksFromArchive()
+    {
+      int heightBlock = HeaderTip.Height + 1;
+
+      while (Archiver.TryLoadBlock(heightBlock, out Block block))
+      {
+        try
+        {
+          block.Header.AppendToHeader(HeaderTip);
+
+          InsertBlockInDB(block);
+
+          Wallet.InsertBlock(block);
+
+          HeaderTip.HeaderNext = block.Header;
+          HeaderTip = block.Header;
+
+          IndexingHeaderTip();
+
+          heightBlock += 1;
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          .Log(this, LogEntryNotifier);
+
+          Archiver.DeleteBlock(heightBlock);
+        }
+      }
+    }
+
+    void LoadImageHeaderchain()
+    {
+      byte[] bytesHeaderImage = File.ReadAllBytes(Path.Combine(GetName(), "ImageHeaderchain"));
+
+      int index = 0;
+
+      $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
+
+      SHA256 sHA256 = SHA256.Create();
+
+      while (index < bytesHeaderImage.Length)
+      {
+        Header header = ParseHeader(bytesHeaderImage, ref index, sHA256);
+
+        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
+        index += 4;
+
+        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref index);
+
+        for (int i = 0; i < countHashesChild; i++)
+        {
+          byte[] iDToken = new byte[IDToken.Length];
+          Array.Copy(bytesHeaderImage, index, iDToken, 0, iDToken.Length);
+          index += iDToken.Length;
+
+          byte[] hashesChild = new byte[32];
+          Array.Copy(bytesHeaderImage, index, hashesChild, 0, 32);
+          index += 32;
+
+          header.HashesChild.Add(iDToken, hashesChild);
+        }
+
+        header.AppendToHeader(HeaderTip);
+
+        HeaderTip.HeaderNext = header;
+        HeaderTip = header;
+
+        IndexingHeaderTip();
+      }
+    }
+    
     public override Header CreateHeaderGenesis()
     {
       HeaderBToken header = new(
@@ -67,11 +150,6 @@ namespace BTokenLib
         nonce: 0);
 
       return header;
-    }
-
-    public override void CreateImageDatabase(string pathImage)
-    {
-      DBAccounts.CreateImage(pathImage);
     }
 
     public override TX ParseTXCoinbase(byte[] buffer, ref int startIndex, SHA256 sHA256, long blockReward)
