@@ -38,7 +38,6 @@
 
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" Orientation="Horizontal">
                 <Button Content="Sync Node" Click="ButtonStartSynchronizationNode_Click" Margin="0,0,10,0"/>
-                <Button Content="PrintChainsToFile" Click="PrintChainsToFile_Click"/>
             </StackPanel>
         </Grid>
 

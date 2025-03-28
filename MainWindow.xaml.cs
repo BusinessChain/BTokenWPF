@@ -147,15 +147,5 @@ namespace BTokenWPF
       new WindowToken(token).Show();
     }
 
-    private void PrintChainsToFile_Click(object sender, RoutedEventArgs e)
-    {
-      string textImage = "";
-      BToken.PrintImage(ref textImage);
-      File.WriteAllText("printImage.txt", textImage);
-
-      string textBlocks = "";
-      BToken.PrintBlocks(ref textBlocks);
-      File.WriteAllText("printBlocks.txt", textBlocks);
-    }
   }
 }

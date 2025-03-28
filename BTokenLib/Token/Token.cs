@@ -39,16 +39,9 @@ namespace BTokenLib
 
     public StreamWriter LogFile;
 
-    const string NameImage = "Image";
-    const string NameImageOld = "ImageOld";
-
-    string PathImage;
-    string PathImageOld;
     string PathRootToken;
 
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
-
-    const int INTERVAL_BLOCKHEIGHT_IMAGE = 50;
 
     bool IsLocked;
     static object LOCK_Token = new();
@@ -77,9 +70,6 @@ namespace BTokenLib
         FileMode.OpenOrCreate,
         FileAccess.ReadWrite,
         FileShare.Read);
-
-      PathImage = Path.Combine(PathRootToken, NameImage);
-      PathImageOld = Path.Combine(PathRootToken, NameImageOld);
 
       HeaderGenesis = CreateHeaderGenesis();
       HeaderTip = HeaderGenesis;
@@ -126,80 +116,6 @@ namespace BTokenLib
       new Thread(Network.Start).Start(); // evt. kein Thread machen, da alles async ist.
 
       TokensChild.ForEach(t => t.StartNetwork());
-    }
-
-    public void PrintImage(ref string text)
-    {
-      try
-      {
-        if (TokenParent != null)
-          TokenParent.PrintImage(ref text);
-
-        text += $"\nPrint Image {GetName()}.\n";
-
-        string pathHeaderchain = Path.Combine(GetName(), NameImage, "ImageHeaderchain");
-
-        byte[] bytesHeaderImage = File.ReadAllBytes(pathHeaderchain);
-
-        text += $"Loaded image headerchain {pathHeaderchain}.\n";
-
-        int index = 0;
-        int heightHeader = 0;
-
-        SHA256 sHA256 = SHA256.Create();
-
-        while (index < bytesHeaderImage.Length)
-        {
-          Header header = ParseHeader(bytesHeaderImage, ref index, sHA256);
-
-          heightHeader += 1;
-
-          header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
-
-          index += 4;
-
-          text += $"{heightHeader}, {header}";
-
-          byte flagHasHashChild = bytesHeaderImage[index];
-          index += 1;
-
-          if (flagHasHashChild == 0x01)
-          {
-            //header.HashesChild = new byte[32];
-            //Array.Copy(bytesHeaderImage, index, header.HashesChild, 0, 32);
-            //index += 32;
-
-            //text += $" -> {header.HashesChild.ToHexString()}";
-          }
-
-          text += "\n";
-        }
-      }
-      catch(Exception ex)
-      {
-        Console.WriteLine($"Exception {ex.GetType().Name} when printing image.");
-      }
-    }
-
-    public void PrintBlocks(ref string text)
-    {
-      if (TokenParent != null)
-        TokenParent.PrintBlocks(ref text);
-
-      text += $"\nPrint blocks {GetName()}.\n";
-
-      int i = 1;
-
-      while (Archiver.TryLoadBlock(i, out Block block))
-      {
-        text += $"{i} -> {block.Header}\n";
-
-        //if(TokenChild != null)
-        //  foreach (TX tX in block.TXs)
-        //    text += tX.Print();
-
-        i++;
-      }
     }
 
     public string GetStatus()
@@ -325,9 +241,6 @@ namespace BTokenLib
 
       DeleteBlocksMinedUnconfirmed();
 
-      if (block.Header.Height % INTERVAL_BLOCKHEIGHT_IMAGE == 0)
-        CreateImage();
-
       foreach (var hashBlockChildToken in block.Header.HashesChild)
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
           .InsertBlockMined(hashBlockChildToken.Value);
@@ -338,8 +251,6 @@ namespace BTokenLib
 
     public bool TryReverseBlockchainToHeight(int height)
     {
-      string pathImage = Path.Combine(GetName(), NameImage);
-
       List<Block> blocksReversed = new();
       List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
 
@@ -384,17 +295,6 @@ namespace BTokenLib
     }
 
     public abstract void ReverseBlockInDB(Block block);
-
-    public void CreateImage()
-    {
-      PathImage.TryMoveDirectoryTo(PathImageOld);
-
-      Directory.CreateDirectory(PathImage);
-
-      CreateImageHeaderchain(PathImage);
-
-      Wallet.CreateImage(PathImage);
-    }
 
     void CreateImageHeaderchain(string pathImage)
     {
