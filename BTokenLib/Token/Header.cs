@@ -18,8 +18,7 @@ namespace BTokenLib
     public Header HeaderNext;
 
     public Header HeaderParent;
-    public Dictionary<byte[], byte[]> HashesChild = 
-      new(new EqualityComparerByteArray());
+    public Dictionary<byte[], byte[]> HashesChild = new(new EqualityComparerByteArray());
 
     public int Height;
     public int CountTXs;

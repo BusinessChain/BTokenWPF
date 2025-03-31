@@ -214,6 +214,8 @@ namespace BTokenLib
 
           Header header = ParseHeader(bytesBlock, ref startIndex, sHA256);
 
+          // Hier evtl. noch die HeaderChild Matrize parsen. Wird bei TokenBToken gemacht.
+
           header.AppendToHeader(HeaderTip);
 
           HeaderTip.HeaderNext = header;

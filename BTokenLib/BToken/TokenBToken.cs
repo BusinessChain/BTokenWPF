@@ -60,14 +60,26 @@ namespace BTokenLib
     {
       Reset();
 
-      LoadImageHeaderchain();
+      LoadImageHeaderchain(); // Ich nehme an, dass die Headerchain mir sagt auf welcher height die DB ist.
 
       LoadBlocksFromArchive();
 
       TokensChild.ForEach(t => t.LoadState());
     }
 
-    protected void LoadBlocksFromArchive()
+    public override void ArchiveBlock(Block block)
+    {
+      WriteBlockToImageHeaderchain(block.Header);
+
+      string pathFile = Path.Combine(GetName(), "blocks", block.Header.Height.ToString());
+
+      using (FileStream fileStreamBlock = new(pathFile, FileMode.Create, FileAccess.Write, FileShare.None))
+      {
+        block.WriteToDisk(fileStreamBlock);
+      }
+    }
+
+    void LoadBlocksFromArchive()
     {
       int heightBlock = HeaderTip.Height + 1;
 
@@ -138,7 +150,31 @@ namespace BTokenLib
         IndexingHeaderTip();
       }
     }
-    
+
+    void WriteBlockToImageHeaderchain(Header header)
+    {
+      using (FileStream fileImageHeaderchain = new(
+          Path.Combine(GetName(), "ImageHeaderchain"),
+          FileMode.Create,
+          FileAccess.Write,
+          FileShare.None))
+      {
+        byte[] headerBytes = header.Serialize();
+
+        fileImageHeaderchain.Write(headerBytes);
+
+        fileImageHeaderchain.Write(BitConverter.GetBytes(header.CountBytesTXs));
+
+        fileImageHeaderchain.Write(VarInt.GetBytes(header.HashesChild.Count));
+
+        foreach (var hashChild in header.HashesChild)
+        {
+          fileImageHeaderchain.Write(hashChild.Key);
+          fileImageHeaderchain.Write(hashChild.Value);
+        }
+      }
+    }
+
     public override Header CreateHeaderGenesis()
     {
       HeaderBToken header = new(

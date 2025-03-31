@@ -219,6 +219,8 @@ namespace BTokenLib
 
     public abstract void InsertBlockInDB(Block block);
 
+    public abstract void ArchiveBlock(Block block);
+
     public void InsertBlock(Block block)
     {
       $"Insert block {block} in {this}.".Log(this, LogEntryNotifier);
@@ -227,17 +229,17 @@ namespace BTokenLib
 
       InsertBlockInDB(block);
 
-      Wallet.InsertBlock(block);
-
       HeaderTip.HeaderNext = block.Header;
       HeaderTip = block.Header;
 
       IndexingHeaderTip();
 
+      Wallet.InsertBlock(block);
+
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
       TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
 
-      Archiver.ArchiveBlock(block);
+      ArchiveBlock(block);
 
       DeleteBlocksMinedUnconfirmed();
 
@@ -295,38 +297,7 @@ namespace BTokenLib
     }
 
     public abstract void ReverseBlockInDB(Block block);
-
-    void CreateImageHeaderchain(string pathImage)
-    {
-      using (FileStream fileImageHeaderchain = new(
-          Path.Combine(pathImage, "ImageHeaderchain"),
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
-      {
-        Header header = HeaderGenesis.HeaderNext;
-
-        while (header != null)
-        {
-          byte[] headerBytes = header.Serialize();
-
-          fileImageHeaderchain.Write(headerBytes);
-
-          fileImageHeaderchain.Write(BitConverter.GetBytes(header.CountBytesTXs));
-
-          fileImageHeaderchain.Write(VarInt.GetBytes(header.HashesChild.Count));
-
-          foreach(var hashChild in header.HashesChild)
-          {
-            fileImageHeaderchain.Write(hashChild.Key);
-            fileImageHeaderchain.Write(hashChild.Value);
-          }
-
-          header = header.HeaderNext;
-        }
-      }
-    }
-              
+                  
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 
     public TX ParseTX(byte[] tXRaw, SHA256 sHA256)
