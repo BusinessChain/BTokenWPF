@@ -135,21 +135,17 @@ namespace BTokenLib
     {
       byte[] buffer = new byte[COUNT_HEADER_BYTES];
 
-      BitConverter.GetBytes(Version)
-        .CopyTo(buffer, 0);
+      BitConverter.GetBytes(Version).CopyTo(buffer, 0);
 
       HashPrevious.CopyTo(buffer, 4);
 
       MerkleRoot.CopyTo(buffer, 36);
 
-      BitConverter.GetBytes(UnixTimeSeconds)
-        .CopyTo(buffer, 68);
+      BitConverter.GetBytes(UnixTimeSeconds).CopyTo(buffer, 68);
 
-      BitConverter.GetBytes(NBits)
-        .CopyTo(buffer, 72);
+      BitConverter.GetBytes(NBits).CopyTo(buffer, 72);
 
-      BitConverter.GetBytes(Nonce)
-        .CopyTo(buffer, 76);
+      BitConverter.GetBytes(Nonce).CopyTo(buffer, 76);
 
       return buffer;
     }

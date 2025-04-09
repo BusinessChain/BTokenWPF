@@ -107,33 +107,5 @@ namespace BTokenLib
       }
     }
 
-    public void ArchiveBlock(Block block)
-    {
-      string pathFile = Path.Combine(PathBlockArchive, block.Header.Height.ToString());
-
-      while (true)
-        try
-        {
-          using (FileStream fileStreamBlock = new(
-          pathFile,
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
-          {
-            block.WriteToDisk(fileStreamBlock);
-          }
-
-          break;
-        }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when writing block height {block.Header.Height} to file:\n" +
-            $"{ex.Message}\n " +
-            $"Try again in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds ...")
-            .Log(this, Token.LogEntryNotifier);
-
-          Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS);
-        }
-    }
   }
 }

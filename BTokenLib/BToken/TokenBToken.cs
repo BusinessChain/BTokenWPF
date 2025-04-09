@@ -69,14 +69,15 @@ namespace BTokenLib
 
     public override void ArchiveBlock(Block block)
     {
-      WriteBlockToImageHeaderchain(block.Header);
+      string pathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
 
-      string pathFile = Path.Combine(GetName(), "blocks", block.Header.Height.ToString());
+      using (FileStream fileImageHeaderchain = new(pathFileHeaderchain, FileMode.Append, FileAccess.Write))
+        block.Header.WriteToDisk(fileImageHeaderchain);
 
-      using (FileStream fileStreamBlock = new(pathFile, FileMode.Create, FileAccess.Write, FileShare.None))
-      {
+      string pathFileBlock = Path.Combine(GetName(), "blocks", block.Header.Height.ToString());
+
+      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Append, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
-      }
     }
 
     void LoadBlocksFromArchive()
@@ -148,30 +149,6 @@ namespace BTokenLib
         HeaderTip = header;
 
         IndexingHeaderTip();
-      }
-    }
-
-    void WriteBlockToImageHeaderchain(Header header)
-    {
-      using (FileStream fileImageHeaderchain = new(
-          Path.Combine(GetName(), "ImageHeaderchain"),
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
-      {
-        byte[] headerBytes = header.Serialize();
-
-        fileImageHeaderchain.Write(headerBytes);
-
-        fileImageHeaderchain.Write(BitConverter.GetBytes(header.CountBytesTXs));
-
-        fileImageHeaderchain.Write(VarInt.GetBytes(header.HashesChild.Count));
-
-        foreach (var hashChild in header.HashesChild)
-        {
-          fileImageHeaderchain.Write(hashChild.Key);
-          fileImageHeaderchain.Write(hashChild.Value);
-        }
       }
     }
 

@@ -106,7 +106,7 @@ namespace BTokenLib
       while (token.TokenParent != null)
         token = TokenParent;
 
-      token.LoadState();
+      token.LoadState(); // after this, the States of all childtokens should also be loaded.
       token.LoadTXPool();
       token.StartNetwork();
     }

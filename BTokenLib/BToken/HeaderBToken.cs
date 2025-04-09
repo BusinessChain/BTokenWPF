@@ -45,11 +45,9 @@ namespace BTokenLib
 
       HashDatabase.CopyTo(buffer, 64);
 
-      BitConverter.GetBytes(UnixTimeSeconds)
-        .CopyTo(buffer, 96);
+      BitConverter.GetBytes(UnixTimeSeconds).CopyTo(buffer, 96);
 
-      BitConverter.GetBytes(Nonce)
-        .CopyTo(buffer, 100);
+      BitConverter.GetBytes(Nonce).CopyTo(buffer, 100);
 
       return buffer;
     }

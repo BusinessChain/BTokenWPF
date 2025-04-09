@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.IO;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -55,6 +57,21 @@ namespace BTokenLib
     }
 
     public abstract byte[] Serialize();
+
+    public void WriteToDisk(FileStream fileStream)
+    {
+      fileStream.Write(Serialize());
+
+      fileStream.Write(BitConverter.GetBytes(CountBytesTXs));
+
+      fileStream.Write(VarInt.GetBytes(HashesChild.Count));
+
+      foreach (var hashChild in HashesChild)
+      {
+        fileStream.Write(hashChild.Key);
+        fileStream.Write(hashChild.Value);
+      }
+    }
 
     public virtual void AppendToHeader(Header headerPrevious)
     {

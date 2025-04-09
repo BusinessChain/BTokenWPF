@@ -22,9 +22,7 @@ namespace BTokenLib
           flagEnableInboundConnections: false,
           logEntryNotifier)
     {
-      Wallet = new WalletBitcoin(
-        File.ReadAllText($"Wallet{GetName()}/wallet"), 
-        this);
+      Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
       TXPool = new PoolTXBitcoin(this);
       SizeBlockMax = SIZE_BLOCK_MAX;
@@ -214,7 +212,20 @@ namespace BTokenLib
 
           Header header = ParseHeader(bytesBlock, ref startIndex, sHA256);
 
-          // Hier evtl. noch die HeaderChild Matrize parsen. Wird bei TokenBToken gemacht.
+          int countHashesChild = VarInt.GetInt(bytesBlock, ref startIndex);
+
+          for (int i = 0; i < countHashesChild; i++)
+          {
+            byte[] iDToken = new byte[IDToken.Length];
+            Array.Copy(bytesBlock, startIndex, iDToken, 0, iDToken.Length);
+            startIndex += iDToken.Length;
+
+            byte[] hashesChild = new byte[32];
+            Array.Copy(bytesBlock, startIndex, hashesChild, 0, 32);
+            startIndex += 32;
+
+            header.HashesChild.Add(iDToken, hashesChild);
+          }
 
           header.AppendToHeader(HeaderTip);
 
@@ -241,6 +252,14 @@ namespace BTokenLib
           File.Delete(Path.Combine(pathBlockArchive, heightBlock.ToString()));
         }
       }
+    }
+
+    public override void ArchiveBlock(Block block)
+    {
+      string pathFileBlock = Path.Combine(GetName(), "blocks", block.Header.Height.ToString());
+
+      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Append, FileAccess.Write))
+        block.WriteToDisk(fileStreamBlock);
     }
   }
 }

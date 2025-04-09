@@ -174,8 +174,6 @@ namespace BTokenLib
       for (int i = 0; i < TXs.Count; i++)
         if (!TXs[i].FlagPrune)
           fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
-
-      fileStream.Flush();
     }
 
     public override string ToString()
