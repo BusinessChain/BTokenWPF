@@ -60,7 +60,7 @@ namespace BTokenLib
     {
       Reset();
 
-      LoadImageHeaderchain(); // Ich nehme an, dass die Headerchain mir sagt auf welcher height die DB ist.
+      LoadImageHeaderchain();
 
       LoadBlocksFromArchive();
 

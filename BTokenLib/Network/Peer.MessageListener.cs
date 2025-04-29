@@ -87,10 +87,7 @@ namespace BTokenLib
                   HeaderDownload.InsertHeader(header);
                 }
                 catch (ProtocolException)
-                {
-                  await SendGetHeaders(HeaderDownload.Locator);
-                  goto LABEL_ListenForNextMessage;
-                }
+                { }
               }
               else if (countHeaders > 0)
                 for (int i = 0; i < countHeaders; i++)
@@ -106,7 +103,7 @@ namespace BTokenLib
                 goto LABEL_ListenForNextMessage;
               }
 
-              await SendGetHeaders(new List<Header> { HeaderDownload.HeaderTip });
+              await SendGetHeaders(HeaderDownload.Locator);
             }
             else if (Command == "getheaders")
             {

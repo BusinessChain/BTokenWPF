@@ -79,25 +79,33 @@ namespace BTokenLib
       if (!TryEnterStateSync(peer))
         return;
 
-      HeaderDownload headerDownload = peer.HeaderDownload;
+      HeadersBeingDownloadedByCountPeers.Clear();
+      QueueDownloadsIncomplete.Clear();
+      QueueBlockInsertion.Clear();
+      FlagSyncAbort = false;
+      PeerSync = peer;
+
+      $"Enter state synchronization of token {Token.GetName()} with peer {PeerSync}."
+        .Log(this, Token.LogFile, Token.LogEntryNotifier);
+
       double difficultyAccumulatedOld = Token.HeaderTip.DifficultyAccumulated;
 
-      if (headerDownload.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
+      if (PeerSync.HeaderDownload.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
         try
         {
-          if (headerDownload.HeaderAncestor != Token.HeaderTip)
+          HeaderRoot = PeerSync.HeaderDownload.HeaderRoot;
+          HeightInsertion = HeaderRoot.Height;
+
+          if (HeaderRoot.HeaderPrevious != Token.HeaderTip)
           {
-            $"Forking chain after common ancestor {headerDownload.HeaderAncestor} with height {headerDownload.HeaderAncestor.Height}."
+            $"Forking chain after common ancestor {HeaderRoot.HeaderPrevious} with height {HeaderRoot.HeaderPrevious.Height}."
               .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-            if (Token.TryReverseBlockchainToHeight(headerDownload.HeaderAncestor.Height))
+            if (Token.TryReverseBlockchainToHeight(HeaderRoot.HeaderPrevious.Height))
               Token.Archiver.SetBlockPathToFork();
             else
               Token.Reset(); //Restart Sync as if cold start.
           }
-
-          HeaderRoot = headerDownload.HeaderRoot;
-          HeightInsertion = HeaderRoot.Height;
 
           while (true)
           {
@@ -155,7 +163,7 @@ namespace BTokenLib
           ($"Unexpected exception {ex.GetType().Name} occured during SyncBlocks.\n" +
             $"{ex.Message}").Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
-      else if (headerDownload.HeaderTip.DifficultyAccumulated < difficultyAccumulatedOld)
+      else if (peer.HeaderDownload.HeaderTip.DifficultyAccumulated < difficultyAccumulatedOld)
         PeerSync.SendHeaders(new List<Header>() { Token.HeaderTip });
 
       ExitStateSync();
@@ -177,18 +185,8 @@ namespace BTokenLib
           return false;
 
         IsStateSync = true;
+        return true;
       }
-
-      $"Enter state synchronization of token {Token.GetName()} with peer {peer}."
-        .Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-      HeadersBeingDownloadedByCountPeers.Clear();
-      QueueDownloadsIncomplete.Clear();
-      QueueBlockInsertion.Clear();
-      FlagSyncAbort = false;
-      PeerSync = peer;
-
-      return true;
     }
 
     void ExitStateSync()

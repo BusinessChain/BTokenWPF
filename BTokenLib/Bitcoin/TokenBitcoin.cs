@@ -203,55 +203,63 @@ namespace BTokenLib
 
       while (true)
       {
-        try
+        string pathBlock = Path.Combine(pathBlockArchive, heightBlock.ToString());
+
+        if(File.Exists(pathBlock))
         {
-          byte[] bytesBlock = File.ReadAllBytes(
-            Path.Combine(pathBlockArchive, heightBlock.ToString()));
-
-          int startIndex = 0;
-
-          Header header = ParseHeader(bytesBlock, ref startIndex, sHA256);
-
-          int countHashesChild = VarInt.GetInt(bytesBlock, ref startIndex);
-
-          for (int i = 0; i < countHashesChild; i++)
+          try
           {
-            byte[] iDToken = new byte[IDToken.Length];
-            Array.Copy(bytesBlock, startIndex, iDToken, 0, iDToken.Length);
-            startIndex += iDToken.Length;
+            byte[] bytesBlock = File.ReadAllBytes(pathBlock);
 
-            byte[] hashesChild = new byte[32];
-            Array.Copy(bytesBlock, startIndex, hashesChild, 0, 32);
-            startIndex += 32;
+            int startIndex = 0;
 
-            header.HashesChild.Add(iDToken, hashesChild);
+            Header header = ParseHeader(bytesBlock, ref startIndex, sHA256);
+
+            int countHashesChild = VarInt.GetInt(bytesBlock, ref startIndex);
+
+            for (int i = 0; i < countHashesChild; i++)
+            {
+              byte[] iDToken = new byte[IDToken.Length];
+              Array.Copy(bytesBlock, startIndex, iDToken, 0, iDToken.Length);
+              startIndex += iDToken.Length;
+
+              byte[] hashesChild = new byte[32];
+              Array.Copy(bytesBlock, startIndex, hashesChild, 0, 32);
+              startIndex += 32;
+
+              header.HashesChild.Add(iDToken, hashesChild);
+            }
+
+            header.AppendToHeader(HeaderTip);
+
+            HeaderTip.HeaderNext = header;
+            HeaderTip = header;
+
+            IndexingHeaderTip();
+
+            int tXCount = VarInt.GetInt(bytesBlock, ref startIndex);
+
+            for (int t = 0; t < tXCount; t += 1)
+            {
+              TX tX = ParseTX(bytesBlock, ref startIndex, sHA256);
+              Wallet.InsertTX(tX);
+            }
+
+            heightBlock += 1;
           }
-
-          header.AppendToHeader(HeaderTip);
-
-          HeaderTip.HeaderNext = header;
-          HeaderTip = header;
-
-          IndexingHeaderTip();
-
-          int tXCount = VarInt.GetInt(bytesBlock, ref startIndex);
-
-          for (int t = 0; t < tXCount; t += 1)
+          catch (ProtocolException ex)
           {
-            TX tX = ParseTX(bytesBlock, ref startIndex, sHA256);
-            Wallet.InsertTX(tX);
+            $"{ex.GetType().Name} when inserting blockheight {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+            .Log(this, LogEntryNotifier);
+
+            File.Delete(Path.Combine(pathBlockArchive, heightBlock.ToString()));
           }
-
-          heightBlock += 1;
         }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when inserting blockheight {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-          .Log(this, LogEntryNotifier);
-
-          File.Delete(Path.Combine(pathBlockArchive, heightBlock.ToString()));
-        }
+        else
+          break;
       }
+
+      TokensChild.ForEach(t => t.LoadState());
     }
 
     public override void ArchiveBlock(Block block)

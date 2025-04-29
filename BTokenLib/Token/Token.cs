@@ -11,7 +11,7 @@ namespace BTokenLib
 {
   public abstract partial class Token
   {
-    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' }; // wird nirgens geprüft
+    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
 
     public byte[] IDToken;
 
@@ -38,15 +38,12 @@ namespace BTokenLib
     public Network Network;
 
     public StreamWriter LogFile;
-
-    string PathRootToken;
+    public ILogEntryNotifier LogEntryNotifier;
 
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
     bool IsLocked;
     static object LOCK_Token = new();
-
-    public ILogEntryNotifier LogEntryNotifier;
 
 
     public Token(
@@ -56,14 +53,14 @@ namespace BTokenLib
       ILogEntryNotifier logEntryNotifier)
     {
       IDToken = iDToken;
-      LogEntryNotifier = logEntryNotifier;
 
-      PathRootToken = GetName();
-      Directory.CreateDirectory(PathRootToken);
+      Directory.CreateDirectory(GetName());
 
       LogFile = new StreamWriter(
         Path.Combine(GetName(), "LogToken"),
         append: false);
+
+      LogEntryNotifier = logEntryNotifier;
 
       FileTXPoolBackup = new FileStream(
         Path.Combine(GetName(), "FileTXPoolBackup"),
@@ -106,7 +103,7 @@ namespace BTokenLib
       while (token.TokenParent != null)
         token = TokenParent;
 
-      token.LoadState(); // after this, the States of all childtokens should also be loaded.
+      token.LoadState();
       token.LoadTXPool();
       token.StartNetwork();
     }
@@ -432,7 +429,6 @@ namespace BTokenLib
         }
 
         depth++;
-
         header = header.HeaderPrevious;
       }
 

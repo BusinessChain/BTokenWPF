@@ -34,7 +34,6 @@ namespace BTokenLib
       }
 
       public StateProtocol State = StateProtocol.NotConnected;
-      public DateTime TimeLastStateTransition;
       public DateTime TimeLastSync;
 
       public HeaderDownload HeaderDownload;
@@ -387,7 +386,6 @@ namespace BTokenLib
       {
         lock (this)
         {
-          TimeLastStateTransition = DateTime.Now;
           State = StateProtocol.Idle;
         }
       }
@@ -399,7 +397,6 @@ namespace BTokenLib
           if (State == StateProtocol.HeaderSync)
             return;
 
-          TimeLastStateTransition = DateTime.Now;
           State = StateProtocol.HeaderSync;
         }
 

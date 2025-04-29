@@ -4,56 +4,56 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  public class HeaderDownload
+  public partial class Network
   {
-    public List<Header> Locator;
-
-    public Header HeaderTip;
-    public Header HeaderRoot; // The first header that is inserted into HeaderDownload
-    public Header HeaderAncestor;
-    public Header HeaderStopAcceptDuplicates;
-
-
-    public HeaderDownload(List<Header> locator)
+    public class HeaderDownload
     {
-      Locator = locator;
-    }
+      public List<Header> Locator;
 
-    public virtual void InsertHeader(Header header)
-    {
-      if (HeaderAncestor == null)
+      public Header HeaderTip;
+      public Header HeaderRoot;
+
+
+      public HeaderDownload(List<Header> locator)
       {
-        HeaderAncestor = Locator.Find(h => h.Hash.IsAllBytesEqual(header.HashPrevious))
-          ?? throw new ProtocolException($"Header {header} does not connect to locator.");
-
-        int indexNext = Locator.IndexOf(HeaderAncestor) + 1;
-        HeaderStopAcceptDuplicates = (Locator.Count > indexNext) ? Locator[indexNext] : null;
-
-        HeaderRoot = header;
+        Locator = locator;
       }
 
-      if (HeaderStopAcceptDuplicates?.Hash.IsAllBytesEqual(header.Hash) == true)
-        throw new ProtocolException($"Headers are all duplicates.");
-
-      if (HeaderAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
+      public void InsertHeader(Header header)
       {
-        HeaderAncestor = HeaderAncestor.HeaderNext;
+        if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
+          throw new ProtocolException($"Header is duplicate.");
 
-        header.AppendToHeader(HeaderAncestor);
-        HeaderRoot = header;
-        HeaderTip = header;
+        if (HeaderRoot == null)
+        {
+          int indexHeaderAncesor = Locator.FindIndex(h => h.Hash.IsAllBytesEqual(header.HashPrevious));
+
+          if (indexHeaderAncesor == -1)
+            throw new ProtocolException($"Header {header} does not connect to locator.");
+
+          if (Locator[indexHeaderAncesor].HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
+            Locator[indexHeaderAncesor] = Locator[indexHeaderAncesor].HeaderNext;
+          else
+          {
+            header.AppendToHeader(Locator[indexHeaderAncesor]);
+            HeaderRoot = header;
+            HeaderTip = header;
+          }
+        }
+        else if (header.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
+        {
+          header.AppendToHeader(HeaderTip);
+          HeaderTip.HeaderNext = header;
+          HeaderTip = header;
+        }
+        else
+          throw new ProtocolException($"Header {header} does not connect to previous header {HeaderTip}.");
       }
-      else
+
+      public override string ToString()
       {
-        header.AppendToHeader(HeaderTip);
-        HeaderTip.HeaderNext = header;
-        HeaderTip = header;
+        return $"{Locator.First()} ... {Locator.Last()}";
       }
-    }
-
-    public override string ToString()
-    {
-      return $"{Locator.First()} ... {Locator.Last()}";
     }
   }
 }
