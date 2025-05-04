@@ -54,24 +54,6 @@ namespace BTokenLib
         }
     }
 
-    void HandleExceptionPeerListener(Peer peer)
-    {
-      $"HandleExceptionPeerListener {peer}".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-      lock (LOCK_IsStateSync) lock (LOCK_Peers)
-        {          
-          if (peer.IsStateBlockSync())
-          {
-            $"ReturnPeerBlockDownloadIncomplete".Log(this, Token.LogFile, Token.LogEntryNotifier);
-            ReturnPeerBlockDownloadIncomplete(peer);
-          }
-          else if (IsStateSync && PeerSync == peer)
-            ExitStateSync();
-          else if (peer.IsStateDBDownload())
-            ReturnPeerDBDownloadIncomplete(peer.HashDBDownload);
-        }
-    }
-
     async Task SyncBlocks(Peer peer)
     {
       lock (LOCK_IsStateSync)
@@ -122,7 +104,7 @@ namespace BTokenLib
 
               Token.LoadState();
 
-              foreach (Peer p in Peers.Where(p => p.IsStateBlockSync())) //mit IsStateSync
+              foreach (Peer p in Peers.Where(p => p.IsStateSync()))
                 p.SetStateIdle();
 
               break;
@@ -136,7 +118,7 @@ namespace BTokenLib
               {
                 peer.SetStateIdle();
 
-                if (Peers.All(p => !p.IsStateBlockSync()))
+                if (Peers.All(p => !p.IsStateSync()))
                 {
                   if (Token.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
                     Token.Archiver.Reorganize();
@@ -148,7 +130,7 @@ namespace BTokenLib
               }
             }
 
-            TryGetPeerIdle(out peer);
+            TryGetPeerIdle(out peer); // Peer nach jedem BlockDownload auf Idle
 
             await Task.Delay(1000).ConfigureAwait(false);
           }
@@ -294,25 +276,25 @@ namespace BTokenLib
       }
     }
 
-    void ReturnPeerBlockDownloadIncomplete(Peer peer)
+    void ReturnBlockDownloadIncomplete(Header headerSync)
     {
       lock (LOCK_FetchHeaderSync)
-        if (QueueDownloadsIncomplete.ContainsKey(peer.HeaderSync.Height))
+        if (QueueDownloadsIncomplete.ContainsKey(headerSync.Height))
         {
           (Header headerBeingDownloaded, int countPeers) =
-            HeadersDownloadingByCountPeers[peer.HeaderSync.Height];
+            HeadersDownloadingByCountPeers[headerSync.Height];
 
           if (countPeers > 1)
-            HeadersDownloadingByCountPeers[peer.HeaderSync.Height] =
+            HeadersDownloadingByCountPeers[headerSync.Height] =
               (headerBeingDownloaded, countPeers - 1);
         }
         else
         {
           QueueDownloadsIncomplete.Add(
-            peer.HeaderSync.Height,
-            peer.HeaderSync);
+            headerSync.Height,
+            headerSync);
 
-          $"Add download {peer.HeaderSync} to QueueDownloadsIncomplete.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+          $"Add download {headerSync} to QueueDownloadsIncomplete.".Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
     }
 
@@ -359,7 +341,7 @@ namespace BTokenLib
           {
             peer.SetStateIdle();
 
-            if (Peers.All(p => !p.IsStateBlockSync()))
+            if (Peers.All(p => !p.IsStateSync()))
               break;
           }
 

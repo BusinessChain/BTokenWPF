@@ -25,8 +25,7 @@ namespace BTokenLib
       {
         NotConnected,
         Idle,
-        HeaderSync,
-        BlockSynchronization,
+        Sync,
         DBDownload,
         GetData,
         AdvertizingTX,
@@ -235,8 +234,8 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
-        if (!IsStateHeaderSync())
-          SetStateHeaderSync();
+        if (!IsStateSync())
+          SetStateSync();
 
         try
         {
@@ -321,8 +320,6 @@ namespace BTokenLib
       {
         $"Start downloading block {HeaderSync}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-        State = StateProtocol.BlockSynchronization;
-
         ResetTimer("receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
@@ -366,7 +363,7 @@ namespace BTokenLib
             return;
           }
 
-          State = StateProtocol.HeaderSync;
+          State = StateProtocol.Sync;
         }
 
         $"Advertize block {block}.".Log(this, LogFiles, Token.LogEntryNotifier);
@@ -390,35 +387,29 @@ namespace BTokenLib
         }
       }
       
-      public void SetStateHeaderSync()
+      public void SetStateSync()
       {
         lock (this)
         {
-          if (State == StateProtocol.HeaderSync)
+          if (State == StateProtocol.Sync)
             return;
 
-          State = StateProtocol.HeaderSync;
+          State = StateProtocol.Sync;
         }
 
         HeaderDownload = new HeaderDownload(Token.GetLocator());
       }
 
-      public bool IsStateHeaderSync()
+      public bool IsStateSync()
       {
         lock (this)
-          return State == StateProtocol.HeaderSync;
+          return State == StateProtocol.Sync;
       }
 
       bool IsStateAwaitingGetDataTX()
       {
         lock (this)
           return State == StateProtocol.GetData;
-      }
-
-      public bool IsStateBlockSync()
-      {
-        lock (this)
-          return State == StateProtocol.BlockSynchronization;
       }
 
       public bool IsStateDBDownload()

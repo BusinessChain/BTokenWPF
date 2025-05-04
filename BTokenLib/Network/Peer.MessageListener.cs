@@ -26,7 +26,7 @@ namespace BTokenLib
 
             if (Command == "block")
             {
-              if (!IsStateBlockSync())
+              if (HeaderSync == null)
                 throw new ProtocolException($"Received unrequested block message.");
 
               await ReadBytes(BlockSync.Buffer, LengthDataPayload);
@@ -75,14 +75,14 @@ namespace BTokenLib
 
               ResetTimer();
 
-              if (!IsStateHeaderSync())
+              if (!IsStateSync())
               {
                 if (countHeaders != 1)
                   throw new ProtocolException($"Unsolicited headersMessage must contain exactly one header, but received {countHeaders}.");
 
                 Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
 
-                SetStateHeaderSync();
+                SetStateSync();
 
                 try
                 {
@@ -195,8 +195,8 @@ namespace BTokenLib
               notFoundMessage.Inventories.ForEach(
                 i => $"Did not find {i.Hash.ToHexString()}".Log(this, LogFiles, Token.LogEntryNotifier));
 
-              if (IsStateBlockSync())
-                Network.ReturnPeerBlockDownloadIncomplete(this);
+              if (HeaderSync != null)
+                Network.ReturnBlockDownloadIncomplete(HeaderSync);
             }
             else if (Command == "inv")
             {
@@ -310,7 +310,10 @@ namespace BTokenLib
         {
           $"{ex.GetType().Name} in listener: \n{ex.Message}".Log(this, LogFiles, Token.LogEntryNotifier);
 
-          Network.HandleExceptionPeerListener(this);
+          if (HeaderSync != null)
+            Network.ReturnBlockDownloadIncomplete(HeaderSync);
+          else if (IsStateDBDownload())
+            Network.ReturnPeerDBDownloadIncomplete(HashDBDownload);
 
           Dispose();
         }
