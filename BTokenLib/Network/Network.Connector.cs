@@ -60,6 +60,8 @@ namespace BTokenLib
             Task.Delay(2000).ConfigureAwait(false);
           }
 
+          Peers.RemoveAll(p => p.State == Peer.StateProtocol.Disposed);
+
           int countPeersCreate = CountMaxPeers - Peers.Count;
 
           if (countPeersCreate > 0)

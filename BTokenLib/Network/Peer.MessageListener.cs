@@ -49,6 +49,8 @@ namespace BTokenLib
               ResetTimer();
 
               Network.InsertBlock(this);
+
+              SetStateIdle();
             }
             else if (Command == "tx")
             {
@@ -306,8 +308,7 @@ namespace BTokenLib
         }
         catch (Exception ex)
         {
-          $"{ex.GetType().Name} in listener: \n{ex.Message}"
-            .Log(this, LogFiles, Token.LogEntryNotifier);
+          $"{ex.GetType().Name} in listener: \n{ex.Message}".Log(this, LogFiles, Token.LogEntryNotifier);
 
           Network.HandleExceptionPeerListener(this);
 
