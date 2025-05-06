@@ -46,7 +46,7 @@ namespace BTokenLib
 
       int startIndexBeginningOfTXs = startIndex;
 
-      long blockReward = Token.BlockRewardInitial >> Header.Height / Token.PeriodHalveningBlockReward;
+      long blockReward = Token.BlockRewardInitial >> heightBlock / Token.PeriodHalveningBlockReward;
 
       TX tX;
 

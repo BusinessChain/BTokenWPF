@@ -48,7 +48,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              Network.InsertBlock(this);
+              Network.InsertBlock(BlockSync, HeaderSync.Height);
 
               SetStateIdle();
             }
@@ -101,7 +101,12 @@ namespace BTokenLib
                 }
               else if(countHeaders == 0)
               {
-                Network.SyncBlocks(this);
+                $"Headerdownload completed, start block download.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+                SetStateIdle();
+
+                Network.SyncBlocks(HeaderDownload);
+
                 goto LABEL_ListenForNextMessage;
               }
 

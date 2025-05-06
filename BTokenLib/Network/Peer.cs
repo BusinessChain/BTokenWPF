@@ -310,9 +310,7 @@ namespace BTokenLib
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
           {
-              new Inventory(
-                InventoryType.MSG_DB,
-                HashDBDownload)
+              new Inventory(InventoryType.MSG_DB, HashDBDownload)
           }));
       }
 
@@ -325,9 +323,7 @@ namespace BTokenLib
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
           {
-              new Inventory(
-                InventoryType.MSG_BLOCK,
-                HeaderSync.Hash)
+              new Inventory(InventoryType.MSG_BLOCK, HeaderSync.Hash)
           }));
       }
 
@@ -382,9 +378,7 @@ namespace BTokenLib
       public void SetStateIdle()
       {
         lock (this)
-        {
           State = StateProtocol.Idle;
-        }
       }
       
       public void SetStateSync()
