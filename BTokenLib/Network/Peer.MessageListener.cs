@@ -26,20 +26,20 @@ namespace BTokenLib
 
             if (Command == "block")
             {
-              if (HeaderSync == null)
+              if (HeaderDownload == null)
                 throw new ProtocolException($"Received unrequested block message.");
 
-              await ReadBytes(BlockSync.Buffer, LengthDataPayload);
-              BlockSync.LengthBufferPayload = LengthDataPayload;
+              await ReadBytes(BlockDownload.Buffer, LengthDataPayload);
+              BlockDownload.LengthBufferPayload = LengthDataPayload;
 
-              BlockSync.Parse(HeaderSync.Height);
+              BlockDownload.Parse(HeaderDownload.Height);
 
-              $"Received block {BlockSync}".Log(this, LogFiles, Token.LogEntryNotifier);
+              $"Received block {BlockDownload}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              if (!BlockSync.Header.Hash.IsAllBytesEqual(HeaderSync.Hash))
+              if (!BlockDownload.Header.Hash.IsAllBytesEqual(HeaderDownload.Hash))
                 throw new ProtocolException(
-                  $"Received unexpected block {BlockSync} at height {BlockSync.Header.Height} from peer {this}.\n" +
-                  $"Requested was {HeaderSync}.");
+                  $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
+                  $"Requested was {HeaderDownload}.");
 
               if (Token.TokenParent == null)
                 Console.Beep(1200, 100);
@@ -48,7 +48,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              Network.InsertBlock(BlockSync, HeaderSync.Height);
+              Network.InsertBlock(this);
 
               SetStateIdle();
             }
@@ -86,7 +86,7 @@ namespace BTokenLib
 
                 try
                 {
-                  HeaderDownload.InsertHeader(header);
+                  HeaderchainDownload.InsertHeader(header);
                 }
                 catch (ProtocolException)
                 { }
@@ -97,7 +97,7 @@ namespace BTokenLib
                   Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
                   startIndex += 1;
 
-                  HeaderDownload.InsertHeader(header);
+                  HeaderchainDownload.InsertHeader(header);
                 }
               else if(countHeaders == 0)
               {
@@ -105,12 +105,12 @@ namespace BTokenLib
 
                 SetStateIdle();
 
-                Network.SyncBlocks(HeaderDownload);
+                Network.SyncBlocks(HeaderchainDownload);
 
                 goto LABEL_ListenForNextMessage;
               }
 
-              await SendGetHeaders(HeaderDownload.Locator);
+              await SendGetHeaders(HeaderchainDownload.Locator);
             }
             else if (Command == "getheaders")
             {
@@ -185,7 +185,7 @@ namespace BTokenLib
               HashesDB = Token.ParseHashesDB(
                 Payload,
                 LengthDataPayload,
-                HeaderDownload.HeaderTip);
+                HeaderchainDownload.HeaderTip);
 
               ResetTimer();
 
@@ -200,8 +200,8 @@ namespace BTokenLib
               notFoundMessage.Inventories.ForEach(
                 i => $"Did not find {i.Hash.ToHexString()}".Log(this, LogFiles, Token.LogEntryNotifier));
 
-              if (HeaderSync != null)
-                Network.ReturnBlockDownloadIncomplete(HeaderSync);
+              if (HeaderDownload != null)
+                Network.ReturnBlockDownloadIncomplete(HeaderDownload);
             }
             else if (Command == "inv")
             {
@@ -306,19 +306,13 @@ namespace BTokenLib
 
               RejectMessage rejectMessage = new(Payload);
 
-              $"Get reject message: {rejectMessage.GetReasonReject()}"
-                .Log(this, LogFiles, Token.LogEntryNotifier);
+              $"Get reject message: {rejectMessage.GetReasonReject()}".Log(this, LogFiles, Token.LogEntryNotifier);
             }
           }
         }
         catch (Exception ex)
         {
           $"{ex.GetType().Name} in listener: \n{ex.Message}".Log(this, LogFiles, Token.LogEntryNotifier);
-
-          if (HeaderSync != null)
-            Network.ReturnBlockDownloadIncomplete(HeaderSync);
-          else if (IsStateDBDownload())
-            Network.ReturnPeerDBDownloadIncomplete(HashDBDownload);
 
           Dispose();
         }

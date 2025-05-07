@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public partial class Network
   {
-    public class HeaderDownload
+    public class HeaderchainDownload
     {
       public List<Header> Locator;
 
@@ -14,7 +14,7 @@ namespace BTokenLib
       public Header HeaderRoot;
 
 
-      public HeaderDownload(List<Header> locator)
+      public HeaderchainDownload(List<Header> locator)
       {
         Locator = locator;
       }

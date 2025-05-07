@@ -35,9 +35,9 @@ namespace BTokenLib
       public StateProtocol State = StateProtocol.NotConnected;
       public DateTime TimeLastSync;
 
-      public HeaderDownload HeaderDownload;
-      public Header HeaderSync;
-      public Block BlockSync;
+      public HeaderchainDownload HeaderchainDownload;
+      public Header HeaderDownload;
+      public Block BlockDownload;
 
       public byte[] HashDBDownload;
       public List<byte[]> HashesDB;
@@ -99,8 +99,6 @@ namespace BTokenLib
       {
         Network = network;
         Token = token;
-
-        BlockSync = new Block(Token);
 
         TcpClient = tcpClient;
         IPAddress = ip;
@@ -316,14 +314,14 @@ namespace BTokenLib
 
       public async Task RequestBlock()
       {
-        $"Start downloading block {HeaderSync}.".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Start downloading block {HeaderDownload}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         ResetTimer("receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
           {
-              new Inventory(InventoryType.MSG_BLOCK, HeaderSync.Hash)
+              new Inventory(InventoryType.MSG_BLOCK, HeaderDownload.Hash)
           }));
       }
 
@@ -391,7 +389,7 @@ namespace BTokenLib
           State = StateProtocol.Sync;
         }
 
-        HeaderDownload = new HeaderDownload(Token.GetLocator());
+        HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
       }
 
       public bool IsStateSync()
