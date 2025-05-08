@@ -312,16 +312,19 @@ namespace BTokenLib
           }));
       }
 
-      public async Task RequestBlock()
+      public async Task RequestBlock(Header headerDownload, Block blockDownload)
       {
-        $"Start downloading block {HeaderDownload}.".Log(this, LogFiles, Token.LogEntryNotifier);
+        HeaderDownload = headerDownload;
+        BlockDownload = blockDownload;
+
+        $"Start downloading block {BlockDownload}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         ResetTimer("receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
           {
-              new Inventory(InventoryType.MSG_BLOCK, HeaderDownload.Hash)
+              new Inventory(InventoryType.MSG_BLOCK, BlockDownload.Header.Hash)
           }));
       }
 

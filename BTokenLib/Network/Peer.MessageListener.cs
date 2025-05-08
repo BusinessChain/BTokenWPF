@@ -26,7 +26,7 @@ namespace BTokenLib
 
             if (Command == "block")
             {
-              if (HeaderDownload == null)
+              if (State != StateProtocol.Sync)
                 throw new ProtocolException($"Received unrequested block message.");
 
               await ReadBytes(BlockDownload.Buffer, LengthDataPayload);
@@ -48,7 +48,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              Network.InsertBlock(this);
+              Network.InsertBlock(BlockDownload, HeaderDownload.Height);
 
               SetStateIdle();
             }
@@ -267,10 +267,10 @@ namespace BTokenLib
 
                 ResetTimer();
 
-                if (Network.InsertDB_FlagContinue(this))
-                  await RequestDB();
-                else
-                  SetStateIdle();
+                //if (Network.InsertDB_FlagContinue(this))
+                //  await RequestDB();
+                //else
+                //  SetStateIdle();
               }
             }
             else if (Command == "ping")

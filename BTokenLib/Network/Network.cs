@@ -74,10 +74,16 @@ namespace BTokenLib
         Peers.ForEach(p => p.AdvertizeBlock(block));
     }
 
-    bool TryGetPeerIdle(out Peer peer)
+    bool TryGetPeerIdle(out Peer peer, Peer.StateProtocol stateNew)
     {
       lock (LOCK_Peers)
-        peer = Peers.Find(p => p.IsStateIdle());
+      {
+        peer = Peers.Find(p => p.IsStateIdle()); // This is not yet done correctly,
+                                                 // if lock on peer level are needed,
+                                                 // then the state transitions should be within IsStateIdle
+                                                 // But maybe it is better if we have no individual peer-level lock
+        peer.State = stateNew;
+      }
 
       return peer != null;
     }
