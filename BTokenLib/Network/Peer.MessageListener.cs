@@ -66,6 +66,9 @@ namespace BTokenLib
             }
             else if (Command == "headers")
             {
+              if(!Network.TryEnterStateSync(this))
+                goto LABEL_ListenForNextMessage;
+
               await ReadBytes(Payload, LengthDataPayload);
 
               int startIndex = 0;
@@ -75,14 +78,16 @@ namespace BTokenLib
 
               ResetTimer();
 
-              if (!IsStateSync())
+              if (State != StateProtocol.Sync)
               {
+                State = StateProtocol.Sync;
+
                 if (countHeaders != 1)
                   throw new ProtocolException($"Unsolicited headersMessage must contain exactly one header, but received {countHeaders}.");
 
                 Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
 
-                SetStateSync();
+                HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
 
                 try
                 {
@@ -101,11 +106,10 @@ namespace BTokenLib
                 }
               else if(countHeaders == 0)
               {
-                $"Headerdownload completed, start block download.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+                State = StateProtocol.Idle;
 
-                SetStateIdle();
-
-                Network.SyncBlocks(HeaderchainDownload);
+                if (HeaderchainDownload.HeaderTip.DifficultyAccumulated > Token.HeaderTip.DifficultyAccumulated)
+                  Network.SyncBlocks(HeaderchainDownload);
 
                 goto LABEL_ListenForNextMessage;
               }
