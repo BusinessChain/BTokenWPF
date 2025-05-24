@@ -22,11 +22,14 @@ namespace BTokenLib
           {
           LABEL_ListenForNextMessage:
 
+            // introduce a Message/time metric for DoS detection.
+            // During synchronization this metric might be temporary disabled.
+
             await ListenForNextMessage();
 
             if (Command == "block")
             {
-              if (State != StateProtocol.Sync)
+              if (State != StateProtocol.HeaderDownload)
                 throw new ProtocolException($"Received unrequested block message.");
 
               await ReadBytes(BlockDownload.Buffer, LengthDataPayload);
@@ -66,55 +69,11 @@ namespace BTokenLib
             }
             else if (Command == "headers")
             {
-              if(!Network.TryEnterStateSync(this))
-                goto LABEL_ListenForNextMessage;
+              $"Receiving headers message.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               await ReadBytes(Payload, LengthDataPayload);
 
-              int startIndex = 0;
-              int countHeaders = VarInt.GetInt(Payload, ref startIndex);
-
-              $"Receiving {countHeaders} headers.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-              ResetTimer();
-
-              if (State != StateProtocol.Sync)
-              {
-                State = StateProtocol.Sync;
-
-                if (countHeaders != 1)
-                  throw new ProtocolException($"Unsolicited headersMessage must contain exactly one header, but received {countHeaders}.");
-
-                Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-
-                HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
-
-                try
-                {
-                  HeaderchainDownload.InsertHeader(header);
-                }
-                catch (ProtocolException)
-                { }
-              }
-              else if (countHeaders > 0)
-                for (int i = 0; i < countHeaders; i++)
-                {
-                  Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-                  startIndex += 1;
-
-                  HeaderchainDownload.InsertHeader(header);
-                }
-              else if(countHeaders == 0)
-              {
-                State = StateProtocol.Idle;
-
-                if (HeaderchainDownload.HeaderTip.DifficultyAccumulated > Token.HeaderTip.DifficultyAccumulated)
-                  Network.SyncBlocks(HeaderchainDownload);
-
-                goto LABEL_ListenForNextMessage;
-              }
-
-              await SendGetHeaders(HeaderchainDownload.Locator);
+              Network.ReceiveHeadersMessage(this);
             }
             else if (Command == "getheaders")
             {
@@ -339,19 +298,9 @@ namespace BTokenLib
         LengthDataPayload = BitConverter.ToInt32(MessageHeader, CommandSize);
 
         if (LengthDataPayload > Token.SizeBlockMax)
-          throw new ProtocolException(
-            $"Message payload too big exceeding {Token.SizeBlockMax} bytes.");
+          throw new ProtocolException($"Message payload too big exceeding {Token.SizeBlockMax} bytes.");
 
-        Command = Encoding.ASCII.GetString(
-          MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
-      }
-
-      void ResetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
-      {
-        if (descriptionTimeOut != "")
-          $"Set timeout for '{descriptionTimeOut}' to {millisecondsTimer} ms.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-        Cancellation.CancelAfter(millisecondsTimer);
+        Command = Encoding.ASCII.GetString(MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
       }
 
       async Task ReadBytes(byte[] buffer, int bytesToRead)
@@ -374,6 +323,14 @@ namespace BTokenLib
           offset += chunkSize;
           bytesToRead -= chunkSize;
         }
+      }
+
+      void ResetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
+      {
+        if (descriptionTimeOut != "")
+          $"Set timeout for '{descriptionTimeOut}' to {millisecondsTimer} ms.".Log(this, LogFiles, Token.LogEntryNotifier);
+
+        Cancellation.CancelAfter(millisecondsTimer);
       }
     }
   }

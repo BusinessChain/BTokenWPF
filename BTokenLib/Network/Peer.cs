@@ -25,7 +25,7 @@ namespace BTokenLib
       {
         NotConnected,
         Idle,
-        Sync,
+        HeaderDownload,
         DBDownload,
         GetData,
         AdvertizingTX,
@@ -35,9 +35,8 @@ namespace BTokenLib
       public StateProtocol State = StateProtocol.NotConnected;
       public DateTime TimeLastSync;
 
-      public HeaderchainDownload HeaderchainDownload;
-      public Header HeaderDownload;
-      public Block BlockDownload;
+      Header HeaderDownload;
+      Block BlockDownload;
 
       public byte[] HashDBDownload;
       public List<byte[]> HashesDB;
@@ -61,7 +60,7 @@ namespace BTokenLib
       const int LengthSize = 4;
       const int ChecksumSize = 4;
 
-      public string Command;
+      string Command;
 
       public byte[] Payload;
       public int LengthDataPayload;
@@ -70,7 +69,7 @@ namespace BTokenLib
       byte[] MessageHeader = new byte[HeaderSize];
       byte[] MagicBytes = new byte[4] { 0xF9, 0xBE, 0xB4, 0xD9 };
 
-      SHA256 SHA256 = SHA256.Create();
+      public SHA256 SHA256 = SHA256.Create();
 
       StreamWriter LogFilePeer;
       List<StreamWriter> LogFiles = new();
@@ -232,9 +231,6 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
-        if (!IsStateSync())
-          SetStateSync();
-
         try
         {
           await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
@@ -360,7 +356,7 @@ namespace BTokenLib
             return;
           }
 
-          State = StateProtocol.Sync;
+          State = StateProtocol.HeaderDownload;
         }
 
         $"Advertize block {block}.".Log(this, LogFiles, Token.LogEntryNotifier);
@@ -386,10 +382,10 @@ namespace BTokenLib
       {
         lock (this)
         {
-          if (State == StateProtocol.Sync)
+          if (State == StateProtocol.HeaderDownload)
             return;
 
-          State = StateProtocol.Sync;
+          State = StateProtocol.HeaderDownload;
         }
 
         HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
@@ -398,7 +394,7 @@ namespace BTokenLib
       public bool IsStateSync()
       {
         lock (this)
-          return State == StateProtocol.Sync;
+          return State == StateProtocol.HeaderDownload;
       }
 
       bool IsStateAwaitingGetDataTX()
@@ -416,6 +412,8 @@ namespace BTokenLib
       public void Dispose()
       {
         $"Dispose {Connection}".Log(this, LogFiles, Token.LogEntryNotifier);
+
+        Cancellation.Cancel();
 
         TcpClient.Dispose();
 

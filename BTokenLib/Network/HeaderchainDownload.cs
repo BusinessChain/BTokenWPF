@@ -17,17 +17,17 @@ namespace BTokenLib
       Locator = locator;
     }
 
-    public void InsertHeader(Header header)
+    public bool TryInsertHeader(Header header)
     {
       if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
-        throw new ProtocolException($"Header is duplicate.");
+        return false;
 
       if (HeaderRoot == null)
       {
         int indexHeaderAncestor = Locator.FindIndex(h => h.Hash.IsAllBytesEqual(header.HashPrevious));
 
         if (indexHeaderAncestor == -1)
-          throw new ProtocolException($"Header {header} does not connect to locator.");
+          return false;
 
         Header headerAncestor = Locator[indexHeaderAncestor];
 
@@ -52,7 +52,9 @@ namespace BTokenLib
         Locator[0] = header;
       }
       else
-        throw new ProtocolException($"Header {header} does not connect to previous header {HeaderTip}.");
+        return false;
+
+      return true;
     }
 
     public override string ToString()
