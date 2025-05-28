@@ -33,7 +33,6 @@ namespace BTokenLib
     List<string> IPAddresses = new();
 
 
-
     public void IncrementCountMaxPeers()
     {
       CountMaxPeers++;
@@ -186,8 +185,7 @@ namespace BTokenLib
 
           if (peer != null)
           {
-            $"Connection with peer {peer} already established."
-              .Log(this, Token.LogFile, Token.LogEntryNotifier);
+            $"Connection with peer {peer} already established.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
             return;
           }
@@ -203,8 +201,7 @@ namespace BTokenLib
       }
       catch (Exception ex)
       {
-        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}."
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
         return;
       }

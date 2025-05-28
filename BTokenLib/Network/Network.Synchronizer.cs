@@ -42,39 +42,25 @@ namespace BTokenLib
         return;
 
       foreach(Peer peer in Peers)
-        try
-        {
-          peer.SendGetHeaders(Token.GetLocator());
-        }
-        catch
-        {
-          $"Could not start synchronization with peer {peer}.".Log(this, Token.LogEntryNotifier);
-        }
+        peer.SendGetHeaders(Token.GetLocator());
     }
 
     Peer PeerSync;
     HeaderchainDownload HeaderchainDownload;
-    double TimeoutAdjustementFactor = 1.0;
-
+    bool FlagSyncHeadersComplete;
 
     void ReceiveHeadersMessage(Peer peer)
     {
-      StartTimerSyncHeaders();
-      // man könnte auch mit einem FlagSyncAborted arbeiten und PeerSync extra nicht nullen, damit kann ausgeschlossen werden
-      // dass gerade nochmal mit demselben Peer versucht wird zu syncen.
       lock (LOCK_IsStateSync)
         if (peer != PeerSync)
         {
-          if (IsStateSync)
-            return;
-
-          if (!Token.TryLock())
+          if (IsStateSync || !Token.TryLock())
             return;
 
           IsStateSync = true;
-
           PeerSync = peer;
           HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
+          FlagSyncHeadersComplete = false;
 
           StartTimerSyncHeaders();
         }
@@ -84,7 +70,7 @@ namespace BTokenLib
 
       if (countHeaders > 0)
       {
-        for (int i = 0; i < countHeaders; i++)
+        for (int i = 0; i < countHeaders; i += 1)
         {
           Header header = Token.ParseHeader(peer.Payload, ref startIndex, peer.SHA256);
           startIndex += 1; // Number of transaction entries, this value is always 0
@@ -96,17 +82,21 @@ namespace BTokenLib
         PeerSync.SendGetHeaders(HeaderchainDownload.Locator);
       }
       else if (HeaderchainDownload.HeaderTip?.DifficultyAccumulated > Token.HeaderTip.DifficultyAccumulated)
+      {
+        FlagSyncHeadersComplete = true;
         SyncBlocks();
+      }
     }
+
+    const int TIMEOUT_HEADERSYNC_SECONDS = 5;
+    double TimeoutAdjustementFactor = 1.0;
 
     async Task StartTimerSyncHeaders()
     {
       Header HeaderTipOld = HeaderchainDownload.HeaderTip;
       int countdownTimeoutSeconds = 0;
 
-      const int TIMEOUT_HEADERSYNC_SECONDS = 5;
-
-      while (true)
+      while (!FlagSyncHeadersComplete)
       {
         if (countdownTimeoutSeconds < TIMEOUT_HEADERSYNC_SECONDS * TimeoutAdjustementFactor)
         {
@@ -121,6 +111,7 @@ namespace BTokenLib
         else
         {
           $"Exiting state synchronization of token {Token.GetName()} due to timeout in synchronizator.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+          
           lock (LOCK_IsStateSync)
           {
             IsStateSync = false;
@@ -129,7 +120,7 @@ namespace BTokenLib
             PeerSync = null;
           }
 
-          return;
+          break;
         }
 
         await Task.Delay(1000).ConfigureAwait(false);
@@ -146,69 +137,58 @@ namespace BTokenLib
 
       double difficultyAccumulatedOld = Token.HeaderTip.DifficultyAccumulated;
 
-      try
+      HeaderDownloadNext = HeaderchainDownload.HeaderRoot;
+      HeightInsertion = HeaderDownloadNext.Height;
+
+      if (HeaderDownloadNext.HeaderPrevious != Token.HeaderTip)
       {
-        HeaderDownloadNext = HeaderchainDownload.HeaderRoot;
-        HeightInsertion = HeaderDownloadNext.Height;
+        $"Forking chain after common ancestor {HeaderDownloadNext.HeaderPrevious} with height {HeaderDownloadNext.HeaderPrevious.Height}."
+          .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-        if (HeaderDownloadNext.HeaderPrevious != Token.HeaderTip)
-        {
-          $"Forking chain after common ancestor {HeaderDownloadNext.HeaderPrevious} with height {HeaderDownloadNext.HeaderPrevious.Height}."
-            .Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-          if (Token.TryReverseBlockchainToHeight(HeaderchainDownload.HeaderRoot.Height - 1))
-            Token.Archiver.SetBlockPathToFork();
-          else
-            Token.Reset(); //Restart Sync as if cold start.
-        }
-
-        int heightHeaderTipOld = Token.HeaderTip.Height;
-        int countdownTimeoutBlockDownloadSeconds = 0;
-
-        while (true)
-        {
-          if (Token.HeaderTip.Height == HeaderchainDownload.HeaderTip.Height)
-            break;
-
-          if (countdownTimeoutBlockDownloadSeconds > TIMEOUT_BLOCKDOWNLOAD_SECONDS)
-            FlagSyncAbort = true;
-          else
-          {
-            if (heightHeaderTipOld == Token.HeaderTip.Height)
-              countdownTimeoutBlockDownloadSeconds += 1;
-            else
-            {
-              heightHeaderTipOld = Token.HeaderTip.Height;
-              countdownTimeoutBlockDownloadSeconds = 0;
-            }
-          }
-
-          if (FlagSyncAbort)
-          {
-            $"Synchronization is aborted.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-            foreach (Peer p in Peers.Where(p => p.IsStateSync()))
-              p.SetStateIdle();
-
-            break;
-          }
-
-          if (TryFetchHeaderDownload(out Header headerDownload))
-            if (TryGetPeerIdle(out Peer peer, Peer.StateProtocol.HeaderDownload))
-            {
-              if (!PoolBlocks.TryTake(out Block blockDownload))
-                blockDownload = new Block(Token);
-
-              peer.RequestBlock(headerDownload, blockDownload);
-            }
-
-          await Task.Delay(1000).ConfigureAwait(false);
-        }
+        if (Token.TryReverseBlockchainToHeight(HeaderchainDownload.HeaderRoot.Height - 1))
+          Token.Archiver.SetBlockPathToFork();
+        else
+          Token.Reset(); //Restart Sync as if cold start.
       }
-      catch (Exception ex)
+
+      int heightHeaderTipOld = Token.HeaderTip.Height;
+      int countdownTimeoutBlockDownloadSeconds = 0;
+
+      while (true)
       {
-        ($"Unexpected exception {ex.GetType().Name} occured during SyncBlocks.\n" +
-          $"{ex.Message}").Log(this, Token.LogFile, Token.LogEntryNotifier);
+        if (Token.HeaderTip.Height == HeaderchainDownload.HeaderTip.Height)
+          break;
+
+        if (countdownTimeoutBlockDownloadSeconds > TIMEOUT_BLOCKDOWNLOAD_SECONDS)
+          FlagSyncAbort = true;
+        else if (heightHeaderTipOld == Token.HeaderTip.Height)
+          countdownTimeoutBlockDownloadSeconds += 1;
+        else
+        {
+          heightHeaderTipOld = Token.HeaderTip.Height;
+          countdownTimeoutBlockDownloadSeconds = 0;
+        }
+
+        if (FlagSyncAbort)
+        {
+          $"Synchronization is aborted.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+          foreach (Peer p in Peers.Where(p => p.IsStateSync()))
+            p.SetStateIdle();
+
+          break;
+        }
+
+        if (TryFetchHeaderDownload(out Header headerDownload))
+          if (TryGetPeerIdle(out Peer peer))
+          {
+            if (!PoolBlocks.TryTake(out Block blockDownload))
+              blockDownload = new Block(Token);
+
+            peer.RequestBlock(headerDownload, blockDownload);
+          }
+
+        await Task.Delay(1000).ConfigureAwait(false);
       }
 
       if (Token.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
@@ -216,9 +196,14 @@ namespace BTokenLib
       else
         Token.LoadState();
 
-      ExitStateSync();
+      lock (LOCK_IsStateSync)
+      {
+        Token.ReleaseLock();
+        IsStateSync = false;
+        PeerSync = null;
 
-      $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+      }
 
       foreach (Token tokenChild in Token.TokensChild)
         tokenChild.Network.StartSync();
@@ -272,6 +257,14 @@ namespace BTokenLib
         }
 
       return headerDownload != null;
+    }
+
+    bool TryGetPeerIdle(out Peer peer)
+    {
+      lock (LOCK_Peers)
+        peer = Peers.Find(p => p.TryRequestIdlePeer());
+
+      return peer != null;
     }
 
     async Task SyncDB(Peer peer)

@@ -27,9 +27,18 @@ namespace BTokenLib
 
             await ListenForNextMessage();
 
-            if (Command == "block")
+
+            if (Command == "headers")
             {
-              if (State != StateProtocol.HeaderDownload)
+              $"Receiving headers message.".Log(this, LogFiles, Token.LogEntryNotifier);
+
+              await ReadBytes(Payload, LengthDataPayload);
+
+              Network.ReceiveHeadersMessage(this);
+            }
+            else if (Command == "block")
+            {
+              if (HeaderDownload == null)
                 throw new ProtocolException($"Received unrequested block message.");
 
               await ReadBytes(BlockDownload.Buffer, LengthDataPayload);
@@ -44,16 +53,9 @@ namespace BTokenLib
                   $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
                   $"Requested was {HeaderDownload}.");
 
-              if (Token.TokenParent == null)
-                Console.Beep(1200, 100);
-              else
-                Console.Beep(1500, 100);
-
               ResetTimer();
 
               Network.InsertBlock(BlockDownload, HeaderDownload.Height);
-
-              SetStateIdle();
             }
             else if (Command == "tx")
             {
@@ -66,14 +68,6 @@ namespace BTokenLib
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               Token.InsertTXUnconfirmed(tX);
-            }
-            else if (Command == "headers")
-            {
-              $"Receiving headers message.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-              await ReadBytes(Payload, LengthDataPayload);
-
-              Network.ReceiveHeadersMessage(this);
             }
             else if (Command == "getheaders")
             {
@@ -96,8 +90,6 @@ namespace BTokenLib
 
               int i = 0;
               List<Header> headers = new();
-              bool flagNotSameTipAsPeer = false;
-              bool flagInitiateSynchronization = false;
 
               while (true)
               {
@@ -118,26 +110,18 @@ namespace BTokenLib
                   if (headers.Any())
                     $"Send headers {headers.First()}...{headers.Last()}.".Log(this, LogFiles, Token.LogEntryNotifier);
                   else
-                  {
                     $"Send empty headers.".Log(this, LogFiles, Token.LogEntryNotifier);
-                    flagInitiateSynchronization = flagNotSameTipAsPeer;
-                  }
 
                   await SendHeaders(headers);
 
                   break;
                 }
-                else
-                  flagNotSameTipAsPeer = true;
 
                 if (i++ == headersCount)
                   throw new ProtocolException($"Found no common ancestor in getheaders locator.");
               }
 
               Token.ReleaseLock();
-
-              if (flagInitiateSynchronization)
-                await SendGetHeaders(Token.GetLocator());
             }
             else if (Command == "hashesDB")
             {
@@ -162,9 +146,6 @@ namespace BTokenLib
 
               notFoundMessage.Inventories.ForEach(
                 i => $"Did not find {i.Hash.ToHexString()}".Log(this, LogFiles, Token.LogEntryNotifier));
-
-              if (HeaderDownload != null)
-                Network.ReturnBlockDownloadIncomplete(HeaderDownload);
             }
             else if (Command == "inv")
             {

@@ -29,7 +29,8 @@ namespace BTokenLib
         DBDownload,
         GetData,
         AdvertizingTX,
-        Disposed
+        Disposed,
+        Busy
       }
 
       public StateProtocol State = StateProtocol.NotConnected;
@@ -153,8 +154,7 @@ namespace BTokenLib
         $"Connect.".Log(this, LogFiles, Token.LogEntryNotifier);
 
         if (!TcpClient.Connected)
-          await TcpClient.ConnectAsync(IPAddress, Network.Port)
-            .ConfigureAwait(false);
+          await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
 
         NetworkStream = TcpClient.GetStream();
 
@@ -231,6 +231,8 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
+        ResetTimer("Get headers.", TIMEOUT_RESPONSE_MILLISECONDS);
+
         try
         {
           await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
@@ -239,10 +241,7 @@ namespace BTokenLib
         catch (Exception ex)
         {
           $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFiles, Token.LogEntryNotifier);
-          throw ex;
         }
-
-        ResetTimer("Receive headers", TIMEOUT_RESPONSE_MILLISECONDS);
       }
 
       public async Task<bool> TryAdvertizeTX(TX tX)
@@ -366,6 +365,18 @@ namespace BTokenLib
         SetStateIdle();
       }
 
+      public bool TryRequestIdlePeer()
+      {
+        lock (this)
+          if (State == StateProtocol.Idle)
+          {
+            State = StateProtocol.Busy;
+            return true;
+          }
+
+        return false;
+      }
+
       public bool IsStateIdle()
       {
         lock (this)
@@ -376,19 +387,6 @@ namespace BTokenLib
       {
         lock (this)
           State = StateProtocol.Idle;
-      }
-      
-      public void SetStateSync()
-      {
-        lock (this)
-        {
-          if (State == StateProtocol.HeaderDownload)
-            return;
-
-          State = StateProtocol.HeaderDownload;
-        }
-
-        HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
       }
 
       public bool IsStateSync()
@@ -424,8 +422,7 @@ namespace BTokenLib
         string pathLogFile = ((FileStream)LogFilePeer.BaseStream).Name;
         string nameLogFile = Path.GetFileName(pathLogFile);
         string pathLogFileDisposed = Path.Combine(
-          Network.DirectoryPeersDisposed.FullName,
-          nameLogFile);
+          Network.DirectoryPeersDisposed.FullName, nameLogFile);
 
         File.Move(pathLogFile, pathLogFileDisposed);
         File.SetCreationTime(pathLogFileDisposed, DateTime.Now);
