@@ -36,8 +36,8 @@ namespace BTokenLib
       public StateProtocol State = StateProtocol.NotConnected;
       public DateTime TimeLastSync;
 
-      Header HeaderDownload;
-      Block BlockDownload;
+      public Header HeaderDownload;
+      public Block BlockDownload;
 
       public byte[] HashDBDownload;
       public List<byte[]> HashesDB;
@@ -314,12 +314,12 @@ namespace BTokenLib
 
         $"Start downloading block {BlockDownload}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-        ResetTimer("receive block", TIMEOUT_RESPONSE_MILLISECONDS);
+        ResetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
           {
-              new Inventory(InventoryType.MSG_BLOCK, BlockDownload.Header.Hash)
+            new Inventory(InventoryType.MSG_BLOCK, headerDownload.Hash)
           }));
       }
 

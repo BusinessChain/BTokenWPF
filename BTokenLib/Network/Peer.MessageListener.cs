@@ -27,7 +27,6 @@ namespace BTokenLib
 
             await ListenForNextMessage();
 
-
             if (Command == "headers")
             {
               $"Receiving headers message.".Log(this, LogFiles, Token.LogEntryNotifier);
@@ -55,7 +54,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              Network.InsertBlock(BlockDownload, HeaderDownload.Height);
+              Network.InsertBlock(this);
             }
             else if (Command == "tx")
             {
