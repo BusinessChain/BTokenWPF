@@ -16,6 +16,10 @@ namespace BTokenLib
     {
       public async Task StartMessageListener()
       {
+
+        // innerhalb 10 minuten max 5 (empirisch bestimmen) non_bulk messages akzeptieren
+
+
         try
         {
           while (true)
@@ -33,11 +37,9 @@ namespace BTokenLib
 
               await ReadBytes(Payload, LengthDataPayload);
 
-              Network.ReceiveHeadersMessage(this, out bool flagBulkMessageIsAccepted);
-
-              if(flagBulkMessageIsAccepted)
+              if(Network.TryReceiveHeadersMessage(this))
               {
-                //Subtract message count DoS metric.);
+                //Subtract message count DoS metric.); 
               }
             }
             else if (Command == "block")

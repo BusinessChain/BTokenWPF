@@ -17,8 +17,10 @@ namespace BTokenLib
       Locator = locator;
     }
 
-    public bool TryInsertHeader(Header header)
+    public bool TryInsertHeader(Header header, out bool flagIsHeaderRoot)
     {
+      flagIsHeaderRoot = false;
+
       if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
         return false;
 
@@ -37,6 +39,7 @@ namespace BTokenLib
         {
           header.AppendToHeader(headerAncestor);
           HeaderRoot = header;
+          flagIsHeaderRoot = false;
           HeaderTip = header;
 
           Locator = Locator.Skip(indexHeaderAncestor).ToList();

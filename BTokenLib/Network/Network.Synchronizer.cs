@@ -44,15 +44,13 @@ namespace BTokenLib
     double TimeoutAdjustementFactor = 1.0;
     Dictionary<Peer, List<byte[]>> PeersWhereHeadersSyncFailed = new();
 
-    void ReceiveHeadersMessage(Peer peer, out bool flagBulkMessageIsAccepted)
+    bool TryReceiveHeadersMessage(Peer peer)
     {
-      flagBulkMessageIsAccepted = false;
-
       lock (LOCK_IsStateSync)
         if (peer != PeerSync)
         {
           if (IsStateSync || !Token.TryLock())
-            return;
+            return false;
 
           IsStateSync = true;
           PeerSync = peer;
@@ -62,34 +60,40 @@ namespace BTokenLib
 
           StartTimerSyncHeaders();
         }
-        else if (FlagSyncHeadersFailed)
-          return;
+        else if (FlagSyncHeadersComplete || FlagSyncHeadersFailed)
+          return false;
 
       int startIndex = 0;
       int countHeaders = VarInt.GetInt(peer.Payload, ref startIndex);
 
       if (countHeaders > 0)
       {
-        for (int i = 0; i < countHeaders; i += 1)
+        int i = 0;
+        while (i < countHeaders)
         {
           Header header = Token.ParseHeader(peer.Payload, ref startIndex, peer.SHA256);
           startIndex += 1; // Number of transaction entries, this value is always 0
 
-          if (!HeaderchainDownload.TryInsertHeader(header))
+          if (!HeaderchainDownload.TryInsertHeader(header, out bool flagIsHeaderRoot))
             break;
-          else if(HeaderchainDownload.HeaderRoot != null && PeersWhereHeadersSyncFailed[PeerSync].Any(hash => hash.IsAllBytesEqual(HeaderchainDownload.HeaderRoot.Hash)))
+          else if(flagIsHeaderRoot && PeersWhereHeadersSyncFailed[PeerSync].Any(hash => hash.IsAllBytesEqual(header.Hash)))
             break;
 
-          flagBulkMessageIsAccepted = true;
+          i += 1;
         }
 
         PeerSync.SendGetHeaders(HeaderchainDownload.Locator);
+
+        if (i == countHeaders)
+          return true;
       }
       else if (HeaderchainDownload.HeaderTip?.DifficultyAccumulated > Token.HeaderTip.DifficultyAccumulated)
       {
         FlagSyncHeadersComplete = true;
         SyncBlocks();
       }
+
+      return false;
     }
 
     async Task StartTimerSyncHeaders()
