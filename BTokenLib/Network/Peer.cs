@@ -41,9 +41,7 @@ namespace BTokenLib
 
       public byte[] HashDBDownload;
       public List<byte[]> HashesDB;
-
-      public Header HeaderUnsolicited;
-     
+           
       ulong FeeFilterValue;
 
       const string UserAgent = "/BTokenCore:0.0.0/";
@@ -345,13 +343,6 @@ namespace BTokenLib
           {
             $"Is not idle when attempting to send block {block} but in state {State}."
               .Log(this, LogFiles, Token.LogEntryNotifier);
-            return;
-          }
-
-          if (HeaderUnsolicited != null &&
-            HeaderUnsolicited.Hash.IsAllBytesEqual(block.Header.Hash))
-          {
-            $"Advertized block {block} was received by same peer.".Log(this, LogFiles, Token.LogEntryNotifier);
             return;
           }
 

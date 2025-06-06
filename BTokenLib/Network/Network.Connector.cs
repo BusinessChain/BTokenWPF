@@ -59,7 +59,10 @@ namespace BTokenLib
             Task.Delay(2000).ConfigureAwait(false);
           }
 
+          List<Peer> removedPeers = Peers.Where(p => p.State == Peer.StateProtocol.Disposed).ToList();
           Peers.RemoveAll(p => p.State == Peer.StateProtocol.Disposed);
+          foreach (Peer peer in removedPeers)
+            PeersWhereHeadersSyncFailed.Remove(peer);
 
           int countPeersCreate = CountMaxPeers - Peers.Count;
 

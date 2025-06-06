@@ -33,12 +33,19 @@ namespace BTokenLib
 
               await ReadBytes(Payload, LengthDataPayload);
 
-              Network.ReceiveHeadersMessage(this);
+              Network.ReceiveHeadersMessage(this, out bool flagBulkMessageIsAccepted);
+
+              if(flagBulkMessageIsAccepted)
+              {
+                //Subtract message count DoS metric.);
+              }
             }
             else if (Command == "block")
             {
               if (HeaderDownload == null)
                 throw new ProtocolException($"Received unrequested block message.");
+              else
+                //Subtract message count DoS metric.
 
               await ReadBytes(BlockDownload.Buffer, LengthDataPayload);
               BlockDownload.LengthBufferPayload = LengthDataPayload;
@@ -128,10 +135,10 @@ namespace BTokenLib
 
               $"Receiving DB hashes.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              HashesDB = Token.ParseHashesDB(
-                Payload,
-                LengthDataPayload,
-                HeaderchainDownload.HeaderTip);
+              //HashesDB = Token.ParseHashesDB(
+              //  Payload,
+              //  LengthDataPayload,
+              //  HeaderchainDownload.HeaderTip);
 
               ResetTimer();
 

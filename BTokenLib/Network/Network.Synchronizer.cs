@@ -42,9 +42,12 @@ namespace BTokenLib
     bool FlagSyncHeadersFailed;
     const int TIMEOUT_HEADERSYNC_SECONDS = 5;
     double TimeoutAdjustementFactor = 1.0;
+    Dictionary<Peer, List<byte[]>> PeersWhereHeadersSyncFailed = new();
 
-    void ReceiveHeadersMessage(Peer peer)
+    void ReceiveHeadersMessage(Peer peer, out bool flagBulkMessageIsAccepted)
     {
+      flagBulkMessageIsAccepted = false;
+
       lock (LOCK_IsStateSync)
         if (peer != PeerSync)
         {
@@ -74,6 +77,10 @@ namespace BTokenLib
 
           if (!HeaderchainDownload.TryInsertHeader(header))
             break;
+          else if(HeaderchainDownload.HeaderRoot != null && PeersWhereHeadersSyncFailed[PeerSync].Any(hash => hash.IsAllBytesEqual(HeaderchainDownload.HeaderRoot.Hash)))
+            break;
+
+          flagBulkMessageIsAccepted = true;
         }
 
         PeerSync.SendGetHeaders(HeaderchainDownload.Locator);
@@ -151,10 +158,24 @@ namespace BTokenLib
         $"Forking chain after common ancestor {HeaderDownloadNext.HeaderPrevious} with height {HeaderDownloadNext.HeaderPrevious.Height}."
           .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-        if (Token.TryReverseBlockchainToHeight(HeaderchainDownload.HeaderRoot.Height - 1))
+        if (Token.TryReverseBlockchainToHeight(HeaderDownloadNext.HeaderPrevious.Height))
           Token.Archiver.SetBlockPathToFork();
         else
-          Token.Reset(); //Restart Sync as if cold start.
+        {
+          Token.Reset();
+          Token.LoadState();
+
+          lock (LOCK_IsStateSync)
+          {
+            Token.ReleaseLock();
+            IsStateSync = false;
+            FlagSyncBlocksComplete = true;
+            PeerSync = null;
+          }
+
+          PeerSync.SendGetHeaders(Token.GetLocator());
+          return;
+        }
       }
 
       StartTimerSyncBlocks();
@@ -176,18 +197,26 @@ namespace BTokenLib
       }
 
       if (Token.HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
-        Token.Archiver.Reorganize();
+        Token.Archiver.Reorganize(); //Lösche blöcke der alten chain, mache neu fork chain zur main chain
       else
-        Token.LoadState();
+      {
+        Token.LoadState(); // Reverse wieder die Fork chain, und synchronisiere wieder auf die Mainchain.
+
+        if (PeersWhereHeadersSyncFailed.TryGetValue(PeerSync, out List<byte[]> headersWhereSyncFailed))
+          headersWhereSyncFailed.Add(HeaderchainDownload.HeaderRoot.Hash);
+        else
+          PeersWhereHeadersSyncFailed.Add(PeerSync, new List<byte[]> { HeaderchainDownload.HeaderRoot.Hash });
+      }
 
       lock (LOCK_IsStateSync)
       {
         Token.ReleaseLock();
         IsStateSync = false;
         FlagSyncBlocksComplete = true;
-
-        $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        PeerSync = null;
       }
+
+      $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
       foreach (Token tokenChild in Token.TokensChild)
         tokenChild.Network.StartSync();
@@ -223,7 +252,7 @@ namespace BTokenLib
 
     void InsertBlock(Peer peer)
     {
-      int heightBlock = peer.HeaderDownload.Height;
+      Header headerDownload = peer.HeaderDownload;
       Block block = peer.BlockDownload;
 
       peer.HeaderDownload = null;
@@ -231,7 +260,17 @@ namespace BTokenLib
       peer.SetStateIdle();
 
       lock (LOCK_FetchHeaderDownload)
-        HeadersDownloading.Remove(heightBlock);
+      {
+        var itemHeaderDownloading = HeadersDownloading
+          .FirstOrDefault(h => h.Value.Hash.IsAllBytesEqual(headerDownload.Hash));
+
+        if (itemHeaderDownloading.Value == null)
+          return;
+
+        HeadersDownloading.Remove(itemHeaderDownloading.Key);
+      }
+
+      int heightBlock = headerDownload.Height;
 
       lock (LOCK_BlockInsertion) // evt. mit lock this arbeiten
       {

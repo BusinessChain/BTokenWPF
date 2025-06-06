@@ -33,6 +33,7 @@ namespace BTokenLib
       File.Delete(pathBlock);
     }
 
+    //Store tha last 400 MB if pruning is activated.
     public bool TryLoadBlock(int blockHeight, out Block block)
     {
       block = null;
