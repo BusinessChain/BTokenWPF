@@ -58,8 +58,6 @@ namespace BTokenLib
 
     public override void LoadState()
     {
-      Reset();
-
       LoadImageHeaderchain();
 
       LoadBlocksFromArchive();
@@ -67,6 +65,7 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.LoadState());
     }
 
+    // Hier muss gegebenfalls der geforkte path verwendet werden.
     public override void ArchiveBlock(Block block)
     {
       string pathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
@@ -85,7 +84,6 @@ namespace BTokenLib
       int heightBlock = HeaderTip.Height + 1;
 
       while (Archiver.TryLoadBlock(heightBlock, out Block block))
-      {
         try
         {
           block.Header.AppendToHeader(HeaderTip);
@@ -108,37 +106,36 @@ namespace BTokenLib
 
           Archiver.DeleteBlock(heightBlock);
         }
-      }
     }
 
     void LoadImageHeaderchain()
     {
       byte[] bytesHeaderImage = File.ReadAllBytes(Path.Combine(GetName(), "ImageHeaderchain"));
 
-      int index = 0;
+      int startIndex = 0;
 
       $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
 
       SHA256 sHA256 = SHA256.Create();
 
-      while (index < bytesHeaderImage.Length)
+      while (startIndex < bytesHeaderImage.Length)
       {
-        Header header = ParseHeader(bytesHeaderImage, ref index, sHA256);
+        Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
 
-        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, index);
-        index += 4;
+        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+        startIndex += 4;
 
-        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref index);
+        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
 
         for (int i = 0; i < countHashesChild; i++)
         {
           byte[] iDToken = new byte[IDToken.Length];
-          Array.Copy(bytesHeaderImage, index, iDToken, 0, iDToken.Length);
-          index += iDToken.Length;
+          Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
+          startIndex += iDToken.Length;
 
           byte[] hashesChild = new byte[32];
-          Array.Copy(bytesHeaderImage, index, hashesChild, 0, 32);
-          index += 32;
+          Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
+          startIndex += 32;
 
           header.HashesChild.Add(iDToken, hashesChild);
         }

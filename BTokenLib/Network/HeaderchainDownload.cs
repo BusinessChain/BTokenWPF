@@ -8,19 +8,20 @@ namespace BTokenLib
   {
     public List<Header> Locator;
 
+    public Header HeaderTipTokenOld;
+
     public Header HeaderTip;
     public Header HeaderRoot;
 
 
     public HeaderchainDownload(List<Header> locator)
     {
+      HeaderTipTokenOld = locator.First();
       Locator = locator;
     }
 
-    public bool TryInsertHeader(Header header, out bool flagIsHeaderRoot)
+    public bool TryInsertHeader(Header header)
     {
-      flagIsHeaderRoot = false;
-
       if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
         return false;
 
@@ -39,7 +40,6 @@ namespace BTokenLib
         {
           header.AppendToHeader(headerAncestor);
           HeaderRoot = header;
-          flagIsHeaderRoot = false;
           HeaderTip = header;
 
           Locator = Locator.Skip(indexHeaderAncestor).ToList();

@@ -196,7 +196,6 @@ namespace BTokenLib
     public override void LoadState()
     {
       SHA256 sHA256 = SHA256.Create();
-
       string pathBlockArchive = Path.Combine(GetName(), "blocks");
 
       int heightBlock = HeaderTip.Height + 1;

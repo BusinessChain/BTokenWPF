@@ -18,16 +18,22 @@ namespace BTokenLib
       {
 
         // innerhalb 10 minuten max 5 (empirisch bestimmen) non_bulk messages akzeptieren
-
+        bool flagMessageMayNotFollowConsensusRules = false;
 
         try
         {
           while (true)
           {
-          LABEL_ListenForNextMessage:
+            if(flagMessageMayNotFollowConsensusRules)
+            {
+              // increment DoS counter
+              // introduce a Message/time metric for DoS detection.
 
-            // introduce a Message/time metric for DoS detection.
-            // During synchronization this metric might be temporary disabled.
+              //if (counterPossibleDOSMessages > max)
+              //  throw new ProtocolException("Received too many possible DoS messages from peer.");
+            }
+
+            flagMessageMayNotFollowConsensusRules = true;
 
             await ListenForNextMessage();
 
@@ -36,11 +42,8 @@ namespace BTokenLib
               $"Receiving headers message.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               await ReadBytes(Payload, LengthDataPayload);
-
-              if(Network.TryReceiveHeadersMessage(this))
-              {
-                //Subtract message count DoS metric.); 
-              }
+              
+              Network.TryReceiveHeadersMessage(this, ref flagMessageMayNotFollowConsensusRules);
             }
             else if (Command == "block")
             {
@@ -63,7 +66,7 @@ namespace BTokenLib
 
               ResetTimer();
 
-              Network.InsertBlock(this);
+              Network.InsertBlock(this, ref flagMessageMayNotFollowConsensusRules);
             }
             else if (Command == "tx")
             {
@@ -93,7 +96,7 @@ namespace BTokenLib
               if (!Token.TryLock())
               {
                 $"... but Token is locked.".Log(this, LogFiles, Token.LogEntryNotifier);
-                goto LABEL_ListenForNextMessage;
+                continue;
               }
 
               int i = 0;

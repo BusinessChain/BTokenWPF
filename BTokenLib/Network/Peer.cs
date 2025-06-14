@@ -75,6 +75,8 @@ namespace BTokenLib
 
       public DateTime TimePeerCreation = DateTime.Now;
 
+      public int HeightHeaderTipLastCommunicated;
+
 
       public Peer(
         Network network,
