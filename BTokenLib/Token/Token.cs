@@ -31,7 +31,9 @@ namespace BTokenLib
     public FileStream FileTXPoolBackup;
     public List<TX> TXsPoolBackup = new();
 
-    public BlockArchiver Archiver;
+    string PathBlockArchive;
+    string PathBlockArchiveMain;
+    string PathBlockArchiveFork;
 
     public Wallet Wallet;
 
@@ -72,8 +74,6 @@ namespace BTokenLib
       HeaderTip = HeaderGenesis;
 
       IndexingHeaderTip();
-
-      Archiver = new(this);
 
       Network = new(this, port, flagEnableInboundConnections);
     }
@@ -205,7 +205,11 @@ namespace BTokenLib
 
     public virtual void Reset()
     {
-      PathBlockArchive = PathBlockArchiveMain;
+      if(PathBlockArchive == PathBlockArchiveFork)
+      {
+        PathBlockArchive = PathBlockArchiveMain;
+        Directory.Delete(PathBlockArchiveFork, recursive: true);
+      }
 
       HeaderTip = HeaderGenesis;
       IndexHeaders.Clear();
@@ -213,10 +217,6 @@ namespace BTokenLib
 
       Wallet.Clear();
     }
-
-    string PathBlockArchive;
-    string PathBlockArchiveMain;
-    string PathBlockArchiveFork;
 
     public void Reorganize(double difficultyAccumulatedOld, int heightHeaderAncestor)
     {
@@ -236,7 +236,6 @@ namespace BTokenLib
         }
         else
         {
-          // Was muss hier noch gemacht wwerden?
           $"Fork turned out to not be stronger than main chain. Restore main chain.".Log(this, LogFile, LogEntryNotifier);
           TryReverseBlockchainToHeight(heightHeaderAncestor);
         }
@@ -328,7 +327,8 @@ namespace BTokenLib
         }
         else if(PathBlockArchive == PathBlockArchiveFork)
         {
-
+          Directory.Delete(PathBlockArchiveFork, recursive: true);
+          PathBlockArchive = PathBlockArchiveMain;
         }
 
         return true;
@@ -382,6 +382,50 @@ namespace BTokenLib
 
     abstract protected void RunMining();
 
+
+
+    public void DeleteBlock(int blockHeight)
+    {
+      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+      File.Delete(pathBlock);
+    }
+
+    //Store tha last 400 MB if pruning is activated.
+    public bool TryLoadBlock(int blockHeight, out Block block)
+    {
+      block = null;
+      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+
+      while (true)
+        try
+        {
+          block = new(this, File.ReadAllBytes(pathBlock));
+          block.Parse(blockHeight);
+
+          return true;
+        }
+        catch (FileNotFoundException)
+        {
+          return false;
+        }
+        catch (IOException ex)
+        {
+          ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
+            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+
+          Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS * 1000);
+        }
+        catch (Exception ex)
+        {
+          $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
+          .Log(this, LogEntryNotifier);
+
+          DeleteBlock(blockHeight);
+
+          return false;
+        }
+    }
+
     public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
     {
       buffer = null;
@@ -389,12 +433,11 @@ namespace BTokenLib
       if (TryGetHeader(hash, out Header header))
         try
         {
-          buffer = Archiver.LoadBlockBytes(header.Height);
+          buffer = File.ReadAllBytes(Path.Combine(PathBlockArchive, header.Height.ToString()));
         }
         catch (Exception ex)
         {
-          $"{ex.GetType().Name} when loading block {hash.ToHexString()} from disk."
-          .Log(this, LogEntryNotifier);
+          $"{ex.GetType().Name} when loading block {hash.ToHexString()} from disk.".Log(this, LogEntryNotifier);
         }
 
       return buffer != null;

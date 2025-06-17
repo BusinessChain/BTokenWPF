@@ -83,7 +83,7 @@ namespace BTokenLib
     {
       int heightBlock = HeaderTip.Height + 1;
 
-      while (Archiver.TryLoadBlock(heightBlock, out Block block))
+      while (TryLoadBlock(heightBlock, out Block block))
         try
         {
           block.Header.AppendToHeader(HeaderTip);
@@ -104,7 +104,7 @@ namespace BTokenLib
           $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
           .Log(this, LogEntryNotifier);
 
-          Archiver.DeleteBlock(heightBlock);
+          DeleteBlock(heightBlock);
         }
     }
 
