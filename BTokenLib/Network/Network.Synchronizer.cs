@@ -173,8 +173,6 @@ namespace BTokenLib
       int heightHeaderTipOld = Token.HeaderTip.Height;
       int countdownTimeoutSeconds = 0;
 
-      double difficultyAccumulatedOld = Token.HeaderTip.DifficultyAccumulated;
-
       while (!FlagSyncBlocksExit)
       {
         if (TryGetPeerIdle(out Peer peer))
@@ -209,7 +207,9 @@ namespace BTokenLib
         await Task.Delay(100).ConfigureAwait(false);
       }
 
-      Token.Reorganize(HeaderchainDownload);
+      Token.Reorganize(
+        HeaderchainDownload.HeaderTipTokenOld.DifficultyAccumulated,
+        HeaderchainDownload.HeaderRoot.HeaderPrevious.Height);
 
       lock (LOCK_IsStateSync)
       {

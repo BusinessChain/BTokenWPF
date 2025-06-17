@@ -205,7 +205,7 @@ namespace BTokenLib
 
     public virtual void Reset()
     {
-      Archiver.ResetBlockPath();
+      PathBlockArchive = PathBlockArchiveMain;
 
       HeaderTip = HeaderGenesis;
       IndexHeaders.Clear();
@@ -218,11 +218,10 @@ namespace BTokenLib
     string PathBlockArchiveMain;
     string PathBlockArchiveFork;
 
-    public void Reorganize(HeaderchainDownload headerchainDownload)
+    public void Reorganize(double difficultyAccumulatedOld, int heightHeaderAncestor)
     {
-      if (HeaderTip.DifficultyAccumulated > headerchainDownload.HeaderTipTokenOld.DifficultyAccumulated)
-      { // Copy forked blocks to MainArchive (overwrite blocks in Main)
-        if (PathBlockArchive == PathBlockArchiveFork)
+      if(PathBlockArchive == PathBlockArchiveFork)
+        if (HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
         {
           foreach (string pathFile in Directory.GetFiles(PathBlockArchiveFork))
           {
@@ -233,23 +232,14 @@ namespace BTokenLib
           }
 
           Directory.Delete(PathBlockArchiveFork, recursive: true);
-
           PathBlockArchive = PathBlockArchiveMain;
         }
-      }
-      else
-      {
-        // muss nicht unbedingt eine fork sein.
-        $"Fork turned out to not be stronger than main chain. Restore main chain.".Log(this, LogFile, LogEntryNotifier);
-
-        if (!TryReverseBlockchainToHeight(headerchainDownload.HeaderRoot.HeaderPrevious.Height))
-          PathBlockArchive = PathBlockArchiveMain;
         else
-          $"Failed to reverse blockchain to Height {headerchainDownload.HeaderRoot.HeaderPrevious.Height} after failed fork attempt. Reset Token.".Log(this, LogFile, LogEntryNotifier);
-
-        Reset();
-        LoadState();
-      }
+        {
+          // Was muss hier noch gemacht wwerden?
+          $"Fork turned out to not be stronger than main chain. Restore main chain.".Log(this, LogFile, LogEntryNotifier);
+          TryReverseBlockchainToHeight(heightHeaderAncestor);
+        }
     }
 
     public abstract void InsertBlockInDB(Block block);
@@ -298,7 +288,7 @@ namespace BTokenLib
       TXPool.Clear();
       Wallet.ClearTXsUnconfirmed();
 
-      while (height < HeaderTip.Height && Archiver.TryLoadBlock(HeaderTip.Height, out Block block))
+      while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
         try
         {
           ReverseBlockInDB(block);
@@ -320,30 +310,36 @@ namespace BTokenLib
           break;
         }
 
-      blocksReversed.Reverse();
-
-      foreach (Block block in blocksReversed)
-        foreach (TX tX in block.TXs)
-          InsertTXUnconfirmed(tX);
-
-      foreach (TX tX in tXsPoolBackup)
-        InsertTXUnconfirmed(tX);
-
       if (height == HeaderTip.Height)
       {
-        Directory.CreateDirectory(PathBlockArchiveFork);
-        PathBlockArchive = PathBlockArchiveFork;
-      }
-      else
-      {
-        $"Failed to reverse blockchain to Height in preparation to fork chain after common ancestor. \nReset Token and re - synchronize."
-          .Log(this, LogFile, LogEntryNotifier);
+        //blocksReversed.Reverse();
 
-        Reset();
-        LoadState();
+        //foreach (Block block in blocksReversed)
+        //  foreach (TX tX in block.TXs)
+        //    InsertTXUnconfirmed(tX);
+
+        //foreach (TX tX in tXsPoolBackup)
+        //  InsertTXUnconfirmed(tX);
+
+        if(PathBlockArchive == PathBlockArchiveMain)
+        {
+          Directory.CreateDirectory(PathBlockArchiveFork);
+          PathBlockArchive = PathBlockArchiveFork;
+        }
+        else if(PathBlockArchive == PathBlockArchiveFork)
+        {
+
+        }
+
+        return true;
       }
 
-      return height == HeaderTip.Height;
+      $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
+
+      Reset();
+      LoadState();
+
+      return false;
     }
 
     public abstract void ReverseBlockInDB(Block block);
