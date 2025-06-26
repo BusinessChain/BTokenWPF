@@ -87,15 +87,13 @@ namespace BTokenLib
         (DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 2 * 60 * 60);
 
       if (isBlockTimePremature)
-        throw new ProtocolException(
-          $"Timestamp premature {new DateTime(unixTimeSeconds).Date}.");
+        throw new ProtocolException($"Timestamp premature {new DateTime(unixTimeSeconds).Date}.");
 
       uint nBits = BitConverter.ToUInt32(buffer, index);
       index += 4;
 
       if (hash.IsGreaterThan(nBits))
-        throw new ProtocolException(
-          $"Header hash {hash.ToHexString()} greater than NBits {nBits}.");
+        throw new ProtocolException($"Header hash {hash.ToHexString()} greater than NBits {nBits}.");
 
       uint nonce = BitConverter.ToUInt32(buffer, index);
       index += 4;
@@ -261,11 +259,11 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.LoadState());
     }
 
-    public override void ArchiveBlock(Block block)
+    public override void ArchiveBlock(Block block, string pathBlockArchive)
     {
-      string pathFileBlock = Path.Combine(GetName(), "blocks", block.Header.Height.ToString());
+      string pathFileBlock = Path.Combine(pathBlockArchive, block.Header.Height.ToString());
 
-      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Append, FileAccess.Write))
+      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
     }
   }

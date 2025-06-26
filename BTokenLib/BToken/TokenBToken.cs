@@ -65,17 +65,16 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.LoadState());
     }
 
-    // Hier muss gegebenfalls der geforkte path verwendet werden.
-    public override void ArchiveBlock(Block block)
+    public override void ArchiveBlock(Block block, string pathBlockArchive)
     {
-      string pathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
+      string pathFileHeaderchain = Path.Combine(pathBlockArchive, "ImageHeaderchain");
 
       using (FileStream fileImageHeaderchain = new(pathFileHeaderchain, FileMode.Append, FileAccess.Write))
         block.Header.WriteToDisk(fileImageHeaderchain);
 
-      string pathFileBlock = Path.Combine(GetName(), "blocks", block.Header.Height.ToString());
+      string pathFileBlock = Path.Combine(pathBlockArchive, block.Header.Height.ToString());
 
-      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Append, FileAccess.Write))
+      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
     }
 
@@ -104,7 +103,7 @@ namespace BTokenLib
           $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
           .Log(this, LogEntryNotifier);
 
-          DeleteBlock(heightBlock);
+          File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
         }
     }
 

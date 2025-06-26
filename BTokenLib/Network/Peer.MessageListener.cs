@@ -42,8 +42,19 @@ namespace BTokenLib
               $"Receiving headers message.".Log(this, LogFiles, Token.LogEntryNotifier);
 
               await ReadBytes(Payload, LengthDataPayload);
-              
-              Network.TryReceiveHeadersMessage(this, ref flagMessageMayNotFollowConsensusRules);
+
+              List<Header> headers = new();
+
+              int startIndex = 0;
+              int countHeaders = VarInt.GetInt(Payload, ref startIndex);
+
+              for (int i = 0; i < countHeaders; i += 1)
+              {
+                headers.Add(Token.ParseHeader(Payload, ref startIndex, SHA256));
+                startIndex += 1; // Number of transaction entries, this value is always 0
+              }
+
+              Network.TryReceiveHeaders(this, headers, ref flagMessageMayNotFollowConsensusRules);
             }
             else if (Command == "block")
             {

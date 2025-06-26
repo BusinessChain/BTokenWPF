@@ -52,10 +52,8 @@ namespace BTokenLib
         peer.SendGetHeaders(Token.GetLocator());
     }
 
-    void TryReceiveHeadersMessage(Peer peer, ref bool flagMessageMayNotFollowConsensusRules)
+    void TryReceiveHeaders(Peer peer, List<Header> headers, ref bool flagMessageMayNotFollowConsensusRules)
     {
-      flagMessageMayNotFollowConsensusRules = true;
-
       lock (LOCK_IsStateSync)
         if (peer != PeerSync)
         {
@@ -72,59 +70,36 @@ namespace BTokenLib
         else if (FlagSyncHeadersExit)
           return;
 
-      if (TryInsertHeadersMessage(peer))
+      if (headers.Any() && HeaderchainDownload.TryInsertHeaders(headers))
       {
         flagMessageMayNotFollowConsensusRules = false;
         PeerSync.SendGetHeaders(HeaderchainDownload.Locator);
       }
-      else if (HeaderchainDownload.HeaderTip?.DifficultyAccumulated > Token.HeaderTip.DifficultyAccumulated)
+      else if (HeaderchainDownload.IsStrongerThan(Token.HeaderTip))
       {
-        if (Token.TryReverseBlockchainToHeight(HeaderchainDownload.HeaderRoot.HeaderPrevious.Height))
-        {
-          FlagSyncHeadersExit = true;
-          SyncBlocks();
-        }
-        else
-        {
-          HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
-          PeerSync.SendHeaders(HeaderchainDownload.Locator);
-        }
+        if(HeaderchainDownload.IsFork)
+          if (!Token.TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor()))
+          {
+            HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
+            PeerSync.SendHeaders(HeaderchainDownload.Locator);
+            return;
+          }
+
+        FlagSyncHeadersExit = true;
+        SyncBlocks();
       }
       else
       {
-        if (HeaderchainDownload.HeaderTip == null ||
-            HeaderchainDownload.HeaderTip.DifficultyAccumulated < Token.HeaderTip.DifficultyAccumulated)
-        {
-          PeerSync.SendHeaders(Token.GetLocator());
-        }
-
         lock (LOCK_IsStateSync)
         {
           PeerSync = null;
           IsStateSync = false;
           Token.ReleaseLock();
         }
+
+        if (HeaderchainDownload.IsWeakerThan(Token.HeaderTip))
+          PeerSync.SendHeaders(Token.GetLocator());
       }
-    }
-
-    bool TryInsertHeadersMessage(Peer peer)
-    {
-      int startIndex = 0;
-      int countHeaders = VarInt.GetInt(peer.Payload, ref startIndex);
-      int i = 0;
-
-      while (i < countHeaders)
-      {
-        Header header = Token.ParseHeader(peer.Payload, ref startIndex, peer.SHA256);
-        startIndex += 1; // Number of transaction entries, this value is always 0
-
-        if (!HeaderchainDownload.TryInsertHeader(header))
-          break;
-
-        i += 1;
-      }
-
-      return i == countHeaders && countHeaders > 0;
     }
 
     async Task StartTimerSyncHeaders()

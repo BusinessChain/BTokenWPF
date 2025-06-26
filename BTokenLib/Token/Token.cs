@@ -31,9 +31,9 @@ namespace BTokenLib
     public FileStream FileTXPoolBackup;
     public List<TX> TXsPoolBackup = new();
 
-    string PathBlockArchive;
-    string PathBlockArchiveMain;
-    string PathBlockArchiveFork;
+    public string PathBlockArchive;
+    public string PathBlockArchiveMain = "PathBlockArchiveMain";
+    public string PathBlockArchiveFork = "PathBlockArchiveFork";
 
     public Wallet Wallet;
 
@@ -58,9 +58,7 @@ namespace BTokenLib
 
       Directory.CreateDirectory(GetName());
 
-      LogFile = new StreamWriter(
-        Path.Combine(GetName(), "LogToken"),
-        append: false);
+      LogFile = new StreamWriter(Path.Combine(GetName(), "LogToken"), append: false);
 
       LogEntryNotifier = logEntryNotifier;
 
@@ -218,6 +216,7 @@ namespace BTokenLib
       Wallet.Clear();
     }
 
+    // Bei BToken muss ja jetzt noch die headerchain fork gemerged werden
     public void Reorganize(double difficultyAccumulatedOld, int heightHeaderAncestor)
     {
       if(PathBlockArchive == PathBlockArchiveFork)
@@ -243,7 +242,7 @@ namespace BTokenLib
 
     public abstract void InsertBlockInDB(Block block);
 
-    public abstract void ArchiveBlock(Block block);
+    public abstract void ArchiveBlock(Block block, string pathFileBlock);
 
     public void InsertBlock(Block block)
     {
@@ -263,7 +262,7 @@ namespace BTokenLib
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
       TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
 
-      ArchiveBlock(block);
+      ArchiveBlock(block, Path.Combine(GetName(), PathBlockArchive));
 
       DeleteBlocksMinedUnconfirmed();
 
@@ -277,9 +276,6 @@ namespace BTokenLib
 
     public bool TryReverseBlockchainToHeight(int height)
     {
-      if (height == HeaderTip.Height)
-        return true;
-
       List<Block> blocksReversed = new();
       List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
 
@@ -382,14 +378,6 @@ namespace BTokenLib
 
     abstract protected void RunMining();
 
-
-
-    public void DeleteBlock(int blockHeight)
-    {
-      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
-      File.Delete(pathBlock);
-    }
-
     //Store tha last 400 MB if pruning is activated.
     public bool TryLoadBlock(int blockHeight, out Block block)
     {
@@ -411,16 +399,16 @@ namespace BTokenLib
         catch (IOException ex)
         {
           ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
-            $"Retry in {Token.TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
+            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
 
-          Thread.Sleep(Token.TIMEOUT_FILE_RELOAD_SECONDS * 1000);
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
         }
         catch (Exception ex)
         {
           $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
           .Log(this, LogEntryNotifier);
 
-          DeleteBlock(blockHeight);
+          File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
 
           return false;
         }
