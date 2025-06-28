@@ -258,13 +258,5 @@ namespace BTokenLib
 
       TokensChild.ForEach(t => t.LoadState());
     }
-
-    public override void ArchiveBlock(Block block, string pathBlockArchive)
-    {
-      string pathFileBlock = Path.Combine(pathBlockArchive, block.Header.Height.ToString());
-
-      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
-        block.WriteToDisk(fileStreamBlock);
-    }
   }
 }

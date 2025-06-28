@@ -8,7 +8,7 @@ namespace BTokenLib
   {
     public List<Header> Locator;
 
-    public Header HeaderTipTokenOld;
+    public Header HeaderTipTokenInitial;
 
     public Header HeaderTip;
     public Header HeaderRoot;
@@ -18,7 +18,7 @@ namespace BTokenLib
 
     public HeaderchainDownload(List<Header> locator)
     {
-      HeaderTipTokenOld = locator.First();
+      HeaderTipTokenInitial = locator.First();
       Locator = locator;
     }
 

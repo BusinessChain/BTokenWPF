@@ -216,33 +216,21 @@ namespace BTokenLib
       Wallet.Clear();
     }
 
-    // Bei BToken muss ja jetzt noch die headerchain fork gemerged werden
-    public void Reorganize(double difficultyAccumulatedOld, int heightHeaderAncestor)
+    public void Reorganize()
     {
-      if(PathBlockArchive == PathBlockArchiveFork)
-        if (HeaderTip.DifficultyAccumulated > difficultyAccumulatedOld)
-        {
-          foreach (string pathFile in Directory.GetFiles(PathBlockArchiveFork))
-          {
-            string newPathFile = Path.Combine(PathBlockArchiveMain, Path.GetFileName(pathFile));
+      foreach (string pathFile in Directory.GetFiles(PathBlockArchiveFork))
+      {
+        string newPathFile = Path.Combine(PathBlockArchiveMain, Path.GetFileName(pathFile));
 
-            File.Delete(newPathFile);
-            File.Move(pathFile, newPathFile);
-          }
+        File.Delete(newPathFile);
+        File.Move(pathFile, newPathFile);
+      }
 
-          Directory.Delete(PathBlockArchiveFork, recursive: true);
-          PathBlockArchive = PathBlockArchiveMain;
-        }
-        else
-        {
-          $"Fork turned out to not be stronger than main chain. Restore main chain.".Log(this, LogFile, LogEntryNotifier);
-          TryReverseBlockchainToHeight(heightHeaderAncestor);
-        }
+      Directory.Delete(PathBlockArchiveFork, recursive: true);
+      PathBlockArchive = PathBlockArchiveMain;
     }
 
     public abstract void InsertBlockInDB(Block block);
-
-    public abstract void ArchiveBlock(Block block, string pathFileBlock);
 
     public void InsertBlock(Block block)
     {
@@ -262,7 +250,9 @@ namespace BTokenLib
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
       TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
 
-      ArchiveBlock(block, Path.Combine(GetName(), PathBlockArchive));
+      string pathFileBlock = Path.Combine(GetName(), PathBlockArchive, block.Header.Height.ToString());
+      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
+        block.WriteToDisk(fileStreamBlock);
 
       DeleteBlocksMinedUnconfirmed();
 

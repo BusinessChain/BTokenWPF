@@ -182,9 +182,13 @@ namespace BTokenLib
         await Task.Delay(100).ConfigureAwait(false);
       }
 
-      Token.Reorganize(
-        HeaderchainDownload.HeaderTipTokenOld.DifficultyAccumulated,
-        HeaderchainDownload.HeaderRoot.HeaderPrevious.Height);
+      if (HeaderchainDownload.IsFork)
+      {
+        if (Token.HeaderTip.DifficultyAccumulated > HeaderchainDownload.HeaderTipTokenInitial.DifficultyAccumulated)
+          Token.Reorganize();
+        else
+          Token.TryReverseBlockchainToHeight(HeaderchainDownload.HeaderRoot.HeaderPrevious.Height);
+      }
 
       lock (LOCK_IsStateSync)
       {

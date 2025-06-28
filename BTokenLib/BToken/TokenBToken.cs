@@ -20,6 +20,7 @@ namespace BTokenLib
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
     public DBAccounts DBAccounts;
+    string PathFileHeaderchain;
 
 
     public enum TypesToken
@@ -40,10 +41,9 @@ namespace BTokenLib
           tokenParent)
     {
       DBAccounts = new(GetName());
+      PathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
 
-      Wallet = new WalletBToken(
-        File.ReadAllText($"Wallet{GetName()}/wallet"), 
-        this);
+      Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
       TXPool = new PoolTXBToken(this);
 
@@ -63,19 +63,6 @@ namespace BTokenLib
       LoadBlocksFromArchive();
 
       TokensChild.ForEach(t => t.LoadState());
-    }
-
-    public override void ArchiveBlock(Block block, string pathBlockArchive)
-    {
-      string pathFileHeaderchain = Path.Combine(pathBlockArchive, "ImageHeaderchain");
-
-      using (FileStream fileImageHeaderchain = new(pathFileHeaderchain, FileMode.Append, FileAccess.Write))
-        block.Header.WriteToDisk(fileImageHeaderchain);
-
-      string pathFileBlock = Path.Combine(pathBlockArchive, block.Header.Height.ToString());
-
-      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
-        block.WriteToDisk(fileStreamBlock);
     }
 
     void LoadBlocksFromArchive()
@@ -109,7 +96,7 @@ namespace BTokenLib
 
     void LoadImageHeaderchain()
     {
-      byte[] bytesHeaderImage = File.ReadAllBytes(Path.Combine(GetName(), "ImageHeaderchain"));
+      byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
 
       int startIndex = 0;
 
@@ -214,6 +201,9 @@ namespace BTokenLib
             { }
             else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
           }
+
+        using (FileStream fileImageHeaderchain = new(PathFileHeaderchain, FileMode.Append, FileAccess.Write))
+          block.Header.WriteToDisk(fileImageHeaderchain);
       }
       catch (Exception ex)
       {
@@ -225,6 +215,7 @@ namespace BTokenLib
       DBAccounts.Commit();
     }
 
+    Headerchain reversen
     public override void ReverseBlockInDB(Block block)
     {
       for (int i = block.TXs.Count - 1; i >= 0; i--)
