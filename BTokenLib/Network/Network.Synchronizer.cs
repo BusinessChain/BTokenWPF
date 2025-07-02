@@ -255,7 +255,7 @@ namespace BTokenLib
 
           } while (QueueBlockInsertion.Remove(HeightInsertion, out block));
 
-        if (Token.HeaderTip.Height >= HeaderchainDownload.HeaderTip.Height)
+        if (Token.HeaderTip.Height == HeaderchainDownload.HeaderTip.Height)
         {
           $"Downloading blocks completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
           FlagSyncBlocksExit = true;

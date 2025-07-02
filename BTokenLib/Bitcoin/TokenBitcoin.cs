@@ -191,18 +191,17 @@ namespace BTokenLib
         };
     }
 
-    public override void LoadState()
+
+    public override void LoadBlocksFromArchive()
     {
       SHA256 sHA256 = SHA256.Create();
       string pathBlockArchive = Path.Combine(GetName(), "blocks");
 
-      int heightBlock = HeaderTip.Height + 1;
-
       while (true)
       {
-        string pathBlock = Path.Combine(pathBlockArchive, heightBlock.ToString());
+        string pathBlock = Path.Combine(pathBlockArchive, (HeaderTip.Height + 1).ToString());
 
-        if(File.Exists(pathBlock))
+        if (File.Exists(pathBlock))
         {
           try
           {
@@ -241,22 +240,18 @@ namespace BTokenLib
               TX tX = ParseTX(bytesBlock, ref startIndex, sHA256);
               Wallet.InsertTX(tX);
             }
-
-            heightBlock += 1;
           }
           catch (ProtocolException ex)
           {
-            $"{ex.GetType().Name} when inserting blockheight {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+            $"{ex.GetType().Name} when inserting blockheight {(HeaderTip.Height + 1)} loaded from disk: \n{ex.Message}. \nBlock is deleted."
             .Log(this, LogEntryNotifier);
 
-            File.Delete(Path.Combine(pathBlockArchive, heightBlock.ToString()));
+            File.Delete(Path.Combine(pathBlockArchive, (HeaderTip.Height + 1).ToString()));
           }
         }
         else
           break;
       }
-
-      TokensChild.ForEach(t => t.LoadState());
     }
   }
 }

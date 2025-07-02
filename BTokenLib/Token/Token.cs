@@ -34,6 +34,7 @@ namespace BTokenLib
     public string PathBlockArchive;
     public string PathBlockArchiveMain = "PathBlockArchiveMain";
     public string PathBlockArchiveFork = "PathBlockArchiveFork";
+    public string PathFileHeaderchain;
 
     public Wallet Wallet;
 
@@ -48,11 +49,7 @@ namespace BTokenLib
     static object LOCK_Token = new();
 
 
-    public Token(
-      UInt16 port,
-      byte[] iDToken,
-      bool flagEnableInboundConnections,
-      ILogEntryNotifier logEntryNotifier)
+    public Token(UInt16 port, byte[] iDToken, bool flagEnableInboundConnections, ILogEntryNotifier logEntryNotifier)
     {
       IDToken = iDToken;
 
@@ -69,9 +66,6 @@ namespace BTokenLib
         FileShare.Read);
 
       HeaderGenesis = CreateHeaderGenesis();
-      HeaderTip = HeaderGenesis;
-
-      IndexingHeaderTip();
 
       Network = new(this, port, flagEnableInboundConnections);
     }
@@ -92,6 +86,20 @@ namespace BTokenLib
       TokenParent.TokensChild.Add(this);
       HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
       TokenParent.HeaderGenesis.HashesChild.Add(IDToken, HeaderGenesis.Hash);
+    }
+
+    public virtual void Reset()
+    {
+      if (Directory.Exists(PathBlockArchiveFork))
+        Directory.Delete(PathBlockArchiveFork, recursive: true);
+
+      PathBlockArchive = PathBlockArchiveMain;
+
+      HeaderTip = HeaderGenesis;
+      IndexHeaders.Clear();
+      IndexingHeaderTip();
+
+      Wallet.Clear();
     }
 
     public void Start()
@@ -168,7 +176,65 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public abstract void LoadState();
+    public  void LoadState()
+    {
+      Reset();
+
+      LoadImageHeaderchain();
+
+      LoadBlocksFromArchive();
+
+      TokensChild.ForEach(t => t.LoadState());
+    }
+
+    public void LoadImageHeaderchain()
+    {
+      if (!File.Exists(PathFileHeaderchain))
+        return;
+
+      byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
+
+      int startIndex = 0;
+
+      $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
+
+      SHA256 sHA256 = SHA256.Create();
+
+      while (startIndex < bytesHeaderImage.Length)
+      {
+        Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
+
+        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+        startIndex += 4;
+
+        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
+
+        for (int i = 0; i < countHashesChild; i++)
+        {
+          byte[] iDToken = new byte[IDToken.Length];
+          Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
+          startIndex += iDToken.Length;
+
+          byte[] hashesChild = new byte[32];
+          Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
+          startIndex += 32;
+
+          header.HashesChild.Add(iDToken, hashesChild);
+        }
+
+        int positionStartHeader = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+        startIndex += 4;
+
+        header.AppendToHeader(HeaderTip);
+
+        HeaderTip.HeaderNext = header;
+        HeaderTip = header;
+
+        IndexingHeaderTip();
+      }
+    }
+
+    public abstract void LoadBlocksFromArchive();
 
     public void LoadTXPool()
     {
@@ -199,21 +265,6 @@ namespace BTokenLib
     {
       // Rebroadcast wird bei beendigung der Netzwerk Sync getriggert.
       // Versuche alle txs die noch nicht bestätigt wurden zu rebroadcasten
-    }
-
-    public virtual void Reset()
-    {
-      if(PathBlockArchive == PathBlockArchiveFork)
-      {
-        PathBlockArchive = PathBlockArchiveMain;
-        Directory.Delete(PathBlockArchiveFork, recursive: true);
-      }
-
-      HeaderTip = HeaderGenesis;
-      IndexHeaders.Clear();
-      IndexingHeaderTip();
-
-      Wallet.Clear();
     }
 
     public void Reorganize()
@@ -322,7 +373,6 @@ namespace BTokenLib
 
       $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
 
-      Reset();
       LoadState();
 
       return false;

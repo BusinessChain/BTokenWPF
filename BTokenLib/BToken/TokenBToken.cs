@@ -20,7 +20,6 @@ namespace BTokenLib
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
     public DBAccounts DBAccounts;
-    string PathFileHeaderchain;
 
 
     public enum TypesToken
@@ -56,16 +55,7 @@ namespace BTokenLib
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
     }
 
-    public override void LoadState()
-    {
-      LoadImageHeaderchain();
-
-      LoadBlocksFromArchive();
-
-      TokensChild.ForEach(t => t.LoadState());
-    }
-
-    void LoadBlocksFromArchive()
+    public override void LoadBlocksFromArchive()
     {
       int heightBlock = HeaderTip.Height + 1;
 
@@ -92,47 +82,6 @@ namespace BTokenLib
 
           File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
         }
-    }
-
-    void LoadImageHeaderchain()
-    {
-      byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
-
-      int startIndex = 0;
-
-      $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
-
-      SHA256 sHA256 = SHA256.Create();
-
-      while (startIndex < bytesHeaderImage.Length)
-      {
-        Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
-
-        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-        startIndex += 4;
-
-        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
-
-        for (int i = 0; i < countHashesChild; i++)
-        {
-          byte[] iDToken = new byte[IDToken.Length];
-          Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
-          startIndex += iDToken.Length;
-
-          byte[] hashesChild = new byte[32];
-          Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
-          startIndex += 32;
-
-          header.HashesChild.Add(iDToken, hashesChild);
-        }
-
-        header.AppendToHeader(HeaderTip);
-
-        HeaderTip.HeaderNext = header;
-        HeaderTip = header;
-
-        IndexingHeaderTip();
-      }
     }
 
     public override Header CreateHeaderGenesis()
@@ -215,7 +164,6 @@ namespace BTokenLib
       DBAccounts.Commit();
     }
 
-    Headerchain reversen
     public override void ReverseBlockInDB(Block block)
     {
       for (int i = block.TXs.Count - 1; i >= 0; i--)
@@ -242,6 +190,17 @@ namespace BTokenLib
           { }
           else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
         }
+      }
+
+      using (FileStream fileImageHeaderchain = new FileStream(PathFileHeaderchain, FileMode.Open, FileAccess.ReadWrite))
+      {
+        fileImageHeaderchain.Seek(-4, SeekOrigin.End);
+
+        byte[] buffer = new byte[4];
+        fileImageHeaderchain.Read(buffer, 0, 4);
+
+        int positionStartHeader = BitConverter.ToInt32(buffer, 0);
+        fileImageHeaderchain.SetLength(positionStartHeader);
       }
     }
 
