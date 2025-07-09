@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Xml.Schema;
 
 
 namespace BTokenLib
@@ -62,16 +63,7 @@ namespace BTokenLib
       while (TryLoadBlock(heightBlock, out Block block))
         try
         {
-          block.Header.AppendToHeader(HeaderTip);
-
-          InsertBlockInDB(block);
-
-          Wallet.InsertBlock(block);
-
-          HeaderTip.HeaderNext = block.Header;
-          HeaderTip = block.Header;
-
-          IndexingHeaderTip();
+          InsertBlock(block);
 
           heightBlock += 1;
         }
@@ -151,8 +143,7 @@ namespace BTokenLib
             else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
           }
 
-        using (FileStream fileImageHeaderchain = new(PathFileHeaderchain, FileMode.Append, FileAccess.Write))
-          block.Header.WriteToDisk(fileImageHeaderchain);
+        block.Header.WriteToDiskAtomic(PathFileHeaderchain);
       }
       catch (Exception ex)
       {
@@ -192,16 +183,7 @@ namespace BTokenLib
         }
       }
 
-      using (FileStream fileImageHeaderchain = new FileStream(PathFileHeaderchain, FileMode.Open, FileAccess.ReadWrite))
-      {
-        fileImageHeaderchain.Seek(-4, SeekOrigin.End);
-
-        byte[] buffer = new byte[4];
-        fileImageHeaderchain.Read(buffer, 0, 4);
-
-        int positionStartHeader = BitConverter.ToInt32(buffer, 0);
-        fileImageHeaderchain.SetLength(positionStartHeader);
-      }
+      block.Header.ReverseHeaderOnDiskAtomic(PathFileHeaderchain);
     }
 
     public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)

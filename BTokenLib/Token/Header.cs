@@ -58,23 +58,64 @@ namespace BTokenLib
 
     public abstract byte[] Serialize();
 
-    public void WriteToDisk(FileStream fileStream)
+
+    private void ModifyFileAtomic(string pathOriginal, Action<string> modifyTempFile)
     {
-      int positionStartHeader = (int)fileStream.Position;
+      string pathTemp = pathOriginal + ".tmp";
 
-      fileStream.Write(Serialize());
+      File.Copy(pathOriginal, pathTemp, overwrite: true);
 
-      fileStream.Write(BitConverter.GetBytes(CountBytesTXs));
+      modifyTempFile(pathTemp);
 
-      fileStream.Write(VarInt.GetBytes(HashesChild.Count));
+      File.Move(pathTemp, pathOriginal, overwrite: true);
+    }
 
-      foreach (var hashChild in HashesChild)
+    public void WriteToDiskAtomic(string pathFileHeaderchain)
+    {
+      string pathTemp = pathFileHeaderchain + ".tmp";
+
+      File.Copy(pathFileHeaderchain, pathTemp, overwrite: true);
+
+      using (FileStream fileStream = new(pathTemp, FileMode.Append, FileAccess.Write))
       {
-        fileStream.Write(hashChild.Key);
-        fileStream.Write(hashChild.Value);
+        int positionStartHeader = (int)fileStream.Position;
+
+        fileStream.Write(Serialize());
+
+        fileStream.Write(BitConverter.GetBytes(CountBytesTXs));
+
+        fileStream.Write(VarInt.GetBytes(HashesChild.Count));
+
+        foreach (var hashChild in HashesChild)
+        {
+          fileStream.Write(hashChild.Key);
+          fileStream.Write(hashChild.Value);
+        }
+
+        fileStream.Write(BitConverter.GetBytes(positionStartHeader));
       }
 
-      fileStream.Write(BitConverter.GetBytes(positionStartHeader));
+      File.Move(pathTemp, pathFileHeaderchain, overwrite: true);
+    }
+
+    public void ReverseHeaderOnDiskAtomic(string pathFileHeaderchain)
+    {
+      string pathTemp = pathFileHeaderchain + ".tmp";
+
+      File.Copy(pathFileHeaderchain, pathTemp, overwrite: true);
+
+      using (FileStream stream = new FileStream(pathTemp, FileMode.Open, FileAccess.ReadWrite))
+      {
+        stream.Seek(-4, SeekOrigin.End);
+
+        byte[] buffer = new byte[4];
+        stream.Read(buffer, 0, 4);
+
+        int positionStartHeader = BitConverter.ToInt32(buffer, 0);
+        stream.SetLength(positionStartHeader);
+      }
+
+      File.Move(pathTemp, pathFileHeaderchain, overwrite: true);
     }
 
     public virtual void AppendToHeader(Header headerPrevious)

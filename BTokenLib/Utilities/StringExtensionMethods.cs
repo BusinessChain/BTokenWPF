@@ -408,5 +408,16 @@ namespace BTokenLib
     {
       return new string(fileName.TakeWhile(c => c != '-').ToArray());
     }
+
+    public static void ModifyFilePathAtomic(this string filePath, Action<string> modifyFile)
+    {
+      string pathTemp = filePath + ".tmp";
+
+      File.Copy(filePath, pathTemp, overwrite: true);
+
+      modifyFile(pathTemp);
+
+      File.Move(pathTemp, filePath, overwrite: true);
+    }
   }
 }

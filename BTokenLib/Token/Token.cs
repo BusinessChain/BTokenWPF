@@ -176,7 +176,7 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public  void LoadState()
+    public void LoadState()
     {
       Reset();
 
@@ -192,45 +192,72 @@ namespace BTokenLib
       if (!File.Exists(PathFileHeaderchain))
         return;
 
-      byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
-
-      int startIndex = 0;
-
-      $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
-
-      SHA256 sHA256 = SHA256.Create();
-
-      while (startIndex < bytesHeaderImage.Length)
+      try
       {
-        Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
+        byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
 
-        header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-        startIndex += 4;
+        int startIndex = 0;
 
-        int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
+        $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
 
-        for (int i = 0; i < countHashesChild; i++)
+        SHA256 sHA256 = SHA256.Create();
+
+        while (startIndex < bytesHeaderImage.Length)
         {
-          byte[] iDToken = new byte[IDToken.Length];
-          Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
-          startIndex += iDToken.Length;
+          try
+          {
 
-          byte[] hashesChild = new byte[32];
-          Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
-          startIndex += 32;
+            Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
 
-          header.HashesChild.Add(iDToken, hashesChild);
+            header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+            startIndex += 4;
+
+            int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
+
+            for (int i = 0; i < countHashesChild; i++)
+            {
+              byte[] iDToken = new byte[IDToken.Length];
+              Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
+              startIndex += iDToken.Length;
+
+              byte[] hashesChild = new byte[32];
+              Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
+              startIndex += 32;
+
+              header.HashesChild.Add(iDToken, hashesChild);
+            }
+
+            int positionStartHeader = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+            startIndex += 4;
+
+            header.AppendToHeader(HeaderTip);
+
+            HeaderTip.HeaderNext = header;
+            HeaderTip = header;
+
+            IndexingHeaderTip();
+          }
+          catch 
         }
-
-        int positionStartHeader = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-        startIndex += 4;
-
-        header.AppendToHeader(HeaderTip);
-
-        HeaderTip.HeaderNext = header;
-        HeaderTip = header;
-
-        IndexingHeaderTip();
+      }
+      catch
+      {
+        // Lade headerchain soweit als möglich, lade alle lokalen Blöcke ab headerchain height.
+        // Diese Blöcke werden mit der DB gemerged. Wenn keine lokalen Blöcke mehr vorhanden sind
+        // (backup Ordner lesen, der User hat die Möglichkeit alle Blöcke in einem Backup Ordner zu speichern), wird vom netzwerk geladen.
+        // Diese Blöcke werden vollständig validiert und inserted, weil hier davon ausgegangen wird, dass die Blöcke noch nie geladen wurden.
+        // Ich erhalte den Block und halte ihn vorerst mal einfach im Memory. Ich mache ein Database.InsertStage. When der Stager ok zurückgibt
+        // weiss ich, dass der Block grundsätzlich gültig ist. Deshalb wird er dann mit atomic save auf disk geschrieben. Das bedeutet,
+        // Der Block zuerst als .tmp auf disk geschrieben, und erst wenn alles abgeschlossen ist, mit atommic rename zu .blk umbenannt.
+        // Nach dem atomic block save, wird nun der Comit gemacht. Erst wenn der Commit abgeschlossen ist, wird per atomic update das
+        // das hedaerchain file updated. Wenn jetzt also im commit was schiefläuft, wird das hoffentlich keine Probleme bereiten,
+        // weil der letzte Block, bei dem es gecrasht hat, bereits validiert wurde, aber der Comit gestört wurde. Dieser Block wird nun 
+        // beim reboot replayed da es sich um einen lokalen Block handelt. Der älteste Block im Cache.
+        // Ich halte jeweils zwei headerchain files auf der disk, welche ich alternierend verwende. Bei Laden sollte immer einer der beiden 
+        // Gültig sein. Da ich ja noch jedesmal die Cache Blöcke habe kann ich den Datenzustand immer rekonstruiren selbst wenn ein 
+        // Headerfile ungültig wäre.
+        // Transaktion könnten so strukturiert sein, dass man einen Output einer Transaktion direkt als Element in die DB einfügt. 
+        // Damit
       }
     }
 
@@ -283,6 +310,10 @@ namespace BTokenLib
 
     public abstract void InsertBlockInDB(Block block);
 
+
+    // Alles im InsertBlock muss so programmiert sein, 
+    // Das jede Transaktion die keinen Einfluss auf den state hat, 
+    // nicht zu einer Exception führen.
     public void InsertBlock(Block block)
     {
       $"Insert block {block} in {this}.".Log(this, LogEntryNotifier);
@@ -373,6 +404,9 @@ namespace BTokenLib
 
       $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
 
+      // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
+      // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
+      // lokale Blockarchiv 
       LoadState();
 
       return false;
