@@ -78,8 +78,6 @@ namespace BTokenLib
 
       using (FileStream fileStream = new(pathTemp, FileMode.Append, FileAccess.Write))
       {
-        int positionStartHeader = (int)fileStream.Position;
-
         fileStream.Write(Serialize());
 
         fileStream.Write(BitConverter.GetBytes(CountBytesTXs));
@@ -91,8 +89,6 @@ namespace BTokenLib
           fileStream.Write(hashChild.Key);
           fileStream.Write(hashChild.Value);
         }
-
-        fileStream.Write(BitConverter.GetBytes(positionStartHeader));
       }
 
       File.Move(pathTemp, pathFileHeaderchain, overwrite: true);

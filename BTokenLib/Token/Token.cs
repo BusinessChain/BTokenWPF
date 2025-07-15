@@ -176,6 +176,28 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
+
+    // Lade headerchain soweit als möglich, lade alle lokalen Blöcke ab headerchain height. Diese Blöcke
+    // gelten als validiert und können einfach mit der DB gemerged werden ohne Account validierung. (Header Hash schon validieren)
+    // Dabei wird eine Cache DB gebaut welche aus den letzten X Blöcken besteht, hier macht eine Hysterese Sinn z.B. 10MB,
+    // dann muss nicht Block für Block vom Cahce in die DB commited werden, sondern es können immer Batchweise, z.B. alle zehn Blöcke.
+    // Diese Block Batches Können auch gerade so auf der Disk gespeichert werden. Danach mit dem Netzwerk syncen.
+    // Netzwerk - Blöcke werden vollständig validiert und inserted, weil hier davon ausgegangen wird,
+    // dass die Blöcke noch nie geladen wurden.
+    
+    // Ich erhalte den Block und halte ihn vorerst mal einfach im Memory. Ich mache ein Database.InsertStage.
+    // Wenn der Stager ok zurückgibt weiss ich, dass der Block grundsätzlich gültig ist.
+    // Deshalb wird er dann mit atomic save auf disk geschrieben. Das bedeutet,der Block zuerst als .tmp auf disk geschrieben,
+    // und erst wenn alles abgeschlossen ist, mit atommic rename zu .blk umbenannt.
+    // Nach dem atomic block save, wird nun der Comit gemacht. Erst wenn der Commit abgeschlossen ist, wird per atomic update das
+    // das hedaerchain file updated. Wenn jetzt also im commit was schiefläuft, wird das hoffentlich keine Probleme bereiten,
+    // weil der letzte Block, bei dem es gecrasht hat, bereits validiert wurde, aber der Comit gestört wurde. Dieser Block wird nun 
+    // beim reboot replayed da es sich um einen lokalen Block handelt. Der älteste Block im Cache.
+    // Ich halte jeweils zwei headerchain files auf der disk, welche ich alternierend verwende. Bei Laden sollte immer einer der beiden 
+    // Gültig sein. Da ich ja noch jedesmal die Cache Blöcke habe kann ich den Datenzustand immer rekonstruiren selbst wenn ein 
+    // Headerfile ungültig wäre.
+    // Transaktion könnten so strukturiert sein, dass man einen Output einer Transaktion direkt als Element in die DB einfügt. 
+
     public void LoadState()
     {
       Reset();
@@ -189,24 +211,32 @@ namespace BTokenLib
 
     public void LoadImageHeaderchain()
     {
-      if (!File.Exists(PathFileHeaderchain))
-        return;
+      SHA256 sHA256 = SHA256.Create();
 
-      try
+      int indexHeaderFile = 0;
+      List<List<Header>> headerchains = new();
+
+      while (true)
       {
-        byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
+        string pathFileHeaderchain = PathFileHeaderchain + indexHeaderFile++.ToString();
+
+        if (!File.Exists(pathFileHeaderchain))
+          break;
+
+        $"Load headerchain file {pathFileHeaderchain}.".Log(this, LogFile, LogEntryNotifier);
+
+        byte[] bytesHeaderImage = File.ReadAllBytes(pathFileHeaderchain);
+
+        List<Header> headerchain = new();
+        headerchains.Add(headerchain);
+
+        Header headerTip = HeaderTip;
 
         int startIndex = 0;
 
-        $"Load headerchain of {GetName()}.".Log(this, LogFile, LogEntryNotifier);
-
-        SHA256 sHA256 = SHA256.Create();
-
         while (startIndex < bytesHeaderImage.Length)
-        {
           try
           {
-
             Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
 
             header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
@@ -227,38 +257,30 @@ namespace BTokenLib
               header.HashesChild.Add(iDToken, hashesChild);
             }
 
-            int positionStartHeader = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-            startIndex += 4;
+            header.AppendToHeader(headerTip);
+            headerTip = header;
 
-            header.AppendToHeader(HeaderTip);
-
-            HeaderTip.HeaderNext = header;
-            HeaderTip = header;
-
-            IndexingHeaderTip();
+            headerchain.Add(headerTip);
           }
-          catch 
+          catch
+          {
+            break;
+          }
+      }
+
+      List<Header> bestHeaderChain = headerchains
+        .Where(chain => chain.Count > 0)
+        .OrderByDescending(chain => chain.Last().DifficultyAccumulated)
+        .First();
+
+      if (bestHeaderChain != null)
+        foreach (Header header in bestHeaderChain)
+        {
+          HeaderTip.HeaderNext = header;
+          HeaderTip = header;
+
+          IndexingHeaderTip();
         }
-      }
-      catch
-      {
-        // Lade headerchain soweit als möglich, lade alle lokalen Blöcke ab headerchain height.
-        // Diese Blöcke werden mit der DB gemerged. Wenn keine lokalen Blöcke mehr vorhanden sind
-        // (backup Ordner lesen, der User hat die Möglichkeit alle Blöcke in einem Backup Ordner zu speichern), wird vom netzwerk geladen.
-        // Diese Blöcke werden vollständig validiert und inserted, weil hier davon ausgegangen wird, dass die Blöcke noch nie geladen wurden.
-        // Ich erhalte den Block und halte ihn vorerst mal einfach im Memory. Ich mache ein Database.InsertStage. When der Stager ok zurückgibt
-        // weiss ich, dass der Block grundsätzlich gültig ist. Deshalb wird er dann mit atomic save auf disk geschrieben. Das bedeutet,
-        // Der Block zuerst als .tmp auf disk geschrieben, und erst wenn alles abgeschlossen ist, mit atommic rename zu .blk umbenannt.
-        // Nach dem atomic block save, wird nun der Comit gemacht. Erst wenn der Commit abgeschlossen ist, wird per atomic update das
-        // das hedaerchain file updated. Wenn jetzt also im commit was schiefläuft, wird das hoffentlich keine Probleme bereiten,
-        // weil der letzte Block, bei dem es gecrasht hat, bereits validiert wurde, aber der Comit gestört wurde. Dieser Block wird nun 
-        // beim reboot replayed da es sich um einen lokalen Block handelt. Der älteste Block im Cache.
-        // Ich halte jeweils zwei headerchain files auf der disk, welche ich alternierend verwende. Bei Laden sollte immer einer der beiden 
-        // Gültig sein. Da ich ja noch jedesmal die Cache Blöcke habe kann ich den Datenzustand immer rekonstruiren selbst wenn ein 
-        // Headerfile ungültig wäre.
-        // Transaktion könnten so strukturiert sein, dass man einen Output einer Transaktion direkt als Element in die DB einfügt. 
-        // Damit
-      }
     }
 
     public abstract void LoadBlocksFromArchive();
@@ -310,10 +332,6 @@ namespace BTokenLib
 
     public abstract void InsertBlockInDB(Block block);
 
-
-    // Alles im InsertBlock muss so programmiert sein, 
-    // Das jede Transaktion die keinen Einfluss auf den state hat, 
-    // nicht zu einer Exception führen.
     public void InsertBlock(Block block)
     {
       $"Insert block {block} in {this}.".Log(this, LogEntryNotifier);
@@ -346,8 +364,17 @@ namespace BTokenLib
     public virtual void InsertBlockMined(byte[] hashBlock)
     { throw new NotImplementedException(); }
 
+
+    // Beim Reversen einfach den cache droppen und neu laden bis zur gewünschten höhe.
+    // Wenn zu einer height geladen werden soll, welche tiefer als der cache ist, wird direkt 
+    // die Fork DB geladen, zuerst MerkleRoot dan testen ob hash mit DB-Hash im header übereinstimmt.
+    // Falls ja, wird neue DB geladen, während alte noch bewahrt wird, bis gültigkeit der neuen bestätigt ist.
+    // Später kann man evt. mit diff. File arbeiten.
     public bool TryReverseBlockchainToHeight(int height)
     {
+      // Droppe einfach die aktuelle Cache DB und versuche auf Height zu builden
+      // testen ob height tiefer ist als Cache.
+
       List<Block> blocksReversed = new();
       List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
 
