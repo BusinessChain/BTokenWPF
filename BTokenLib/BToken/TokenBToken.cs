@@ -63,7 +63,13 @@ namespace BTokenLib
       while (TryLoadBlock(heightBlock, out Block block))
         try
         {
-          InsertBlock(block);
+          $"Load block {block}.".Log(this, LogEntryNotifier);
+
+          block.Header.AppendToHeader(HeaderTip);
+
+          InsertBlockInDatabaseCache(block);
+
+          Wallet.InsertBlock(block);
 
           heightBlock += 1;
         }
@@ -117,7 +123,7 @@ namespace BTokenLib
       throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
 
-    public override void InsertBlockInDB(Block block)
+    public override void InsertBlockInDatabase(Block block)
     {
       try
       {
@@ -142,17 +148,22 @@ namespace BTokenLib
             { }
             else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
           }
-
-        block.Header.WriteToDiskAtomic(PathFileHeaderchain);
       }
       catch (Exception ex)
       {
         DBAccounts.PurgeStagedData();
-
+        
         throw ex;
       }
 
-      DBAccounts.Commit();
+      string pathFileBlock = Path.Combine(GetName(), PathBlockArchive, block.Header.Height.ToString());
+      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
+        block.WriteToDisk(fileStreamBlock);
+
+      DBAccounts.Commit(); // Geht in die Cache DB
+
+      if (SizeDatabaseCache > SizeMaxDatabaseCache)
+        DBAccounts.DumpCacheOldestSliceToDisk(); // schreibe betroffene Header in alternierendes headerchain File
     }
 
     public override void ReverseBlockInDB(Block block)

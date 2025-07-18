@@ -185,7 +185,7 @@ namespace BTokenLib
     // Netzwerk - Blöcke werden vollständig validiert und inserted, weil hier davon ausgegangen wird,
     // dass die Blöcke noch nie geladen wurden.
     
-    // Ich erhalte den Block und halte ihn vorerst mal einfach im Memory. Ich mache ein Database.InsertStage.
+    // Ich erhalte den Block und mache ein Database.InsertStage.
     // Wenn der Stager ok zurückgibt weiss ich, dass der Block grundsätzlich gültig ist.
     // Deshalb wird er dann mit atomic save auf disk geschrieben. Das bedeutet,der Block zuerst als .tmp auf disk geschrieben,
     // und erst wenn alles abgeschlossen ist, mit atommic rename zu .blk umbenannt.
@@ -228,10 +228,7 @@ namespace BTokenLib
         byte[] bytesHeaderImage = File.ReadAllBytes(pathFileHeaderchain);
 
         List<Header> headerchain = new();
-        headerchains.Add(headerchain);
-
         Header headerTip = HeaderTip;
-
         int startIndex = 0;
 
         while (startIndex < bytesHeaderImage.Length)
@@ -266,21 +263,19 @@ namespace BTokenLib
           {
             break;
           }
+
+        if (headerchain.Any())
+          headerchains.Add(headerchain);
       }
 
-      List<Header> bestHeaderChain = headerchains
-        .Where(chain => chain.Count > 0)
-        .OrderByDescending(chain => chain.Last().DifficultyAccumulated)
-        .First();
-
-      if (bestHeaderChain != null)
-        foreach (Header header in bestHeaderChain)
+      if (headerchains.Any())
+        headerchains.OrderByDescending(chain => chain.Last().DifficultyAccumulated).First().ForEach(header =>
         {
           HeaderTip.HeaderNext = header;
           HeaderTip = header;
 
           IndexingHeaderTip();
-        }
+        });
     }
 
     public abstract void LoadBlocksFromArchive();
@@ -330,15 +325,15 @@ namespace BTokenLib
       PathBlockArchive = PathBlockArchiveMain;
     }
 
-    public abstract void InsertBlockInDB(Block block);
+    public abstract void InsertBlockInDatabase(Block block);
 
     public void InsertBlock(Block block)
     {
-      $"Insert block {block} in {this}.".Log(this, LogEntryNotifier);
+      $"Insert block {block}.".Log(this, LogEntryNotifier);
 
       block.Header.AppendToHeader(HeaderTip);
 
-      InsertBlockInDB(block);
+      InsertBlockInDatabase(block);
 
       HeaderTip.HeaderNext = block.Header;
       HeaderTip = block.Header;
@@ -349,10 +344,6 @@ namespace BTokenLib
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
       TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
-
-      string pathFileBlock = Path.Combine(GetName(), PathBlockArchive, block.Header.Height.ToString());
-      using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
-        block.WriteToDisk(fileStreamBlock);
 
       DeleteBlocksMinedUnconfirmed();
 
