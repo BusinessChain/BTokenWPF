@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Xml.Schema;
 
 
 namespace BTokenLib
@@ -67,7 +66,7 @@ namespace BTokenLib
 
           block.Header.AppendToHeader(HeaderTip);
 
-          InsertBlockInDatabaseCache(block);
+          InsertBlockInDatabase(block);
 
           Wallet.InsertBlock(block);
 
@@ -156,14 +155,14 @@ namespace BTokenLib
         throw ex;
       }
 
+      DBAccounts.Commit();
+
       string pathFileBlock = Path.Combine(GetName(), PathBlockArchive, block.Header.Height.ToString());
       using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
-
-      DBAccounts.Commit(); // Geht in die Cache DB
-
-      if (SizeDatabaseCache > SizeMaxDatabaseCache)
-        DBAccounts.DumpCacheOldestSliceToDisk(); // schreibe betroffene Header in alternierendes headerchain File
+            
+      if (SizeDatabaseCache > SIZE_DATABASE_CACHE_MAX)
+        DBAccounts.DumpCacheOldestSliceToDisk(); 
     }
 
     public override void ReverseBlockInDB(Block block)
