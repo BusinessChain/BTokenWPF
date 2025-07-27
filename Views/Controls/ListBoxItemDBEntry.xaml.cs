@@ -11,7 +11,7 @@ namespace BTokenWPF
       InitializeComponent();
 
       LabelHashAccount.Content = $"AccountID: {account}";
-      LabeValue.Content = "Value: " + account.Value;
+      LabeValue.Content = "Value: " + account.Balance;
       LabelBlockHeighInit_Nonce.Content = $"Nonce: {account.BlockHeightAccountInit} - {account.Nonce}";
       LabelLocation_Index.Content = $"Location: {locationAccount}{indexSource}";
     }

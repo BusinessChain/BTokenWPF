@@ -65,7 +65,7 @@ namespace BTokenLib
 
       foreach (Account account in accounts)
       {
-        if (account.Value > 0)
+        if (account.Balance > 0)
         {
           if (account.StartIndexFileDBOrigin > 0)
             accountsUpdate.Add(account);

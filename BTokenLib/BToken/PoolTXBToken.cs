@@ -60,7 +60,7 @@ namespace BTokenLib
 
         lock (LOCK_TXsPool)
         {
-          long valueAccountNetPool = accountSource.Value;
+          long valueAccountNetPool = accountSource.Balance;
 
           if (TXsByIDAccountSource.TryGetValue(tXBToken.IDAccountSource, out List<TXBToken> tXsInPool))
           {
@@ -109,16 +109,16 @@ namespace BTokenLib
       accounUnconfirmed.BlockHeightAccountInit = account.BlockHeightAccountInit;
       accounUnconfirmed.Nonce = account.Nonce;
       accounUnconfirmed.ID = account.ID;
-      accounUnconfirmed.Value = account.Value;
+      accounUnconfirmed.Balance = account.Balance;
 
       if (TXsByIDAccountSource.TryGetValue(account.ID, out List<TXBToken> tXsInPool))
       {
         accounUnconfirmed.Nonce = tXsInPool.Last().Nonce + 1;
-        accounUnconfirmed.Value -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
+        accounUnconfirmed.Balance -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
       }
 
       if (OutputValuesByIDAccount.TryGetValue(account.ID, out long valueOutputs))
-        accounUnconfirmed.Value += valueOutputs;
+        accounUnconfirmed.Balance += valueOutputs;
 
       return accounUnconfirmed;
     }

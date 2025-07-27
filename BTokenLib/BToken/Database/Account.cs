@@ -14,7 +14,7 @@ namespace BTokenLib
     public byte[] ID = new byte[LENGTH_ID];
     public int BlockHeightAccountInit;
     public int Nonce;
-    public long Value;
+    public long Balance;
 
     public long StartIndexFileDBOrigin = -1;
 
@@ -37,7 +37,7 @@ namespace BTokenLib
       Nonce = BitConverter.ToInt32(ByteArraySerialized, index);
       index += 4;
 
-      Value = BitConverter.ToInt64(ByteArraySerialized, index);
+      Balance = BitConverter.ToInt64(ByteArraySerialized, index);
     }
 
     public void SpendTX(TXBToken tX)
@@ -45,17 +45,17 @@ namespace BTokenLib
       if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
         throw new ProtocolException($"Staged account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
 
-      if (Value < tX.GetValueOutputs() + tX.Fee)
+      if (Balance < tX.GetValueOutputs() + tX.Fee)
         throw new ProtocolException($"Staged account {this} referenced by TX {tX} does not have enough fund.");
 
       Nonce += 1;
-      Value -= tX.GetValueOutputs() + tX.Fee;
+      Balance -= tX.GetValueOutputs() + tX.Fee;
     }
 
     public void ReverseSpendTX(TXBToken tX)
     {
       Nonce -= 1;
-      Value += tX.GetValueOutputs() + tX.Fee;
+      Balance += tX.GetValueOutputs() + tX.Fee;
     }
 
     public override string ToString()
@@ -76,7 +76,7 @@ namespace BTokenLib
       BitConverter.GetBytes(Nonce).CopyTo(ByteArraySerialized, index);
       index += 4;
 
-      BitConverter.GetBytes(Value).CopyTo(ByteArraySerialized, index);
+      BitConverter.GetBytes(Balance).CopyTo(ByteArraySerialized, index);
 
       return ByteArraySerialized;
     }

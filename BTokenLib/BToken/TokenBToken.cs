@@ -151,18 +151,15 @@ namespace BTokenLib
       catch (Exception ex)
       {
         DBAccounts.PurgeStagedData();
-        
+
         throw ex;
       }
-
-      DBAccounts.Commit();
 
       string pathFileBlock = Path.Combine(GetName(), PathBlockArchive, block.Header.Height.ToString());
       using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
-            
-      if (SizeDatabaseCache > SIZE_DATABASE_CACHE_MAX)
-        DBAccounts.DumpCacheOldestSliceToDisk(); 
+
+      DBAccounts.Commit();
     }
 
     public override void ReverseBlockInDB(Block block)

@@ -8,6 +8,12 @@ namespace BTokenLib
 {
   public partial class DBAccounts
   {
+    // New cache concept
+
+    Dictionary<byte[], Account> Cache = new ();
+
+    //
+
     public const int COUNT_CACHES = 256;
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 40000; // Read from configuration file
     List<Dictionary<byte[], Account>> Caches = new();
@@ -21,7 +27,7 @@ namespace BTokenLib
     SHA256 SHA256 = SHA256.Create();
     byte[] Hash;
 
-    List<Dictionary<byte[], Account>> AccountsStaged;
+    Dictionary<byte[], Account> AccountsStaged;
 
 
     public DBAccounts(string nameToken)
@@ -30,11 +36,10 @@ namespace BTokenLib
 
       Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), PathRootDB));
 
+      AccountsStaged = new(new EqualityComparerByteArray());
+
       for (int i = 0; i < COUNT_FILES_DB; i++)
-      {
         FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
-        AccountsStaged[i] = new(new EqualityComparerByteArray());
-      }
 
       for (int i = 0; i < COUNT_CACHES; i++)
         Caches.Add(new Dictionary<byte[], Account>(new EqualityComparerByteArray()));
@@ -93,16 +98,15 @@ namespace BTokenLib
 
     public void SpendInput(TXBToken tX)
     {
-      if (!AccountsStaged[tX.IDAccountSource[0]].TryGetValue(tX.IDAccountSource, out Account accountStaged))
-      {
+      Account accountStaged;
+
+      if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out accountStaged))
         if (!TryPopAccountFromCache(tX.IDAccountSource, out accountStaged))
           if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out accountStaged))
             throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
 
-        AccountsStaged[tX.IDAccountSource[0]].Add(tX.IDAccountSource, accountStaged);
-      }
-
       accountStaged.SpendTX(tX);
+      AccountsStaged.Add(tX.IDAccountSource, accountStaged);
     }
 
     public void InsertOutput(TXOutputBToken output, int blockHeight)
@@ -110,26 +114,25 @@ namespace BTokenLib
       if(output.Value <= 0)
         throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
 
-      if (!AccountsStaged[output.IDAccount[0]].TryGetValue(output.IDAccount, out Account accountStaged))
-      {
+      Account accountStaged;
+
+      if (!AccountsStaged.TryGetValue(output.IDAccount, out accountStaged))
         if (!TryPopAccountFromCache(output.IDAccount, out accountStaged))
           if (!FilesDB[output.IDAccount[0]].TryGetAccount(output.IDAccount, out accountStaged))
             accountStaged = new()
             {
               ID = output.IDAccount,
               BlockHeightAccountInit = blockHeight,
-              Value = output.Value
+              Balance = output.Value
             };
 
-        AccountsStaged[output.IDAccount[0]].Add(output.IDAccount, accountStaged);
-      }
-
-      accountStaged.Value += output.Value;
+      accountStaged.Balance += output.Value;
+      AccountsStaged.Add(output.IDAccount, accountStaged);
     }
 
     public void ReverseSpendInput(TXBToken tX)
     {
-      if (!AccountsStaged[tX.IDAccountSource[0]].TryGetValue(tX.IDAccountSource, out Account accountStaged))
+      if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountStaged))
       {
         if (!TryPopAccountFromCache(tX.IDAccountSource, out accountStaged))
           if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out accountStaged))
@@ -140,7 +143,7 @@ namespace BTokenLib
               Nonce = tX.Nonce,
             };
 
-        AccountsStaged[tX.IDAccountSource[0]].Add(tX.IDAccountSource, accountStaged);
+        AccountsStaged.Add(tX.IDAccountSource, accountStaged);
       }
 
       accountStaged.ReverseSpendTX(tX);
@@ -148,16 +151,16 @@ namespace BTokenLib
 
     public void ReverseOutput(TXOutputBToken output)
     {
-      if (!AccountsStaged[output.IDAccount[0]].TryGetValue(output.IDAccount, out Account accountStaged))
+      if (!AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
       {
         if (!TryPopAccountFromCache(output.IDAccount, out accountStaged))
           if (!FilesDB[output.IDAccount[0]].TryGetAccount(output.IDAccount, out accountStaged))
             throw new ProtocolException($"TX Output cannot be reversed because account {output.IDAccount.ToHexString()} does not exist in database.");
 
-        AccountsStaged[output.IDAccount[0]].Add(output.IDAccount, accountStaged);
+        AccountsStaged.Add(output.IDAccount, accountStaged);
       }
 
-      accountStaged.Value -= output.Value;
+      accountStaged.Balance -= output.Value;
     }
 
     bool TryPopAccountFromCache(byte[] iDAccount, out Account account)
@@ -188,20 +191,16 @@ namespace BTokenLib
 
     public void Commit()
     {
-      for (int i = 0; i < COUNT_FILES_DB; i++)
-      {
-        List<Account> accountsPerFileDB = AccountsStaged[i].Values.ToList();
-        AccountsStaged[i].Clear();
+      foreach(var account in AccountsStaged)
+        if (account.Value.Balance == 0)
+          Cache.Remove(account.Key);
+        else
+          Cache[account.Key] = account.Value;
 
-        FilesDB[i].Commit(accountsPerFileDB);
-        FilesDB[i].Hash.CopyTo(HashesFilesDB, i * 32);
+      AccountsStaged.Clear();
 
-        foreach (Account account in accountsPerFileDB)
-          if (account.Value > 0)
-            AddToCacheTopPriority(account);
-      }
-
-      Hash = SHA256.ComputeHash(HashesFilesDB);
+      if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+        DumpCacheOldestSliceToDisk();
     }
 
     void AddToCacheTopPriority(Account account)

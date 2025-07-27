@@ -41,8 +41,8 @@ namespace BTokenLib
 
       Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
 
-      if (accountUnconfirmed.Value < valueOutput + fee)
-        throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Value}.");
+      if (accountUnconfirmed.Balance < valueOutput + fee)
+        throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Balance}.");
 
       List<byte> tXRaw = new();
 
@@ -77,8 +77,8 @@ namespace BTokenLib
 
       Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
 
-      if (accountUnconfirmed.Value < fee)
-        throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Value}.");
+      if (accountUnconfirmed.Balance < fee)
+        throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Balance}.");
 
       List<byte> tXRaw = new();
 
@@ -134,7 +134,7 @@ namespace BTokenLib
       try
       {
         Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
-        return accountUnconfirmed.Value;
+        return accountUnconfirmed.Balance;
       }
       catch
       {
