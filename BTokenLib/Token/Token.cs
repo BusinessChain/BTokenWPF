@@ -176,28 +176,6 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-
-    // Lade headerchain soweit als möglich, lade alle lokalen Blöcke ab headerchain height. Diese Blöcke
-    // gelten als validiert und können einfach mit der DB gemerged werden ohne Account validierung. (Header Hash schon validieren)
-    // Dabei wird eine Cache DB gebaut welche aus den letzten X Blöcken besteht, hier macht eine Hysterese Sinn z.B. 10MB,
-    // dann muss nicht Block für Block vom Cahce in die DB commited werden, sondern es können immer Batchweise, z.B. alle zehn Blöcke.
-    // Diese Block Batches Können auch gerade so auf der Disk gespeichert werden. Danach mit dem Netzwerk syncen.
-    // Netzwerk - Blöcke werden vollständig validiert und inserted, weil hier davon ausgegangen wird,
-    // dass die Blöcke noch nie geladen wurden.
-    
-    // Ich erhalte den Block und mache ein Database.InsertStage.
-    // Wenn der Stager ok zurückgibt weiss ich, dass der Block grundsätzlich gültig ist.
-    // Deshalb wird er dann mit atomic save auf disk geschrieben. Das bedeutet,der Block zuerst als .tmp auf disk geschrieben,
-    // und erst wenn alles abgeschlossen ist, mit atommic rename zu .blk umbenannt.
-    // Nach dem atomic block save, wird nun der Comit gemacht. Erst wenn der Commit abgeschlossen ist, wird per atomic update das
-    // das hedaerchain file updated. Wenn jetzt also im commit was schiefläuft, wird das hoffentlich keine Probleme bereiten,
-    // weil der letzte Block, bei dem es gecrasht hat, bereits validiert wurde, aber der Comit gestört wurde. Dieser Block wird nun 
-    // beim reboot replayed da es sich um einen lokalen Block handelt. Der älteste Block im Cache.
-    // Ich halte jeweils zwei headerchain files auf der disk, welche ich alternierend verwende. Bei Laden sollte immer einer der beiden 
-    // Gültig sein. Da ich ja noch jedesmal die Cache Blöcke habe kann ich den Datenzustand immer rekonstruiren selbst wenn ein 
-    // Headerfile ungültig wäre.
-    // Transaktion könnten so strukturiert sein, dass man einen Output einer Transaktion direkt als Element in die DB einfügt. 
-
     public void LoadState()
     {
       Reset();
@@ -209,74 +187,7 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.LoadState());
     }
 
-    public void LoadImageHeaderchain()
-    {
-      SHA256 sHA256 = SHA256.Create();
-
-      int indexHeaderFile = 0;
-      List<List<Header>> headerchains = new();
-
-      while (true)
-      {
-        string pathFileHeaderchain = PathFileHeaderchain + indexHeaderFile++.ToString();
-
-        if (!File.Exists(pathFileHeaderchain))
-          break;
-
-        $"Load headerchain file {pathFileHeaderchain}.".Log(this, LogFile, LogEntryNotifier);
-
-        byte[] bytesHeaderImage = File.ReadAllBytes(pathFileHeaderchain);
-
-        List<Header> headerchain = new();
-        Header headerTip = HeaderTip;
-        int startIndex = 0;
-
-        while (startIndex < bytesHeaderImage.Length)
-          try
-          {
-            Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
-
-            header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-            startIndex += 4;
-
-            int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
-
-            for (int i = 0; i < countHashesChild; i++)
-            {
-              byte[] iDToken = new byte[IDToken.Length];
-              Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
-              startIndex += iDToken.Length;
-
-              byte[] hashesChild = new byte[32];
-              Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
-              startIndex += 32;
-
-              header.HashesChild.Add(iDToken, hashesChild);
-            }
-
-            header.AppendToHeader(headerTip);
-            headerTip = header;
-
-            headerchain.Add(headerTip);
-          }
-          catch
-          {
-            break;
-          }
-
-        if (headerchain.Any())
-          headerchains.Add(headerchain);
-      }
-
-      if (headerchains.Any())
-        headerchains.OrderByDescending(chain => chain.Last().DifficultyAccumulated).First().ForEach(header =>
-        {
-          HeaderTip.HeaderNext = header;
-          HeaderTip = header;
-
-          IndexingHeaderTip();
-        });
-    }
+    public abstract void LoadImageHeaderchain();
 
     public abstract void LoadBlocksFromArchive();
 

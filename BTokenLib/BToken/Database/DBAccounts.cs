@@ -10,7 +10,6 @@ namespace BTokenLib
   {
     // New cache concept
 
-    Dictionary<byte[], Account> Cache = new ();
 
     //
 
@@ -187,20 +186,6 @@ namespace BTokenLib
     public void PurgeStagedData()
     {
       AccountsStaged.Clear();
-    }
-
-    public void Commit()
-    {
-      foreach(var account in AccountsStaged)
-        if (account.Value.Balance == 0)
-          Cache.Remove(account.Key);
-        else
-          Cache[account.Key] = account.Value;
-
-      AccountsStaged.Clear();
-
-      if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
-        DumpCacheOldestSliceToDisk();
     }
 
     void AddToCacheTopPriority(Account account)

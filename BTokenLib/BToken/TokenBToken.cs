@@ -19,7 +19,7 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    public DBAccounts DBAccounts;
+    DBAccounts DBAccounts;
 
 
     public enum TypesToken
@@ -53,6 +53,99 @@ namespace BTokenLib
 
       BlockRewardInitial = BLOCK_REWARD_INITIAL;
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
+    }
+
+    public override void LoadImageHeaderchain()
+    {
+      SHA256 sHA256 = SHA256.Create();
+
+      int indexHeaderFile = 0;
+      List<Header> headerchainStrongest = null;
+      int indexHeaderFileStrongest = 0;
+
+      const int header_File_Count = 2;
+
+      while (indexHeaderFile < header_File_Count)
+      {
+        string pathFileHeaderchain = PathFileHeaderchain + indexHeaderFile.ToString();
+
+        if (!File.Exists(pathFileHeaderchain))
+          continue;
+
+        $"Load headerchain file {pathFileHeaderchain}.".Log(this, LogFile, LogEntryNotifier);
+
+        byte[] bytesHeaderImage = File.ReadAllBytes(pathFileHeaderchain);
+
+        List<Header> headerchain = new();
+        Header headerTip = HeaderTip;
+        int startIndex = 0;
+
+        while (startIndex < bytesHeaderImage.Length)
+          try
+          {
+            Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
+
+            header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+            startIndex += 4;
+
+            int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
+
+            for (int i = 0; i < countHashesChild; i++)
+            {
+              byte[] iDToken = new byte[IDToken.Length];
+              Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
+              startIndex += iDToken.Length;
+
+              byte[] hashesChild = new byte[32];
+              Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
+              startIndex += 32;
+
+              header.HashesChild.Add(iDToken, hashesChild);
+            }
+
+            header.AppendToHeader(headerTip);
+            headerTip = header;
+
+            headerchain.Add(headerTip);
+          }
+          catch (Exception ex)
+          {
+            $"Failed to parse header at index {startIndex}: {ex.Message}".Log(this, LogFile, LogEntryNotifier);
+            break;
+          }
+
+        if (headerchain.Any())
+          if (headerchainStrongest == null || headerchain.Last().DifficultyAccumulated > headerchainStrongest.Last().DifficultyAccumulated)
+          {
+            headerchainStrongest = headerchain;
+            indexHeaderFileStrongest = indexHeaderFile;
+          }
+
+        indexHeaderFile += 1;
+      }
+
+      if (headerchainStrongest != null)
+      {
+        headerchainStrongest.ForEach(header =>
+        {
+          HeaderTip.HeaderNext = header;
+          HeaderTip = header;
+
+          IndexingHeaderTip();
+        });
+
+        HeightBlockchainDatabaseOnDisk = HeaderTip.Height;
+
+        string pathFileHeaderchainStronger = PathFileHeaderchain + indexHeaderFileStrongest.ToString();
+        string pathFileHeaderchainWeaker;
+
+        if (indexHeaderFileStrongest == 0)
+          pathFileHeaderchainWeaker = PathFileHeaderchain + 1.ToString();
+        else
+          pathFileHeaderchainWeaker = PathFileHeaderchain + 0.ToString();
+
+        File.Copy(pathFileHeaderchainStronger, pathFileHeaderchainWeaker);
+      }
     }
 
     public override void LoadBlocksFromArchive()
@@ -122,6 +215,13 @@ namespace BTokenLib
       throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
 
+    // Evt. DB Accounts nach hier transferieren
+    Dictionary<byte[], Account> Cache = new();
+    Dictionary<byte[], Account> AccountsStaged;
+    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 40000; // Read from configuration file
+    const double COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS = 0.9;
+    int HeightBlockchainDatabaseOnDisk;
+
     public override void InsertBlockInDatabase(Block block)
     {
       try
@@ -159,7 +259,60 @@ namespace BTokenLib
       using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
 
-      DBAccounts.Commit();
+      Commit();
+    }
+
+    public void Commit()
+    {
+      foreach (var account in AccountsStaged)
+        if (account.Value.Balance == 0)
+          Cache.Remove(account.Key);
+        else
+          Cache[account.Key] = account.Value;
+
+      AccountsStaged.Clear();
+
+      if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+      {
+        // Insert old blocks in File-DB and delete them from Cache.
+
+
+        int heightBlock = HeightBlockchainDatabaseOnDisk + 1;
+
+        while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS)
+          if (TryLoadBlock(heightBlock, out Block block))
+          {
+            try
+            {
+              $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+
+              InsertBlockInDatabaseOnDisk(block);
+
+              // update headerchain File
+
+              // Remove block from cache
+
+              heightBlock += 1;
+            }
+            catch (ProtocolException ex)
+            {
+              $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+              .Log(this, LogEntryNotifier);
+
+              File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
+            }
+          }
+          else
+          {
+            // Reload state
+          }
+
+        // Load headerFile for writting after the dump.
+        // Dump the block after block into the database (blocks can be assumed validated)
+        // After each block database dump, update headerchain file and remove block from cache
+        // If cache size is small enough (400MB plus hysteresis) then exit dumping.
+        // Delete unused blocks that were dumped the last time and delete zero accounts that were zero the last time
+      }
     }
 
     public override void ReverseBlockInDB(Block block)
