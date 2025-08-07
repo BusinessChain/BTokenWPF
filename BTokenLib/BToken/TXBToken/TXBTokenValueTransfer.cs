@@ -7,9 +7,6 @@ namespace BTokenLib
 {
   public class TXBTokenValueTransfer : TXBToken
   {
-    public List<TXOutputBToken> TXOutputs = new();
-
-
     public TXBTokenValueTransfer(byte[] buffer, ref int index, SHA256 sHA256)
     {
       int indexTxStart = index - 1;
@@ -26,29 +23,6 @@ namespace BTokenLib
       Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, CountBytes));
 
       VerifySignatureTX(indexTxStart, buffer, ref index);
-    }
-
-    public override long GetValueOutputs()
-    {
-      return TXOutputs.Sum(t => t.Value);
-    }
-
-    public override List<TXOutputBToken> GetOutputs()
-    { return TXOutputs; }
-
-    public override List<(string label, string value)> GetLabelsValuePairs()
-    {
-      List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();
-
-      for (int i = 0; i < TXOutputs.Count; i++)
-      {
-        TXOutputBToken output = TXOutputs[i];
-
-        labelValuePairs.Add(($"Output{i} :: IDAccount", $"{output.IDAccount.BinaryToBase58Check()}"));
-        labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
-      }
-
-      return labelValuePairs;
     }
   }
 }

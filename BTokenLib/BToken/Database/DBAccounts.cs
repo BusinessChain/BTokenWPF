@@ -97,6 +97,9 @@ namespace BTokenLib
 
     public void SpendInput(TXBToken tX)
     {
+      if (tX is TXBTokenCoinbase)
+        return;
+
       Account accountStaged;
 
       if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out accountStaged))

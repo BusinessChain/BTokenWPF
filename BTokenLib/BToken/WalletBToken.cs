@@ -111,7 +111,7 @@ namespace BTokenLib
       if (tXBToken.PublicKey.IsAllBytesEqual(PublicKey))
         tX.FlagPrune = false;
 
-      foreach (TXOutputBToken output in tXBToken.GetOutputs())
+      foreach (TXOutputBToken output in tXBToken.TXOutputs)
         if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
           tX.FlagPrune = false;
 

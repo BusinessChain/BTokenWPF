@@ -22,8 +22,6 @@ namespace BTokenLib
 
     public abstract long GetValueOutputs();
 
-    public abstract string Print();
-
     public void WriteToStream(Stream stream)
     {
       stream.Write(TXRaw, 0, TXRaw.Length);

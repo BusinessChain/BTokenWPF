@@ -53,6 +53,10 @@ namespace BTokenLib
 
       BlockRewardInitial = BLOCK_REWARD_INITIAL;
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
+
+      for (int i = 0; i < COUNT_FILES_DB; i++)
+        FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
+
     }
 
     public override void LoadImageHeaderchain()
@@ -222,6 +226,11 @@ namespace BTokenLib
     const double COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS = 0.9;
     int HeightBlockchainDatabaseOnDisk;
 
+    string PathRootDB;
+    public const int COUNT_FILES_DB = 256;
+    List<FileDB> FilesDB = new();
+    byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
+
     public override void InsertBlockInDatabase(Block block)
     {
       try
@@ -274,9 +283,6 @@ namespace BTokenLib
 
       if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
-        // Insert old blocks in File-DB and delete them from Cache.
-
-
         int heightBlock = HeightBlockchainDatabaseOnDisk + 1;
 
         while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS)
@@ -286,11 +292,17 @@ namespace BTokenLib
             {
               $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
 
-              InsertBlockInDatabaseOnDisk(block);
+              TXBTokenCoinbase tXBTokenCoinbase = block.TXs[0] as TXBTokenCoinbase;
 
-              // update headerchain File
 
-              // Remove block from cache
+              foreach (TXBToken tX in block.TXs.Skip(1))
+                if (TrySpendInputOnDisk(tX))
+                  InsertOutputsInDatabaseOnDisk(tX, block.Header.Height);
+
+              block.Header.WriteToDiskAtomic(PathFileHeaderchain + 0.ToString());
+              block.Header.WriteToDiskAtomic(PathFileHeaderchain + 1.ToString());
+
+              RemoveBlockFromCache(block);
 
               heightBlock += 1;
             }
@@ -307,12 +319,55 @@ namespace BTokenLib
             // Reload state
           }
 
-        // Load headerFile for writting after the dump.
+        // Load headerFile for writing after the dump.
         // Dump the block after block into the database (blocks can be assumed validated)
         // After each block database dump, update headerchain file and remove block from cache
         // If cache size is small enough (400MB plus hysteresis) then exit dumping.
         // Delete unused blocks that were dumped the last time and delete zero accounts that were zero the last time
       }
+    }
+
+    public bool TrySpendInputOnDisk(TXBToken tX)
+    {
+      Account account;
+
+      if (tX is TXBTokenCoinbase)
+        if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out account))
+        {
+          account = new() { ID = tX.IDAccountSource };
+          // store account on disk, flush
+          return true;
+        }
+        else if (account.BlockHeightAccountInit == tX.BlockheightAccountInit)
+          return false; // Assume this transaction has already been inserted into the database at an earlier attempt.
+
+      if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out account))
+        throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
+      // kann man das irgendwie fixen, konnte das durch ein frühere insertierung hervorgerufen werden?
+
+      accountStaged.SpendTX(tX);
+      AccountsStaged.Add(tX.IDAccountSource, accountStaged);
+    }
+
+    public void InsertOutputsInDatabaseOnDisk(TXBToken tX, int blockHeight)
+    {
+      foreach (TXOutputBToken output in tX.TXOutputs)
+        if (FilesDB[output.IDAccount[0]].TryGetAccount(output.IDAccount, out Account account))
+        {
+          account.Balance += output.Value;
+          FilesDB.UpdateAccount(account);
+        }
+        else
+        {
+          account = new()
+          {
+            ID = output.IDAccount,
+            BlockHeightAccountInit = blockHeight,
+            Balance = output.Value
+          };
+
+          FilesDB.InsertAccount(account);
+        }
     }
 
     public override void ReverseBlockInDB(Block block)
@@ -348,12 +403,12 @@ namespace BTokenLib
 
     public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
     {
-      DBAccounts.InsertDB(bufferDB, lengthDataInBuffer);
-    }
+      int startIndex = 0;
 
-    public override void DeleteDB()
-    { 
-      DBAccounts.Delete(); 
+      FileDB fileDB = new(Path.Combine(PathRootDB, bufferDB[startIndex].ToString()));
+      fileDB.Write(bufferDB, startIndex, lengthDataInBuffer - 1);
+
+      FilesDB.Add(fileDB);
     }
 
     public override List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
@@ -408,7 +463,16 @@ namespace BTokenLib
 
     public override bool TryGetDB(byte[] hash, out byte[] dataDB)
     {
-      return DBAccounts.TryGetDB(hash, out dataDB);
+      for (int i = 0; i < HashesFilesDB.Length; i++)
+        if (hash.IsAllBytesEqual(HashesFilesDB, i * 32))
+        {
+          dataDB = new byte[FilesDB[i].Length];
+          FilesDB[i].Write(dataDB, 0, dataDB.Length);
+          return true;
+        }
+
+      dataDB = null;
+      return false;
     }
 
     public override List<string> GetSeedAddresses()

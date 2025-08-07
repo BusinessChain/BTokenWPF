@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -27,10 +28,13 @@ namespace BTokenLib
     public int Nonce;
 
     /// <summary>
-    /// This is the block height at which the account source was created.
+    /// This has to match the block height at which the account source was created.
     /// It is in a sense an extension of the nonce.
     /// </summary>
     public int BlockheightAccountInit;
+
+
+    public List<TXOutputBToken> TXOutputs = new();
 
 
     public override bool IsSuccessorTo(TX tX)
@@ -43,23 +47,10 @@ namespace BTokenLib
         && Nonce == tXBToken.Nonce + 1;
     }
 
-    //public override bool TryGetAnchorToken(out TokenAnchor tokenAnchor)
-    //{
-    //  TXBTokenAnchor tXBTokenAnchor = this as TXBTokenAnchor;
-
-    //  if (tXBTokenAnchor == null)
-    //    tokenAnchor = null;
-    //  else
-    //    tokenAnchor = tXBTokenAnchor.TokenAnchor;
-
-    //  return tokenAnchor != null;
-    //}
-
     public override List<TokenAnchor> GetTokenAnchors()
     {
       return new();
     }
-
 
     public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)
     {
@@ -91,19 +82,9 @@ namespace BTokenLib
         throw new ProtocolException($"TX {this} contains invalid signature.");
     }
 
-    public virtual List<TXOutputBToken> GetOutputs()
-    { return new(); }
-
-    public override string Print()
-    {
-      string text = "";
-
-      return text;
-    }
-
     public override List<(string label, string value)> GetLabelsValuePairs()
     {
-      return new List<(string label, string value)>()
+      List<(string label, string value)> labelValuePairs = new List<(string label, string value)>()
       {
         ("Type", $"{GetType().Name}"),
         ("Hash", $"{this}"),
@@ -113,6 +94,21 @@ namespace BTokenLib
         ("ValueOutputs", $"{GetValueOutputs()}"),
         ("Fee", $"{Fee}")
       };
+
+      for (int i = 0; i < TXOutputs.Count; i++)
+      {
+        TXOutputBToken output = TXOutputs[i];
+
+        labelValuePairs.Add(($"Output{i} :: IDAccount", $"{output.IDAccount.BinaryToBase58Check()}"));
+        labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
+      }
+
+      return labelValuePairs;
+    }
+
+    public override long GetValueOutputs()
+    {
+      return TXOutputs.Sum(t => t.Value);
     }
   }
 }

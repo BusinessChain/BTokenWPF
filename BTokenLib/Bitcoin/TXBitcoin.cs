@@ -31,13 +31,6 @@ namespace BTokenLib
       return TXOutputs.Where(t => t.TokenAnchor != null).Select(t => t.TokenAnchor).ToList();
     }
 
-    public override string Print()
-    {
-      string text = "";
-
-      return text;
-    }
-
     public override List<(string label, string value)> GetLabelsValuePairs()
     {
       List<(string label, string value)> labelValuePairs = new()
