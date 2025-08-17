@@ -1,84 +1,105 @@
 ﻿using System;
 using System.IO;
 
+using LiteDB;
+
 
 namespace BTokenLib
 {
-  public class Account
+  public partial class TokenBToken : Token
   {
-    public const int LENGTH_ACCOUNT = 36;
-    public const int LENGTH_ID = 20;
-
-    byte[] ByteArraySerialized = new byte[LENGTH_ACCOUNT];
-
-    public byte[] ID = new byte[LENGTH_ID];
-    public int BlockHeightAccountInit;
-    public int Nonce;
-    public long Balance;
-
-    public long StartIndexFileDBOrigin = -1;
-
-
-    public Account() { }
-
-    public Account(FileStream fileStream)
+    public class Account
     {
-      StartIndexFileDBOrigin = fileStream.Position;
-      fileStream.Read(ByteArraySerialized, 0, LENGTH_ACCOUNT);
+      public const int LENGTH_ACCOUNT = 36;
+      public const int LENGTH_ID = 20;
 
-      int index = 0;
+      [BsonId]
+      public byte[] ID = new byte[LENGTH_ID];
 
-      Array.Copy(ByteArraySerialized, ID, LENGTH_ID);
-      index += LENGTH_ID;
+      [BsonField]
+      public int BlockHeightAccountInit;
 
-      BlockHeightAccountInit = BitConverter.ToInt32(ByteArraySerialized, index);
-      index += 4;
+      [BsonField]
+      public int Nonce;
 
-      Nonce = BitConverter.ToInt32(ByteArraySerialized, index);
-      index += 4;
+      [BsonField]
+      public long Balance;
 
-      Balance = BitConverter.ToInt64(ByteArraySerialized, index);
-    }
+      public long PositionInFileStream = -1;
+      byte[] ByteArraySerialized = new byte[LENGTH_ACCOUNT];
 
-    public void SpendTX(TXBToken tX)
-    {
-      if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
-        throw new ProtocolException($"Staged account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
 
-      if (Balance < tX.GetValueOutputs() + tX.Fee)
-        throw new ProtocolException($"Staged account {this} referenced by TX {tX} does not have enough fund.");
+      public Account() { }
 
-      Nonce += 1;
-      Balance -= tX.GetValueOutputs() + tX.Fee;
-    }
+      public Account(FileStream fileStream)
+      {
+        PositionInFileStream = fileStream.Position;
+        fileStream.Read(ByteArraySerialized, 0, LENGTH_ACCOUNT);
 
-    public void ReverseSpendTX(TXBToken tX)
-    {
-      Nonce -= 1;
-      Balance += tX.GetValueOutputs() + tX.Fee;
-    }
+        int index = 0;
 
-    public override string ToString()
-    {
-      return ID.BinaryToBase58Check();
-    }
+        Array.Copy(ByteArraySerialized, ID, LENGTH_ID);
+        index += LENGTH_ID;
 
-    public byte[] Serialize()
-    {
-      int index = 0;
+        BlockHeightAccountInit = BitConverter.ToInt32(ByteArraySerialized, index);
+        index += 4;
 
-      ID.CopyTo(ByteArraySerialized, index);
-      index += LENGTH_ID;
+        Nonce = BitConverter.ToInt32(ByteArraySerialized, index);
+        index += 4;
 
-      BitConverter.GetBytes(BlockHeightAccountInit).CopyTo(ByteArraySerialized, index);
-      index += 4;
+        Balance = BitConverter.ToInt64(ByteArraySerialized, index);
+      }
 
-      BitConverter.GetBytes(Nonce).CopyTo(ByteArraySerialized, index);
-      index += 4;
+      public void FlushToDisk(FileStream fileStream)
+      {
+        fileStream.Position = PositionInFileStream;
 
-      BitConverter.GetBytes(Balance).CopyTo(ByteArraySerialized, index);
+        Serialize();
 
-      return ByteArraySerialized;
+        fileStream.Write(ByteArraySerialized, 0, ByteArraySerialized.Length);
+        fileStream.Flush(true);
+      }
+
+      public void SpendTX(TXBToken tX)
+      {
+        if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
+          throw new ProtocolException($"Staged account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
+
+        if (Balance < tX.GetValueOutputs() + tX.Fee)
+          throw new ProtocolException($"Staged account {this} referenced by TX {tX} does not have enough fund.");
+
+        Nonce += 1;
+        Balance -= tX.GetValueOutputs() + tX.Fee;
+      }
+
+      public void ReverseSpendTX(TXBToken tX)
+      {
+        Nonce -= 1;
+        Balance += tX.GetValueOutputs() + tX.Fee;
+      }
+
+      public override string ToString()
+      {
+        return ID.BinaryToBase58Check();
+      }
+
+      public byte[] Serialize()
+      {
+        int index = 0;
+
+        ID.CopyTo(ByteArraySerialized, index);
+        index += LENGTH_ID;
+
+        BitConverter.GetBytes(BlockHeightAccountInit).CopyTo(ByteArraySerialized, index);
+        index += 4;
+
+        BitConverter.GetBytes(Nonce).CopyTo(ByteArraySerialized, index);
+        index += 4;
+
+        BitConverter.GetBytes(Balance).CopyTo(ByteArraySerialized, index);
+
+        return ByteArraySerialized;
+      }
     }
   }
 }

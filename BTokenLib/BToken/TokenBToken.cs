@@ -4,6 +4,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
+using LiteDB;
+
 
 namespace BTokenLib
 {
@@ -19,7 +21,9 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    DBAccounts DBAccounts;
+    public DBAccounts DBAccounts;
+    LiteDatabase Database;
+    ILiteCollection<Account> AccountsCollection;
 
 
     public enum TypesToken
@@ -57,99 +61,63 @@ namespace BTokenLib
       for (int i = 0; i < COUNT_FILES_DB; i++)
         FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
 
+      Database = new LiteDatabase("bToken.db");
+      AccountsCollection = Database.GetCollection<Account>("accounts");
+
+      AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+      {
+        Database?.Dispose();
+      };
     }
 
     public override void LoadImageHeaderchain()
     {
       SHA256 sHA256 = SHA256.Create();
 
-      int indexHeaderFile = 0;
-      List<Header> headerchainStrongest = null;
-      int indexHeaderFileStrongest = 0;
+      if (!File.Exists(PathFileHeaderchain))
+        return;
 
-      const int header_File_Count = 2;
+      $"Load headerchain file {PathFileHeaderchain}.".Log(this, LogFile, LogEntryNotifier);
 
-      while (indexHeaderFile < header_File_Count)
-      {
-        string pathFileHeaderchain = PathFileHeaderchain + indexHeaderFile.ToString();
+      byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
+      int startIndex = 0;
 
-        if (!File.Exists(pathFileHeaderchain))
-          continue;
-
-        $"Load headerchain file {pathFileHeaderchain}.".Log(this, LogFile, LogEntryNotifier);
-
-        byte[] bytesHeaderImage = File.ReadAllBytes(pathFileHeaderchain);
-
-        List<Header> headerchain = new();
-        Header headerTip = HeaderTip;
-        int startIndex = 0;
-
-        while (startIndex < bytesHeaderImage.Length)
-          try
-          {
-            Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
-
-            header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-            startIndex += 4;
-
-            int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
-
-            for (int i = 0; i < countHashesChild; i++)
-            {
-              byte[] iDToken = new byte[IDToken.Length];
-              Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
-              startIndex += iDToken.Length;
-
-              byte[] hashesChild = new byte[32];
-              Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
-              startIndex += 32;
-
-              header.HashesChild.Add(iDToken, hashesChild);
-            }
-
-            header.AppendToHeader(headerTip);
-            headerTip = header;
-
-            headerchain.Add(headerTip);
-          }
-          catch (Exception ex)
-          {
-            $"Failed to parse header at index {startIndex}: {ex.Message}".Log(this, LogFile, LogEntryNotifier);
-            break;
-          }
-
-        if (headerchain.Any())
-          if (headerchainStrongest == null || headerchain.Last().DifficultyAccumulated > headerchainStrongest.Last().DifficultyAccumulated)
-          {
-            headerchainStrongest = headerchain;
-            indexHeaderFileStrongest = indexHeaderFile;
-          }
-
-        indexHeaderFile += 1;
-      }
-
-      if (headerchainStrongest != null)
-      {
-        headerchainStrongest.ForEach(header =>
+      while (startIndex < bytesHeaderImage.Length)
+        try
         {
+          Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
+
+          header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
+          startIndex += 4;
+
+          int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
+
+          for (int i = 0; i < countHashesChild; i++)
+          {
+            byte[] iDToken = new byte[IDToken.Length];
+            Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
+            startIndex += iDToken.Length;
+
+            byte[] hashesChild = new byte[32];
+            Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
+            startIndex += 32;
+
+            header.HashesChild.Add(iDToken, hashesChild);
+          }
+
+          header.AppendToHeader(HeaderTip);
           HeaderTip.HeaderNext = header;
           HeaderTip = header;
 
           IndexingHeaderTip();
-        });
+        }
+        catch (Exception ex)
+        {
+          $"Failed to parse header at index {startIndex}: {ex.Message}".Log(this, LogFile, LogEntryNotifier);
+          break;
+        }
 
-        HeightBlockchainDatabaseOnDisk = HeaderTip.Height;
-
-        string pathFileHeaderchainStronger = PathFileHeaderchain + indexHeaderFileStrongest.ToString();
-        string pathFileHeaderchainWeaker;
-
-        if (indexHeaderFileStrongest == 0)
-          pathFileHeaderchainWeaker = PathFileHeaderchain + 1.ToString();
-        else
-          pathFileHeaderchainWeaker = PathFileHeaderchain + 0.ToString();
-
-        File.Copy(pathFileHeaderchainStronger, pathFileHeaderchainWeaker);
-      }
+      HeightBlockchainDatabaseOnDisk = HeaderTip.Height;
     }
 
     public override void LoadBlocksFromArchive()
@@ -220,8 +188,8 @@ namespace BTokenLib
     }
 
     // Evt. DB Accounts nach hier transferieren
-    Dictionary<byte[], Account> Cache = new();
-    Dictionary<byte[], Account> AccountsStaged;
+    Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
+    Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 40000; // Read from configuration file
     const double COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS = 0.9;
     int HeightBlockchainDatabaseOnDisk;
@@ -236,31 +204,16 @@ namespace BTokenLib
       try
       {
         foreach (TXBToken tX in block.TXs)
-          if (tX is TXBTokenCoinbase tXCoinbase)
-          {
-            foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
-              DBAccounts.InsertOutput(tXOutput, block.Header.Height);
-          }
-          else
-          {
-            DBAccounts.SpendInput(tX);
+        {
+          foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+            StageOutput(tXOutput, block.Header.Height);
 
-            if (tX is TXBTokenValueTransfer tXTokenTransfer)
-            {
-              foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
-                DBAccounts.InsertOutput(tXOutput, block.Header.Height);
-            }
-            else if (tX is TXBTokenAnchor tXBTokenAnchor)
-            { }
-            else if (tX is TXBTokenData tXBTokenData)
-            { }
-            else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
-          }
+          StageSpendInput(tX);
+        }
       }
       catch (Exception ex)
       {
-        DBAccounts.PurgeStagedData();
-
+        AccountsStaged.Clear();
         throw ex;
       }
 
@@ -268,11 +221,6 @@ namespace BTokenLib
       using (FileStream fileStreamBlock = new(pathFileBlock, FileMode.Create, FileAccess.Write))
         block.WriteToDisk(fileStreamBlock);
 
-      Commit();
-    }
-
-    public void Commit()
-    {
       foreach (var account in AccountsStaged)
         if (account.Value.Balance == 0)
           Cache.Remove(account.Key);
@@ -282,71 +230,146 @@ namespace BTokenLib
       AccountsStaged.Clear();
 
       if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+        DumpCacheToDisk();
+    }
+
+    public void StageSpendInput(TXBToken tX)
+    {
+      if (tX is TXBTokenCoinbase)
+        return;
+
+      Account accountStaged;
+
+      if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out accountStaged))
       {
-        int heightBlock = HeightBlockchainDatabaseOnDisk + 1;
-
-        while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS)
-          if (TryLoadBlock(heightBlock, out Block block))
+        if (Cache.TryGetValue(tX.IDAccountSource, out Account accountCached))
+        {
+          accountStaged = new()
           {
-            try
-            {
-              $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
-
-              TXBTokenCoinbase tXBTokenCoinbase = block.TXs[0] as TXBTokenCoinbase;
-
-
-              foreach (TXBToken tX in block.TXs.Skip(1))
-                if (TrySpendInputOnDisk(tX))
-                  InsertOutputsInDatabaseOnDisk(tX, block.Header.Height);
-
-              block.Header.WriteToDiskAtomic(PathFileHeaderchain + 0.ToString());
-              block.Header.WriteToDiskAtomic(PathFileHeaderchain + 1.ToString());
-
-              RemoveBlockFromCache(block);
-
-              heightBlock += 1;
-            }
-            catch (ProtocolException ex)
-            {
-              $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-              .Log(this, LogEntryNotifier);
-
-              File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
-            }
-          }
-          else
+            ID = accountCached.ID,
+            BlockHeightAccountInit = accountCached.BlockHeightAccountInit,
+            Nonce = accountCached.Nonce,
+            Balance = accountCached.Balance
+          };
+        }
+        else if (AccountsCollection.FindById(tX.IDAccountSource) is Account accountStored)
+          accountStaged = new()
           {
-            // Reload state
-          }
+            ID = accountStored.ID,
+            BlockHeightAccountInit = accountStored.BlockHeightAccountInit,
+            Nonce = accountStored.Nonce,
+            Balance = accountStored.Balance
+          };
+        else
+          throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
 
-        // Load headerFile for writing after the dump.
-        // Dump the block after block into the database (blocks can be assumed validated)
-        // After each block database dump, update headerchain file and remove block from cache
-        // If cache size is small enough (400MB plus hysteresis) then exit dumping.
-        // Delete unused blocks that were dumped the last time and delete zero accounts that were zero the last time
+        AccountsStaged.Add(tX.IDAccountSource, accountStaged);
       }
+
+      accountStaged.SpendTX(tX);
+    }
+
+    public void StageOutput(TXOutputBToken output, int blockHeight)
+    {
+      if (output.Value <= 0)
+        throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
+
+      if (AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
+        accountStaged.Balance += output.Value;
+      else
+      {
+        if (Cache.TryGetValue(output.IDAccount, out Account accountCached))
+          accountStaged = new()
+          {
+            ID = accountCached.ID,
+            BlockHeightAccountInit = accountCached.BlockHeightAccountInit,
+            Nonce = accountCached.Nonce,
+            Balance = accountCached.Balance + output.Value
+          };
+        else if (AccountsCollection.FindById(output.IDAccount) is Account accountStored)
+          accountStaged = new()
+          {
+            ID = accountStored.ID,
+            BlockHeightAccountInit = accountStored.BlockHeightAccountInit,
+            Nonce = accountStored.Nonce,
+            Balance = accountStored.Balance + output.Value
+          };
+        else
+          accountStaged = new()
+          {
+            ID = output.IDAccount,
+            BlockHeightAccountInit = blockHeight,
+            Nonce = 0,
+            Balance = output.Value
+          };
+
+        AccountsStaged.Add(output.IDAccount, accountStaged);
+      }
+    }
+
+    public void DumpCacheToDisk()
+    {
+      int heightBlock = HeightBlockchainDatabaseOnDisk + 1;
+
+      while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * COUNT_MAX_ACCOUNTS_IN_CACHE_HYSTERESIS)
+        if (TryLoadBlock(heightBlock, out Block block))
+        {
+          try
+          {
+            $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+
+            foreach (TXBToken tX in block.TXs)
+              if (TrySpendInputOnDisk(tX))
+                InsertOutputsInDatabaseOnDisk(tX, block.Header.Height);
+
+            block.Header.WriteToDiskAtomic(PathFileHeaderchain);
+
+            RemoveBlockFromCache(block);
+
+            heightBlock += 1;
+          }
+          catch (ProtocolException ex)
+          {
+            $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+            .Log(this, LogEntryNotifier);
+
+            File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
+          }
+        }
+        else
+        {
+          // Reload state
+        }
+
+      // Load headerFile for writing after the dump.
+      // Dump the block after block into the database (blocks can be assumed validated)
+      // After each block database dump, update headerchain file and remove block from cache
+      // If cache size is small enough (400MB plus hysteresis) then exit dumping.
+      // Delete unused blocks that were dumped the last time and delete zero accounts that were zero the last time
     }
 
     public bool TrySpendInputOnDisk(TXBToken tX)
     {
-      Account account;
+      FileDB fileDB = FilesDB[tX.IDAccountSource[0]];
+
+      bool flagGetAccountFailed = !fileDB.TryGetAccount(tX.IDAccountSource, out Account account);
 
       if (tX is TXBTokenCoinbase)
-        if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out account))
+      {
+        if (flagGetAccountFailed)
         {
-          account = new() { ID = tX.IDAccountSource };
-          // store account on disk, flush
-          return true;
+          account = new() { BlockHeightAccountInit = tX.BlockheightAccountInit };
+          account.FlushToDisk(fileDB);
         }
         else if (account.BlockHeightAccountInit == tX.BlockheightAccountInit)
           return false; // Assume this transaction has already been inserted into the database at an earlier attempt.
-
-      if (!FilesDB[tX.IDAccountSource[0]].TryGetAccount(tX.IDAccountSource, out account))
+      }
+      else if (flagGetAccountFailed)
         throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
-      // kann man das irgendwie fixen, konnte das durch ein frühere insertierung hervorgerufen werden?
+      else
+        account.SpendTX(tX);
 
-      accountStaged.SpendTX(tX);
-      AccountsStaged.Add(tX.IDAccountSource, accountStaged);
+      return true;
     }
 
     public void InsertOutputsInDatabaseOnDisk(TXBToken tX, int blockHeight)

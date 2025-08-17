@@ -23,7 +23,7 @@ namespace BTokenLib
       Seek(0, SeekOrigin.End);
     }
 
-    public bool TryGetAccount(byte[] iDAccount, out Account account)
+    public bool TryGetAccount(byte[] iDAccount, out TokenBToken.Account account)
     {
       Seek(0, SeekOrigin.Begin);
 
@@ -55,74 +55,6 @@ namespace BTokenLib
         accounts.Add(new(this));
 
       return accounts;
-    }
-
-    public void Commit(List<Account> accounts)
-    {
-      List<Account> accountsUpdate = new();
-      List<Account> accountsRemove = new();
-      List<Account> accountsNew = new();
-
-      foreach (Account account in accounts)
-      {
-        if (account.Balance > 0)
-        {
-          if (account.StartIndexFileDBOrigin > 0)
-            accountsUpdate.Add(account);
-          else
-            accountsNew.Add(account);
-        }
-        else
-          accountsRemove.Add(account);
-      }
-
-      foreach(Account accountUpdate in accountsUpdate)
-      {
-        Position = accountUpdate.StartIndexFileDBOrigin;
-        Write(accountUpdate.Serialize());
-      }
-
-      int i = 0;
-
-      while (i < accountsNew.Count)
-      {
-        if (accountsRemove.Count > i)
-          Position = accountsRemove[i].StartIndexFileDBOrigin;
-        else
-          Position = Length;
-
-        accountsNew[i].StartIndexFileDBOrigin = Position;
-        Write(accountsNew[i].Serialize());
-
-        i += 1;
-      }
-
-      long lengthFileStream = Length;
-
-      while (i < accountsRemove.Count)
-      {
-        Position = lengthFileStream - Account.LENGTH_ACCOUNT;
-
-        if (accountsRemove[i].StartIndexFileDBOrigin != Position)
-        {
-          Read(TempByteArrayCopyLastRecord);
-
-          Position = accountsRemove[i].StartIndexFileDBOrigin;
-
-          Write(TempByteArrayCopyLastRecord);
-        }
-
-        lengthFileStream -= Account.LENGTH_ACCOUNT;
-
-        i += 1;
-      }
-
-      SetLength(lengthFileStream);
-      Position = Length;
-
-      Hash = SHA256.ComputeHash(this);
-
-      Flush();
     }
 
     int ReadInt32()
