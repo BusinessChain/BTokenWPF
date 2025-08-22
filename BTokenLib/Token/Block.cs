@@ -163,17 +163,23 @@ namespace BTokenLib
       LengthBufferPayload = startIndex;
     }
 
-    public void WriteToDisk(FileStream fileStream)
+    // atomisch machen
+    public void WriteToDisk(string pathRoot)
     {
-      byte[] bufferHeader = Header.Serialize();
-      fileStream.Write(bufferHeader, 0, bufferHeader.Length);
+      string pathFileBlock = Path.Combine(pathRoot, Header.Hash.ToHexString());
 
-      byte[] countTXs = VarInt.GetBytes(TXs.Count(t => !t.FlagPrune));
-      fileStream.Write(countTXs, 0, countTXs.Length);
+      using (FileStream fileStream = new(pathFileBlock, FileMode.Create, FileAccess.Write))
+      {
+        byte[] bufferHeader = Header.Serialize();
+        fileStream.Write(bufferHeader, 0, bufferHeader.Length);
 
-      for (int i = 0; i < TXs.Count; i++)
-        if (!TXs[i].FlagPrune)
-          fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+        byte[] countTXs = VarInt.GetBytes(TXs.Count(t => !t.FlagPrune));
+        fileStream.Write(countTXs, 0, countTXs.Length);
+
+        for (int i = 0; i < TXs.Count; i++)
+          if (!TXs[i].FlagPrune)
+            fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+      }
     }
 
     public override string ToString()

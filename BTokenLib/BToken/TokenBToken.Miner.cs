@@ -71,7 +71,10 @@ namespace BTokenLib
             if (TokenParent.TryBroadcastTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
             {
               $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
-              SaveBlockMined(block);
+
+              BlocksMinedCache.Add(block);
+
+              block.WriteToDisk(PathBlocksMined);
             }
           }
 
@@ -118,36 +121,6 @@ namespace BTokenLib
       .Concat(IDToken)
       .Concat(block.Header.Hash)
       .Concat(block.Header.HashPrevious).ToArray();
-    }
-
-    void SaveBlockMined(Block block)
-    {
-      BlocksMinedCache.Add(block);
-
-      string pathBlockMined = Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString());
-
-      while (true)
-        try
-        {
-          using (FileStream fileStreamBlock = new(
-          pathBlockMined,
-          FileMode.Create,
-          FileAccess.Write,
-          FileShare.None))
-          {
-            block.WriteToDisk(fileStreamBlock);
-          }
-
-          return;
-        }
-        catch (Exception ex)
-        {
-          ($"{ex.GetType().Name} when writing block height {block.Header.Height} to file:\n" +
-            $"{ex.Message}\n " +
-            $"Try again in {TIMEOUT_FILE_RELOAD_SECONDS} seconds ...").Log(this, LogEntryNotifier);
-
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS);
-        }
     }
 
     public override void DeleteBlocksMinedUnconfirmed()

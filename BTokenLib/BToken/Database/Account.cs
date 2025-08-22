@@ -10,14 +10,17 @@ namespace BTokenLib
   {
     public class Account
     {
-      public const int LENGTH_ACCOUNT = 36;
+      public const int LENGTH_ACCOUNT = 40;
       public const int LENGTH_ID = 20;
 
       [BsonId]
       public byte[] ID = new byte[LENGTH_ID];
 
       [BsonField]
-      public int BlockHeightAccountInit;
+      public int BlockHeightAccountCreated;
+
+      [BsonField]
+      public int BlockHeightLastUpdatedOnDisk;
 
       [BsonField]
       public int Nonce;
@@ -31,6 +34,14 @@ namespace BTokenLib
 
       public Account() { }
 
+      public Account(Account account) 
+      {
+        ID = account.ID;
+        BlockHeightAccountCreated = account.BlockHeightAccountCreated;
+        Nonce = account.Nonce;
+        Balance = account.Balance;
+      }
+
       public Account(FileStream fileStream)
       {
         PositionInFileStream = fileStream.Position;
@@ -41,7 +52,7 @@ namespace BTokenLib
         Array.Copy(ByteArraySerialized, ID, LENGTH_ID);
         index += LENGTH_ID;
 
-        BlockHeightAccountInit = BitConverter.ToInt32(ByteArraySerialized, index);
+        BlockHeightAccountCreated = BitConverter.ToInt32(ByteArraySerialized, index);
         index += 4;
 
         Nonce = BitConverter.ToInt32(ByteArraySerialized, index);
@@ -62,7 +73,7 @@ namespace BTokenLib
 
       public void SpendTX(TXBToken tX)
       {
-        if (BlockHeightAccountInit != tX.BlockheightAccountInit || Nonce != tX.Nonce)
+        if (BlockHeightAccountCreated != tX.BlockheightAccountInit || Nonce != tX.Nonce)
           throw new ProtocolException($"Staged account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
 
         if (Balance < tX.GetValueOutputs() + tX.Fee)
@@ -90,7 +101,7 @@ namespace BTokenLib
         ID.CopyTo(ByteArraySerialized, index);
         index += LENGTH_ID;
 
-        BitConverter.GetBytes(BlockHeightAccountInit).CopyTo(ByteArraySerialized, index);
+        BitConverter.GetBytes(BlockHeightAccountCreated).CopyTo(ByteArraySerialized, index);
         index += 4;
 
         BitConverter.GetBytes(Nonce).CopyTo(ByteArraySerialized, index);
