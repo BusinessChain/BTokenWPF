@@ -20,7 +20,7 @@ namespace BTokenLib
       public int BlockHeightAccountCreated;
 
       [BsonField]
-      public int BlockHeightLastUpdatedOnDisk;
+      public int BlockHeightLastUpdated;
 
       [BsonField]
       public int Nonce;

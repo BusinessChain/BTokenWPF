@@ -23,7 +23,8 @@ namespace BTokenLib
 
     public DBAccounts DBAccounts;
     LiteDatabase Database;
-    ILiteCollection<Account> AccountsCollection;
+    ILiteCollection<BsonDocument> DatabaseMetaCollection;
+    ILiteCollection<Account> DatabaseAccountsCollection;
 
     public enum TypesToken
     {
@@ -60,13 +61,11 @@ namespace BTokenLib
       for (int i = 0; i < COUNT_FILES_DB; i++)
         FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
 
-      Database = new LiteDatabase("bToken.db");
-      AccountsCollection = Database.GetCollection<Account>("accounts");
+      Database = new LiteDatabase("bToken.db;Mode=Exclusive");
+      DatabaseAccountsCollection = Database.GetCollection<Account>("accounts");
+      DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
 
-      AppDomain.CurrentDomain.ProcessExit += (s, e) =>
-      {
-        Database?.Dispose();
-      };
+      AppDomain.CurrentDomain.ProcessExit += (s, e) => { Database?.Dispose(); };
     }
 
     public override void LoadImageHeaderchain()
@@ -115,8 +114,6 @@ namespace BTokenLib
           $"Failed to parse header at index {startIndex}: {ex.Message}".Log(this, LogFile, LogEntryNotifier);
           break;
         }
-
-      HeightBlockchainDatabaseOnDisk = HeaderTip.Height;
     }
 
     public override void LoadBlocksFromArchive()
@@ -189,9 +186,9 @@ namespace BTokenLib
     // Evt. DB Accounts nach hier transferieren
     Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
     Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
-    const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 250_000_000; // Read from configuration file
-    const double HYSTERESIS_COUNT_MAX_BYTES_IN_BLOCK_ARCHIV = 0.9;
-    int HeightBlockchainDatabaseOnDisk;
+    const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
+    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
+    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
     string PathRootDB;
     public const int COUNT_FILES_DB = 256;
@@ -218,13 +215,7 @@ namespace BTokenLib
         AccountsStaged.Clear();
       }
 
-      string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
-      block.WriteToDisk(pathRootFileBlock);
-
-      long totalBytesBlocksInArchive = new DirectoryInfo(pathRootFileBlock).EnumerateFiles().Sum(f => f.Length);
-
-      if (totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE)
-        DumpCacheToDisk();
+      DumpCacheToDisk(block);
     }
 
     public void StageSpendInput(TXBToken tX)
@@ -236,7 +227,7 @@ namespace BTokenLib
       {
         if (Cache.TryGetValue(tX.IDAccountSource, out Account accountCached))
           accountStaged = new(accountCached);
-        else if (AccountsCollection.FindById(tX.IDAccountSource) is Account accountStored)
+        else if (DatabaseAccountsCollection.FindById(tX.IDAccountSource) is Account accountStored)
           accountStaged = new(accountStored);
         else
           throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
@@ -264,7 +255,7 @@ namespace BTokenLib
             Nonce = accountCached.Nonce,
             Balance = accountCached.Balance + output.Value
           };
-        else if (AccountsCollection.FindById(output.IDAccount) is Account accountStored)
+        else if (DatabaseAccountsCollection.FindById(output.IDAccount) is Account accountStored)
           accountStaged = new()
           {
             ID = accountStored.ID,
@@ -285,15 +276,22 @@ namespace BTokenLib
       }
     }
 
-    // Was machen wenn Account gelöscht -> noch stehen lassen und erst später löschen
-    // Was passiert, wenn Account bereits geupdated mit dieser Blockheight !! Das machen, hü
-    public void DumpCacheToDisk()
+    public void DumpCacheToDisk(Block block)
     {
-      int heightBlock = HeightBlockchainDatabaseOnDisk + 1;
+      string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
+      block.WriteToDisk(pathRootFileBlock);
 
-      // Stattdessen sagen, ich will einfach Blöcke im Wert von z.B. 50MB löschen
-      while (Cache.Count > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE * HYSTERESIS_COUNT_MAX_BYTES_IN_BLOCK_ARCHIV) 
-        if (TryLoadBlock(heightBlock, out Block block))
+      long totalBytesBlocksInArchive = new DirectoryInfo(pathRootFileBlock).EnumerateFiles().Sum(f => f.Length);
+
+      if (totalBytesBlocksInArchive < COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE && Cache.Count < COUNT_MAX_ACCOUNTS_IN_CACHE)
+        return;
+
+      int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+
+      // Stattdessen sagen, ich will einfach Blöcke im Wert von z.B. 50MB löschen, das machen hü jitzt.
+      while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV ||
+        totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE) 
+        if (TryLoadBlock(heightBlock, out block))
         {
           try
           {
@@ -301,17 +299,18 @@ namespace BTokenLib
 
             foreach (TXBToken tX in block.TXs)
             {
+              RemoveAccountFromCache(tX.IDAccountSource, heightBlock);
+
               if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
               {
-                accountSource = AccountsCollection.FindById(tX.IDAccountSource);
-
-                if (accountSource == null)
+                accountSource = DatabaseAccountsCollection.FindById(tX.IDAccountSource) ??
                   throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
 
-                if (accountSource.BlockHeightLastUpdatedOnDisk == heightBlock)
-                  continue;
-
-                AccountsStaged.Add(accountSource.ID, accountSource);
+                if (accountSource.BlockHeightLastUpdated < heightBlock)
+                {
+                  accountSource.BlockHeightLastUpdated = heightBlock;
+                  AccountsStaged.Add(accountSource.ID, accountSource);
+                }
               }
 
               accountSource.Nonce += 1;
@@ -319,45 +318,66 @@ namespace BTokenLib
 
               foreach (TXOutputBToken tXOutput in tX.TXOutputs)
               {
+                RemoveAccountFromCache(tXOutput.IDAccount, heightBlock);
+
                 if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
                 {
-                  accountOutput = AccountsCollection.FindById(tXOutput.IDAccount) ??
+                  accountOutput = DatabaseAccountsCollection.FindById(tXOutput.IDAccount) ??
                     new()
                     {
                       ID = tXOutput.IDAccount,
                       BlockHeightAccountCreated = heightBlock
                     };
 
-                  AccountsStaged.Add(accountOutput.ID, accountOutput);
+                  if (accountOutput.BlockHeightLastUpdated < heightBlock)
+                  {
+                    accountOutput.BlockHeightLastUpdated = heightBlock;
+                    AccountsStaged.Add(accountOutput.ID, accountOutput);
+                  }
                 }
 
-                accountOutput.BlockHeightLastUpdatedOnDisk = heightBlock;
                 accountOutput.Balance += tXOutput.Value;
               }
-
-              foreach (IEnumerable<Account> batchAccountsStaged in AccountsStaged.Values.Chunk(500))
-                AccountsCollection.Upsert(batchAccountsStaged);
             }
 
-            // Das auch in der LiteDB abspeichern, evt. die ganze Headerchain in der LiteDB abspeichern.
+            foreach (IEnumerable<Account> batchAccountsStaged in AccountsStaged.Values.Chunk(500))
+              DatabaseAccountsCollection.Upsert(batchAccountsStaged);
+
+            DatabaseMetaCollection.Upsert(new BsonDocument
+            {
+              ["_id"] = "lastProcessedBlock",
+              ["height"] = heightBlock
+            });
+
+            // Wie Header in DB schreiben ?
             block.Header.WriteToDiskAtomic(PathFileHeaderchain);
 
-            RemoveBlockFromCache(block);
-
-            heightBlock += 1;
+            AccountsStaged.Clear();
           }
-          catch (ProtocolException ex)
+          finally
           {
-            $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-            .Log(this, LogEntryNotifier);
-
             File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
           }
+
+          totalBytesBlocksInArchive -= block.Buffer.Length;
+
+          heightBlock += 1;
         }
         else
         {
           // Reload state
         }
+
+      DatabaseAccountsCollection.DeleteMany(account => account.Balance == 0);
+
+      Database.Checkpoint();
+    }
+
+    void RemoveAccountFromCache(byte[] idAccount, int heightBlock)
+    {
+      if (Cache.TryGetValue(idAccount, out Account account))
+        if (account.BlockHeightLastUpdated == heightBlock)
+          Cache.Remove(idAccount);
     }
 
     public override void ReverseBlockInDB(Block block)
