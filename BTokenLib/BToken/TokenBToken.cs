@@ -21,10 +21,10 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    public DBAccounts DBAccounts;
     LiteDatabase Database;
     ILiteCollection<BsonDocument> DatabaseMetaCollection;
-    ILiteCollection<Account> DatabaseAccountsCollection;
+    ILiteCollection<Account> DatabaseAccountCollection;
+    ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
     public enum TypesToken
     {
@@ -43,7 +43,6 @@ namespace BTokenLib
           logEntryNotifier,
           tokenParent)
     {
-      DBAccounts = new(GetName());
       PathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
 
       Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
@@ -62,61 +61,73 @@ namespace BTokenLib
         FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
 
       Database = new LiteDatabase("bToken.db;Mode=Exclusive");
-      DatabaseAccountsCollection = Database.GetCollection<Account>("accounts");
+      DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
+      DatabaseHeaderCollection = Database.GetCollection<BsonDocument>("headers");
       DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
 
       AppDomain.CurrentDomain.ProcessExit += (s, e) => { Database?.Dispose(); };
     }
 
-    public override void LoadImageHeaderchain()
+    protected override void LoadHeaderTip()
     {
-      SHA256 sHA256 = SHA256.Create();
+      HeaderTip = HeaderGenesis;
 
-      if (!File.Exists(PathFileHeaderchain))
-        return;
+      byte[] hash;
+      int height;
+      byte[] headerBuffer = null;
 
-      $"Load headerchain file {PathFileHeaderchain}.".Log(this, LogFile, LogEntryNotifier);
+      try
+      {
+        hash = DatabaseMetaCollection.FindById("lastProcessedBlock")["hash"].AsBinary;
+        height = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32;
 
-      byte[] bytesHeaderImage = File.ReadAllBytes(PathFileHeaderchain);
-      int startIndex = 0;
+        if (hash.IsAllBytesEqual(HeaderGenesis.Hash))
+          return;
 
-      while (startIndex < bytesHeaderImage.Length)
-        try
+        headerBuffer = DatabaseHeaderCollection.FindById(hash)["buffer"].AsBinary;
+
+        SHA256 sHA256 = SHA256.Create();
+        Header header = null;
+        int startIndex = 0;
+
+        header = ParseHeader(headerBuffer, ref startIndex, sHA256);
+        header.Height = height;
+
+        header.CountBytesTXs = BitConverter.ToInt32(headerBuffer, startIndex);
+        startIndex += 4;
+
+        int countHashesChild = VarInt.GetInt(headerBuffer, ref startIndex);
+
+        for (int i = 0; i < countHashesChild; i++)
         {
-          Header header = ParseHeader(bytesHeaderImage, ref startIndex, sHA256);
+          byte[] iDToken = new byte[IDToken.Length];
+          Array.Copy(headerBuffer, startIndex, iDToken, 0, iDToken.Length);
+          startIndex += iDToken.Length;
 
-          header.CountBytesTXs = BitConverter.ToInt32(bytesHeaderImage, startIndex);
-          startIndex += 4;
+          byte[] hashesChild = new byte[32];
+          Array.Copy(headerBuffer, startIndex, hashesChild, 0, 32);
+          startIndex += 32;
 
-          int countHashesChild = VarInt.GetInt(bytesHeaderImage, ref startIndex);
-
-          for (int i = 0; i < countHashesChild; i++)
-          {
-            byte[] iDToken = new byte[IDToken.Length];
-            Array.Copy(bytesHeaderImage, startIndex, iDToken, 0, iDToken.Length);
-            startIndex += iDToken.Length;
-
-            byte[] hashesChild = new byte[32];
-            Array.Copy(bytesHeaderImage, startIndex, hashesChild, 0, 32);
-            startIndex += 32;
-
-            header.HashesChild.Add(iDToken, hashesChild);
-          }
-
-          header.AppendToHeader(HeaderTip);
-          HeaderTip.HeaderNext = header;
-          HeaderTip = header;
-
-          IndexingHeaderTip();
+          header.HashesChild.Add(iDToken, hashesChild);
         }
-        catch (Exception ex)
+
+        HeaderTip = header;
+      }
+      catch (Exception ex)
+      {
+        ($"Exception {ex.GetType().Name} thrown when trying to load headerTip from database: \n{ex.Message}\n" +
+          $"Set HeaderTip to HeaderGenesis.").Log(this, LogEntryNotifier);
+
+        DatabaseMetaCollection.Upsert(new BsonDocument
         {
-          $"Failed to parse header at index {startIndex}: {ex.Message}".Log(this, LogFile, LogEntryNotifier);
-          break;
-        }
+          ["_id"] = "lastProcessedBlock",
+          ["hash"] = HeaderGenesis.Hash,
+          ["height"] = 0
+        });
+      }
     }
 
-    public override void LoadBlocksFromArchive()
+    public override void LoadBlocksFromArchive(int heightMax = int.MaxValue)
     {
       int heightBlock = HeaderTip.Height + 1;
 
@@ -218,7 +229,7 @@ namespace BTokenLib
       DumpCacheToDisk(block);
     }
 
-    public void StageSpendInput(TXBToken tX)
+    void StageSpendInput(TXBToken tX)
     {
       if (tX is TXBTokenCoinbase)
         return;
@@ -227,7 +238,7 @@ namespace BTokenLib
       {
         if (Cache.TryGetValue(tX.IDAccountSource, out Account accountCached))
           accountStaged = new(accountCached);
-        else if (DatabaseAccountsCollection.FindById(tX.IDAccountSource) is Account accountStored)
+        else if (DatabaseAccountCollection.FindById(tX.IDAccountSource) is Account accountStored)
           accountStaged = new(accountStored);
         else
           throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
@@ -238,7 +249,7 @@ namespace BTokenLib
       accountStaged.SpendTX(tX);
     }
 
-    public void StageOutput(TXOutputBToken output, int blockHeight)
+    void StageOutput(TXOutputBToken output, int blockHeight)
     {
       if (output.Value <= 0)
         throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
@@ -255,7 +266,7 @@ namespace BTokenLib
             Nonce = accountCached.Nonce,
             Balance = accountCached.Balance + output.Value
           };
-        else if (DatabaseAccountsCollection.FindById(output.IDAccount) is Account accountStored)
+        else if (DatabaseAccountCollection.FindById(output.IDAccount) is Account accountStored)
           accountStaged = new()
           {
             ID = accountStored.ID,
@@ -276,7 +287,7 @@ namespace BTokenLib
       }
     }
 
-    public void DumpCacheToDisk(Block block)
+    void DumpCacheToDisk(Block block)
     {
       string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
       block.WriteToDisk(pathRootFileBlock);
@@ -288,7 +299,6 @@ namespace BTokenLib
 
       int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
 
-      // Stattdessen sagen, ich will einfach Blöcke im Wert von z.B. 50MB löschen, das machen hü jitzt.
       while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV ||
         totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE) 
         if (TryLoadBlock(heightBlock, out block))
@@ -303,7 +313,7 @@ namespace BTokenLib
 
               if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
               {
-                accountSource = DatabaseAccountsCollection.FindById(tX.IDAccountSource) ??
+                accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
                   throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
 
                 if (accountSource.BlockHeightLastUpdated < heightBlock)
@@ -322,7 +332,7 @@ namespace BTokenLib
 
                 if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
                 {
-                  accountOutput = DatabaseAccountsCollection.FindById(tXOutput.IDAccount) ??
+                  accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
                     new()
                     {
                       ID = tXOutput.IDAccount,
@@ -341,21 +351,24 @@ namespace BTokenLib
             }
 
             foreach (IEnumerable<Account> batchAccountsStaged in AccountsStaged.Values.Chunk(500))
-              DatabaseAccountsCollection.Upsert(batchAccountsStaged);
+              DatabaseAccountCollection.Upsert(batchAccountsStaged);
+
+            DatabaseHeaderCollection.Upsert(new BsonDocument
+            {
+              ["_id"] = block.Header.Hash,
+              ["buffer"] = block.Header.Serialize()
+            });
 
             DatabaseMetaCollection.Upsert(new BsonDocument
             {
               ["_id"] = "lastProcessedBlock",
+              ["hash"] = block.Header.Hash,
               ["height"] = heightBlock
             });
-
-            // Wie Header in DB schreiben ?
-            block.Header.WriteToDiskAtomic(PathFileHeaderchain);
-
-            AccountsStaged.Clear();
           }
           finally
           {
+            AccountsStaged.Clear();
             File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
           }
 
@@ -368,7 +381,7 @@ namespace BTokenLib
           // Reload state
         }
 
-      DatabaseAccountsCollection.DeleteMany(account => account.Balance == 0);
+      DatabaseAccountCollection.DeleteMany(account => account.Balance == 0);
 
       Database.Checkpoint();
     }
@@ -432,12 +445,12 @@ namespace BTokenLib
 
       List<byte[]> hashesDB = new();
 
-      for (int i = 0; i < DBAccounts.COUNT_CACHES + DBAccounts.COUNT_FILES_DB; i += 32)
-      {
-        byte[] hashDB = new byte[32];
-        Array.Copy(buffer, i, hashDB, 0, 32);
-        hashesDB.Add(hashDB);
-      }
+      //for (int i = 0; i < DBAccounts.COUNT_CACHES + DBAccounts.COUNT_FILES_DB; i += 32)
+      //{
+      //  byte[] hashDB = new byte[32];
+      //  Array.Copy(buffer, i, hashDB, 0, 32);
+      //  hashesDB.Add(hashDB);
+      //}
 
       return hashesDB;
     }
@@ -468,7 +481,7 @@ namespace BTokenLib
     public override void Reset()
     {
       base.Reset();
-      DBAccounts.ClearCache();
+      Cache.Clear();
     }
 
     public override bool TryGetDB(byte[] hash, out byte[] dataDB)

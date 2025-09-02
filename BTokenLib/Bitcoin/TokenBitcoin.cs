@@ -191,7 +191,7 @@ namespace BTokenLib
         };
     }
 
-    public override void LoadImageHeaderchain()
+    public override void LoadHeaderTip()
     {
 
     }

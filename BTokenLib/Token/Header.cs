@@ -58,6 +58,14 @@ namespace BTokenLib
 
     public abstract byte[] Serialize();
 
+    public HeaderDB GetHeaderDB()
+    {
+      return new()
+      {
+        Hash = Hash,
+        Data = Serialize()
+      };
+    }
 
     private void ModifyFileAtomic(string pathOriginal, Action<string> modifyTempFile)
     {

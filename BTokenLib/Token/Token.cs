@@ -95,9 +95,7 @@ namespace BTokenLib
 
       PathBlockArchive = PathBlockArchiveMain;
 
-      HeaderTip = HeaderGenesis;
       IndexHeaders.Clear();
-      IndexingHeaderTip();
 
       Wallet.Clear();
     }
@@ -109,7 +107,7 @@ namespace BTokenLib
       while (token.TokenParent != null)
         token = TokenParent;
 
-      token.LoadState();
+      token.LoadCache();
       token.LoadTXPool();
       token.StartNetwork();
     }
@@ -176,20 +174,20 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void LoadState()
+    public void LoadCache(int heightMax = int.MaxValue)
     {
       Reset();
 
-      LoadImageHeaderchain();
+      LoadHeaderTip();
 
-      LoadBlocksFromArchive();
+      LoadBlocksFromArchive(heightMax);
 
-      TokensChild.ForEach(t => t.LoadState());
+      TokensChild.ForEach(t => t.LoadCache());
     }
 
-    public abstract void LoadImageHeaderchain();
+    protected abstract void LoadHeaderTip();
 
-    public abstract void LoadBlocksFromArchive();
+    public abstract void LoadBlocksFromArchive(int heightMax);
 
     public void LoadTXPool()
     {
@@ -269,13 +267,17 @@ namespace BTokenLib
 
     // Beim Reversen einfach den cache droppen und neu laden bis zur gewünschten höhe.
     // Wenn zu einer height geladen werden soll, welche tiefer als der cache ist, wird direkt 
-    // die Fork DB geladen, zuerst MerkleRoot dan testen ob hash mit DB-Hash im header übereinstimmt.
+    // die Fork DB geladen, zuerst MerkleRoot, dann testen ob hash mit DB-Hash im header übereinstimmt.
     // Falls ja, wird neue DB geladen, während alte noch bewahrt wird, bis gültigkeit der neuen bestätigt ist.
     // Später kann man evt. mit diff. File arbeiten.
-    public bool TryReverseBlockchainToHeight(int height)
+    public bool TryReverseCacheToHeight(int height)
     {
       // Droppe einfach die aktuelle Cache DB und versuche auf Height zu builden
       // testen ob height tiefer ist als Cache.
+
+      // Hier wird einfach der Cache neu aufgebaut aber nur bis height. 
+      // DB wird nicht gelöscht.
+      LoadCache(height); 
 
       List<Block> blocksReversed = new();
       List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
@@ -336,7 +338,7 @@ namespace BTokenLib
       // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
       // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
       // lokale Blockarchiv 
-      LoadState();
+      LoadCache();
 
       return false;
     }

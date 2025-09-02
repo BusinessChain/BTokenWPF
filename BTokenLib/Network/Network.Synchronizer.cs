@@ -78,7 +78,7 @@ namespace BTokenLib
       else if (HeaderchainDownload.IsStrongerThan(Token.HeaderTip))
       {
         if(HeaderchainDownload.IsFork)
-          if (!Token.TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor()))
+          if (!Token.TryReverseCacheToHeight(HeaderchainDownload.GetHeightAncestor()))
           {
             HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
             PeerSync.SendHeaders(HeaderchainDownload.Locator);
@@ -187,7 +187,7 @@ namespace BTokenLib
         if (Token.HeaderTip.DifficultyAccumulated > HeaderchainDownload.HeaderTipTokenInitial.DifficultyAccumulated)
           Token.Reorganize();
         else
-          Token.TryReverseBlockchainToHeight(HeaderchainDownload.HeaderRoot.HeaderPrevious.Height);
+          Token.TryReverseCacheToHeight(HeaderchainDownload.HeaderRoot.HeaderPrevious.Height);
       }
 
       lock (LOCK_IsStateSync)
