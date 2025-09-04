@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -149,6 +150,77 @@ namespace BTokenLib
     {
       // In Bitcoin we simply assume that everything is ok.
       // Actually, we could also use a UTXO database but only for our address
+    }
+
+
+    public override bool TryReverseCacheToHeight(int height)
+    {
+      // Hier wird einfach der Cache neu aufgebaut aber nur bis height. 
+      // DB wird nicht gelöscht.
+      LoadCache(height);
+
+      List<Block> blocksReversed = new();
+      List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
+
+      TXsPoolBackup.Clear();
+      TXPool.Clear();
+      Wallet.ClearTXsUnconfirmed();
+
+      while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
+        try
+        {
+          ReverseBlockInDB(block);
+
+          Wallet.ReverseBlock(block);
+
+          RemoveIndexHeaderTip();
+
+          HeaderTip = HeaderTip.HeaderPrevious;
+          HeaderTip.HeaderNext = null;
+
+          blocksReversed.Add(block);
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
+          .Log(this, LogEntryNotifier);
+
+          break;
+        }
+
+      if (height == HeaderTip.Height)
+      {
+        //blocksReversed.Reverse();
+
+        //foreach (Block block in blocksReversed)
+        //  foreach (TX tX in block.TXs)
+        //    InsertTXUnconfirmed(tX);
+
+        //foreach (TX tX in tXsPoolBackup)
+        //  InsertTXUnconfirmed(tX);
+
+        if (PathBlockArchive == PathBlockArchiveMain)
+        {
+          Directory.CreateDirectory(PathBlockArchiveFork);
+          PathBlockArchive = PathBlockArchiveFork;
+        }
+        else if (PathBlockArchive == PathBlockArchiveFork)
+        {
+          Directory.Delete(PathBlockArchiveFork, recursive: true);
+          PathBlockArchive = PathBlockArchiveMain;
+        }
+
+        return true;
+      }
+
+      $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
+
+      // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
+      // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
+      // lokale Blockarchiv 
+      LoadCache();
+
+      return false;
     }
 
     public override void ReverseBlockInDB(Block block)

@@ -174,20 +174,20 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void LoadCache(int heightMax = int.MaxValue)
+    public void LoadCache()
     {
       Reset();
 
       LoadHeaderTip();
 
-      LoadBlocksFromArchive(heightMax);
+      LoadBlocksFromArchive();
 
       TokensChild.ForEach(t => t.LoadCache());
     }
 
     protected abstract void LoadHeaderTip();
 
-    public abstract void LoadBlocksFromArchive(int heightMax);
+    public abstract void LoadBlocksFromArchive(int heightMax = int.MaxValue);
 
     public void LoadTXPool()
     {
@@ -270,78 +270,7 @@ namespace BTokenLib
     // die Fork DB geladen, zuerst MerkleRoot, dann testen ob hash mit DB-Hash im header übereinstimmt.
     // Falls ja, wird neue DB geladen, während alte noch bewahrt wird, bis gültigkeit der neuen bestätigt ist.
     // Später kann man evt. mit diff. File arbeiten.
-    public bool TryReverseCacheToHeight(int height)
-    {
-      // Droppe einfach die aktuelle Cache DB und versuche auf Height zu builden
-      // testen ob height tiefer ist als Cache.
-
-      // Hier wird einfach der Cache neu aufgebaut aber nur bis height. 
-      // DB wird nicht gelöscht.
-      LoadCache(height); 
-
-      List<Block> blocksReversed = new();
-      List<TX> tXsPoolBackup = TXsPoolBackup.ToList();
-
-      TXsPoolBackup.Clear();
-      TXPool.Clear();
-      Wallet.ClearTXsUnconfirmed();
-
-      while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
-        try
-        {
-          ReverseBlockInDB(block);
-
-          Wallet.ReverseBlock(block);
-
-          RemoveIndexHeaderTip();
-
-          HeaderTip = HeaderTip.HeaderPrevious;
-          HeaderTip.HeaderNext = null;
-
-          blocksReversed.Add(block);
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
-          .Log(this, LogEntryNotifier);
-
-          break;
-        }
-
-      if (height == HeaderTip.Height)
-      {
-        //blocksReversed.Reverse();
-
-        //foreach (Block block in blocksReversed)
-        //  foreach (TX tX in block.TXs)
-        //    InsertTXUnconfirmed(tX);
-
-        //foreach (TX tX in tXsPoolBackup)
-        //  InsertTXUnconfirmed(tX);
-
-        if(PathBlockArchive == PathBlockArchiveMain)
-        {
-          Directory.CreateDirectory(PathBlockArchiveFork);
-          PathBlockArchive = PathBlockArchiveFork;
-        }
-        else if(PathBlockArchive == PathBlockArchiveFork)
-        {
-          Directory.Delete(PathBlockArchiveFork, recursive: true);
-          PathBlockArchive = PathBlockArchiveMain;
-        }
-
-        return true;
-      }
-
-      $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
-
-      // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
-      // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
-      // lokale Blockarchiv 
-      LoadCache();
-
-      return false;
-    }
+    public abstract bool TryReverseCacheToHeight(int height);
 
     public abstract void ReverseBlockInDB(Block block);
                   
@@ -435,9 +364,6 @@ namespace BTokenLib
 
       return buffer != null;
     }
-
-    public virtual void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
-    { throw new NotImplementedException(); }
 
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }

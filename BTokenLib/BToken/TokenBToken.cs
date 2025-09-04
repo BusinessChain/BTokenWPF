@@ -57,9 +57,6 @@ namespace BTokenLib
       BlockRewardInitial = BLOCK_REWARD_INITIAL;
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
 
-      for (int i = 0; i < COUNT_FILES_DB; i++)
-        FilesDB.Add(new FileDB(Path.Combine(PathRootDB, i.ToString())));
-
       Database = new LiteDatabase("bToken.db;Mode=Exclusive");
       DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
       DatabaseHeaderCollection = Database.GetCollection<BsonDocument>("headers");
@@ -127,11 +124,11 @@ namespace BTokenLib
       }
     }
 
-    public override void LoadBlocksFromArchive(int heightMax = int.MaxValue)
+    public override void LoadBlocksFromArchive(int heightTarget)
     {
-      int heightBlock = HeaderTip.Height + 1;
+      int heightBlockNext = HeaderTip.Height + 1;
 
-      while (TryLoadBlock(heightBlock, out Block block))
+      while (HeaderTip.Height < heightTarget && TryLoadBlock(heightBlockNext, out Block block))
         try
         {
           $"Load block {block}.".Log(this, LogEntryNotifier);
@@ -140,16 +137,17 @@ namespace BTokenLib
 
           InsertBlockInDatabase(block);
 
-          Wallet.InsertBlock(block);
+          HeaderTip.HeaderNext = block.Header;
+          HeaderTip = block.Header;
 
-          heightBlock += 1;
+          Wallet.InsertBlock(block);
         }
         catch (ProtocolException ex)
         {
-          $"{ex.GetType().Name} when inserting block {block}, height {heightBlock} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
           .Log(this, LogEntryNotifier);
 
-          File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
+          File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
         }
     }
 
@@ -203,7 +201,6 @@ namespace BTokenLib
 
     string PathRootDB;
     public const int COUNT_FILES_DB = 256;
-    List<FileDB> FilesDB = new();
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
 
     public override void InsertBlockInDatabase(Block block)
@@ -393,45 +390,13 @@ namespace BTokenLib
           Cache.Remove(idAccount);
     }
 
-    public override void ReverseBlockInDB(Block block)
+    public override bool TryReverseCacheToHeight(int height)
     {
-      for (int i = block.TXs.Count - 1; i >= 0; i--)
-      {
-        TXBToken tX = block.TXs[i] as TXBToken;
+      Cache.Clear();
+      LoadHeaderTip();
+      LoadBlocksFromArchive(height);
 
-        if (tX is TXBTokenCoinbase tXCoinbase)
-        {
-          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
-            DBAccounts.ReverseOutput(tXOutput);
-        }
-        else
-        {
-          DBAccounts.ReverseSpendInput(tX);
-
-          if (tX is TXBTokenValueTransfer tXTokenTransfer)
-          {
-            foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
-              DBAccounts.ReverseOutput(tXOutput);
-          }
-          else if (tX is TXBTokenAnchor tXBTokenAnchor)
-          { }
-          else if (tX is TXBTokenData tXBTokenData)
-          { }
-          else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
-        }
-      }
-
-      block.Header.ReverseHeaderOnDiskAtomic(PathFileHeaderchain);
-    }
-
-    public override void InsertDB(byte[] bufferDB, int lengthDataInBuffer)
-    {
-      int startIndex = 0;
-
-      FileDB fileDB = new(Path.Combine(PathRootDB, bufferDB[startIndex].ToString()));
-      fileDB.Write(bufferDB, startIndex, lengthDataInBuffer - 1);
-
-      FilesDB.Add(fileDB);
+      return HeaderTip.Height == height;
     }
 
     public override List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
@@ -484,20 +449,6 @@ namespace BTokenLib
       Cache.Clear();
     }
 
-    public override bool TryGetDB(byte[] hash, out byte[] dataDB)
-    {
-      for (int i = 0; i < HashesFilesDB.Length; i++)
-        if (hash.IsAllBytesEqual(HashesFilesDB, i * 32))
-        {
-          dataDB = new byte[FilesDB[i].Length];
-          FilesDB[i].Write(dataDB, 0, dataDB.Length);
-          return true;
-        }
-
-      dataDB = null;
-      return false;
-    }
-
     public override List<string> GetSeedAddresses()
     {
       return new List<string>()
@@ -512,7 +463,7 @@ namespace BTokenLib
       if(!DBAccounts.TryGetAccount(iDAccount, out Account account))
         throw new ProtocolException($"Account {iDAccount} not in database.");
 
-      return ((PoolTXBToken)TXPool).ApplyTXsOnAccount(account);
+      return ((PoolTXBToken)TXPool).ApplyTXTryReverseCacheToHeightsOnAccount(account);
     }
 
     public override HeaderBToken ParseHeader(byte[] buffer, ref int index, SHA256 sHA256)
