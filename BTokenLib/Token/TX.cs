@@ -15,8 +15,6 @@ namespace BTokenLib
 
     public byte[] TXRaw;
 
-    public bool FlagPrune = true;
-
 
     public abstract List<TokenAnchor> GetTokenAnchors();
 

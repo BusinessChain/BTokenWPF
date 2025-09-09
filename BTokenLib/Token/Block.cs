@@ -61,8 +61,6 @@ namespace BTokenLib
 
         foreach(TokenAnchor tokenAnchor in tX.GetTokenAnchors())
         {
-          tX.FlagPrune = false;
-
           byte[] differenceHash = SHA256.HashData(Header.Hash).SubtractByteWise(tokenAnchor.HashBlockReferenced);
 
           if (tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out TX tXAnchorWinner))
@@ -173,12 +171,11 @@ namespace BTokenLib
         byte[] bufferHeader = Header.Serialize();
         fileStream.Write(bufferHeader, 0, bufferHeader.Length);
 
-        byte[] countTXs = VarInt.GetBytes(TXs.Count(t => !t.FlagPrune));
+        byte[] countTXs = VarInt.GetBytes(TXs.Count);
         fileStream.Write(countTXs, 0, countTXs.Length);
 
         for (int i = 0; i < TXs.Count; i++)
-          if (!TXs[i].FlagPrune)
-            fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+          fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
       }
     }
 

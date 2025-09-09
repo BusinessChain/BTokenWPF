@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
+using LiteDB;
+
 
 namespace BTokenLib
 {
@@ -20,7 +22,6 @@ namespace BTokenLib
 
     public Header HeaderGenesis;
     public Header HeaderTip;
-    Dictionary<int, List<Header>> IndexHeaders = new();
 
     public long BlockRewardInitial;
     public int PeriodHalveningBlockReward;
@@ -35,6 +36,14 @@ namespace BTokenLib
     public string PathBlockArchiveMain = "PathBlockArchiveMain";
     public string PathBlockArchiveFork = "PathBlockArchiveFork";
     public string PathFileHeaderchain;
+
+    protected LiteDatabase Database;
+    protected ILiteCollection<BsonDocument> DatabaseMetaCollection;
+    protected ILiteCollection<BsonDocument> DatabaseHeaderCollection;
+
+    const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
+    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
+    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
     public Wallet Wallet;
 
@@ -65,6 +74,10 @@ namespace BTokenLib
         FileAccess.ReadWrite,
         FileShare.Read);
 
+      Database = new LiteDatabase($"{GetName()}.db;Mode=Exclusive");
+      DatabaseHeaderCollection = Database.GetCollection<BsonDocument>("headers");
+      DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
+
       HeaderGenesis = CreateHeaderGenesis();
 
       Network = new(this, port, flagEnableInboundConnections);
@@ -94,8 +107,6 @@ namespace BTokenLib
         Directory.Delete(PathBlockArchiveFork, recursive: true);
 
       PathBlockArchive = PathBlockArchiveMain;
-
-      IndexHeaders.Clear();
 
       Wallet.Clear();
     }
@@ -174,7 +185,7 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void LoadCache()
+    protected void LoadCache()
     {
       Reset();
 
@@ -185,9 +196,92 @@ namespace BTokenLib
       TokensChild.ForEach(t => t.LoadCache());
     }
 
-    protected abstract void LoadHeaderTip();
+    void LoadHeaderTip()
+    {
+      HeaderTip = HeaderGenesis;
 
-    public abstract void LoadBlocksFromArchive(int heightMax = int.MaxValue);
+      byte[] hash;
+      int height;
+      byte[] headerBuffer = null;
+
+      try
+      {
+        hash = DatabaseMetaCollection.FindById("lastProcessedBlock")["hash"].AsBinary;
+        height = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32;
+
+        if (hash.IsAllBytesEqual(HeaderGenesis.Hash))
+          return;
+
+        headerBuffer = DatabaseHeaderCollection.FindById(hash)["buffer"].AsBinary;
+
+        SHA256 sHA256 = SHA256.Create();
+        Header header = null;
+        int startIndex = 0;
+
+        header = ParseHeader(headerBuffer, ref startIndex, sHA256);
+        header.Height = height;
+
+        header.CountBytesTXs = BitConverter.ToInt32(headerBuffer, startIndex);
+        startIndex += 4;
+
+        int countHashesChild = VarInt.GetInt(headerBuffer, ref startIndex);
+
+        for (int i = 0; i < countHashesChild; i++)
+        {
+          byte[] iDToken = new byte[IDToken.Length];
+          Array.Copy(headerBuffer, startIndex, iDToken, 0, iDToken.Length);
+          startIndex += iDToken.Length;
+
+          byte[] hashesChild = new byte[32];
+          Array.Copy(headerBuffer, startIndex, hashesChild, 0, 32);
+          startIndex += 32;
+
+          header.HashesChild.Add(iDToken, hashesChild);
+        }
+
+        HeaderTip = header;
+      }
+      catch (Exception ex)
+      {
+        ($"Exception {ex.GetType().Name} thrown when trying to load headerTip from database: \n{ex.Message}\n" +
+          $"Set HeaderTip to HeaderGenesis.").Log(this, LogEntryNotifier);
+
+        DatabaseMetaCollection.Upsert(new BsonDocument
+        {
+          ["_id"] = "lastProcessedBlock",
+          ["hash"] = HeaderGenesis.Hash,
+          ["height"] = 0
+        });
+      }
+    }
+
+    void LoadBlocksFromArchive()
+    {
+      int heightBlockNext = HeaderTip.Height + 1;
+
+      while (TryLoadBlock(heightBlockNext, out Block block))
+        try
+        {
+          $"Load block {block}.".Log(this, LogEntryNotifier);
+
+          block.Header.AppendToHeader(HeaderTip);
+
+          InsertBlockInDatabaseCache(block);
+
+          HeaderTip.HeaderNext = block.Header;
+          HeaderTip = block.Header;
+
+          // Muss idempotent sein, da diese Blöcke schon beim ursprünglichen Cache insert in die Wallet DB eingeführt wurden.
+          Wallet.InsertBlock(block);
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+          .Log(this, LogEntryNotifier);
+
+          File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
+        }
+    }
 
     public void LoadTXPool()
     {
@@ -234,7 +328,53 @@ namespace BTokenLib
       PathBlockArchive = PathBlockArchiveMain;
     }
 
-    public abstract void InsertBlockInDatabase(Block block);
+    public bool TryReverseCacheToHeight(int height)
+    {
+      while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
+        try
+        {
+          ReverseBlockInDB(block);
+
+          Wallet.ReverseBlock(block);
+
+          DatabaseHeaderCollection.Delete(HeaderTip.Hash);
+
+          HeaderTip = HeaderTip.HeaderPrevious;
+          HeaderTip.HeaderNext = null;
+        }
+        catch (ProtocolException ex)
+        {
+          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
+          .Log(this, LogEntryNotifier);
+
+          break;
+        }
+
+      if (height == HeaderTip.Height)
+      {
+        if (PathBlockArchive == PathBlockArchiveMain)
+        {
+          Directory.CreateDirectory(PathBlockArchiveFork);
+          PathBlockArchive = PathBlockArchiveFork;
+        }
+        else if (PathBlockArchive == PathBlockArchiveFork)
+        {
+          Directory.Delete(PathBlockArchiveFork, recursive: true);
+          PathBlockArchive = PathBlockArchiveMain;
+        }
+
+        return true;
+      }
+
+      $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
+
+      // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
+      // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
+      // lokale Blockarchiv 
+      LoadState();
+
+      return false;
+    }
 
     public void InsertBlock(Block block)
     {
@@ -246,8 +386,6 @@ namespace BTokenLib
 
       HeaderTip.HeaderNext = block.Header;
       HeaderTip = block.Header;
-
-      IndexingHeaderTip();
 
       Wallet.InsertBlock(block);
 
@@ -261,16 +399,67 @@ namespace BTokenLib
           .InsertBlockMined(hashBlockChildToken.Value);
     }
 
+    void InsertBlockInDatabase(Block block)
+    {
+      int sizeCache = InsertBlockInDatabaseCache(block);
+
+      string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
+      block.WriteToDisk(pathRootFileBlock);
+
+      long totalBytesBlocksInArchive = new DirectoryInfo(pathRootFileBlock).EnumerateFiles().Sum(f => f.Length);
+
+      if (totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE || sizeCache > COUNT_MAX_ACCOUNTS_IN_CACHE)
+      {
+        int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+
+        while (sizeCache > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV ||
+        totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE)
+          if (TryLoadBlock(heightBlock, out block))
+          {
+            try
+            {
+              sizeCache = DumpBlockFromCacheToDB(block);
+
+              DatabaseHeaderCollection.Upsert(new BsonDocument
+              {
+                ["_id"] = block.Header.Hash,
+                ["buffer"] = block.Header.Serialize()
+              });
+
+              DatabaseMetaCollection.Upsert(new BsonDocument
+              {
+                ["_id"] = "lastProcessedBlock",
+                ["hash"] = block.Header.Hash,
+                ["height"] = heightBlock
+              });
+            }
+            finally
+            {
+              File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
+            }
+
+            totalBytesBlocksInArchive -= block.Buffer.Length;
+
+            heightBlock += 1;
+          }
+          else
+          {
+            // Reload state
+          }
+
+        Database.Checkpoint();
+      }
+    } 
+
+    protected virtual int InsertBlockInDatabaseCache(Block block)
+    {
+      return 0;
+    }
+
+    protected abstract int DumpBlockFromCacheToDB(Block block);
+
     public virtual void InsertBlockMined(byte[] hashBlock)
     { throw new NotImplementedException(); }
-
-
-    // Beim Reversen einfach den cache droppen und neu laden bis zur gewünschten höhe.
-    // Wenn zu einer height geladen werden soll, welche tiefer als der cache ist, wird direkt 
-    // die Fork DB geladen, zuerst MerkleRoot, dann testen ob hash mit DB-Hash im header übereinstimmt.
-    // Falls ja, wird neue DB geladen, während alte noch bewahrt wird, bis gültigkeit der neuen bestätigt ist.
-    // Später kann man evt. mit diff. File arbeiten.
-    public abstract bool TryReverseCacheToHeight(int height);
 
     public abstract void ReverseBlockInDB(Block block);
                   
@@ -312,7 +501,6 @@ namespace BTokenLib
 
     abstract protected void RunMining();
 
-    //Store tha last 400 MB if pruning is activated.
     public bool TryLoadBlock(int blockHeight, out Block block)
     {
       block = null;
@@ -446,33 +634,6 @@ namespace BTokenLib
       return locator;
     }
 
-    public List<Header> GetHeaders(IEnumerable<byte[]> locatorHashes, int count, byte[] stopHash)
-    {
-      foreach (byte[] hash in locatorHashes)
-      {
-        if (TryGetHeader(hash, out Header header))
-        {
-          List<Header> headers = new();
-
-          while (
-            header.HeaderNext != null &&
-            headers.Count < count &&
-            !header.Hash.IsAllBytesEqual(stopHash))
-          {
-            Header nextHeader = header.HeaderNext;
-
-            headers.Add(nextHeader);
-            header = nextHeader;
-          }
-
-          return headers;
-        }
-      }
-
-      throw new ProtocolException(string.Format(
-        "Locator does not root in headerchain."));
-    }
-
     public bool TryGetHeader(byte[] headerHash, out Header header)
     {
       header = null;
@@ -484,31 +645,6 @@ namespace BTokenLib
           header = headers.FirstOrDefault(h => headerHash.IsAllBytesEqual(h.Hash));
 
       return header != null;
-    }
-
-    protected void IndexingHeaderTip()
-    {
-      int keyHeader = BitConverter.ToInt32(HeaderTip.Hash, 0);
-
-      lock (IndexHeaders)
-      {
-        if (!IndexHeaders.TryGetValue(keyHeader, out List<Header> headers))
-        {
-          headers = new List<Header>();
-          IndexHeaders.Add(keyHeader, headers);
-        }
-
-        headers.Add(HeaderTip);
-      }
-    }
-
-    void RemoveIndexHeaderTip()
-    {
-      int keyHeader = BitConverter.ToInt32(HeaderTip.Hash, 0);
-
-      lock (IndexHeaders)
-        if (IndexHeaders.TryGetValue(BitConverter.ToInt32(HeaderTip.Hash, 0), out List<Header> headers))
-          headers.RemoveAll(h => h.Hash.IsAllBytesEqual(HeaderTip.Hash));
     }
   }
 }

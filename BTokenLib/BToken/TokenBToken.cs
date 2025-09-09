@@ -21,10 +21,7 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    LiteDatabase Database;
-    ILiteCollection<BsonDocument> DatabaseMetaCollection;
     ILiteCollection<Account> DatabaseAccountCollection;
-    ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
     public enum TypesToken
     {
@@ -57,98 +54,9 @@ namespace BTokenLib
       BlockRewardInitial = BLOCK_REWARD_INITIAL;
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
 
-      Database = new LiteDatabase("bToken.db;Mode=Exclusive");
       DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
-      DatabaseHeaderCollection = Database.GetCollection<BsonDocument>("headers");
-      DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
 
       AppDomain.CurrentDomain.ProcessExit += (s, e) => { Database?.Dispose(); };
-    }
-
-    protected override void LoadHeaderTip()
-    {
-      HeaderTip = HeaderGenesis;
-
-      byte[] hash;
-      int height;
-      byte[] headerBuffer = null;
-
-      try
-      {
-        hash = DatabaseMetaCollection.FindById("lastProcessedBlock")["hash"].AsBinary;
-        height = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32;
-
-        if (hash.IsAllBytesEqual(HeaderGenesis.Hash))
-          return;
-
-        headerBuffer = DatabaseHeaderCollection.FindById(hash)["buffer"].AsBinary;
-
-        SHA256 sHA256 = SHA256.Create();
-        Header header = null;
-        int startIndex = 0;
-
-        header = ParseHeader(headerBuffer, ref startIndex, sHA256);
-        header.Height = height;
-
-        header.CountBytesTXs = BitConverter.ToInt32(headerBuffer, startIndex);
-        startIndex += 4;
-
-        int countHashesChild = VarInt.GetInt(headerBuffer, ref startIndex);
-
-        for (int i = 0; i < countHashesChild; i++)
-        {
-          byte[] iDToken = new byte[IDToken.Length];
-          Array.Copy(headerBuffer, startIndex, iDToken, 0, iDToken.Length);
-          startIndex += iDToken.Length;
-
-          byte[] hashesChild = new byte[32];
-          Array.Copy(headerBuffer, startIndex, hashesChild, 0, 32);
-          startIndex += 32;
-
-          header.HashesChild.Add(iDToken, hashesChild);
-        }
-
-        HeaderTip = header;
-      }
-      catch (Exception ex)
-      {
-        ($"Exception {ex.GetType().Name} thrown when trying to load headerTip from database: \n{ex.Message}\n" +
-          $"Set HeaderTip to HeaderGenesis.").Log(this, LogEntryNotifier);
-
-        DatabaseMetaCollection.Upsert(new BsonDocument
-        {
-          ["_id"] = "lastProcessedBlock",
-          ["hash"] = HeaderGenesis.Hash,
-          ["height"] = 0
-        });
-      }
-    }
-
-    public override void LoadBlocksFromArchive(int heightTarget)
-    {
-      int heightBlockNext = HeaderTip.Height + 1;
-
-      while (HeaderTip.Height < heightTarget && TryLoadBlock(heightBlockNext, out Block block))
-        try
-        {
-          $"Load block {block}.".Log(this, LogEntryNotifier);
-
-          block.Header.AppendToHeader(HeaderTip);
-
-          InsertBlockInDatabase(block);
-
-          HeaderTip.HeaderNext = block.Header;
-          HeaderTip = block.Header;
-
-          Wallet.InsertBlock(block);
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-          .Log(this, LogEntryNotifier);
-
-          File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
-        }
     }
 
     public override Header CreateHeaderGenesis()
@@ -195,15 +103,12 @@ namespace BTokenLib
     // Evt. DB Accounts nach hier transferieren
     Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
     Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
-    const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
-    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
-    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
     string PathRootDB;
     public const int COUNT_FILES_DB = 256;
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
 
-    public override void InsertBlockInDatabase(Block block)
+    protected override int InsertBlockInDatabaseCache(Block block)
     {
       try
       {
@@ -217,13 +122,13 @@ namespace BTokenLib
 
         foreach (var account in AccountsStaged)
           Cache[account.Key] = account.Value;
+
+        return Cache.Count;
       }
       finally
       {
         AccountsStaged.Clear();
       }
-
-      DumpCacheToDisk(block);
     }
 
     void StageSpendInput(TXBToken tX)
@@ -284,103 +189,60 @@ namespace BTokenLib
       }
     }
 
-    void DumpCacheToDisk(Block block)
+    protected override int DumpBlockFromCacheToDB(Block block)
     {
-      string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
-      block.WriteToDisk(pathRootFileBlock);
+      $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+      int heightBlock = block.Header.Height;
 
-      long totalBytesBlocksInArchive = new DirectoryInfo(pathRootFileBlock).EnumerateFiles().Sum(f => f.Length);
+      foreach (TXBToken tX in block.TXs)
+      {
+        RemoveAccountFromCache(tX.IDAccountSource, heightBlock);
 
-      if (totalBytesBlocksInArchive < COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE && Cache.Count < COUNT_MAX_ACCOUNTS_IN_CACHE)
-        return;
-
-      int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
-
-      while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV ||
-        totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE) 
-        if (TryLoadBlock(heightBlock, out block))
+        if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
         {
-          try
+          accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
+            throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
+
+          if (accountSource.BlockHeightLastUpdated < heightBlock)
           {
-            $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+            accountSource.BlockHeightLastUpdated = heightBlock;
+            AccountsStaged.Add(accountSource.ID, accountSource);
+          }
+        }
 
-            foreach (TXBToken tX in block.TXs)
+        accountSource.Nonce += 1;
+        accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
+
+        foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+        {
+          RemoveAccountFromCache(tXOutput.IDAccount, heightBlock);
+
+          if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
+          {
+            accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
+              new()
+              {
+                ID = tXOutput.IDAccount,
+                BlockHeightAccountCreated = heightBlock
+              };
+
+            if (accountOutput.BlockHeightLastUpdated < heightBlock)
             {
-              RemoveAccountFromCache(tX.IDAccountSource, heightBlock);
-
-              if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
-              {
-                accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
-                  throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
-
-                if (accountSource.BlockHeightLastUpdated < heightBlock)
-                {
-                  accountSource.BlockHeightLastUpdated = heightBlock;
-                  AccountsStaged.Add(accountSource.ID, accountSource);
-                }
-              }
-
-              accountSource.Nonce += 1;
-              accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
-
-              foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-              {
-                RemoveAccountFromCache(tXOutput.IDAccount, heightBlock);
-
-                if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
-                {
-                  accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
-                    new()
-                    {
-                      ID = tXOutput.IDAccount,
-                      BlockHeightAccountCreated = heightBlock
-                    };
-
-                  if (accountOutput.BlockHeightLastUpdated < heightBlock)
-                  {
-                    accountOutput.BlockHeightLastUpdated = heightBlock;
-                    AccountsStaged.Add(accountOutput.ID, accountOutput);
-                  }
-                }
-
-                accountOutput.Balance += tXOutput.Value;
-              }
+              accountOutput.BlockHeightLastUpdated = heightBlock;
+              AccountsStaged.Add(accountOutput.ID, accountOutput);
             }
-
-            foreach (IEnumerable<Account> batchAccountsStaged in AccountsStaged.Values.Chunk(500))
-              DatabaseAccountCollection.Upsert(batchAccountsStaged);
-
-            DatabaseHeaderCollection.Upsert(new BsonDocument
-            {
-              ["_id"] = block.Header.Hash,
-              ["buffer"] = block.Header.Serialize()
-            });
-
-            DatabaseMetaCollection.Upsert(new BsonDocument
-            {
-              ["_id"] = "lastProcessedBlock",
-              ["hash"] = block.Header.Hash,
-              ["height"] = heightBlock
-            });
-          }
-          finally
-          {
-            AccountsStaged.Clear();
-            File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
           }
 
-          totalBytesBlocksInArchive -= block.Buffer.Length;
-
-          heightBlock += 1;
+          accountOutput.Balance += tXOutput.Value;
         }
-        else
-        {
-          // Reload state
-        }
+      }
 
-      DatabaseAccountCollection.DeleteMany(account => account.Balance == 0);
+      foreach (IEnumerable<Account> batchAccountsStaged in AccountsStaged.Values.Chunk(500))
+        DatabaseAccountCollection.Upsert(batchAccountsStaged);
 
-      Database.Checkpoint();
+      DatabaseAccountCollection.DeleteMany(account => account.Balance == 0); // Wegen performance besser eine Liste mit id's machen und hier löschen
+
+      return Cache.Count;
     }
 
     void RemoveAccountFromCache(byte[] idAccount, int heightBlock)
@@ -388,15 +250,6 @@ namespace BTokenLib
       if (Cache.TryGetValue(idAccount, out Account account))
         if (account.BlockHeightLastUpdated == heightBlock)
           Cache.Remove(idAccount);
-    }
-
-    public override bool TryReverseCacheToHeight(int height)
-    {
-      Cache.Clear();
-      LoadHeaderTip();
-      LoadBlocksFromArchive(height);
-
-      return HeaderTip.Height == height;
     }
 
     public override List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)

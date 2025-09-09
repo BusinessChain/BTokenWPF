@@ -6,13 +6,13 @@ namespace BTokenWPF
 {
   public partial class ListBoxItemDBEntry : UserControl
   {
-    public ListBoxItemDBEntry(Account account, string locationAccount, int indexSource)
+    public ListBoxItemDBEntry(TokenBToken.Account account, string locationAccount, int indexSource)
     {
       InitializeComponent();
 
       LabelHashAccount.Content = $"AccountID: {account}";
       LabeValue.Content = "Value: " + account.Balance;
-      LabelBlockHeighInit_Nonce.Content = $"Nonce: {account.BlockHeightAccountInit} - {account.Nonce}";
+      LabelBlockHeighInit_Nonce.Content = $"Nonce: {account.BlockHeightAccountCreated} - {account.Nonce}";
       LabelLocation_Index.Content = $"Location: {locationAccount}{indexSource}";
     }
   }

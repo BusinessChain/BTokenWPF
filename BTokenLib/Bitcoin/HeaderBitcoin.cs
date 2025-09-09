@@ -56,8 +56,7 @@ namespace BTokenLib
 
       if (UnixTimeSeconds < medianTimePastSeconds)
         throw new ProtocolException(string.Format(
-          $"Header {this} with unix time {1} " +
-          "is older than median time past {2}.",
+          $"Header {this} with unix time {1} is older than median time past {2}.",
           DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds),
           DateTimeOffset.FromUnixTimeSeconds(medianTimePastSeconds)));
 
@@ -65,8 +64,7 @@ namespace BTokenLib
 
       if (NBits != targetBitsNew)
         throw new ProtocolException(
-          $"nBits {NBits} not equal to target nBits {targetBitsNew}\n" +
-          $"in header {this}.");
+          $"nBits {NBits} not equal to target nBits {targetBitsNew} in header {this}.");
     }
 
     static uint GetMedianTimePastSeconds(Header header)
