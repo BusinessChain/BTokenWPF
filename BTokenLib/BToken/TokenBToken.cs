@@ -252,6 +252,67 @@ namespace BTokenLib
           Cache.Remove(idAccount);
     }
 
+    protected override void ReverseBlockInDB(Block block)
+    {
+      for (int i = block.TXs.Count - 1; i >= 0; i--)
+      {
+        TXBToken tX = block.TXs[i] as TXBToken;
+
+        if (tX is TXBTokenCoinbase tXCoinbase)
+        {
+          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
+            ReverseOutputInCache(tXOutput);
+        }
+        else
+        {
+          ReverseSpendInputInCache(tX);
+
+          if (tX is TXBTokenValueTransfer tXTokenTransfer)
+          {
+            foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+              ReverseOutputInCache(tXOutput);
+          }
+          else if (tX is TXBTokenAnchor tXBTokenAnchor)
+          { }
+          else if (tX is TXBTokenData tXBTokenData)
+          { }
+          else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
+        }
+      }
+    }
+
+    // mache ein eigenes Cache Objekt welches von Dictionary erbt, so können diese Funktion dort verstaut werden
+    void ReverseOutputInCache(TXOutputBToken output)
+    {
+      if (!AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
+      {
+        if (!Cache.TryGetValue(output.IDAccount, out accountStaged))
+          throw new ProtocolException($"TX Output cannot be reversed because account {output.IDAccount.ToHexString()} does not exist in cache.");
+
+        AccountsStaged.Add(output.IDAccount, accountStaged);
+      }
+
+      accountStaged.Balance -= output.Value;
+    }
+
+    public void ReverseSpendInputInCache(TXBToken tX)
+    {
+      if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountStaged))
+      {
+        if (!Cache.TryGetValue(tX.IDAccountSource, out accountStaged))
+          accountStaged = new()
+          {
+            ID = tX.IDAccountSource,
+            BlockHeightAccountCreated = tX.BlockheightAccountCreated,
+            Nonce = tX.Nonce,
+          };
+
+        AccountsStaged.Add(tX.IDAccountSource, accountStaged);
+      }
+
+      accountStaged.ReverseSpendTX(tX);
+    }
+
     public override List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
     {
       SHA256 sHA256 = SHA256.Create();

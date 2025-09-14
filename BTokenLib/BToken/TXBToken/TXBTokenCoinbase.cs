@@ -12,7 +12,7 @@ namespace BTokenLib
     {
       int indexTxStart = index - 1;
 
-      BlockheightAccountInit = BitConverter.ToInt32(buffer, index);
+      BlockheightAccountCreated = BitConverter.ToInt32(buffer, index);
       index += 4;
 
       int countOutputs = VarInt.GetInt(buffer, ref index);

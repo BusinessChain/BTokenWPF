@@ -330,6 +330,11 @@ namespace BTokenLib
 
     public bool TryReverseCacheToHeight(int height)
     {
+      int heightDatabase = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32;
+
+      if (heightDatabase > height)
+        return false;
+
       while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
         try
         {
@@ -371,7 +376,7 @@ namespace BTokenLib
       // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
       // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
       // lokale Blockarchiv 
-      LoadState();
+      LoadCache();
 
       return false;
     }
@@ -461,7 +466,7 @@ namespace BTokenLib
     public virtual void InsertBlockMined(byte[] hashBlock)
     { throw new NotImplementedException(); }
 
-    public abstract void ReverseBlockInDB(Block block);
+    protected virtual void ReverseBlockInDB(Block block) { }
                   
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 

@@ -31,7 +31,7 @@ namespace BTokenLib
     /// This has to match the block height at which the account source was created.
     /// It is in a sense an extension of the nonce.
     /// </summary>
-    public int BlockheightAccountInit;
+    public int BlockheightAccountCreated;
 
 
     public List<TXOutputBToken> TXOutputs = new();
@@ -43,7 +43,7 @@ namespace BTokenLib
 
       return tXBToken != null
         && IDAccountSource.IsAllBytesEqual(tXBToken.IDAccountSource)
-        && BlockheightAccountInit == tXBToken.BlockheightAccountInit
+        && BlockheightAccountCreated == tXBToken.BlockheightAccountCreated
         && Nonce == tXBToken.Nonce + 1;
     }
 
@@ -59,7 +59,7 @@ namespace BTokenLib
 
       IDAccountSource = Crypto.ComputeHash160(PublicKey, sHA256);
 
-      BlockheightAccountInit = BitConverter.ToInt32(buffer, index);
+      BlockheightAccountCreated = BitConverter.ToInt32(buffer, index);
       index += 4;
 
       Nonce = BitConverter.ToInt32(buffer, index);
@@ -89,7 +89,7 @@ namespace BTokenLib
         ("Type", $"{GetType().Name}"),
         ("Hash", $"{this}"),
         ("IDAccountSource", $"{IDAccountSource.BinaryToBase58Check()}"),
-        ("BlockheightAccountInit", $"{BlockheightAccountInit}"),
+        ("BlockheightAccountInit", $"{BlockheightAccountCreated}"),
         ("Nonce", $"{Nonce}"),
         ("ValueOutputs", $"{GetValueOutputs()}"),
         ("Fee", $"{Fee}")

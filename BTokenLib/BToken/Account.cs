@@ -73,7 +73,7 @@ namespace BTokenLib
 
       public void SpendTX(TXBToken tX)
       {
-        if (BlockHeightAccountCreated != tX.BlockheightAccountInit || Nonce != tX.Nonce)
+        if (BlockHeightAccountCreated != tX.BlockheightAccountCreated || Nonce != tX.Nonce)
           throw new ProtocolException($"Staged account {this} referenced by TX {tX} has unequal nonce or blockheightAccountInit.");
 
         if (Balance < tX.GetValueOutputs() + tX.Fee)

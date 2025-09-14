@@ -147,9 +147,6 @@ namespace BTokenLib
     }
 
 
-    public override void ReverseBlockInDB(Block block)
-    { }
-
     public override List<string> GetSeedAddresses()
     {
       return new List<string>()

@@ -57,8 +57,8 @@ namespace BTokenLib
           if (!Token.DBAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
             throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
 
-          if (accountSource.BlockHeightAccountCreated != tXBToken.BlockheightAccountInit)
-            throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountInit} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockHeightAccountCreated}.");
+          if (accountSource.BlockHeightAccountCreated != tXBToken.BlockheightAccountCreated)
+            throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountCreated} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockHeightAccountCreated}.");
 
           lock (LOCK_TXsPool)
           {
