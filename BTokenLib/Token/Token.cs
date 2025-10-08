@@ -37,10 +37,6 @@ namespace BTokenLib
     public string PathBlockArchiveFork = "PathBlockArchiveFork";
     public string PathFileHeaderchain;
 
-    protected LiteDatabase Database;
-    protected ILiteCollection<BsonDocument> DatabaseMetaCollection;
-    protected ILiteCollection<BsonDocument> DatabaseHeaderCollection;
-
     const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
     const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
@@ -56,6 +52,11 @@ namespace BTokenLib
 
     bool IsLocked;
     static object LOCK_Token = new();
+
+    // Kann man das vielleicht im BToken machen, weil Bitcoin braucht das ja nicht, oder?
+    protected LiteDatabase LiteDatabase;
+    protected ILiteCollection<BsonDocument> DatabaseMetaCollection;
+    protected ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
 
     public Token(UInt16 port, byte[] iDToken, bool flagEnableInboundConnections, ILogEntryNotifier logEntryNotifier)
@@ -74,9 +75,9 @@ namespace BTokenLib
         FileAccess.ReadWrite,
         FileShare.Read);
 
-      Database = new LiteDatabase($"{GetName()}.db;Mode=Exclusive");
-      DatabaseHeaderCollection = Database.GetCollection<BsonDocument>("headers");
-      DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
+      LiteDatabase = new LiteDatabase($"{GetName()}.db;Mode=Exclusive");
+      DatabaseHeaderCollection = LiteDatabase.GetCollection<BsonDocument>("headers");
+      DatabaseMetaCollection = LiteDatabase.GetCollection<BsonDocument>("meta");
 
       HeaderGenesis = CreateHeaderGenesis();
 
@@ -266,7 +267,7 @@ namespace BTokenLib
 
           block.Header.AppendToHeader(HeaderTip);
 
-          InsertBlockInDatabaseCache(block);
+          InsertBlockInDatabase(block);
 
           HeaderTip.HeaderNext = block.Header;
           HeaderTip = block.Header;
@@ -338,7 +339,7 @@ namespace BTokenLib
       while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
         try
         {
-          ReverseBlockInDB(block);
+          ReverseBlockInCache(block);
 
           Wallet.ReverseBlock(block);
 
@@ -381,6 +382,11 @@ namespace BTokenLib
       return false;
     }
 
+    public virtual bool TryStageBlock(Block block)
+    {
+      return true;
+    }
+
     public void InsertBlock(Block block)
     {
       $"Insert block {block}.".Log(this, LogEntryNotifier);
@@ -404,14 +410,25 @@ namespace BTokenLib
           .InsertBlockMined(hashBlockChildToken.Value);
     }
 
-    void InsertBlockInDatabase(Block block)
+    void InsertBlockInDatabase_Old(Block block)
     {
-      int sizeCache = InsertBlockInDatabaseCache(block);
-
+      /*
+       * das wird ins Netzwerk Objekt vorgelagert, das Netwerk speichert die letzten Zig Blöcke.
+       * Das ganze Blockarchive geht ins Netzwerk.
+       * Im Netzwerk wird zuerst der Block gespeichert, dann Token.InsertBlock(block) gemacht, wenn exception, dann Block wieder löschen. 
+       * In Token.InsertBlock(block) innen drin Cache auf Disk dumpen, falls Cache zu gross wird
+       * und entsprechend Headerchain nachgeführen.
+       * Wenn Block Archiv überläuft, wird das per Token.AnnounceDumpBlock(HeightBlock) gemeldet, dann wird auch auf disk gedumpt und headerchain nachgeführt.
+       * Es wird angenommen dass im DB Cache bereits vermekt ist, welche Transaktion bei welcher height kreiert wurde und was entsprechend gemacht
+       * werden muss bei dumpDisk oder Rollback. Der 
+       * 
+       * 
+       * 
       string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
       block.WriteToDisk(pathRootFileBlock);
 
       long totalBytesBlocksInArchive = new DirectoryInfo(pathRootFileBlock).EnumerateFiles().Sum(f => f.Length);
+      
 
       if (totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE || sizeCache > COUNT_MAX_ACCOUNTS_IN_CACHE)
       {
@@ -431,6 +448,7 @@ namespace BTokenLib
                 ["buffer"] = block.Header.Serialize()
               });
 
+              // Das hier wird vielleicht im Token gemacht.
               DatabaseMetaCollection.Upsert(new BsonDocument
               {
                 ["_id"] = "lastProcessedBlock",
@@ -452,21 +470,19 @@ namespace BTokenLib
             // Reload state
           }
 
-        Database.Checkpoint();
+        LiteDatabase.Checkpoint();
       }
-    } 
 
-    protected virtual int InsertBlockInDatabaseCache(Block block)
-    {
-      return 0;
+      */
     }
 
-    protected abstract int DumpBlockFromCacheToDB(Block block);
+    protected virtual void InsertBlockInDatabase(Block block)
+    { }
 
     public virtual void InsertBlockMined(byte[] hashBlock)
     { throw new NotImplementedException(); }
 
-    protected virtual void ReverseBlockInDB(Block block) { }
+    protected virtual void ReverseBlockInCache(Block block) { }
                   
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 

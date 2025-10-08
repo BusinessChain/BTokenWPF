@@ -21,8 +21,6 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    ILiteCollection<Account> DatabaseAccountCollection;
-
     public enum TypesToken
     {
       Coinbase = 0,
@@ -30,6 +28,14 @@ namespace BTokenLib
       AnchorToken = 2,
       Data = 3
     }
+
+
+
+    Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
+    Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
+
+    LiteDatabase Database;
+    ILiteCollection<Account> DatabaseAccountCollection;
 
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier, byte[] iDToken, UInt16 port, Token tokenParent)
@@ -100,15 +106,15 @@ namespace BTokenLib
       throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
 
-    // Evt. DB Accounts nach hier transferieren
-    Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
-    Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
-
     string PathRootDB;
     public const int COUNT_FILES_DB = 256;
-    byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
+    byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32]; 
+    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
+    const int COUNT_EVICTION_ACCOUNTS_FROM_CACHE = 200_000; // Read from configuration file
+    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
-    protected override int InsertBlockInDatabaseCache(Block block)
+
+    protected override void InsertBlockInDatabase(Block block)
     {
       try
       {
@@ -122,12 +128,95 @@ namespace BTokenLib
 
         foreach (var account in AccountsStaged)
           Cache[account.Key] = account.Value;
-
-        return Cache.Count;
       }
       finally
       {
         AccountsStaged.Clear();
+      }
+
+      if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+      {
+        int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+
+        while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV)
+          if (TryLoadBlock(heightBlock, out block))
+          {
+            $"Loaded block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+
+            RemoveAccountsFromCache(block);
+
+            foreach (TXBToken tX in block.TXs)
+            {
+              if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
+              {
+                accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
+                  throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
+
+                if (accountSource.BlockHeightLastUpdated < heightBlock)
+                {
+                  accountSource.BlockHeightLastUpdated = heightBlock;
+                  AccountsStaged.Add(accountSource.ID, accountSource);
+                }
+              }
+
+              accountSource.Nonce += 1;
+              accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
+
+              foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+              {
+                if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
+                {
+                  accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
+                    new()
+                    {
+                      ID = tXOutput.IDAccount,
+                      BlockHeightAccountCreated = heightBlock
+                    };
+
+                  if (accountOutput.BlockHeightLastUpdated < heightBlock)
+                  {
+                    accountOutput.BlockHeightLastUpdated = heightBlock;
+                    AccountsStaged.Add(accountOutput.ID, accountOutput);
+                  }
+                }
+
+                accountOutput.Balance += tXOutput.Value;
+              }
+            }
+
+            List<byte[]> accountIDsWhereBalanceZero = AccountsStaged.Values.Where(a => a.Balance == 0).Select(a => a.ID).ToList();
+
+            foreach (byte[] id in accountIDsWhereBalanceZero)
+            {
+              DatabaseAccountCollection.Delete(id);
+              AccountsStaged.Remove(id);
+            }
+
+            foreach (var batch in AccountsStaged.Values.Chunk(500))
+              DatabaseAccountCollection.Upsert(batch);
+
+            DatabaseHeaderCollection.Upsert(new BsonDocument
+            {
+              ["_id"] = block.Header.Hash,
+              ["buffer"] = block.Header.Serialize()
+            });
+
+            DatabaseMetaCollection.Upsert(new BsonDocument
+            {
+              ["_id"] = "lastProcessedBlock",
+              ["hash"] = block.Header.Hash,
+              ["height"] = heightBlock
+            });
+
+            heightBlock += 1;
+          }
+          else
+          {
+            $"Failed to load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+            // Reload state
+          }
+
+        LiteDatabase.Checkpoint();
       }
     }
 
@@ -188,100 +277,65 @@ namespace BTokenLib
         AccountsStaged.Add(output.IDAccount, accountStaged);
       }
     }
-
-    protected override int DumpBlockFromCacheToDB(Block block)
+     
+    void RemoveAccountsFromCache(Block block)
     {
-      $"Load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
       int heightBlock = block.Header.Height;
 
       foreach (TXBToken tX in block.TXs)
       {
-        RemoveAccountFromCache(tX.IDAccountSource, heightBlock);
+        TryRemove(tX.IDAccountSource);
 
-        if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
-        {
-          accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
-            throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
-
-          if (accountSource.BlockHeightLastUpdated < heightBlock)
-          {
-            accountSource.BlockHeightLastUpdated = heightBlock;
-            AccountsStaged.Add(accountSource.ID, accountSource);
-          }
-        }
-
-        accountSource.Nonce += 1;
-        accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
-
-        foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-        {
-          RemoveAccountFromCache(tXOutput.IDAccount, heightBlock);
-
-          if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
-          {
-            accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
-              new()
-              {
-                ID = tXOutput.IDAccount,
-                BlockHeightAccountCreated = heightBlock
-              };
-
-            if (accountOutput.BlockHeightLastUpdated < heightBlock)
-            {
-              accountOutput.BlockHeightLastUpdated = heightBlock;
-              AccountsStaged.Add(accountOutput.ID, accountOutput);
-            }
-          }
-
-          accountOutput.Balance += tXOutput.Value;
-        }
+        foreach (TXOutputBToken outputBToken in tX.TXOutputs)
+          TryRemove(outputBToken.IDAccount);
       }
 
-      foreach (IEnumerable<Account> batchAccountsStaged in AccountsStaged.Values.Chunk(500))
-        DatabaseAccountCollection.Upsert(batchAccountsStaged);
-
-      DatabaseAccountCollection.DeleteMany(account => account.Balance == 0); // Wegen performance besser eine Liste mit id's machen und hier löschen
-
-      return Cache.Count;
-    }
-
-    void RemoveAccountFromCache(byte[] idAccount, int heightBlock)
-    {
-      if (Cache.TryGetValue(idAccount, out Account account))
-        if (account.BlockHeightLastUpdated == heightBlock)
-          Cache.Remove(idAccount);
-    }
-
-    protected override void ReverseBlockInDB(Block block)
-    {
-      for (int i = block.TXs.Count - 1; i >= 0; i--)
+      void TryRemove(byte[] id)
       {
-        TXBToken tX = block.TXs[i] as TXBToken;
+        if (Cache.TryGetValue(id, out Account account) && account.BlockHeightLastUpdated == heightBlock)
+          Cache.Remove(id);
+      }
+    }
 
-        if (tX is TXBTokenCoinbase tXCoinbase)
+    protected override void ReverseBlockInCache(Block block)
+    {
+      try
+      {
+        for (int i = block.TXs.Count - 1; i >= 0; i--)
         {
-          foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
-            ReverseOutputInCache(tXOutput);
-        }
-        else
-        {
-          ReverseSpendInputInCache(tX);
+          TXBToken tX = block.TXs[i] as TXBToken;
 
-          if (tX is TXBTokenValueTransfer tXTokenTransfer)
+          if (tX is TXBTokenCoinbase tXCoinbase)
           {
-            foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+            foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
               ReverseOutputInCache(tXOutput);
           }
-          else if (tX is TXBTokenAnchor tXBTokenAnchor)
-          { }
-          else if (tX is TXBTokenData tXBTokenData)
-          { }
-          else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
+          else
+          {
+            ReverseSpendInputInCache(tX);
+
+            if (tX is TXBTokenValueTransfer tXTokenTransfer)
+            {
+              foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
+                ReverseOutputInCache(tXOutput);
+            }
+            else if (tX is TXBTokenAnchor tXBTokenAnchor)
+            { }
+            else if (tX is TXBTokenData tXBTokenData)
+            { }
+            else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
+          }
+
+          foreach (var account in AccountsStaged)
+            Cache[account.Key] = account.Value;
         }
+      }
+      finally
+      {
+        AccountsStaged.Clear();
       }
     }
 
-    // mache ein eigenes Cache Objekt welches von Dictionary erbt, so können diese Funktion dort verstaut werden
     void ReverseOutputInCache(TXOutputBToken output)
     {
       if (!AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
