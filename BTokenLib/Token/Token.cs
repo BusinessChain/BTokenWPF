@@ -410,71 +410,14 @@ namespace BTokenLib
           .InsertBlockMined(hashBlockChildToken.Value);
     }
 
-    void InsertBlockInDatabase_Old(Block block)
-    {
-      /*
-       * das wird ins Netzwerk Objekt vorgelagert, das Netwerk speichert die letzten Zig Blöcke.
-       * Das ganze Blockarchive geht ins Netzwerk.
+    /*
+       * Das Netwerk speichert die letzten Zig Blöcke. Das ganze Blockarchive geht ins Netzwerk.
        * Im Netzwerk wird zuerst der Block gespeichert, dann Token.InsertBlock(block) gemacht, wenn exception, dann Block wieder löschen. 
        * In Token.InsertBlock(block) innen drin Cache auf Disk dumpen, falls Cache zu gross wird
        * und entsprechend Headerchain nachgeführen.
        * Wenn Block Archiv überläuft, wird das per Token.AnnounceDumpBlock(HeightBlock) gemeldet, dann wird auch auf disk gedumpt und headerchain nachgeführt.
        * Es wird angenommen dass im DB Cache bereits vermekt ist, welche Transaktion bei welcher height kreiert wurde und was entsprechend gemacht
-       * werden muss bei dumpDisk oder Rollback. Der 
-       * 
-       * 
-       * 
-      string pathRootFileBlock = Path.Combine(GetName(), PathBlockArchive);
-      block.WriteToDisk(pathRootFileBlock);
-
-      long totalBytesBlocksInArchive = new DirectoryInfo(pathRootFileBlock).EnumerateFiles().Sum(f => f.Length);
-      
-
-      if (totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE || sizeCache > COUNT_MAX_ACCOUNTS_IN_CACHE)
-      {
-        int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
-
-        while (sizeCache > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV ||
-        totalBytesBlocksInArchive > COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE)
-          if (TryLoadBlock(heightBlock, out block))
-          {
-            try
-            {
-              sizeCache = DumpBlockFromCacheToDB(block);
-
-              DatabaseHeaderCollection.Upsert(new BsonDocument
-              {
-                ["_id"] = block.Header.Hash,
-                ["buffer"] = block.Header.Serialize()
-              });
-
-              // Das hier wird vielleicht im Token gemacht.
-              DatabaseMetaCollection.Upsert(new BsonDocument
-              {
-                ["_id"] = "lastProcessedBlock",
-                ["hash"] = block.Header.Hash,
-                ["height"] = heightBlock
-              });
-            }
-            finally
-            {
-              File.Delete(Path.Combine(PathBlockArchive, heightBlock.ToString()));
-            }
-
-            totalBytesBlocksInArchive -= block.Buffer.Length;
-
-            heightBlock += 1;
-          }
-          else
-          {
-            // Reload state
-          }
-
-        LiteDatabase.Checkpoint();
-      }
-
-      */
-    }
+       * werden muss bei dumpDisk oder Rollback. Der */
 
     protected virtual void InsertBlockInDatabase(Block block)
     { }
