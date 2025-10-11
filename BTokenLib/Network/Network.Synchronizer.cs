@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -38,6 +40,13 @@ namespace BTokenLib
     Header HeaderDownloadNext;
 
     bool FlagSyncBlocksExit;
+
+    public string PathBlockArchive;
+    public string PathBlockArchiveMain = "PathBlockArchiveMain";
+    public string PathBlockArchiveFork = "PathBlockArchiveFork";
+    public string PathFileHeaderchain;
+
+    public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
 
     public void StartSync()
@@ -78,7 +87,7 @@ namespace BTokenLib
       else if (HeaderchainDownload.IsStrongerThan(Token.HeaderTip))
       {
         if(HeaderchainDownload.IsFork)
-          if (!Token.TryReverseCacheToHeight(HeaderchainDownload.GetHeightAncestor()))
+          if (!TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor()))
           {
             HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
             PeerSync.SendHeaders(HeaderchainDownload.Locator);
@@ -100,6 +109,36 @@ namespace BTokenLib
         if (HeaderchainDownload.IsWeakerThan(Token.HeaderTip))
           PeerSync.SendHeaders(Token.GetLocator());
       }
+    }
+
+
+    bool TryReverseBlockchainToHeight(int heightBlockAncestor)
+    {
+      int heightBlock = Directory.GetFiles(PathBlockArchive)
+        .Select(f => Path.GetFileName(f))
+        .Select(name => int.TryParse(name, out int value) ? value : -1)
+        .DefaultIfEmpty(-1)
+        .Max();
+
+      while (heightBlockAncestor < heightBlock && TryLoadBlock(heightBlock, out Block block))
+        if (Token.TryReverseBlock(block))
+          heightBlock -= 1;
+
+      if (heightBlockAncestor != heightBlock)
+        return false;
+
+      if (PathBlockArchive == PathBlockArchiveMain)
+      {
+        Directory.CreateDirectory(PathBlockArchiveFork);
+        PathBlockArchive = PathBlockArchiveFork;
+      }
+      else if (PathBlockArchive == PathBlockArchiveFork)
+      {
+        Directory.Delete(PathBlockArchiveFork, recursive: true);
+        PathBlockArchive = PathBlockArchiveMain;
+      }
+
+      return true;
     }
 
     async Task StartTimerSyncHeaders()
@@ -185,9 +224,9 @@ namespace BTokenLib
       if (HeaderchainDownload.IsFork)
       {
         if (Token.HeaderTip.DifficultyAccumulated > HeaderchainDownload.HeaderTipTokenInitial.DifficultyAccumulated)
-          Token.Reorganize();
+          Reorganize();
         else
-          Token.TryReverseCacheToHeight(HeaderchainDownload.HeaderRoot.HeaderPrevious.Height);
+          TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor());
       }
 
       lock (LOCK_IsStateSync)
@@ -205,6 +244,20 @@ namespace BTokenLib
         peerNextSync.SendGetHeaders(Token.GetLocator());
       else
         Token.TokensChild.ForEach(t => t.StartSync());
+    }
+
+    public void Reorganize()
+    {
+      foreach (string pathFile in Directory.GetFiles(PathBlockArchiveFork))
+      {
+        string newPathFile = Path.Combine(PathBlockArchiveMain, Path.GetFileName(pathFile));
+
+        File.Delete(newPathFile);
+        File.Move(pathFile, newPathFile);
+      }
+
+      Directory.Delete(PathBlockArchiveFork, recursive: true);
+      PathBlockArchive = PathBlockArchiveMain;
     }
 
     void InsertBlock(Peer peer, ref bool flagMessageMayNotFollowConsensusRules)
@@ -240,11 +293,14 @@ namespace BTokenLib
           {
             try
             {
+              // hier block ins Archiv speichern
               Token.InsertBlock(block);
             }
             catch (Exception ex)
             {
               $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+              // hier block im Archiv wieder löschen.
               FlagSyncBlocksExit = true;
               return;
             }
@@ -262,6 +318,42 @@ namespace BTokenLib
         }
       }
     }
+
+    public bool TryLoadBlock(int blockHeight, out Block block)
+    {
+      block = null;
+      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+
+      while (true)
+        try
+        {
+          block = new(Token, File.ReadAllBytes(pathBlock));
+          block.Parse(blockHeight);
+
+          return true;
+        }
+        catch (FileNotFoundException)
+        {
+          return false;
+        }
+        catch (IOException ex)
+        {
+          ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
+            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
+
+          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
+        }
+        catch (Exception ex)
+        {
+          $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
+          .Log(this, Token.LogEntryNotifier);
+
+          File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
+
+          return false;
+        }
+    }
+
 
     bool TryFetchHeaderDownload(out Header headerDownload)
     {

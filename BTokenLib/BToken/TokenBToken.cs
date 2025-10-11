@@ -29,8 +29,6 @@ namespace BTokenLib
       Data = 3
     }
 
-
-
     Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
     Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
 
@@ -135,89 +133,92 @@ namespace BTokenLib
       }
 
       if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
-      {
-        int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+        EvictBlockFromCache();
+    }
 
-        while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV)
-          if (TryLoadBlock(heightBlock, out block))
+    void EvictBlockFromCache()
+    {
+      int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+
+      while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV)
+        if (TryLoadBlock(heightBlock, out Block block))
+        {
+          $"Loaded block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+
+          RemoveAccountsFromCache(block);
+
+          foreach (TXBToken tX in block.TXs)
           {
-            $"Loaded block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
-
-            RemoveAccountsFromCache(block);
-
-            foreach (TXBToken tX in block.TXs)
+            if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
             {
-              if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
-              {
-                accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
-                  throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
+              accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
+                throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
 
-                if (accountSource.BlockHeightLastUpdated < heightBlock)
-                {
-                  accountSource.BlockHeightLastUpdated = heightBlock;
-                  AccountsStaged.Add(accountSource.ID, accountSource);
-                }
+              if (accountSource.BlockHeightLastUpdated < heightBlock)
+              {
+                accountSource.BlockHeightLastUpdated = heightBlock;
+                AccountsStaged.Add(accountSource.ID, accountSource);
               }
+            }
 
-              accountSource.Nonce += 1;
-              accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
+            accountSource.Nonce += 1;
+            accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
 
-              foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+            foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+            {
+              if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
               {
-                if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
-                {
-                  accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
-                    new()
-                    {
-                      ID = tXOutput.IDAccount,
-                      BlockHeightAccountCreated = heightBlock
-                    };
-
-                  if (accountOutput.BlockHeightLastUpdated < heightBlock)
+                accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
+                  new()
                   {
-                    accountOutput.BlockHeightLastUpdated = heightBlock;
-                    AccountsStaged.Add(accountOutput.ID, accountOutput);
-                  }
+                    ID = tXOutput.IDAccount,
+                    BlockHeightAccountCreated = heightBlock
+                  };
+
+                if (accountOutput.BlockHeightLastUpdated < heightBlock)
+                {
+                  accountOutput.BlockHeightLastUpdated = heightBlock;
+                  AccountsStaged.Add(accountOutput.ID, accountOutput);
                 }
-
-                accountOutput.Balance += tXOutput.Value;
               }
+
+              accountOutput.Balance += tXOutput.Value;
             }
-
-            List<byte[]> accountIDsWhereBalanceZero = AccountsStaged.Values.Where(a => a.Balance == 0).Select(a => a.ID).ToList();
-
-            foreach (byte[] id in accountIDsWhereBalanceZero)
-            {
-              DatabaseAccountCollection.Delete(id);
-              AccountsStaged.Remove(id);
-            }
-
-            foreach (var batch in AccountsStaged.Values.Chunk(500))
-              DatabaseAccountCollection.Upsert(batch);
-
-            DatabaseHeaderCollection.Upsert(new BsonDocument
-            {
-              ["_id"] = block.Header.Hash,
-              ["buffer"] = block.Header.Serialize()
-            });
-
-            DatabaseMetaCollection.Upsert(new BsonDocument
-            {
-              ["_id"] = "lastProcessedBlock",
-              ["hash"] = block.Header.Hash,
-              ["height"] = heightBlock
-            });
-
-            heightBlock += 1;
           }
-          else
+
+          List<byte[]> accountIDsWhereBalanceZero = AccountsStaged.Values.Where(a => a.Balance == 0).Select(a => a.ID).ToList();
+
+          foreach (byte[] id in accountIDsWhereBalanceZero)
           {
-            $"Failed to load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
-            // Reload state
+            DatabaseAccountCollection.Delete(id);
+            AccountsStaged.Remove(id);
           }
 
-        LiteDatabase.Checkpoint();
-      }
+          foreach (var batch in AccountsStaged.Values.Chunk(500))
+            DatabaseAccountCollection.Upsert(batch);
+
+          DatabaseHeaderCollection.Upsert(new BsonDocument
+          {
+            ["_id"] = block.Header.Hash,
+            ["buffer"] = block.Header.Serialize()
+          });
+
+          DatabaseMetaCollection.Upsert(new BsonDocument
+          {
+            ["_id"] = "lastProcessedBlock",
+            ["hash"] = block.Header.Hash,
+            ["height"] = heightBlock
+          });
+
+          heightBlock += 1;
+        }
+        else
+        {
+          $"Failed to load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+          // Reload state
+        }
+
+      LiteDatabase.Checkpoint();
     }
 
     void StageSpendInput(TXBToken tX)

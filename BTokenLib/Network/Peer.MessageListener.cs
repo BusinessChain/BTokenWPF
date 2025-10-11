@@ -43,15 +43,14 @@ namespace BTokenLib
 
               await ReadBytes(Payload, LengthDataPayload);
 
-              List<Header> headers = new();
-
               int startIndex = 0;
               int countHeaders = VarInt.GetInt(Payload, ref startIndex);
+              List<Header> headers = new();
 
               for (int i = 0; i < countHeaders; i += 1)
               {
                 headers.Add(Token.ParseHeader(Payload, ref startIndex, SHA256));
-                startIndex += 1; // Number of transaction entries, this value is always 0
+                startIndex += 1; // Number of transaction in the block, which in the header is always 0
               }
 
               Network.TryReceiveHeaders(this, headers, ref flagMessageMayNotFollowConsensusRules);

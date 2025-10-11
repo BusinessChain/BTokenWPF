@@ -32,11 +32,6 @@ namespace BTokenLib
     public FileStream FileTXPoolBackup;
     public List<TX> TXsPoolBackup = new();
 
-    public string PathBlockArchive;
-    public string PathBlockArchiveMain = "PathBlockArchiveMain";
-    public string PathBlockArchiveFork = "PathBlockArchiveFork";
-    public string PathFileHeaderchain;
-
     const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
     const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
@@ -47,8 +42,6 @@ namespace BTokenLib
 
     public StreamWriter LogFile;
     public ILogEntryNotifier LogEntryNotifier;
-
-    public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
     bool IsLocked;
     static object LOCK_Token = new();
@@ -315,78 +308,6 @@ namespace BTokenLib
       // Versuche alle txs die noch nicht bestätigt wurden zu rebroadcasten
     }
 
-    public void Reorganize()
-    {
-      foreach (string pathFile in Directory.GetFiles(PathBlockArchiveFork))
-      {
-        string newPathFile = Path.Combine(PathBlockArchiveMain, Path.GetFileName(pathFile));
-
-        File.Delete(newPathFile);
-        File.Move(pathFile, newPathFile);
-      }
-
-      Directory.Delete(PathBlockArchiveFork, recursive: true);
-      PathBlockArchive = PathBlockArchiveMain;
-    }
-
-    public bool TryReverseCacheToHeight(int height)
-    {
-      int heightDatabase = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32;
-
-      if (heightDatabase > height)
-        return false;
-
-      while (height < HeaderTip.Height && TryLoadBlock(HeaderTip.Height, out Block block))
-        try
-        {
-          ReverseBlockInCache(block);
-
-          Wallet.ReverseBlock(block);
-
-          DatabaseHeaderCollection.Delete(HeaderTip.Hash);
-
-          HeaderTip = HeaderTip.HeaderPrevious;
-          HeaderTip.HeaderNext = null;
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
-          .Log(this, LogEntryNotifier);
-
-          break;
-        }
-
-      if (height == HeaderTip.Height)
-      {
-        if (PathBlockArchive == PathBlockArchiveMain)
-        {
-          Directory.CreateDirectory(PathBlockArchiveFork);
-          PathBlockArchive = PathBlockArchiveFork;
-        }
-        else if (PathBlockArchive == PathBlockArchiveFork)
-        {
-          Directory.Delete(PathBlockArchiveFork, recursive: true);
-          PathBlockArchive = PathBlockArchiveMain;
-        }
-
-        return true;
-      }
-
-      $"Failed to reverse blockchain to Height. \nReload state.".Log(this, LogFile, LogEntryNotifier);
-
-      // Soll hier auch neu synchronisiert werden? Ja, wann immer meine DB korrupt
-      // ist, komplett neu aufsynchronisiert. Allerdings wird zuerst versucht das 
-      // lokale Blockarchiv 
-      LoadCache();
-
-      return false;
-    }
-
-    public virtual bool TryStageBlock(Block block)
-    {
-      return true;
-    }
-
     public void InsertBlock(Block block)
     {
       $"Insert block {block}.".Log(this, LogEntryNotifier);
@@ -408,16 +329,31 @@ namespace BTokenLib
       foreach (var hashBlockChildToken in block.Header.HashesChild)
         TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
           .InsertBlockMined(hashBlockChildToken.Value);
-    }
+    }    
 
-    /*
-       * Das Netwerk speichert die letzten Zig Blöcke. Das ganze Blockarchive geht ins Netzwerk.
-       * Im Netzwerk wird zuerst der Block gespeichert, dann Token.InsertBlock(block) gemacht, wenn exception, dann Block wieder löschen. 
-       * In Token.InsertBlock(block) innen drin Cache auf Disk dumpen, falls Cache zu gross wird
-       * und entsprechend Headerchain nachgeführen.
-       * Wenn Block Archiv überläuft, wird das per Token.AnnounceDumpBlock(HeightBlock) gemeldet, dann wird auch auf disk gedumpt und headerchain nachgeführt.
-       * Es wird angenommen dass im DB Cache bereits vermekt ist, welche Transaktion bei welcher height kreiert wurde und was entsprechend gemacht
-       * werden muss bei dumpDisk oder Rollback. Der */
+    public bool TryReverseBlock(Block block)
+    {
+      try
+      {
+        ReverseBlockInCache(block);
+
+        Wallet.ReverseBlock(block);
+
+        DatabaseHeaderCollection.Delete(HeaderTip.Hash);
+
+        HeaderTip = HeaderTip.HeaderPrevious;
+        HeaderTip.HeaderNext = null;
+
+        return true;
+      }
+      catch (ProtocolException ex)
+      {
+        $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
+        .Log(this, LogEntryNotifier);
+
+        return false;
+      }
+    }
 
     protected virtual void InsertBlockInDatabase(Block block)
     { }
@@ -464,58 +400,6 @@ namespace BTokenLib
     }
 
     abstract protected void RunMining();
-
-    public bool TryLoadBlock(int blockHeight, out Block block)
-    {
-      block = null;
-      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
-
-      while (true)
-        try
-        {
-          block = new(this, File.ReadAllBytes(pathBlock));
-          block.Parse(blockHeight);
-
-          return true;
-        }
-        catch (FileNotFoundException)
-        {
-          return false;
-        }
-        catch (IOException ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
-            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, LogEntryNotifier);
-
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-        }
-        catch (Exception ex)
-        {
-          $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
-          .Log(this, LogEntryNotifier);
-
-          File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
-
-          return false;
-        }
-    }
-
-    public bool TryGetBlockBytes(byte[] hash, out byte[] buffer)
-    {
-      buffer = null;
-
-      if (TryGetHeader(hash, out Header header))
-        try
-        {
-          buffer = File.ReadAllBytes(Path.Combine(PathBlockArchive, header.Height.ToString()));
-        }
-        catch (Exception ex)
-        {
-          $"{ex.GetType().Name} when loading block {hash.ToHexString()} from disk.".Log(this, LogEntryNotifier);
-        }
-
-      return buffer != null;
-    }
 
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
@@ -598,17 +482,5 @@ namespace BTokenLib
       return locator;
     }
 
-    public bool TryGetHeader(byte[] headerHash, out Header header)
-    {
-      header = null;
-
-      int key = BitConverter.ToInt32(headerHash, 0);
-
-      lock (IndexHeaders)
-        if (IndexHeaders.TryGetValue(key, out List<Header> headers))
-          header = headers.FirstOrDefault(h => headerHash.IsAllBytesEqual(h.Hash));
-
-      return header != null;
-    }
   }
 }
