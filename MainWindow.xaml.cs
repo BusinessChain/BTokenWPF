@@ -8,7 +8,7 @@ using BTokenLib;
 
 namespace BTokenWPF
 {
-  public partial class MainWindow : Window, ILogEntryNotifier
+  public partial class MainWindow : Window, ILogEntryNotifier // Interfaces womiglich kombinieren.
   {
     TokenBToken BToken;
 
@@ -18,11 +18,7 @@ namespace BTokenWPF
       {
         InitializeComponent();
 
-        byte[] iDToken = new byte[4] { (byte)'B', (byte)'C', (byte)'S', (byte)'H' };
-
-        TokenBitcoin tokenBitcoin = new(this);
-
-        BToken = new(this, iDToken, port: 8777, tokenBitcoin);
+        BToken = new(this);
         BToken.Start();
 
         UpdateTextBoxStatus();

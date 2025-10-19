@@ -161,12 +161,14 @@ namespace BTokenLib
       LengthBufferPayload = startIndex;
     }
 
-    // atomisch machen
-    public void WriteToDisk(string pathRoot)
+    public void WriteToDisk(string pathFileBlock, bool flagEnableAtomicSave = true)
     {
-      string pathFileBlock = Path.Combine(pathRoot, Header.Hash.ToHexString());
+      string pathTemp = pathFileBlock;
 
-      using (FileStream fileStream = new(pathFileBlock, FileMode.Create, FileAccess.Write))
+      if (flagEnableAtomicSave)
+        pathTemp += ".tmp";
+
+      using (FileStream fileStream = new(pathTemp, FileMode.Create, FileAccess.Write))
       {
         byte[] bufferHeader = Header.Serialize();
         fileStream.Write(bufferHeader, 0, bufferHeader.Length);
@@ -176,7 +178,12 @@ namespace BTokenLib
 
         for (int i = 0; i < TXs.Count; i++)
           fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+
+        fileStream.Flush(true);
       }
+
+      if (flagEnableAtomicSave)
+        File.Move(pathTemp, pathFileBlock, overwrite: true);
     }
 
     public override string ToString()

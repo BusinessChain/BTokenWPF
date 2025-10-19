@@ -13,11 +13,11 @@ namespace BTokenLib
 {
   public abstract partial class Token
   {
-    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
-
-    public byte[] IDToken;
+    public Network Network;
 
     public Token TokenParent;
+
+    // Vielleicht wäre es besser auf Childs zu verzichten und immer bottom up zu gehen
     public List<Token> TokensChild = new();
 
     public Header HeaderGenesis;
@@ -38,8 +38,6 @@ namespace BTokenLib
 
     public Wallet Wallet;
 
-    public Network Network;
-
     public StreamWriter LogFile;
     public ILogEntryNotifier LogEntryNotifier;
 
@@ -52,10 +50,8 @@ namespace BTokenLib
     protected ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
 
-    public Token(UInt16 port, byte[] iDToken, bool flagEnableInboundConnections, ILogEntryNotifier logEntryNotifier)
+    public Token(ILogEntryNotifier logEntryNotifier)
     {
-      IDToken = iDToken;
-
       Directory.CreateDirectory(GetName());
 
       LogFile = new StreamWriter(Path.Combine(GetName(), "LogToken"), append: false);
@@ -73,55 +69,19 @@ namespace BTokenLib
       DatabaseMetaCollection = LiteDatabase.GetCollection<BsonDocument>("meta");
 
       HeaderGenesis = CreateHeaderGenesis();
-
-      Network = new(this, port, flagEnableInboundConnections);
-    }
-
-    public Token(
-      UInt16 port,
-      byte[] iDToken,
-      bool flagEnableInboundConnections,
-      ILogEntryNotifier logEntryNotifier,
-      Token tokenParent)
-      : this(
-          port, 
-          iDToken, 
-          flagEnableInboundConnections, 
-          logEntryNotifier)
-    {
-      TokenParent = tokenParent;
-      TokenParent.TokensChild.Add(this);
-      HeaderGenesis.HeaderParent = TokenParent.HeaderGenesis;
-      TokenParent.HeaderGenesis.HashesChild.Add(IDToken, HeaderGenesis.Hash);
     }
 
     public virtual void Reset()
     {
-      if (Directory.Exists(PathBlockArchiveFork))
-        Directory.Delete(PathBlockArchiveFork, recursive: true);
-
-      PathBlockArchive = PathBlockArchiveMain;
-
       Wallet.Clear();
     }
 
     public void Start()
     {
-      Token token = this;
+      Network.Start(); // hier soll man erst rauskommen, wenn synchronisiert ist.
 
-      while (token.TokenParent != null)
-        token = TokenParent;
-
-      token.LoadCache();
-      token.LoadTXPool();
-      token.StartNetwork();
-    }
-
-    void StartNetwork()
-    {
-      new Thread(Network.Start).Start(); // evt. kein Thread machen, da alles async ist.
-
-      TokensChild.ForEach(t => t.StartNetwork());
+      if (TokenParent != null)
+        TokenParent.Start();
     }
 
     public string GetStatus()
@@ -178,17 +138,6 @@ namespace BTokenLib
     }
 
     public abstract Header CreateHeaderGenesis();
-
-    protected void LoadCache()
-    {
-      Reset();
-
-      LoadHeaderTip();
-
-      LoadBlocksFromArchive();
-
-      TokensChild.ForEach(t => t.LoadCache());
-    }
 
     void LoadHeaderTip()
     {
@@ -253,7 +202,7 @@ namespace BTokenLib
     {
       int heightBlockNext = HeaderTip.Height + 1;
 
-      while (TryLoadBlock(heightBlockNext, out Block block))
+      while (Network.TryLoadBlock(heightBlockNext, out Block block))
         try
         {
           $"Load block {block}.".Log(this, LogEntryNotifier);

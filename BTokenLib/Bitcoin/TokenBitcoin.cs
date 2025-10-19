@@ -17,11 +17,7 @@ namespace BTokenLib
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
-      : base(
-          COMPORT_BITCOIN,
-          iDToken: new byte[TokenAnchor.LENGTH_IDTOKEN],
-          flagEnableInboundConnections: false,
-          logEntryNotifier)
+      : base(logEntryNotifier)
     {
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
@@ -30,6 +26,12 @@ namespace BTokenLib
 
       BlockRewardInitial = BLOCK_REWARD_INITIAL;
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
+
+      Network = new Network(
+        this,
+        iDToken: new byte[3] { (byte)'B', (byte)'T', (byte)'C' },
+        port: 8333,
+        flagEnableInboundConnections: false);
     }
 
     public override Header CreateHeaderGenesis()

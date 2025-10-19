@@ -73,7 +73,7 @@ namespace BTokenLib
 
               BlocksMinedCache.Add(block);
 
-              block.WriteToDisk(PathBlocksMined);
+              block.WriteToDisk(Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString()));
             }
           }
 

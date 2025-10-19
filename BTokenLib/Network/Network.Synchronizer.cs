@@ -291,16 +291,23 @@ namespace BTokenLib
         else
           do
           {
+            string pathBlock = Path.Combine(PathBlockArchive, block.Header.Height.ToString());
+            string pathBlockTemp = pathBlock + ".tmp";
+
+            block.WriteToDisk(pathBlockTemp, flagEnableAtomicSave: false);
+
             try
             {
-              // hier block ins Archiv speichern
               Token.InsertBlock(block);
+
+              File.Move(pathBlockTemp, pathBlock, overwrite: true);
             }
             catch (Exception ex)
             {
               $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-              // hier block im Archiv wieder löschen.
+              File.Delete(pathBlockTemp);
+
               FlagSyncBlocksExit = true;
               return;
             }

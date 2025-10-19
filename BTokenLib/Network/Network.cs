@@ -1,17 +1,18 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace BTokenLib
 {
   public partial class Network
   {
-    Token Token;
-
-    UInt16 Port;
-
+    protected Token Token;
+    public byte[] IDToken;
+    protected UInt16 Port;
     public bool EnableInboundConnections;
+    public ILogEntryNotifier LogEntryNotifier;
 
     object LOCK_Peers = new();
     List<Peer> Peers = new();
@@ -24,13 +25,11 @@ namespace BTokenLib
 
     public Network(
       Token token,
-      UInt16 port,
+      byte[] iDToken, 
+      UInt16 port, 
       bool flagEnableInboundConnections)
     {
-      Token = token;
-
-      Port = port;
-      EnableInboundConnections = flagEnableInboundConnections;
+      LogEntryNotifier = token.LogEntryNotifier;
 
       string pathRoot = token.GetName();
 
@@ -52,20 +51,23 @@ namespace BTokenLib
         file.MoveTo(Path.Combine(DirectoryPeersArchive.FullName, file.Name));
     }
 
-    public void Start()
+    public async Task Start()
     {
-      $"Start Network {Token.GetName()}".Log(this, Token.LogFile, Token.LogEntryNotifier);
+      $"Start Network {Token.GetName()}".Log(this, Token.LogFile, LogEntryNotifier);
 
       StartPeerConnector();
 
       if (EnableInboundConnections)
         StartPeerInboundConnector();
+
+      while (!FlagInitialSyncSucceed)
+        await Task.Delay(1000).ConfigureAwait(false);
     }
 
     void LoadNetworkConfiguration(string pathConfigFile)
     {
       $"Load Network configuration {pathConfigFile}."
-        .Log(this, Token.LogFile, Token.LogEntryNotifier);
+        .Log(this, Token.LogFile, LogEntryNotifier);
     }
 
     public void AdvertizeBlockToNetwork(Block block)

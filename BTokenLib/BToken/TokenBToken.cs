@@ -36,13 +36,8 @@ namespace BTokenLib
     ILiteCollection<Account> DatabaseAccountCollection;
 
 
-    public TokenBToken(ILogEntryNotifier logEntryNotifier, byte[] iDToken, UInt16 port, Token tokenParent)
-      : base(
-          port,
-          iDToken,
-          flagEnableInboundConnections: true,
-          logEntryNotifier,
-          tokenParent)
+    public TokenBToken(ILogEntryNotifier logEntryNotifier)
+      : base(logEntryNotifier)
     {
       PathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
 
@@ -61,6 +56,14 @@ namespace BTokenLib
       DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
 
       AppDomain.CurrentDomain.ProcessExit += (s, e) => { Database?.Dispose(); };
+
+      TokenParent = new TokenBitcoin(logEntryNotifier);
+
+      Network = new Network(
+        this,
+        iDToken: new byte[3] { (byte)'B', (byte)'T', (byte)'K' },
+        port: 8777,
+        flagEnableInboundConnections: true);
     }
 
     public override Header CreateHeaderGenesis()
