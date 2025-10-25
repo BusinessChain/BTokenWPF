@@ -139,13 +139,13 @@ namespace BTokenWPF
       if (ListBoxBlockchain.Items.Count > 0)
         header = ((ListBoxItemHeader)ListBoxBlockchain.Items.GetItemAt(0)).Header;
 
-      if (Token.HeaderTip != header)
-        if (ListBoxBlockchain.Items.Count > 0 && Token.HeaderTip.HeaderPrevious == header)
-          ListBoxBlockchain.Items.Insert(0, new ListBoxItemHeader(Token.HeaderTip));
+      if (Token.Network.HeaderTip != header)
+        if (ListBoxBlockchain.Items.Count > 0 && Token.Network.HeaderTip.HeaderPrevious == header)
+          ListBoxBlockchain.Items.Insert(0, new ListBoxItemHeader(Token.Network.HeaderTip));
         else
         {
           ListBoxBlockchain.Items.Clear();
-          header = Token.HeaderTip;
+          header = Token.Network.HeaderTip;
 
           while (header != null)
           {

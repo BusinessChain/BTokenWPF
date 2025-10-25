@@ -20,9 +20,6 @@ namespace BTokenLib
     // Vielleicht wäre es besser auf Childs zu verzichten und immer bottom up zu gehen
     public List<Token> TokensChild = new();
 
-    public Header HeaderGenesis;
-    public Header HeaderTip;
-
     public long BlockRewardInitial;
     public int PeriodHalveningBlockReward;
 
@@ -44,11 +41,6 @@ namespace BTokenLib
     bool IsLocked;
     static object LOCK_Token = new();
 
-    // Kann man das vielleicht im BToken machen, weil Bitcoin braucht das ja nicht, oder?
-    protected LiteDatabase LiteDatabase;
-    protected ILiteCollection<BsonDocument> DatabaseMetaCollection;
-    protected ILiteCollection<BsonDocument> DatabaseHeaderCollection;
-
 
     public Token(ILogEntryNotifier logEntryNotifier)
     {
@@ -63,12 +55,6 @@ namespace BTokenLib
         FileMode.OpenOrCreate,
         FileAccess.ReadWrite,
         FileShare.Read);
-
-      LiteDatabase = new LiteDatabase($"{GetName()}.db;Mode=Exclusive");
-      DatabaseHeaderCollection = LiteDatabase.GetCollection<BsonDocument>("headers");
-      DatabaseMetaCollection = LiteDatabase.GetCollection<BsonDocument>("meta");
-
-      HeaderGenesis = CreateHeaderGenesis();
     }
 
     public virtual void Reset()
@@ -78,28 +64,12 @@ namespace BTokenLib
 
     public void Start()
     {
+      $"Start Token {GetName()}".Log(this, LogFile, LogEntryNotifier);
+
       Network.Start(); // hier soll man erst rauskommen, wenn synchronisiert ist.
 
       if (TokenParent != null)
         TokenParent.Start();
-    }
-
-    public string GetStatus()
-    {
-      string messageStatus = "";
-
-      var ageBlock = TimeSpan.FromSeconds(
-        DateTimeOffset.UtcNow.ToUnixTimeSeconds() - HeaderTip.UnixTimeSeconds);
-
-      messageStatus +=
-        $"Height: {HeaderTip.Height}\n" +
-        $"Block tip: {HeaderTip.Hash.ToHexString().Substring(0, 24) + " ..."}\n" +
-        $"Difficulty Tip: {HeaderTip.Difficulty}\n" +
-        $"Acc. Difficulty: {HeaderTip.DifficultyAccumulated}\n" +
-        $"Timestamp: {DateTimeOffset.FromUnixTimeSeconds(HeaderTip.UnixTimeSeconds)}\n" +
-        $"Age: {ageBlock}\n";
-
-      return messageStatus;
     }
 
     public abstract List<string> GetSeedAddresses();
@@ -139,93 +109,6 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    void LoadHeaderTip()
-    {
-      HeaderTip = HeaderGenesis;
-
-      byte[] hash;
-      int height;
-      byte[] headerBuffer = null;
-
-      try
-      {
-        hash = DatabaseMetaCollection.FindById("lastProcessedBlock")["hash"].AsBinary;
-        height = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32;
-
-        if (hash.IsAllBytesEqual(HeaderGenesis.Hash))
-          return;
-
-        headerBuffer = DatabaseHeaderCollection.FindById(hash)["buffer"].AsBinary;
-
-        SHA256 sHA256 = SHA256.Create();
-        Header header = null;
-        int startIndex = 0;
-
-        header = ParseHeader(headerBuffer, ref startIndex, sHA256);
-        header.Height = height;
-
-        header.CountBytesTXs = BitConverter.ToInt32(headerBuffer, startIndex);
-        startIndex += 4;
-
-        int countHashesChild = VarInt.GetInt(headerBuffer, ref startIndex);
-
-        for (int i = 0; i < countHashesChild; i++)
-        {
-          byte[] iDToken = new byte[IDToken.Length];
-          Array.Copy(headerBuffer, startIndex, iDToken, 0, iDToken.Length);
-          startIndex += iDToken.Length;
-
-          byte[] hashesChild = new byte[32];
-          Array.Copy(headerBuffer, startIndex, hashesChild, 0, 32);
-          startIndex += 32;
-
-          header.HashesChild.Add(iDToken, hashesChild);
-        }
-
-        HeaderTip = header;
-      }
-      catch (Exception ex)
-      {
-        ($"Exception {ex.GetType().Name} thrown when trying to load headerTip from database: \n{ex.Message}\n" +
-          $"Set HeaderTip to HeaderGenesis.").Log(this, LogEntryNotifier);
-
-        DatabaseMetaCollection.Upsert(new BsonDocument
-        {
-          ["_id"] = "lastProcessedBlock",
-          ["hash"] = HeaderGenesis.Hash,
-          ["height"] = 0
-        });
-      }
-    }
-
-    void LoadBlocksFromArchive()
-    {
-      int heightBlockNext = HeaderTip.Height + 1;
-
-      while (Network.TryLoadBlock(heightBlockNext, out Block block))
-        try
-        {
-          $"Load block {block}.".Log(this, LogEntryNotifier);
-
-          block.Header.AppendToHeader(HeaderTip);
-
-          InsertBlockInDatabase(block);
-
-          HeaderTip.HeaderNext = block.Header;
-          HeaderTip = block.Header;
-
-          // Muss idempotent sein, da diese Blöcke schon beim ursprünglichen Cache insert in die Wallet DB eingeführt wurden.
-          Wallet.InsertBlock(block);
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-          .Log(this, LogEntryNotifier);
-
-          File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
-        }
-    }
-
     public void LoadTXPool()
     {
       SHA256 sHA256 = SHA256.Create();
@@ -261,23 +144,12 @@ namespace BTokenLib
     {
       $"Insert block {block}.".Log(this, LogEntryNotifier);
 
-      block.Header.AppendToHeader(HeaderTip);
-
       InsertBlockInDatabase(block);
-
-      HeaderTip.HeaderNext = block.Header;
-      HeaderTip = block.Header;
 
       Wallet.InsertBlock(block);
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
       TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
-
-      DeleteBlocksMinedUnconfirmed();
-
-      foreach (var hashBlockChildToken in block.Header.HashesChild)
-        TokensChild.Find(t => t.IDToken.IsAllBytesEqual(hashBlockChildToken.Key))?
-          .InsertBlockMined(hashBlockChildToken.Value);
     }    
 
     public bool TryReverseBlock(Block block)
@@ -288,16 +160,11 @@ namespace BTokenLib
 
         Wallet.ReverseBlock(block);
 
-        DatabaseHeaderCollection.Delete(HeaderTip.Hash);
-
-        HeaderTip = HeaderTip.HeaderPrevious;
-        HeaderTip.HeaderNext = null;
-
         return true;
       }
       catch (ProtocolException ex)
       {
-        $"{ex.GetType().Name} when reversing block {block}, height {HeaderTip.Height} loaded from disk: \n{ex.Message}."
+        $"{ex.GetType().Name} when reversing block {block}, height {block.Header.Height} loaded from disk: \n{ex.Message}."
         .Log(this, LogEntryNotifier);
 
         return false;
@@ -353,8 +220,6 @@ namespace BTokenLib
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }
 
-    public virtual void DeleteBlocksMinedUnconfirmed() { }
-
     public virtual List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
     { throw new NotImplementedException(); }
 
@@ -408,28 +273,5 @@ namespace BTokenLib
 
       return false;
     }
-
-    public List<Header> GetLocator()
-    {
-      Header header = HeaderTip;
-      List<Header> locator = new();
-      int depth = 0;
-      int nextLocationDepth = 0;
-
-      while (header != null)
-      {
-        if (depth == nextLocationDepth || header.HeaderPrevious == null)
-        {
-          locator.Add(header);
-          nextLocationDepth = 2 * nextLocationDepth + 1;
-        }
-
-        depth++;
-        header = header.HeaderPrevious;
-      }
-
-      return locator;
-    }
-
   }
 }

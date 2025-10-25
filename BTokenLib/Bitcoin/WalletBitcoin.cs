@@ -272,20 +272,13 @@ namespace BTokenLib
 
       foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
         if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
-        {
-          tX.FlagPrune = false;
           TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
-        }
 
       for (int i = 0; i < tXBitcoin.TXOutputs.Count; i++)
         if (TryAddTXOutputWallet(OutputsSpendable, tXBitcoin, i))
-        {
-          tX.FlagPrune = false;
           TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
-        }
 
-      if (!tX.FlagPrune)
-        IndexTXs.Add(tX.Hash, tX);
+      IndexTXs.Add(tX.Hash, tX);
     }
 
     public override void ReverseBlock(Block block)

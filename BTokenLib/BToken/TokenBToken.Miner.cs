@@ -121,14 +121,6 @@ namespace BTokenLib
       .Concat(block.Header.Hash)
       .Concat(block.Header.HashPrevious).ToArray();
     }
-
-    public override void DeleteBlocksMinedUnconfirmed()
-    {
-      BlocksMinedCache.Clear();
-
-      foreach (string pathFile in Directory.GetFiles(PathBlocksMined))
-        File.Delete(pathFile);
-    }
     
     public override void InsertBlockMined(byte[] hashBlock)
     {

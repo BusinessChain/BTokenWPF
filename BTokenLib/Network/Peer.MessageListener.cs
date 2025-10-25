@@ -117,7 +117,7 @@ namespace BTokenLib
                 Array.Copy(Payload, startIndex, hashHeaderAncestor, 0, 32);
                 startIndex += 32;
 
-                if (Token.TryGetHeader(hashHeaderAncestor, out Header header))
+                if (Network.TryGetHeader(hashHeaderAncestor, out Header header))
                 {
                   $"In getheaders locator common ancestor is {header}."
                     .Log(this, LogFiles, Token.LogEntryNotifier);
@@ -197,7 +197,7 @@ namespace BTokenLib
                 }
                 else if (inventory.Type == InventoryType.MSG_BLOCK)
                 {
-                  if (Token.TryGetBlockBytes(inventory.Hash, out byte[] buffer))
+                  if (Network.TryGetBlockBytes(inventory.Hash, out byte[] buffer))
                   {
                     $"Send block {inventory}.".Log(this, LogFiles, Token.LogEntryNotifier);
                     await SendMessage(new MessageBlock(buffer));

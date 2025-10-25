@@ -34,13 +34,12 @@ namespace BTokenLib
 
     LiteDatabase Database;
     ILiteCollection<Account> DatabaseAccountCollection;
+    ILiteCollection<BsonDocument> DatabaseMetaCollection;
 
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
     {
-      PathFileHeaderchain = Path.Combine(GetName(), "ImageHeaderchain");
-
       Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
       TXPool = new PoolTXBToken(this);
@@ -54,6 +53,7 @@ namespace BTokenLib
       PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
 
       DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
+      DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
 
       AppDomain.CurrentDomain.ProcessExit += (s, e) => { Database?.Dispose(); };
 
@@ -144,7 +144,7 @@ namespace BTokenLib
       int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
 
       while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV)
-        if (TryLoadBlock(heightBlock, out Block block))
+        if (Network.TryLoadBlock(heightBlock, out Block block))
         {
           $"Loaded block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
 
@@ -200,12 +200,6 @@ namespace BTokenLib
           foreach (var batch in AccountsStaged.Values.Chunk(500))
             DatabaseAccountCollection.Upsert(batch);
 
-          DatabaseHeaderCollection.Upsert(new BsonDocument
-          {
-            ["_id"] = block.Header.Hash,
-            ["buffer"] = block.Header.Serialize()
-          });
-
           DatabaseMetaCollection.Upsert(new BsonDocument
           {
             ["_id"] = "lastProcessedBlock",
@@ -221,7 +215,7 @@ namespace BTokenLib
           // Reload state
         }
 
-      LiteDatabase.Checkpoint();
+      Database.Checkpoint();
     }
 
     void StageSpendInput(TXBToken tX)

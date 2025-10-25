@@ -110,15 +110,9 @@ namespace BTokenLib
       {
         TXBToken tXBToken = tX as TXBToken;
 
-        if (tXBToken.PublicKey.IsAllBytesEqual(PublicKey))
-          tX.FlagPrune = false;
-
         foreach (TXOutputBToken output in tXBToken.TXOutputs)
           if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
-            tX.FlagPrune = false;
-
-        if (!tX.FlagPrune)
-          IndexTXs.Add(tX.Hash, tX);
+            IndexTXs.Add(tX.Hash, tX);
       }
 
       public override void ReverseBlock(Block block)

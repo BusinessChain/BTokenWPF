@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
+using LiteDB;
+
 
 namespace BTokenLib
 {
@@ -58,7 +60,30 @@ namespace BTokenLib
         return;
 
       foreach(Peer peer in Peers)
-        peer.SendGetHeaders(Token.GetLocator());
+        peer.SendGetHeaders(GetLocator());
+    }
+
+
+    public List<Header> GetLocator()
+    {
+      Header header = HeaderTip;
+      List<Header> locator = new();
+      int depth = 0;
+      int nextLocationDepth = 0;
+
+      while (header != null)
+      {
+        if (depth == nextLocationDepth || header.HeaderPrevious == null)
+        {
+          locator.Add(header);
+          nextLocationDepth = 2 * nextLocationDepth + 1;
+        }
+
+        depth++;
+        header = header.HeaderPrevious;
+      }
+
+      return locator;
     }
 
     void TryReceiveHeaders(Peer peer, List<Header> headers, ref bool flagMessageMayNotFollowConsensusRules)
@@ -71,7 +96,7 @@ namespace BTokenLib
 
           IsStateSync = true;
           PeerSync = peer;
-          HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
+          HeaderchainDownload = new HeaderchainDownload(GetLocator());
           FlagSyncHeadersExit = false;
 
           StartTimerSyncHeaders();
@@ -84,12 +109,12 @@ namespace BTokenLib
         flagMessageMayNotFollowConsensusRules = false;
         PeerSync.SendGetHeaders(HeaderchainDownload.Locator);
       }
-      else if (HeaderchainDownload.IsStrongerThan(Token.HeaderTip))
+      else if (HeaderchainDownload.IsStrongerThan(HeaderTip))
       {
         if(HeaderchainDownload.IsFork)
           if (!TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor()))
           {
-            HeaderchainDownload = new HeaderchainDownload(Token.GetLocator());
+            HeaderchainDownload = new HeaderchainDownload(GetLocator());
             PeerSync.SendHeaders(HeaderchainDownload.Locator);
             return;
           }
@@ -106,11 +131,10 @@ namespace BTokenLib
           Token.ReleaseLock();
         }
 
-        if (HeaderchainDownload.IsWeakerThan(Token.HeaderTip))
-          PeerSync.SendHeaders(Token.GetLocator());
+        if (HeaderchainDownload.IsWeakerThan(HeaderTip))
+          PeerSync.SendHeaders(GetLocator());
       }
     }
-
 
     bool TryReverseBlockchainToHeight(int heightBlockAncestor)
     {
@@ -184,7 +208,7 @@ namespace BTokenLib
       HeightInsertion = HeaderDownloadNext.Height;
       FlagSyncBlocksExit = false;
 
-      int heightHeaderTipOld = Token.HeaderTip.Height;
+      int heightHeaderTipOld = HeaderTip.Height;
       int countdownTimeoutSeconds = 0;
 
       while (!FlagSyncBlocksExit)
@@ -203,11 +227,11 @@ namespace BTokenLib
 
         if (countdownTimeoutSeconds < TIMEOUT_BLOCKDOWNLOAD_SECONDS * 10 * TimeoutAdjustementFactor)
         {
-          if (heightHeaderTipOld == Token.HeaderTip.Height)
+          if (heightHeaderTipOld == HeaderTip.Height)
             countdownTimeoutSeconds += 1;
           else
           {
-            heightHeaderTipOld = Token.HeaderTip.Height;
+            heightHeaderTipOld = HeaderTip.Height;
             countdownTimeoutSeconds = 0;
           }
         }
@@ -223,7 +247,7 @@ namespace BTokenLib
 
       if (HeaderchainDownload.IsFork)
       {
-        if (Token.HeaderTip.DifficultyAccumulated > HeaderchainDownload.HeaderTipTokenInitial.DifficultyAccumulated)
+        if (HeaderTip.DifficultyAccumulated > HeaderchainDownload.HeaderTipTokenInitial.DifficultyAccumulated)
           Reorganize();
         else
           TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor());
@@ -238,10 +262,10 @@ namespace BTokenLib
 
       $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-      Peer peerNextSync = Peers.Find(p => p.HeightHeaderTipLastCommunicated != Token.HeaderTip.Height);
+      Peer peerNextSync = Peers.Find(p => p.HeightHeaderTipLastCommunicated != HeaderTip.Height);
 
       if (peerNextSync != null)
-        peerNextSync.SendGetHeaders(Token.GetLocator());
+        peerNextSync.SendGetHeaders(GetLocator());
       else
         Token.TokensChild.ForEach(t => t.StartSync());
     }
@@ -298,7 +322,18 @@ namespace BTokenLib
 
             try
             {
+              block.Header.AppendToHeader(HeaderTip);
+
               Token.InsertBlock(block);
+
+              HeaderTip.HeaderNext = block.Header;
+              HeaderTip = block.Header;
+
+              DatabaseHeaderCollection.Upsert(new BsonDocument
+              {
+                ["_id"] = block.Header.Hash,
+                ["buffer"] = block.Header.Serialize()
+              });
 
               File.Move(pathBlockTemp, pathBlock, overwrite: true);
             }
@@ -318,7 +353,7 @@ namespace BTokenLib
 
           } while (QueueBlockInsertion.Remove(HeightInsertion, out block));
 
-        if (Token.HeaderTip.Height == HeaderchainDownload.HeaderTip.Height)
+        if (HeaderTip.Height == HeaderchainDownload.HeaderTip.Height)
         {
           $"Downloading blocks completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
           FlagSyncBlocksExit = true;
