@@ -40,8 +40,8 @@ namespace BTokenWPF
         while (true)
         {
           await Task.Delay(1000);
-          LabelBitcoinStatus.Content = BToken.TokenParent.GetStatus();
-          LabelBTokenStatus.Content = BToken.GetStatus();
+          LabelBitcoinStatus.Content = BToken.TokenParent.Network.GetStatus();
+          LabelBTokenStatus.Content = BToken.Network.GetStatus();
         }
       }
       catch(Exception ex)

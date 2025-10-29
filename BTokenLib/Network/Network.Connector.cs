@@ -274,7 +274,7 @@ namespace BTokenLib
           $"Peer {peer} is already connected but received inbound connection request, therefore initiate synchronization."
             .Log(this, Token.LogFile, Token.LogEntryNotifier);
 
-          await peer.SendGetHeaders(Token.GetLocator());
+          await peer.SendGetHeaders(Token.Network.GetLocator());
 
           continue;
         }

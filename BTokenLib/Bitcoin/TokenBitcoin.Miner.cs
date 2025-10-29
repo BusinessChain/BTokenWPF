@@ -71,28 +71,28 @@ namespace BTokenLib
     {
     LABEL_StartPoW:
 
-      int height = HeaderTip.Height + 1;
+      int height = Network.HeaderTip.Height + 1;
 
       Block block = new(this);
 
       block.TXs.Add(CreateCoinbaseTX(height, sHA256));
       block.TXs.AddRange(TXPool.GetTXs(COUNT_TXS_PER_BLOCK_MAX, out long feeTXs));
 
-      uint nBits = HeaderBitcoin.GetNextTarget((HeaderBitcoin)HeaderTip);
+      uint nBits = HeaderBitcoin.GetNextTarget((HeaderBitcoin)Network.HeaderTip);
       double difficulty = HeaderBitcoin.ComputeDifficultyFromNBits(nBits);
       uint seed = (uint)(indexThread * uint.MaxValue / NumberOfProcesses);
 
       HeaderBitcoin header = new()
       {
         Version = 0x01,
-        HashPrevious = HeaderTip.Hash,
-        HeaderPrevious = HeaderTip,
+        HashPrevious = Network.HeaderTip.Hash,
+        HeaderPrevious = Network.HeaderTip,
         Height = height,
         UnixTimeSeconds = (uint)DateTimeOffset.Now.ToUnixTimeSeconds(),
         Nonce = seed,
         NBits = nBits,
         Difficulty = difficulty,
-        DifficultyAccumulated = HeaderTip.DifficultyAccumulated + difficulty,
+        DifficultyAccumulated = Network.HeaderTip.DifficultyAccumulated + difficulty,
         MerkleRoot = block.ComputeMerkleRoot()
       };
 
@@ -102,7 +102,7 @@ namespace BTokenLib
 
       while (block.Header.Hash.IsGreaterThan(header.NBits))
       {
-        if (HeaderTip.Height >= height || ((PoolTXBitcoin)TXPool).GetFlagTXAddedSinceLastInquiry())
+        if (Network.HeaderTip.Height >= height || ((PoolTXBitcoin)TXPool).GetFlagTXAddedSinceLastInquiry())
           goto LABEL_StartPoW;
 
         if (!IsMining)

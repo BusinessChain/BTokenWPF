@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Windows;
-using BTokenWPF.Views;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using BTokenLib;
+
+using BTokenWPF.Views;
 
 
 namespace BTokenWPF

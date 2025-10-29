@@ -19,10 +19,12 @@ namespace BTokenLib
     List<Block> BlocksMinedCache = new();
     string PathBlocksMined;
 
+    public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
+
 
     protected override async void RunMining()
     {
-      $"Miner {this} starts.".Log(this, LogFile, LogEntryNotifier);
+      $"Miner starts.".Log(this, LogFile, LogEntryNotifier);
 
       Header headerTipParent = null;
       Header headerTip = null;
@@ -31,7 +33,7 @@ namespace BTokenLib
       int timerCreateNextToken = 0;
       int timeMinerLoopMilliseconds = 100;
 
-      FeeSatoshiPerByteAnchorToken = TokenParent.HeaderTip.FeePerByte;
+      FeeSatoshiPerByteAnchorToken = TokenParent.Network.HeaderTip.FeePerByte;
 
       if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
         FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;
@@ -42,16 +44,16 @@ namespace BTokenLib
         {
           if (headerTip == null)
           {
-            headerTip = HeaderTip;
-            headerTipParent = TokenParent.HeaderTip;
+            headerTip = Network.HeaderTip;
+            headerTipParent = TokenParent.Network.HeaderTip;
           }
 
-          if (headerTipParent != TokenParent.HeaderTip)
+          if (headerTipParent != TokenParent.Network.HeaderTip)
           {
             timerMinerPause = TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS * 1000
               / timeMinerLoopMilliseconds;
 
-            headerTipParent = TokenParent.HeaderTip;
+            headerTipParent = TokenParent.Network.HeaderTip;
           }
 
           if (timerMinerPause > 0)
@@ -92,7 +94,7 @@ namespace BTokenLib
 
       block.TXs.AddRange(TXPool.GetTXs(COUNT_BYTES_PER_BLOCK_MAX, out long feeTXs));
 
-      int height = HeaderTip.Height + 1;
+      int height = Network.HeaderTip.Height + 1;
 
       long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
       blockReward += feeTXs;
@@ -103,8 +105,8 @@ namespace BTokenLib
 
       block.Header = new HeaderBToken()
       {
-        HashPrevious = HeaderTip.Hash,
-        HeaderPrevious = HeaderTip,
+        HashPrevious = Network.HeaderTip.Hash,
+        HeaderPrevious = Network.HeaderTip,
         Height = height,
         UnixTimeSeconds = (uint)DateTimeOffset.Now.ToUnixTimeSeconds(),
         MerkleRoot = block.ComputeMerkleRoot(),
@@ -131,7 +133,7 @@ namespace BTokenLib
         if (blockMined == null)
         {
           blockMined = new(this, File.ReadAllBytes(Path.Combine(PathBlocksMined, hashBlock.ToHexString())));
-          blockMined.Parse(HeaderTip.Height + 1);
+          blockMined.Parse(Network.HeaderTip.Height + 1);
         }
 
         InsertBlock(blockMined);

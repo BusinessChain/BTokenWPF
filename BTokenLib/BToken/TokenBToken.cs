@@ -59,9 +59,10 @@ namespace BTokenLib
 
       TokenParent = new TokenBitcoin(logEntryNotifier);
 
+      IDToken = new byte[3] { (byte)'B', (byte)'T', (byte)'K' };
+
       Network = new Network(
         this,
-        iDToken: new byte[3] { (byte)'B', (byte)'T', (byte)'K' },
         port: 8777,
         flagEnableInboundConnections: true);
     }

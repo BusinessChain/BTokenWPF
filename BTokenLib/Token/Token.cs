@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-using LiteDB;
-
 
 namespace BTokenLib
 {
   public abstract partial class Token
   {
+    public byte[] IDToken;
     public Network Network;
 
     public Token TokenParent;
@@ -150,7 +149,7 @@ namespace BTokenLib
 
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
       TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
-    }    
+    }
 
     public bool TryReverseBlock(Block block)
     {
@@ -195,27 +194,6 @@ namespace BTokenLib
     public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
     
     public abstract TX ParseTXCoinbase(byte[] buffer, ref int index, SHA256 sHA256, long blockReward);
-
-    public bool IsMining;
-
-    public void StopMining()
-    {
-      IsMining = false;
-    }
-
-    public void StartMining()
-    {
-      if (IsMining)
-        return;
-
-      IsMining = true;
-
-      $"Start {GetName()} miner".Log(this, LogFile, LogEntryNotifier);
-
-      new Thread(RunMining).Start();
-    }
-
-    abstract protected void RunMining();
 
     public virtual void DeleteDB()
     { throw new NotImplementedException(); }

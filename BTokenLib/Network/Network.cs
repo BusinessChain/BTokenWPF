@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 using LiteDB;
 
@@ -13,7 +12,6 @@ namespace BTokenLib
   public partial class Network
   {
     protected Token Token;
-    public byte[] IDToken;
     protected UInt16 Port;
     public bool EnableInboundConnections;
     public ILogEntryNotifier LogEntryNotifier;
@@ -36,7 +34,6 @@ namespace BTokenLib
 
     public Network(
       Token token,
-      byte[] iDToken, 
       UInt16 port, 
       bool flagEnableInboundConnections)
     {
