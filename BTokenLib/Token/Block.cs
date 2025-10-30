@@ -27,6 +27,7 @@ namespace BTokenLib
     {
       Token = token;
       Buffer = buffer;
+      LengthBufferPayload = buffer.Length;
     }
 
     public void Parse(int heightBlock)

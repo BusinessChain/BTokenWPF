@@ -109,37 +109,28 @@ namespace BTokenLib
                 continue;
               }
 
-              int i = 0;
               List<Header> headers = new();
 
-              while (true)
+              Array.Copy(Payload, startIndex, hashHeaderAncestor, 0, 32);
+              startIndex += 32;
+
+              if (Network.TryLoadHeader(hashHeaderAncestor, out Header header))
               {
-                Array.Copy(Payload, startIndex, hashHeaderAncestor, 0, 32);
-                startIndex += 32;
+                $"In getheaders locator common ancestor is {header}."
+                  .Log(this, LogFiles, Token.LogEntryNotifier);
 
-                if (Network.TryGetHeader(hashHeaderAncestor, out Header header))
+                while (header.HeaderNext != null && headers.Count < 2000)
                 {
-                  $"In getheaders locator common ancestor is {header}."
-                    .Log(this, LogFiles, Token.LogEntryNotifier);
-
-                  while (header.HeaderNext != null && headers.Count < 2000)
-                  {
-                    headers.Add(header.HeaderNext);
-                    header = header.HeaderNext;
-                  }
-
-                  if (headers.Any())
-                    $"Send headers {headers.First()}...{headers.Last()}.".Log(this, LogFiles, Token.LogEntryNotifier);
-                  else
-                    $"Send empty headers.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-                  await SendHeaders(headers);
-
-                  break;
+                  headers.Add(header.HeaderNext);
+                  header = header.HeaderNext;
                 }
 
-                if (i++ == headersCount)
-                  throw new ProtocolException($"Found no common ancestor in getheaders locator.");
+                if (headers.Any())
+                  $"Send headers {headers.First()}...{headers.Last()}.".Log(this, LogFiles, Token.LogEntryNotifier);
+                else
+                  $"Send empty headers.".Log(this, LogFiles, Token.LogEntryNotifier);
+
+                SendHeaders(headers);
               }
 
               Token.ReleaseLock();
@@ -197,10 +188,10 @@ namespace BTokenLib
                 }
                 else if (inventory.Type == InventoryType.MSG_BLOCK)
                 {
-                  if (Network.TryGetBlockBytes(inventory.Hash, out byte[] buffer))
+                  if (Network.TryLoadBlock(inventory.Hash, out Block block))
                   {
                     $"Send block {inventory}.".Log(this, LogFiles, Token.LogEntryNotifier);
-                    await SendMessage(new MessageBlock(buffer));
+                    await SendMessage(new MessageBlock(block.Buffer, block.LengthBufferPayload));
                   }
                   else
                     await SendMessage(new NotFoundMessage(

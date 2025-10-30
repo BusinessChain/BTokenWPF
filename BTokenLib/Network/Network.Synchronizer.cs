@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -360,42 +359,6 @@ namespace BTokenLib
         }
       }
     }
-
-    public bool TryLoadBlock(int blockHeight, out Block block)
-    {
-      block = null;
-      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
-
-      while (true)
-        try
-        {
-          block = new(Token, File.ReadAllBytes(pathBlock));
-          block.Parse(blockHeight);
-
-          return true;
-        }
-        catch (FileNotFoundException)
-        {
-          return false;
-        }
-        catch (IOException ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
-            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
-
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-        }
-        catch (Exception ex)
-        {
-          $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
-          .Log(this, Token.LogEntryNotifier);
-
-          File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
-
-          return false;
-        }
-    }
-
 
     bool TryFetchHeaderDownload(out Header headerDownload)
     {

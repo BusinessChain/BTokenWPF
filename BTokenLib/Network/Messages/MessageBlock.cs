@@ -7,12 +7,12 @@ namespace BTokenLib
   {
     class MessageBlock : MessageNetwork
     { 
-      public MessageBlock(byte[] bufferBlock)
+      public MessageBlock(byte[] bufferBlock, int lengthPayload)
         : base(
             "block",
             bufferBlock,
             0,
-            bufferBlock.Length)
+            lengthPayload)
       { }
     }
   }
