@@ -34,7 +34,7 @@ namespace BTokenLib
       }
 
       public StateProtocol State = StateProtocol.NotConnected;
-      public DateTime TimeLastSync;
+      public bool FlagInitialSyncCompleted;
 
       public Header HeaderDownload;
       public Block BlockDownload;

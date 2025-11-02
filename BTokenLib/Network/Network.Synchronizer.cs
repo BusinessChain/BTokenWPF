@@ -261,12 +261,13 @@ namespace BTokenLib
 
       $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
 
+      if (PeerSync != null)
+        PeerSync.FlagInitialSyncCompleted = true;
+
       Peer peerNextSync = Peers.Find(p => p.HeightHeaderTipLastCommunicated != HeaderTip.Height);
 
       if (peerNextSync != null)
         peerNextSync.SendGetHeaders(GetLocator());
-      else
-        Token.TokensChild.ForEach(t => t.StartSync());
     }
 
     public void Reorganize()

@@ -16,9 +16,6 @@ namespace BTokenLib
 
     public Token TokenParent;
 
-    // Vielleicht wäre es besser auf Childs zu verzichten und immer bottom up zu gehen
-    public List<Token> TokensChild = new();
-
     public long BlockRewardInitial;
     public int PeriodHalveningBlockReward;
 
@@ -129,8 +126,6 @@ namespace BTokenLib
         if (TXPool.TryAddTX(tX))
           Wallet.InsertTXUnconfirmed(tX);
       }
-
-      TokensChild.ForEach(t => t.LoadTXPool());
     }
 
     public async Task RebroadcastTXsUnconfirmed()

@@ -25,7 +25,6 @@ namespace BTokenLib
     DirectoryInfo DirectoryPeersArchive;
     DirectoryInfo DirectoryPeersDisposed;
 
-
     public Header HeaderTip;
     public Header HeaderGenesis;
 
@@ -77,8 +76,10 @@ namespace BTokenLib
       if (EnableInboundConnections)
         StartPeerInboundConnector();
 
-      while (!FlagInitialSyncSucceed)
-        await Task.Delay(1000).ConfigureAwait(false);
+      do
+      {
+        await Task.Delay(10000).ConfigureAwait(false);
+      } while (Peers.Count == 0 || !Peers.All(p => p.FlagInitialSyncCompleted));
     }
 
     void LoadBlocksFromArchive()
