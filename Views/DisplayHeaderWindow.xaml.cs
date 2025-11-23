@@ -50,7 +50,7 @@ namespace BTokenWPF
         $"{DateTimeOffset.FromUnixTimeSeconds(header.UnixTimeSeconds)}\n" +
         $"{header.Nonce}\n";
 
-      if (Token.TryLoadBlock(Header.Height, out Block block))
+      if (Token.Network.TryLoadBlock(Header.Height, out Block block))
         foreach (TX tX in block.TXs)
           ListBoxTXs.Items.Add(new ListBoxItemTX(tX));
       else

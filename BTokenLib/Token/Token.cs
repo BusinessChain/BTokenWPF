@@ -22,8 +22,6 @@ namespace BTokenLib
     public int SizeBlockMax;
 
     public TXPool TXPool;
-    public FileStream FileTXPoolBackup;
-    public List<TX> TXsPoolBackup = new();
 
     const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
     const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
@@ -35,7 +33,6 @@ namespace BTokenLib
     public ILogEntryNotifier LogEntryNotifier;
 
     bool IsLocked;
-    static object LOCK_Token = new();
 
 
     public Token(ILogEntryNotifier logEntryNotifier)
@@ -45,12 +42,6 @@ namespace BTokenLib
       LogFile = new StreamWriter(Path.Combine(GetName(), "LogToken"), append: false);
 
       LogEntryNotifier = logEntryNotifier;
-
-      FileTXPoolBackup = new FileStream(
-        Path.Combine(GetName(), "FileTXPoolBackup"),
-        FileMode.OpenOrCreate,
-        FileAccess.ReadWrite,
-        FileShare.Read);
     }
 
     public virtual void Reset()
@@ -85,7 +76,7 @@ namespace BTokenLib
       if (TokenParent != null)
         return TokenParent.TryLock();
 
-      lock (LOCK_Token)
+      lock (this)
       {
         if (IsLocked)
           return false;
@@ -97,42 +88,13 @@ namespace BTokenLib
 
     public void ReleaseLock()
     {
-      if (TokenParent == null)
-        IsLocked = false;
-      else
+      if (TokenParent != null)
         TokenParent.ReleaseLock();
+      else
+        IsLocked = false;
     }
 
     public abstract Header CreateHeaderGenesis();
-
-    public void LoadTXPool()
-    {
-      SHA256 sHA256 = SHA256.Create();
-
-      byte[] fileData = new byte[FileTXPoolBackup.Length];
-      FileTXPoolBackup.Read(fileData, 0, (int)FileTXPoolBackup.Length);
-
-      int startIndex = 0;
-      while(startIndex < fileData.Length)
-      {
-        int indexTxStart = startIndex;
-
-        TX tX = ParseTX(fileData, ref startIndex, sHA256);
-
-        tX.TXRaw = new byte[startIndex - indexTxStart];
-
-        Array.Copy(fileData, indexTxStart, tX.TXRaw, 0, tX.TXRaw.Length);
-
-        if (TXPool.TryAddTX(tX))
-          Wallet.InsertTXUnconfirmed(tX);
-      }
-    }
-
-    public async Task RebroadcastTXsUnconfirmed()
-    {
-      // Rebroadcast wird bei beendigung der Netzwerk Sync getriggert.
-      // Versuche alle txs die noch nicht bestätigt wurden zu rebroadcasten
-    }
 
     public void InsertBlock(Block block)
     {
@@ -140,10 +102,10 @@ namespace BTokenLib
 
       InsertBlockInDatabase(block);
 
-      Wallet.InsertBlock(block);
+      for (int t = 0; t < block.TXs.Count; t += 1)
+        Wallet.InsertTX(block.TXs[t], block.Header.Height);
 
-      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash), FileTXPoolBackup);
-      TXsPoolBackup.RemoveAll(tXPool => block.TXs.Any(tXBlock => tXPool.Hash.IsAllBytesEqual(tXBlock.Hash)));
+      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
 
     public bool TryReverseBlock(Block block)
@@ -206,18 +168,23 @@ namespace BTokenLib
 
     public void InsertTXUnconfirmed(TX tX)
     {
+      bool flagTryAgainLater = true;
+
+      while (!TryLock())
+        if (flagTryAgainLater)
+        {
+          Thread.Sleep(3000);
+          flagTryAgainLater = false;
+        }
+        else
+          return;
+
       if (TXPool.TryAddTX(tX))
-      {
-        tX.WriteToStream(FileTXPoolBackup);
-        FileTXPoolBackup.Flush();
+          Wallet.InsertTXUnconfirmed(tX);
+        else
+          $"Could not insert tX {tX} to pool.".Log(this, LogEntryNotifier);
 
-        TXsPoolBackup.Add(tX);
-
-        Wallet.InsertTXUnconfirmed(tX);
-        Wallet.AddTXUnconfirmedToHistory(tX);
-      }
-      else
-        $"Could not insert tX {tX} to pool.".Log(this, LogEntryNotifier);
+      ReleaseLock();
     }
 
     public bool TrySendTX(string address, long value, double feePerByte, out TX tX)

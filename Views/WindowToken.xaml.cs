@@ -102,8 +102,8 @@ namespace BTokenWPF
       {
         ListDBEntries.Items.Clear();
 
-        tokenBToken.DBAccounts.GetAccounts()
-        .ForEach(t => ListDBEntries.Items.Add(new ListBoxItemDBEntry(t.account, t.locationAccount, t.indexSource)));
+        //tokenBToken.GetAccounts()
+        //.ForEach(t => ListDBEntries.Items.Add(new ListBoxItemDBEntry(t.account, t.locationAccount, t.indexSource)));
       }
     }
 

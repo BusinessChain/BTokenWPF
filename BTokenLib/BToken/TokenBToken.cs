@@ -219,22 +219,23 @@ namespace BTokenLib
       Database.Checkpoint();
     }
 
-    void StageSpendInput(TXBToken tX)
+    public Account GetCopyOfAccount(byte[] accountID)
+    {
+      if (Cache.TryGetValue(accountID, out Account accountCached))
+        return new(accountCached);
+      else if (DatabaseAccountCollection.FindById(accountID) is Account accountStored)
+        return new(accountStored);
+      else
+        throw new ProtocolException($"Account {accountID.ToHexString()} not found in database.");
+    }
+
+    public void StageSpendInput(TXBToken tX)
     {
       if (tX is TXBTokenCoinbase)
         return;
-
-      if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountStaged))
-      {
-        if (Cache.TryGetValue(tX.IDAccountSource, out Account accountCached))
-          accountStaged = new(accountCached);
-        else if (DatabaseAccountCollection.FindById(tX.IDAccountSource) is Account accountStored)
-          accountStaged = new(accountStored);
-        else
-          throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
-
+      
+        Account accountStaged = GetCopyOfAccount(tX.IDAccountSource);
         AccountsStaged.Add(accountStaged.ID, accountStaged);
-      }
 
       accountStaged.SpendTX(tX);
     }
@@ -423,14 +424,6 @@ namespace BTokenLib
         "83.229.86.158" 
         //84.74.69.100
       };
-    }
-
-    public Account GetAccountUnconfirmed(byte[] iDAccount)
-    {
-      if(!DBAccounts.TryGetAccount(iDAccount, out Account account))
-        throw new ProtocolException($"Account {iDAccount} not in database.");
-
-      return ((PoolTXBToken)TXPool).ApplyTXTryReverseCacheToHeightsOnAccount(account);
     }
 
     public override HeaderBToken ParseHeader(byte[] buffer, ref int index, SHA256 sHA256)

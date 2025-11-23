@@ -121,12 +121,11 @@ namespace BTokenLib
       }
     }
 
-    public override void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup)
+    public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
     {
       foreach (byte[] hashTX in hashesTX)
         RemoveTX(hashTX, flagRemoveRecursive: false);
 
-      fileTXPoolBackup.SetLength(0);
       SequenceNumberTX = 0;
 
       var orderedItems = TXPoolDict.OrderBy(i => i.Value.sequenceNumberTX).ToList();
@@ -134,10 +133,7 @@ namespace BTokenLib
       for (int i = 0; i < orderedItems.Count; i++)
       {
         TXPoolDict[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
-        orderedItems[i].Value.tX.WriteToStream(fileTXPoolBackup);
       }
-
-      fileTXPoolBackup.Flush();
     }
 
     void RemoveTX(byte[] hashTX, bool flagRemoveRecursive)

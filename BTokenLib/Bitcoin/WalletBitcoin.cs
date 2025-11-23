@@ -43,6 +43,9 @@ namespace BTokenLib
 
     public List<TXOutputWallet> OutputsSpendable = new();
 
+    // Das muss eine Datanbank sein!!
+    public Dictionary<byte[], TX> IndexTXs = new(new EqualityComparerByteArray());
+
 
     public WalletBitcoin(string privKeyDec, TokenBitcoin token)
       : base(privKeyDec)
@@ -266,7 +269,7 @@ namespace BTokenLib
         TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
     }
 
-    public override void InsertTX(TX tX)
+    public override void InsertTX(TX tX, int heightBlock)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;
 

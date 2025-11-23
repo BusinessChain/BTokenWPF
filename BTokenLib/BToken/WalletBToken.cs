@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
+
+using LiteDB;
+
 
 namespace BTokenLib
 {
@@ -9,6 +13,13 @@ namespace BTokenLib
     {
       TokenBToken Token;
 
+      int SerialNumberTX;
+
+      LiteDatabase Database;
+      ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
+
+      public List<TX> TXsUnconfirmed = new();
+
       static int LENGTH_P2PKH_TX = 120;
 
 
@@ -16,6 +27,8 @@ namespace BTokenLib
         : base(privKeyDec)
       {
         Token = token;
+
+        DatabaseTXCollection = Database.GetCollection<DBRecordTXWallet>("RecordsTXWallet");
       }
 
       public TX CreateTXCoinbase(long blockReward, int blockHeight)
@@ -48,7 +61,7 @@ namespace BTokenLib
 
         List<byte> tXRaw = new();
 
-        tXRaw.Add((byte)TokenBToken.TypesToken.ValueTransfer);
+        tXRaw.Add((byte)TypesToken.ValueTransfer);
 
         tXRaw.AddRange(PublicKey);
         tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockHeightAccountCreated));
@@ -106,13 +119,30 @@ namespace BTokenLib
         return true;
       }
 
-      public override void InsertTX(TX tX)
+      public override void InsertTX(TX tX, int heightBlock)
       {
         TXBToken tXBToken = tX as TXBToken;
 
+        bool flagIndexTX = false;
+
+        if (tXBToken.IDAccountSource.IsAllBytesEqual(PublicKeyHash160))
+          flagIndexTX = true;
+
         foreach (TXOutputBToken output in tXBToken.TXOutputs)
           if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
-            IndexTXs.Add(tX.Hash, tX);
+            flagIndexTX = true;
+
+        if(flagIndexTX)
+        {
+          DBRecordTXWallet record = new ()
+          {
+            HashTX = tX.Hash,
+            BlockHeightOriginTX = heightBlock,
+            SerialNumberTX = SerialNumberTX++,
+            TXRaw = tX.TXRaw
+          };
+          DatabaseTXCollection.Upsert(record);
+        }
       }
 
       public override void ReverseBlock(Block block)
@@ -122,7 +152,10 @@ namespace BTokenLib
 
       public override void InsertTXUnconfirmed(TX tX)
       {
-
+        if (!TXsUnconfirmed.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
+          // Hier braucht es noch eine weitere Bedingung, nämlich dass die TX für uns von interesse ist.
+          // Und falls nicht oder bei ungültigkeit, einfach returnen ohne exception.
+          TXsUnconfirmed.Add(tX);
       }
 
       public override long GetBalance()

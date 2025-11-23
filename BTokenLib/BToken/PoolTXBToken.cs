@@ -54,11 +54,7 @@ namespace BTokenLib
         {
           TXBToken tXBToken = tX as TXBToken;
 
-          if (!Token.DBAccounts.TryGetAccount(tXBToken.IDAccountSource, out Account accountSource))
-            throw new ProtocolException($"Account source {tXBToken.IDAccountSource} referenced by {tX} not in database.");
-
-          if (accountSource.BlockHeightAccountCreated != tXBToken.BlockheightAccountCreated)
-            throw new ProtocolException($"BlockheightAccountInit {tXBToken.BlockheightAccountCreated} as specified in tX {tX} not equal as in account {accountSource} where it is {accountSource.BlockHeightAccountCreated}.");
+          Account accountSource = Token.GetCopyOfAccount(tXBToken.IDAccountSource);
 
           lock (LOCK_TXsPool)
           {
@@ -99,7 +95,7 @@ namespace BTokenLib
         }
         catch (ProtocolException ex)
         {
-          ex.Message.Log(this, Token.LogEntryNotifier);
+          $"ProtocolException: {ex.Message}, when attempting to Add tX {tX.Hash.ToHexString()} to TX Pool.".Log(this, Token.LogEntryNotifier);
           return false;
         }
       }
@@ -125,7 +121,7 @@ namespace BTokenLib
         return accounUnconfirmed;
       }
 
-      public override void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup)
+      public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
       {
         foreach (byte[] hashTX in hashesTX)
         {
@@ -154,7 +150,6 @@ namespace BTokenLib
             }
 
           TXBundlesSortedByFee.Clear();
-          fileTXPoolBackup.SetLength(0);
           SequenceNumberTX = 0;
 
           var orderedItems = TXsByHash.OrderBy(i => i.Value.sequenceNumberTX).ToList();
@@ -163,10 +158,7 @@ namespace BTokenLib
           {
             TXsByHash[orderedItems[i].Key] = (orderedItems[i].Value.tX, SequenceNumberTX++);
             InsertTXInTXBundlesSortedByFee(orderedItems[i].Value.tX);
-            orderedItems[i].Value.tX.WriteToStream(fileTXPoolBackup);
           }
-
-          fileTXPoolBackup.Flush();
         }
       }
 

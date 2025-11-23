@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public abstract class TXPool
   {
-    public abstract void RemoveTXs(IEnumerable<byte[]> hashesTX, FileStream fileTXPoolBackup);
+    public abstract void RemoveTXs(IEnumerable<byte[]> hashesTX);
 
     public abstract bool TryAddTX(TX tX);
 

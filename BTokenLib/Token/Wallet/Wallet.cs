@@ -17,9 +17,6 @@ namespace BTokenLib
     public string AddressAccount;
 
     public List<TX> HistoryTXs = new();
-    public List<TX> HistoryTXsUnconfirmed = new();
-
-    public Dictionary<byte[], TX> IndexTXs = new(new EqualityComparerByteArray());
 
     public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
 
@@ -83,19 +80,6 @@ namespace BTokenLib
         }
       }
 
-      using (FileStream fileWalletHistoryTXsUnconfirmed = new(
-        Path.Combine(path, "walletHistoryTXsUnconfirmed"),
-        FileMode.Create,
-        FileAccess.Write,
-        FileShare.None))
-      {
-        foreach (TX tX in HistoryTXsUnconfirmed)
-        {
-          byte[] txRaw = tX.TXRaw;
-          fileWalletHistoryTXsUnconfirmed.Write(txRaw, 0, txRaw.Length);
-        }
-      }
-
       StoreOutputs(OutputsSpendableUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmed"));
       StoreOutputs(OutputsSpentUnconfirmed, Path.Combine(path, "OutputsValueUnconfirmedSpent"));
     }
@@ -123,19 +107,7 @@ namespace BTokenLib
 
     public abstract void InsertTXUnconfirmed(TX tX);
 
-    public void ClearTXsUnconfirmed()
-    {
-      OutputsSpendableUnconfirmed.Clear();
-      OutputsSpentUnconfirmed.Clear();
-    }
-
-    public void InsertBlock(Block block)
-    {
-      for (int t = 0; t < block.TXs.Count; t += 1)
-        InsertTX(block.TXs[t]);
-    }
-
-    public abstract void InsertTX(TX tX);
+    public abstract void InsertTX(TX tX, int heightBlock);
 
     public abstract void ReverseBlock(Block block);
 
@@ -143,14 +115,6 @@ namespace BTokenLib
     {
       if (!HistoryTXs.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
         HistoryTXs.Add(tX);
-    }
-
-    public void AddTXUnconfirmedToHistory(TX tX)
-    {
-      if (!HistoryTXsUnconfirmed.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
-        HistoryTXsUnconfirmed.Add(tX);
-
-      // Immediately backup tX unconfirmed on disk
     }
 
     public abstract long GetBalance();
