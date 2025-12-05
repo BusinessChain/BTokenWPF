@@ -13,8 +13,6 @@ namespace BTokenLib
   {
     const int SIZE_BLOCK_MAX = 1 << 22; // 4 MB
 
-    const int COUNT_BLOCKS_DOWNLOAD_DEPTH_MAX = 300;
-
     const long BLOCK_REWARD_INITIAL = 200000000000000; // 200 BTK
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;
 
@@ -35,6 +33,13 @@ namespace BTokenLib
     LiteDatabase Database;
     ILiteCollection<Account> DatabaseAccountCollection;
     ILiteCollection<BsonDocument> DatabaseMetaCollection;
+
+    string PathRootDB;
+    public const int COUNT_FILES_DB = 256;
+    byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
+    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
+    const int COUNT_EVICTION_ACCOUNTS_FROM_CACHE = 200_000; // Read from configuration file
+    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier)
@@ -107,14 +112,6 @@ namespace BTokenLib
 
       throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
-
-    string PathRootDB;
-    public const int COUNT_FILES_DB = 256;
-    byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32]; 
-    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
-    const int COUNT_EVICTION_ACCOUNTS_FROM_CACHE = 200_000; // Read from configuration file
-    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
-
 
     protected override void InsertBlockInDatabase(Block block)
     {
@@ -229,7 +226,25 @@ namespace BTokenLib
         throw new ProtocolException($"Account {accountID.ToHexString()} not found in database.");
     }
 
-    public void StageSpendInput(TXBToken tX)
+    bool TryCopyAccountUnconfirmed(byte[] accountID, out Account account)
+    {
+      account = null;
+
+      try
+      {
+        account = GetCopyOfAccount(accountID);
+        List<TXBToken> tXs = TXPool.GetTXsInvolvingAccountID(accountID);
+        // appliy those tXs on account
+
+        return true;
+      }
+      catch
+      {
+        return false;
+      }
+    }
+
+    void StageSpendInput(TXBToken tX)
     {
       if (tX is TXBTokenCoinbase)
         return;
@@ -461,6 +476,77 @@ namespace BTokenLib
         hashDatabase,
         unixTimeSeconds,
         nonce);
+    }
+
+    public bool TrySendTXValue(string addressOutput, long valueOutput, double feePerByte, Account accountSource)
+    {
+      long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
+
+      if (accountSource.Balance < valueOutput + fee)
+        return false;
+
+      List<byte> tXRaw = new();
+
+      tXRaw.Add((byte)TypesToken.ValueTransfer);
+
+      tXRaw.AddRange(Wallet.PublicKey);
+      tXRaw.AddRange(BitConverter.GetBytes(accountSource.BlockHeightAccountCreated));
+      tXRaw.AddRange(BitConverter.GetBytes(accountSource.Nonce));
+
+      tXRaw.AddRange(BitConverter.GetBytes(fee));
+
+      tXRaw.Add(0x01); // count outputs
+
+      tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
+      tXRaw.AddRange(addressOutput.Base58CheckToPubKeyHash());
+
+      byte[] signature = Wallet.GetSignature(tXRaw.ToArray());
+
+      tXRaw.Add((byte)signature.Length);
+      tXRaw.AddRange(signature);
+
+      TX tX = ParseTX(tXRaw.ToArray(), SHA256.Create());
+
+      if (!TryInsertTXUnconfirmed(tX))
+        return false;
+
+      Network.AdvertizeTX(tX);
+      return true;
+    }
+
+    public bool TrySendTXData(byte[] data, double feePerByte, Account accountSource)
+    {
+      long fee = (long)(feePerByte * (data.Length + LENGTH_TX_DATA));
+
+      if (accountSource.Balance < fee)
+        return false;
+
+      List<byte> tXRaw = new();
+
+      tXRaw.Add((byte)TypesToken.Data);
+
+      tXRaw.AddRange(Wallet.PublicKey);
+      tXRaw.AddRange(BitConverter.GetBytes(accountSource.BlockHeightAccountCreated));
+      tXRaw.AddRange(BitConverter.GetBytes(accountSource.Nonce));
+
+      tXRaw.AddRange(BitConverter.GetBytes(fee));
+
+      tXRaw.Add(0x01);
+      tXRaw.AddRange(VarInt.GetBytes(data.Length));
+      tXRaw.AddRange(data);
+
+      byte[] signature = Wallet.GetSignature(tXRaw.ToArray());
+
+      tXRaw.Add((byte)signature.Length);
+      tXRaw.AddRange(signature);
+
+      TX tX = ParseTX(tXRaw.ToArray(), SHA256.Create());
+
+      if (!TryInsertTXUnconfirmed(tX))
+        return false;
+
+      Network.AdvertizeTX(tX);
+      return true;
     }
   }
 }

@@ -37,9 +37,16 @@ namespace BTokenLib
       AddressAccount = PublicKeyHash160.BinaryToBase58Check();
     }
 
-    public abstract bool TryCreateTX(string address, long value, double feePerByte, out TX tX);
 
-    public abstract bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX);
+    public byte[] GetSignature(byte[] dataToBeSigned)
+    {
+      return Crypto.GetSignature(PrivKeyDec, dataToBeSigned);
+    }
+      
+
+    public abstract bool TrySendTXValue(string address, long value, double feePerByte);
+
+    public abstract bool TrySendTXData(byte[] data, double feePerByte);
 
     protected static void LoadOutputs(List<TXOutputWallet> outputs, string fileName)
     {
@@ -104,8 +111,6 @@ namespace BTokenLib
         }
       }
     }
-
-    public abstract void InsertTXUnconfirmed(TX tX);
 
     public abstract void InsertTX(TX tX, int heightBlock);
 

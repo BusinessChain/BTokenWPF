@@ -175,32 +175,23 @@ namespace BTokenWPF
 
     void ButtonMakeTX_Click(object sender, RoutedEventArgs e)
     {
-      try
-      {
-        string address = TextBoxAddress.Text;
-        long value = long.Parse(TextBoxValue.Text);
-        double fee = double.Parse(TextBoxFee.Text);
+      string address = TextBoxAddress.Text;
+      long value = long.Parse(TextBoxValue.Text);
+      double fee = double.Parse(TextBoxFee.Text);
 
-        if (Token.TrySendTX(address, value, fee, out TX tX))
-        {
-          TextBoxRawTX.Text = tX.TXRaw.Reverse().ToArray().ToHexString();
-          TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
-        }
-        else
-          MessageBox.Show(
-            "Could not send tX. Possibly not enough fund.",
-            "Error",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
-      }
-      catch(Exception ex)
+      if (Token.Wallet.TrySendTXValue(address, value, fee))
       {
-        MessageBox.Show(
-          ex.Message, 
-          "Exception", 
-          MessageBoxButton.OK, 
-          MessageBoxImage.Error);
+        // Request the tX back, from the Wallet, in order to make the text outputs below
+        
+        //TextBoxRawTX.Text = tX.TXRaw.Reverse().ToArray().ToHexString();
+        //TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
       }
+      else
+        MessageBox.Show(
+          "Could not send tX. Possibly not enough fund.",
+          "Error",
+          MessageBoxButton.OK,
+          MessageBoxImage.Error);
     }
   }
 }

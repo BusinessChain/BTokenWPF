@@ -18,8 +18,6 @@ namespace BTokenLib
       LiteDatabase Database;
       ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
 
-      public List<TX> TXsUnconfirmed = new();
-
       static int LENGTH_P2PKH_TX = 120;
 
 
@@ -48,75 +46,24 @@ namespace BTokenLib
         return Token.ParseTX(tXRaw.ToArray(), SHA256);
       }
 
-      public override bool TryCreateTX(string addressOutput, long valueOutput, double feePerByte, out TX tX)
+      public override bool TrySendTXValue(string addressOutput, long valueOutput, double feePerByte)
       {
-        tX = null;
+        if (!Token.TryCopyAccountUnconfirmed(PublicKeyHash160, out Account accountUnconfirmed))
+          return false;
 
-        long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
+        // apply the Wallet's saved unconfirmed tXs on accountWalletUnconfirmed.
 
-        Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
-
-        if (accountUnconfirmed.Balance < valueOutput + fee)
-          throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Balance}.");
-
-        List<byte> tXRaw = new();
-
-        tXRaw.Add((byte)TypesToken.ValueTransfer);
-
-        tXRaw.AddRange(PublicKey);
-        tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockHeightAccountCreated));
-        tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce));
-
-        tXRaw.AddRange(BitConverter.GetBytes(fee));
-
-        tXRaw.Add(0x01); // count outputs
-
-        tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
-        tXRaw.AddRange(addressOutput.Base58CheckToPubKeyHash());
-
-        byte[] signature = Crypto.GetSignature(PrivKeyDec, tXRaw.ToArray());
-
-        tXRaw.Add((byte)signature.Length);
-        tXRaw.AddRange(signature);
-
-        tX = Token.ParseTX(tXRaw.ToArray(), SHA256);
-
-        return true;
+        return Token.TrySendTXValue(addressOutput, valueOutput, feePerByte, accountUnconfirmed);
       }
 
-      public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
+      public override bool TrySendTXData(byte[] data, double feePerByte)
       {
-        tX = null;
+        if (!Token.TryCopyAccountUnconfirmed(PublicKeyHash160, out Account accountUnconfirmed))
+          return false;
 
-        long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
+        // apply the Wallet's saved unconfirmed tXs on accountWalletUnconfirmed.
 
-        Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
-
-        if (accountUnconfirmed.Balance < fee)
-          throw new ProtocolException($"Account {PublicKeyHash160} does not contain enough funds {accountUnconfirmed.Balance}.");
-
-        List<byte> tXRaw = new();
-
-        tXRaw.Add((byte)TokenBToken.TypesToken.Data);
-
-        tXRaw.AddRange(PublicKey);
-        tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.BlockHeightAccountCreated));
-        tXRaw.AddRange(BitConverter.GetBytes(accountUnconfirmed.Nonce));
-
-        tXRaw.AddRange(BitConverter.GetBytes(fee));
-
-        tXRaw.Add(0x01);
-        tXRaw.AddRange(VarInt.GetBytes(data.Length));
-        tXRaw.AddRange(data);
-
-        byte[] signature = Crypto.GetSignature(PrivKeyDec, tXRaw.ToArray());
-
-        tXRaw.Add((byte)signature.Length);
-        tXRaw.AddRange(signature);
-
-        tX = Token.ParseTX(tXRaw.ToArray(), SHA256);
-
-        return true;
+        return Token.TrySendTXData(data, feePerByte, accountUnconfirmed);
       }
 
       public override void InsertTX(TX tX, int heightBlock)
@@ -148,14 +95,6 @@ namespace BTokenLib
       public override void ReverseBlock(Block block)
       {
 
-      }
-
-      public override void InsertTXUnconfirmed(TX tX)
-      {
-        if (!TXsUnconfirmed.Any(t => t.Hash.IsAllBytesEqual(tX.Hash)))
-          // Hier braucht es noch eine weitere Bedingung, nämlich dass die TX für uns von interesse ist.
-          // Und falls nicht oder bei ungültigkeit, einfach returnen ohne exception.
-          TXsUnconfirmed.Add(tX);
       }
 
       public override long GetBalance()

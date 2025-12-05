@@ -69,7 +69,7 @@ namespace BTokenLib
 
             byte[] dataAnchorToken = CreateAnchorToken(out Block block);
 
-            if (TokenParent.TryBroadcastTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
+            if (TokenParent.Wallet.TrySendTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
             {
               $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
 

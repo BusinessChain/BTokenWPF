@@ -166,7 +166,7 @@ namespace BTokenLib
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-    public void InsertTXUnconfirmed(TX tX)
+    public bool TryInsertTXUnconfirmed(TX tX)
     {
       bool flagTryAgainLater = true;
 
@@ -177,41 +177,13 @@ namespace BTokenLib
           flagTryAgainLater = false;
         }
         else
-          return;
+          return false;
 
-      if (TXPool.TryAddTX(tX))
-          Wallet.InsertTXUnconfirmed(tX);
-        else
-          $"Could not insert tX {tX} to pool.".Log(this, LogEntryNotifier);
+      bool flagTryAddTXtoPoolSuccessfull = TXPool.TryAddTX(tX);
 
       ReleaseLock();
-    }
 
-    public bool TrySendTX(string address, long value, double feePerByte, out TX tX)
-    {
-      if (Wallet.TryCreateTX(address, value, feePerByte, out tX))
-      {
-        InsertTXUnconfirmed(tX);
-        Network.AdvertizeTX(tX);
-        return true;
-      }
-
-      return false;
-    }
-
-    public bool TryBroadcastTXData(byte[] data, double feeSatoshiPerByte, int sequence = 0)
-    {
-      if (Wallet.TryCreateTXData(data, sequence, feeSatoshiPerByte, out TX tX))
-      {
-        InsertTXUnconfirmed(tX);
-        Network.AdvertizeTX(tX);
-
-        $"Created and broadcasted anchor token {tX}.".Log(this, LogEntryNotifier);
-
-        return true;
-      }
-
-      return false;
+      return flagTryAddTXtoPoolSuccessfull;
     }
   }
 }

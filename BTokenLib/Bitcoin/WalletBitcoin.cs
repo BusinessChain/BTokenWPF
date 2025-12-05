@@ -55,7 +55,7 @@ namespace BTokenLib
       PublicScript = PREFIX_P2PKH.Concat(PublicKeyHash160).Concat(POSTFIX_P2PKH).ToArray();
     }
 
-    public override bool TryCreateTX(
+    public override bool TryCreateTXValue(
       string addressOutput, 
       long valueOutput, 
       double feePerByte, 
@@ -250,23 +250,6 @@ namespace BTokenLib
       base.CreateImage(path);
 
       StoreOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
-    }
-
-    public override void InsertTXUnconfirmed(TX tX)
-    {
-      TXBitcoin tXBitcoin = (TXBitcoin)tX;
-
-      foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
-      {
-        TXOutputWallet outputSpendable = OutputsSpendable.Concat(OutputsSpendableUnconfirmed).
-          FirstOrDefault(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
-
-        if (outputSpendable != null)
-          OutputsSpentUnconfirmed.Add(outputSpendable);
-      }
-
-      for (int i = 0; i < tXBitcoin.TXOutputs.Count; i++)
-        TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
     }
 
     public override void InsertTX(TX tX, int heightBlock)
