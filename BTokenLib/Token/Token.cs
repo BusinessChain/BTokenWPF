@@ -105,6 +105,7 @@ namespace BTokenLib
       for (int t = 0; t < block.TXs.Count; t += 1)
         Wallet.InsertTX(block.TXs[t], block.Header.Height);
 
+      // Könnte in InsertBlockInDatabase verschoben werden, damit der derived Pool in der derived class deklariert wird.
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
 
@@ -179,6 +180,8 @@ namespace BTokenLib
         else
           return false;
 
+      // Wenn gut, dann auch in Wallet.InsertTXUnconfirmed(tX) einfügen.
+      // Wallet und Pool als zwei unabhängige Datenstrukturen betrachten.
       bool flagTryAddTXtoPoolSuccessfull = TXPool.TryAddTX(tX);
 
       ReleaseLock();

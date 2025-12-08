@@ -28,7 +28,6 @@ namespace BTokenLib
       [BsonField]
       public long Balance;
 
-      public long PositionInFileStream = -1;
       byte[] ByteArraySerialized = new byte[LENGTH_ACCOUNT];
 
 
@@ -44,7 +43,6 @@ namespace BTokenLib
 
       public Account(FileStream fileStream)
       {
-        PositionInFileStream = fileStream.Position;
         fileStream.Read(ByteArraySerialized, 0, LENGTH_ACCOUNT);
 
         int index = 0;
@@ -59,16 +57,6 @@ namespace BTokenLib
         index += 4;
 
         Balance = BitConverter.ToInt64(ByteArraySerialized, index);
-      }
-
-      public void FlushToDisk(FileStream fileStream)
-      {
-        fileStream.Position = PositionInFileStream;
-
-        Serialize();
-
-        fileStream.Write(ByteArraySerialized, 0, ByteArraySerialized.Length);
-        fileStream.Flush(true);
       }
 
       public void SpendTX(TXBToken tX)

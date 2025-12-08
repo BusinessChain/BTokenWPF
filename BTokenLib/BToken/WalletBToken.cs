@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 using LiteDB;
+using System.Threading.Tasks;
 
 
 namespace BTokenLib
@@ -13,6 +14,8 @@ namespace BTokenLib
     {
       TokenBToken Token;
 
+      Account AccountWalletConfirmed;
+      Account AccountWalletUnconfirmed;
       int SerialNumberTX;
 
       LiteDatabase Database;
@@ -46,24 +49,41 @@ namespace BTokenLib
         return Token.ParseTX(tXRaw.ToArray(), SHA256);
       }
 
-      public override bool TrySendTXValue(string addressOutput, long valueOutput, double feePerByte)
+
+      List<(string address, long value, double feePerByte)> TXsQueueSend = new();
+
+      // Die Wallet muss selber einen Account mitführen, den sie als aktuell gültig betrachtet. 
+      // Zum Beispiel immer beim Versuch eine erfasste TX zu senden oder, wenn ein neue konfirmierte TX ankommt
+      // wird die konsistenz zur Token DB geprüft.
+
+      // Die Wallet über ein Interface an das Token ankoppeln.
+
+      List<TX> TXsPending = new();
+
+      public override bool TrySendTXValue(string address, long value, double feePerByte)
       {
-        if (!Token.TryCopyAccountUnconfirmed(PublicKeyHash160, out Account accountUnconfirmed))
-          return false;
+        // überprüfen, ob gemäss TXs pending (Wallet) und TXs nonconfirmed (Pool) die TX gültig ist (genug Funds).
+        // Allenfalls muss hier das Token gefragt werden, wieviele bytes eine TX benötigt um (fee) zu berechnen.
 
-        // apply the Wallet's saved unconfirmed tXs on accountWalletUnconfirmed.
+        long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
 
-        return Token.TrySendTXValue(addressOutput, valueOutput, feePerByte, accountUnconfirmed);
+
+        byte[] tXRawToBeSigned = Token.CreateTXRaw(address, value, fee);
+
+        byte[] signature = GetSignature(tXRawToBeSigned.ToArray());
+
+        TX tX = Token.CreateTX(tXRawToBeSigned, signature);
+
+        TXsPending.Add(tX);
+
+        Token.SendTX(tX);
+
+        return true;
       }
 
       public override bool TrySendTXData(byte[] data, double feePerByte)
       {
-        if (!Token.TryCopyAccountUnconfirmed(PublicKeyHash160, out Account accountUnconfirmed))
-          return false;
-
-        // apply the Wallet's saved unconfirmed tXs on accountWalletUnconfirmed.
-
-        return Token.TrySendTXData(data, feePerByte, accountUnconfirmed);
+        return Token.TrySendTXData(data, feePerByte, AccountWalletUnconfirmed);
       }
 
       public override void InsertTX(TX tX, int heightBlock)

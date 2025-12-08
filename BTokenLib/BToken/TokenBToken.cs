@@ -233,8 +233,7 @@ namespace BTokenLib
       try
       {
         account = GetCopyOfAccount(accountID);
-        List<TXBToken> tXs = TXPool.GetTXsInvolvingAccountID(accountID);
-        // appliy those tXs on account
+        TXPool.ApplyTXPoolOnAccount(account);
 
         return true;
       }
@@ -478,9 +477,10 @@ namespace BTokenLib
         nonce);
     }
 
-    public bool TrySendTXValue(string addressOutput, long valueOutput, double feePerByte, Account accountSource)
+    public byte[] CreateTXRaw(string addressOutput, long valueOutput, long fee)
     {
-      long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
+      if (!Token.TryCopyAccountUnconfirmed(PublicKeyHash160, out Account accountUnconfirmed))
+        return false;
 
       if (accountSource.Balance < valueOutput + fee)
         return false;

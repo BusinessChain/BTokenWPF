@@ -53,6 +53,8 @@ namespace BTokenLib
                 startIndex += 1; // Number of transaction in the block, which in the header is always 0
               }
 
+              // Es wäre doch sinnvoller hier gerade die Payload zu übergeben, dann muss der Peer nicht
+              // selber den Parser aufrufen.
               Network.TryReceiveHeaders(this, headers, ref flagMessageMayNotFollowConsensusRules);
             }
             else if (Command == "block")
@@ -88,7 +90,20 @@ namespace BTokenLib
 
               $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-              Token.InsertTXUnconfirmed(tX);
+              int numberOfRemainingTriesLockToken = 3;
+
+              while (numberOfRemainingTriesLockToken > 0)
+                if (Token.TryLock())
+                {
+                  Token.TXPool.TryAddTX(tX);
+                  Token.ReleaseLock();
+                  break;
+                }
+                else
+                {
+                  await Task.Delay(1000);
+                  numberOfRemainingTriesLockToken -= 1;
+                }
             }
             else if (Command == "getheaders")
             {
@@ -166,7 +181,7 @@ namespace BTokenLib
               InvMessage invMessage = new(Payload);
 
               List<Inventory> inventoriesRequest = invMessage.Inventories.Where(
-                i => i.IsTX() && !Token.TXPool.TryGetTX(i.Hash, out TX tXInPool)).ToList();
+                i => i.IsTX() && !Token.TryGetTX(i.Hash, out TX tXInPool)).ToList();
 
               if (inventoriesRequest.Count > 0)
                 SendMessage(new GetDataMessage(inventoriesRequest));
@@ -180,7 +195,7 @@ namespace BTokenLib
               foreach (Inventory inventory in getDataMessage.Inventories)
                 if (inventory.Type == InventoryType.MSG_TX)
                 {
-                  if (Token.TXPool.TryGetTX(inventory.Hash, out TX tXInPool))
+                  if (Token.TryGetTX(inventory.Hash, out TX tXInPool))
                     await SendMessage(new TXMessage(tXInPool.TXRaw));
                   else
                     await SendMessage(new NotFoundMessage(
