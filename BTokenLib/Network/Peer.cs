@@ -14,7 +14,7 @@ namespace BTokenLib
 {
   partial class Network
   {
-    public partial class Peer
+    partial class Peer
     {
       Network Network;
       Token Token;
@@ -188,7 +188,7 @@ namespace BTokenLib
         StartMessageListener();
       }
 
-      async Task SendMessage(MessageNetwork message)
+      public async Task SendMessage(MessageNetwork message)
       {
         while (true)
         {
@@ -199,7 +199,7 @@ namespace BTokenLib
               break;
             }
 
-          await Task.Delay(100).ConfigureAwait(true);
+          await Task.Delay(500).ConfigureAwait(false);
         }
 
         NetworkStream.Write(MagicBytes, 0, MagicBytes.Length);
@@ -244,51 +244,15 @@ namespace BTokenLib
         }
       }
 
-      public async Task<bool> TryAdvertizeTX(TX tX)
+      public async Task AdvertizeTX(TX tX)
       {
-        lock (this)
-          if (State == StateProtocol.Idle)
-            State = StateProtocol.AdvertizingTX;
-          else
-            return false;
-
         $"Advertize token {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
 
-        Inventory inventoryTX = new(
-          InventoryType.MSG_TX,
-          tX.Hash);
-
-        InvMessage invMessage = new(
-          new List<Inventory> { inventoryTX });
-
-        await SendMessage(invMessage);
-
-        SetStateIdle();
-
-        return true;
-      }
-
-      public async Task<bool> TryAdvertizeTXs(List<TX> tXs)
-      {
-        lock (this)
-          if (State == StateProtocol.Idle)
-            State = StateProtocol.AdvertizingTX;
-          else
-            return false;
-
-        List<Inventory> inventories = new();
-
-        tXs.ForEach(t =>
-        {
-          $"Advertize token {t}.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-          inventories.Add(new(InventoryType.MSG_TX,t.Hash));
+        InvMessage invMessage = new(new List<Inventory> {
+          new(InventoryType.MSG_TX, tX.Hash)
         });
 
-        await SendMessage(new InvMessage(inventories));
-
-        SetStateIdle();
-        return true;
+        await SendMessage(invMessage);
       }
 
       public async Task RequestDB()

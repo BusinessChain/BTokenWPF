@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 
 using LiteDB;
-using System.Threading.Tasks;
 
 
 namespace BTokenLib
@@ -21,7 +20,6 @@ namespace BTokenLib
       LiteDatabase Database;
       ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
 
-      static int LENGTH_P2PKH_TX = 120;
 
 
       public WalletBToken(string privKeyDec, TokenBToken token)
@@ -36,7 +34,7 @@ namespace BTokenLib
       {
         List<byte> tXRaw = new()
       {
-        (byte)TokenBToken.TypesToken.Coinbase
+        (byte)TypesToken.Coinbase
       };
 
         tXRaw.AddRange(BitConverter.GetBytes(blockHeight));
@@ -44,7 +42,7 @@ namespace BTokenLib
         tXRaw.Add(0x01); // count outputs
 
         tXRaw.AddRange(BitConverter.GetBytes(blockReward));
-        tXRaw.AddRange(PublicKeyHash160);
+        tXRaw.AddRange(Hash160PKeyPublic);
 
         return Token.ParseTX(tXRaw.ToArray(), SHA256);
       }
@@ -60,25 +58,23 @@ namespace BTokenLib
 
       List<TX> TXsPending = new();
 
-      public override bool TrySendTXValue(string address, long value, double feePerByte)
+      public override void SendTXValue(string addressDest, long value, double feePerByte, out string errorMessage)
       {
         // überprüfen, ob gemäss TXs pending (Wallet) und TXs nonconfirmed (Pool) die TX gültig ist (genug Funds).
         // Allenfalls muss hier das Token gefragt werden, wieviele bytes eine TX benötigt um (fee) zu berechnen.
 
-        long fee = (long)(feePerByte * LENGTH_P2PKH_TX);
+        List<byte> tXRaw = Token.CreateTXValueRaw(KeyPublic, addressDest, value, feePerByte);
 
+        byte[] signature = GetSignature(tXRaw.ToArray());
 
-        byte[] tXRawToBeSigned = Token.CreateTXRaw(address, value, fee);
+        TX tX = Token.CreateTXValue(tXRaw, signature);
 
-        byte[] signature = GetSignature(tXRawToBeSigned.ToArray());
-
-        TX tX = Token.CreateTX(tXRawToBeSigned, signature);
-
+        // Fire and Forget.
+        // Keine Garantie, dass die TX tatsächlich im Netzwerk aufgenommen wird.
+        // Deshalb geht die abgeschickte TX in die TXsPending rein und wird dann bei Bedarf erneut versendet.
+        Token.BroadcastTX(tX);
+        
         TXsPending.Add(tX);
-
-        Token.SendTX(tX);
-
-        return true;
       }
 
       public override bool TrySendTXData(byte[] data, double feePerByte)
@@ -92,11 +88,11 @@ namespace BTokenLib
 
         bool flagIndexTX = false;
 
-        if (tXBToken.IDAccountSource.IsAllBytesEqual(PublicKeyHash160))
+        if (tXBToken.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
           flagIndexTX = true;
 
         foreach (TXOutputBToken output in tXBToken.TXOutputs)
-          if (output.IDAccount.IsAllBytesEqual(PublicKeyHash160))
+          if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
             flagIndexTX = true;
 
         if(flagIndexTX)
@@ -121,7 +117,7 @@ namespace BTokenLib
       {
         try
         {
-          Account accountUnconfirmed = Token.GetAccountUnconfirmed(PublicKeyHash160);
+          Account accountUnconfirmed = Token.GetAccountUnconfirmed(Hash160PKeyPublic);
           return accountUnconfirmed.Balance;
         }
         catch

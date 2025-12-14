@@ -88,22 +88,8 @@ namespace BTokenLib
 
               TX tX = Token.ParseTX(tXRaw, SHA256);
 
-              $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
-
-              int numberOfRemainingTriesLockToken = 3;
-
-              while (numberOfRemainingTriesLockToken > 0)
-                if (Token.TryLock())
-                {
-                  Token.TXPool.TryAddTX(tX);
-                  Token.ReleaseLock();
-                  break;
-                }
-                else
-                {
-                  await Task.Delay(1000);
-                  numberOfRemainingTriesLockToken -= 1;
-                }
+              if(Token.TryInsertTXUnconfirmed(tX))
+                $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
             }
             else if (Command == "getheaders")
             {

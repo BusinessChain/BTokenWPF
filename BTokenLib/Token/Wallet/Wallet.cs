@@ -11,9 +11,9 @@ namespace BTokenLib
   {
     protected SHA256 SHA256 = SHA256.Create();
 
-    public string PrivKeyDec;
-    public byte[] PublicKey;
-    public byte[] PublicKeyHash160 = new byte[20];
+    public string KeyPrivateDecimal;
+    public byte[] KeyPublic;
+    public byte[] Hash160PKeyPublic = new byte[20];
     public string AddressAccount;
 
     public List<TX> HistoryTXs = new();
@@ -28,23 +28,23 @@ namespace BTokenLib
 
     public Wallet(string privKeyDec)
     {
-      PrivKeyDec = privKeyDec;
+      KeyPrivateDecimal = privKeyDec;
 
-      PublicKey = Crypto.GetPubKeyFromPrivKey(PrivKeyDec);
+      KeyPublic = Crypto.GetPubKeyFromPrivKey(KeyPrivateDecimal);
 
-      PublicKeyHash160 = Crypto.ComputeHash160(PublicKey, SHA256);
+      Hash160PKeyPublic = Crypto.ComputeHash160(KeyPublic, SHA256);
 
-      AddressAccount = PublicKeyHash160.BinaryToBase58Check();
+      AddressAccount = Hash160PKeyPublic.BinaryToBase58Check();
     }
 
 
     public byte[] GetSignature(byte[] dataToBeSigned)
     {
-      return Crypto.GetSignature(PrivKeyDec, dataToBeSigned);
+      return Crypto.GetSignature(KeyPrivateDecimal, dataToBeSigned);
     }
       
 
-    public abstract bool TrySendTXValue(string address, long value, double feePerByte);
+    public abstract bool TrySendTXValue(string address, long value, double feePerByte, out string errorMessage);
 
     public abstract bool TrySendTXData(byte[] data, double feePerByte);
 

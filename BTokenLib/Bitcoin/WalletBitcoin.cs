@@ -52,7 +52,7 @@ namespace BTokenLib
     {
       Token = token;
 
-      PublicScript = PREFIX_P2PKH.Concat(PublicKeyHash160).Concat(POSTFIX_P2PKH).ToArray();
+      PublicScript = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray();
     }
 
     public override bool TryCreateTXValue(
@@ -169,7 +169,7 @@ namespace BTokenLib
 
         byte[] message = SHA256.ComputeHash(tXRawSign.ToArray());
 
-        byte[] signature = Crypto.GetSignature(PrivKeyDec, message);
+        byte[] signature = Crypto.GetSignature(KeyPrivateDecimal, message);
 
         List<byte> scriptSig = new();
 
@@ -177,8 +177,8 @@ namespace BTokenLib
         scriptSig.AddRange(signature);
         scriptSig.Add(0x01);
 
-        scriptSig.Add((byte)PublicKey.Length);
-        scriptSig.AddRange(PublicKey);
+        scriptSig.Add((byte)KeyPublic.Length);
+        scriptSig.AddRange(KeyPublic);
 
         signaturesPerInput.Add(scriptSig);
       }
@@ -292,7 +292,7 @@ namespace BTokenLib
       TXOutputBitcoin tXOutputReferenced = tX.TXOutputs[indexOutput];
 
       if (tXOutputReferenced.Type == TXOutputBitcoin.TypesToken.P2PKH &&
-        tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(PublicKeyHash160))
+        tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(Hash160PKeyPublic))
       {
         listOutputs.Add(
           new TXOutputWallet

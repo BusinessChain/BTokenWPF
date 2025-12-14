@@ -169,24 +169,14 @@ namespace BTokenLib
 
     public bool TryInsertTXUnconfirmed(TX tX)
     {
-      bool flagTryAgainLater = true;
+      if (!TryLock())
+        return false;
 
-      while (!TryLock())
-        if (flagTryAgainLater)
-        {
-          Thread.Sleep(3000);
-          flagTryAgainLater = false;
-        }
-        else
-          return false;
-
-      // Wenn gut, dann auch in Wallet.InsertTXUnconfirmed(tX) einfügen.
-      // Wallet und Pool als zwei unabhängige Datenstrukturen betrachten.
-      bool flagTryAddTXtoPoolSuccessfull = TXPool.TryAddTX(tX);
+      bool flagInsertionSuccess = TXPool.TryAddTX(tX);
 
       ReleaseLock();
 
-      return flagTryAddTXtoPoolSuccessfull;
+      return flagInsertionSuccess;
     }
   }
 }

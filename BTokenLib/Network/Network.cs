@@ -181,16 +181,17 @@ namespace BTokenLib
 
     public void AdvertizeTX(TX tX)
     {
-      lock (LOCK_Peers)
-        foreach (Peer peer in Peers)
-          peer.TryAdvertizeTX(tX);
-    }
+      $"Advertize token {tX}.".Log(this, Token.LogEntryNotifier);
 
-    public void AdvertizeTXs(List<TX> tXs)
-    {
       lock (LOCK_Peers)
         foreach (Peer peer in Peers)
-          peer.TryAdvertizeTXs(tXs);
+        {
+          InvMessage invMessage = new(new List<Inventory> {
+            new(InventoryType.MSG_TX, tX.Hash)
+          });
+
+          peer.SendMessage(invMessage);
+        }
     }
 
     public List<Peer> GetPeers()
