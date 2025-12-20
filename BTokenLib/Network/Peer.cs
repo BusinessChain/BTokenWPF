@@ -70,8 +70,7 @@ namespace BTokenLib
 
       public SHA256 SHA256 = SHA256.Create();
 
-      StreamWriter LogFilePeer;
-      List<StreamWriter> LogFiles = new();
+      StreamWriter LogFile;
 
       public DateTime TimePeerCreation = DateTime.Now;
 
@@ -141,17 +140,14 @@ namespace BTokenLib
         if (File.Exists(pathLogFileArchive))
           File.Move(pathLogFileArchive, pathLogFileActive);
 
-        LogFilePeer = new StreamWriter(
+        LogFile = new StreamWriter(
           pathLogFileActive,
           append: true);
-
-        LogFiles.Add(LogFilePeer);
-        LogFiles.Add(Token.LogFile);
       }
 
       public async Task Connect()
       {
-        $"Connect.".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Connect.".Log(this, LogFile, Token.LogEntryNotifier);
 
         if (!TcpClient.Connected)
           await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
@@ -180,7 +176,7 @@ namespace BTokenLib
           await ListenForNextMessage();
         while (Command != "verack");
 
-        $"Received verack.".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Received verack.".Log(this, LogFile, Token.LogEntryNotifier);
         ResetTimer();
 
         SetStateIdle();
@@ -236,17 +232,17 @@ namespace BTokenLib
         try
         {
           await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
-          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}".Log(this, LogFiles, Token.LogEntryNotifier);
+          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}".Log(this, LogFile, Token.LogEntryNotifier);
         }
         catch (Exception ex)
         {
-          $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFiles, Token.LogEntryNotifier);
+          $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFile, Token.LogEntryNotifier);
         }
       }
 
       public async Task AdvertizeTX(TX tX)
       {
-        $"Advertize token {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Advertize token {tX}.".Log(this, LogFile, Token.LogEntryNotifier);
 
         InvMessage invMessage = new(new List<Inventory> {
           new(InventoryType.MSG_TX, tX.Hash)
@@ -258,7 +254,7 @@ namespace BTokenLib
       public async Task RequestDB()
       {
         $"Start downloading DB {HashDBDownload.ToHexString()}."
-          .Log(this, LogFiles, Token.LogEntryNotifier);
+          .Log(this, LogFile, Token.LogEntryNotifier);
 
         State = StateProtocol.DBDownload;
 
@@ -276,7 +272,7 @@ namespace BTokenLib
         HeaderDownload = headerDownload;
         BlockDownload = blockDownload;
 
-        $"Start downloading block {BlockDownload}.".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Start downloading block {BlockDownload}.".Log(this, LogFile, Token.LogEntryNotifier);
 
         ResetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
@@ -296,7 +292,7 @@ namespace BTokenLib
         if (headers.Count > 1)
           logText += $" ... {headers.Last()}.";
 
-        logText.Log(this, LogFiles, Token.LogEntryNotifier);
+        logText.Log(this, LogFile, Token.LogEntryNotifier);
 
         await SendMessage(new HeadersMessage(headers));
       }
@@ -308,14 +304,14 @@ namespace BTokenLib
           if(State != StateProtocol.Idle)
           {
             $"Is not idle when attempting to send block {block} but in state {State}."
-              .Log(this, LogFiles, Token.LogEntryNotifier);
+              .Log(this, LogFile, Token.LogEntryNotifier);
             return;
           }
 
           State = StateProtocol.HeaderDownload;
         }
 
-        $"Advertize block {block}.".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Advertize block {block}.".Log(this, LogFile, Token.LogEntryNotifier);
 
         await SendHeaders(new List<Header>() { block.Header });
 
@@ -366,17 +362,17 @@ namespace BTokenLib
 
       public void Dispose()
       {
-        $"Dispose {Connection}".Log(this, LogFiles, Token.LogEntryNotifier);
+        $"Dispose {Connection}".Log(this, LogFile, Token.LogEntryNotifier);
 
         Cancellation.Cancel();
 
         TcpClient.Dispose();
 
-        LogFilePeer.Dispose();
+        LogFile.Dispose();
 
         State = StateProtocol.Disposed;
 
-        string pathLogFile = ((FileStream)LogFilePeer.BaseStream).Name;
+        string pathLogFile = ((FileStream)LogFile.BaseStream).Name;
         string nameLogFile = Path.GetFileName(pathLogFile);
         string pathLogFileDisposed = Path.Combine(
           Network.DirectoryPeersDisposed.FullName, nameLogFile);

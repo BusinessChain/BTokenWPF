@@ -179,19 +179,22 @@ namespace BTokenWPF
       long value = long.Parse(TextBoxValue.Text);
       double fee = double.Parse(TextBoxFee.Text);
 
-      if (Token.Wallet.TrySendTXValue(address, value, fee))
+      try
       {
+        Token.Wallet.SendTXValue(address, value, fee);
         // Request the tX back, from the Wallet, in order to make the text outputs below
-        
+
         //TextBoxRawTX.Text = tX.TXRaw.Reverse().ToArray().ToHexString();
         //TextBoxTXID.Text = tX.Hash.ToHexString().ToLower();
       }
-      else
+      catch (Exception ex)
+      {
         MessageBox.Show(
-          "Could not send tX. Possibly not enough fund.",
+          $"Could not send tX.\n {ex.GetType().Name}: {ex.Message}.",
           "Error",
           MessageBoxButton.OK,
           MessageBoxImage.Error);
+      }
     }
   }
 }

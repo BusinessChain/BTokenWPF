@@ -24,10 +24,31 @@ namespace BTokenLib
         {
           while (true)
           {
-            if(flagMessageMayNotFollowConsensusRules)
+            // Divide messages into solicited and unsolicited messages.
+
+            // Solicited messages are messages that we asked for. These messages are by definition never spam.
+            // If a solicited message contains data that violates the protocol, a ProtocolException should be thrown,
+            // in which case the peer is disconnected for 24 hours. This mey happen even when the peer had no malicious intent,
+            // but that doesnt matter, as connections to peers should be randomized and continuously shuffled anyway,
+            // because the network layer should be kept trustless.
+
+            // Unsolicited messages may be blocks, transactions, protocol command.
+            // Here we should deploy a DoS throttle for each category. 
+            // Since blocks on average can be created only one every 10 minutes, 
+            // We can be generous an allow an average of one block message per minute over a ten minute window.
+            // With transactions, we can accept a tlps [transaction load per second] of G * Blocksize / 600 [Bytes/s]
+            // G is some generosity margins such that temporary burst demand may be satisfied.
+            // In BToken that would be 1'000'000 / 600 = 1.6 kB/s worth of transaction. We can bump this up to 5 kB/s
+            // worth of transaction that we accept, if a peer send us more, we will disconnect.
+            // DoS limiters for protocol commands have to be assessed seperately for each command.
+
+            // Bezüglich log file per peer: Das logfile der peers gibt es nur im debug modus.
+            if(flagMessagePossible_DoS_Attack)
             {
               // increment DoS counter
-              // introduce a Message/time metric for DoS detection.
+              // introduce a fixed Message/time metric for DoS detection. The network protocol
+              // shoud be designed in such a way that a few messages per minutes are enough.
+              // Assuming there are on average 
 
               //if (counterPossibleDOSMessages > max)
               //  throw new ProtocolException("Received too many possible DoS messages from peer.");
@@ -88,8 +109,15 @@ namespace BTokenLib
 
               TX tX = Token.ParseTX(tXRaw, SHA256);
 
-              if(Token.TryInsertTXUnconfirmed(tX))
+              try
+              {
+                Token.InsertTXUnconfirmed(tX);
                 $"Received TX {tX}.".Log(this, LogFiles, Token.LogEntryNotifier);
+              }
+              catch(Exception ex)
+              {
+                $"Rejected inbound TX {tX}\n {ex.GetType().Name}: {ex.Message}.".Log(this, LogFiles, Token.LogEntryNotifier);
+              }
             }
             else if (Command == "getheaders")
             {

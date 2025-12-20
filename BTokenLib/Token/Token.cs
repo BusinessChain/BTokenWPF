@@ -102,8 +102,7 @@ namespace BTokenLib
 
       InsertBlockInDatabase(block);
 
-      for (int t = 0; t < block.TXs.Count; t += 1)
-        Wallet.InsertTX(block.TXs[t], block.Header.Height);
+      Wallet.InsertBlock(block);
 
       // Könnte in InsertBlockInDatabase verschoben werden, damit der derived Pool in der derived class deklariert wird.
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
@@ -167,16 +166,39 @@ namespace BTokenLib
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-    public bool TryInsertTXUnconfirmed(TX tX)
+    /// <summary>
+    /// May just throw any Exception if fails to broadcast the transaction.
+    /// I suspect we should not handle this exception for you. Users could
+    /// just be notified that his transaction did not get through, 
+    /// and show them the error message. 
+    /// From the perspective of an developer, if an application calls this method,
+    /// let's just bubble up the exception to the caller, they may want to decide on there own
+    /// if they want to retry or not.
+    /// </summary>
+    /// <param name="tX"></param>
+    /// <exception cref="Exception"></exception>
+    public void BroadcastTX(TX tX)
+    {
+      InsertTXUnconfirmed(tX);
+      Network.BroadcastTX(tX);
+    }
+
+    public void InsertTXUnconfirmed(TX tX)
     {
       if (!TryLock())
-        return false;
+        throw new SynchronizationLockException("Failed to acquire database lock.");
 
-      bool flagInsertionSuccess = TXPool.TryAddTX(tX);
+      try
+      {
+        TXPool.AddTX(tX);
+      }
+      finally
+      {
+        ReleaseLock();
+      }
 
-      ReleaseLock();
-
-      return flagInsertionSuccess;
+      Wallet.InsertTXUnconfirmed(tX);
     }
+
   }
 }

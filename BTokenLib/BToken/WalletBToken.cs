@@ -47,7 +47,6 @@ namespace BTokenLib
         return Token.ParseTX(tXRaw.ToArray(), SHA256);
       }
 
-
       List<(string address, long value, double feePerByte)> TXsQueueSend = new();
 
       // Die Wallet muss selber einen Account mitführen, den sie als aktuell gültig betrachtet. 
@@ -56,56 +55,78 @@ namespace BTokenLib
 
       // Die Wallet über ein Interface an das Token ankoppeln.
 
-      List<TX> TXsPending = new();
+      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
+      List<TX> TXsUnconfirmedReceived = new();
 
-      public override void SendTXValue(string addressDest, long value, double feePerByte, out string errorMessage)
+      public override void SendTXValue(string addressDest, long value, double feePerByte)
       {
-        // überprüfen, ob gemäss TXs pending (Wallet) und TXs nonconfirmed (Pool) die TX gültig ist (genug Funds).
-        // Allenfalls muss hier das Token gefragt werden, wieviele bytes eine TX benötigt um (fee) zu berechnen.
+        List<byte> tXRaw =
+          Token.CreateTXValueRaw(KeyPublic, addressDest, value, feePerByte);
 
-        List<byte> tXRaw = Token.CreateTXValueRaw(KeyPublic, addressDest, value, feePerByte);
+        SendRawTX(tXRaw);
+      }
 
+      public override void SendTXData(byte[] data, double feePerByte)
+      {
+        List<byte> tXRaw =
+          Token.CreateTXDataRaw(KeyPublic, data, feePerByte);
+
+        SendRawTX(tXRaw);
+      }
+
+      void SendRawTX(List<byte> tXRaw)
+      {
         byte[] signature = GetSignature(tXRaw.ToArray());
 
-        TX tX = Token.CreateTXValue(tXRaw, signature);
+        TX tX = Token.CreateTX(tXRaw, signature);
 
-        // Fire and Forget.
-        // Keine Garantie, dass die TX tatsächlich im Netzwerk aufgenommen wird.
-        // Deshalb geht die abgeschickte TX in die TXsPending rein und wird dann bei Bedarf erneut versendet.
         Token.BroadcastTX(tX);
-        
-        TXsPending.Add(tX);
+
+        TXsUnconfirmedCreated.Add((tX, 0));
       }
 
-      public override bool TrySendTXData(byte[] data, double feePerByte)
+      public override void InsertBlock(Block block)
       {
-        return Token.TrySendTXData(data, feePerByte, AccountWalletUnconfirmed);
-      }
+        foreach (TXBToken tX in block.TXs)
+        {
+          bool flagIndexTX = false;
 
-      public override void InsertTX(TX tX, int heightBlock)
-      {
-        TXBToken tXBToken = tX as TXBToken;
-
-        bool flagIndexTX = false;
-
-        if (tXBToken.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
-          flagIndexTX = true;
-
-        foreach (TXOutputBToken output in tXBToken.TXOutputs)
-          if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
+          if (tX.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
             flagIndexTX = true;
 
-        if(flagIndexTX)
-        {
-          DBRecordTXWallet record = new ()
-          {
-            HashTX = tX.Hash,
-            BlockHeightOriginTX = heightBlock,
-            SerialNumberTX = SerialNumberTX++,
-            TXRaw = tX.TXRaw
-          };
-          DatabaseTXCollection.Upsert(record);
+          foreach (TXOutputBToken output in tX.TXOutputs)
+            if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
+              flagIndexTX = true;
+
+          if (flagIndexTX)
+            DatabaseTXCollection.Upsert(
+              new DBRecordTXWallet()
+              {
+                HashTX = tX.Hash,
+                BlockHeightOriginTX = block.Header.Height,
+                SerialNumberTX = SerialNumberTX++,
+                TXRaw = tX.TXRaw
+              });
+
+          TXsUnconfirmedCreated.RemoveAll(tXUnconfirmed => tXUnconfirmed.tX.Hash.IsAllBytesEqual(tX.Hash));
         }
+
+        foreach ((TXBToken tX, int) tXBToken in TXsUnconfirmedCreated.Where(t => t.ageBlock > 3))
+        {
+          try
+          {
+            Token.BroadcastTX(tXBToken.tX);
+          }
+          catch (Exception ex)
+          {
+            $"Exception when trying to rebroadcast yet unconfirmed transactions.".Log(this, Token.LogEntryNotifier);
+          }
+        }
+      }
+
+      public override void InsertTXUnconfirmed(TX tX)
+      {
+
       }
 
       public override void ReverseBlock(Block block)

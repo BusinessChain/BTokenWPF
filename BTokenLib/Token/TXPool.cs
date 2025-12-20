@@ -8,7 +8,7 @@ namespace BTokenLib
   {
     public abstract void RemoveTXs(IEnumerable<byte[]> hashesTX);
 
-    public abstract bool TryAddTX(TX tX);
+    public abstract void AddTX(TX tX);
 
     public abstract bool TryGetTX(byte[] hashTX, out TX tX);
 

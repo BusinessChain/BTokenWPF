@@ -1,6 +1,6 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Collections.Generic;
 
 
@@ -48,56 +48,61 @@ namespace BTokenLib
         Token = token;
       }
 
-      public override bool TryAddTX(TX tX)
+      public Account GetCopyOfAccount(byte[] accountID)
       {
+        if (!Token.TryLock())
+          throw new SynchronizationLockException("Database busy.");
+
+        Account account;
+
         try
         {
-          TXBToken tXBToken = tX as TXBToken;
+          account = Token.GetCopyOfAccount(accountID);
 
-          Account accountSource = Token.GetCopyOfAccount(tXBToken.IDAccountSource);
-
-          lock (LOCK_TXsPool)
+          if (TXsByIDAccountSource.TryGetValue(accountID, out List<TXBToken> tXsInPool))
           {
-            long valueAccountNetPool = accountSource.Balance;
-
-            if (TXsByIDAccountSource.TryGetValue(tXBToken.IDAccountSource, out List<TXBToken> tXsInPool))
-            {
-              valueAccountNetPool -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
-
-              if (tXsInPool.Last().Nonce + 1 != tXBToken.Nonce)
-                throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not in succession with nonce {tXsInPool.Last().Nonce} of last tX in pool.");
-            }
-            else if (accountSource.Nonce != tXBToken.Nonce)
-              throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not equal to nonce {accountSource.Nonce} of account {accountSource}.");
-
-            if (OutputValuesByIDAccount.TryGetValue(tXBToken.IDAccountSource, out long outputValue))
-              valueAccountNetPool += outputValue;
-
-            if (valueAccountNetPool < tXBToken.GetValueOutputs() + tXBToken.Fee)
-              throw new ProtocolException($"Value {tXBToken.GetValueOutputs() + tXBToken.Fee} of tX {tXBToken} bigger than value {valueAccountNetPool} in account {accountSource} considering tXs in pool.");
-
-            TXsByHash.Add(tXBToken.Hash, (tXBToken, SequenceNumberTX++));
-
-            if (tXsInPool == null)
-              TXsByIDAccountSource.Add(tXBToken.IDAccountSource, new List<TXBToken>() { tXBToken });
-            else
-              tXsInPool.Add(tXBToken);
-
-            if (tXBToken is TXBTokenValueTransfer tXValueTransfer)
-              foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
-                if (!OutputValuesByIDAccount.TryAdd(tXOutputBToken.IDAccount, tXOutputBToken.Value))
-                  OutputValuesByIDAccount[tXOutputBToken.IDAccount] += tXOutputBToken.Value;
-
-            InsertTXInTXBundlesSortedByFee(tXBToken);
+            account.Balance -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
+            account.Nonce += tXsInPool.Count;
           }
 
-          return true;
+          if (OutputValuesByIDAccount.TryGetValue(accountID, out long valueTotal))
+            account.Balance += valueTotal;
+
+          return account;
         }
-        catch (ProtocolException ex)
+        finally
         {
-          $"ProtocolException: {ex.Message}, when attempting to Add tX {tX.Hash.ToHexString()} to TX Pool.".Log(this, Token.LogEntryNotifier);
-          return false;
+          Token.ReleaseLock();
         }
+      }
+
+      public override void AddTX(TX tX)
+      {
+        TXBToken tXBToken = tX as TXBToken;
+
+        Account accountSource = GetCopyOfAccount(tXBToken.IDAccountSource);
+
+        if (accountSource.Nonce != tXBToken.Nonce)
+          throw new ProtocolException($"Nonce {tXBToken.Nonce} of tX {tXBToken} not equal " +
+            $"to unconfirmed nonce {accountSource.Nonce} of account {accountSource}.");
+
+        if (accountSource.Balance < tXBToken.GetValueOutputs() + tXBToken.Fee)
+          throw new ProtocolException($"Value {tXBToken.GetValueOutputs() + tXBToken.Fee} of tX {tXBToken} " +
+            $"bigger than unconfirmed balance {accountSource.Balance} of account {accountSource}.");
+
+        TXsByHash.Add(tXBToken.Hash, (tXBToken, SequenceNumberTX++));
+
+        if (TXsByIDAccountSource.TryGetValue(tXBToken.IDAccountSource, out List<TXBToken> tXsInPool))
+          tXsInPool.Add(tXBToken);
+        else
+          TXsByIDAccountSource.Add(tXBToken.IDAccountSource, new List<TXBToken>() { tXBToken });
+
+        if (tXBToken is TXBTokenValueTransfer tXValueTransfer)
+          foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
+            if (!OutputValuesByIDAccount.TryAdd(tXOutputBToken.IDAccount, tXOutputBToken.Value))
+              OutputValuesByIDAccount[tXOutputBToken.IDAccount] += tXOutputBToken.Value;
+
+        InsertTXInTXBundlesSortedByFee(tXBToken);
       }
 
       public Account ApplyTXsOnAccount(Account account)

@@ -179,7 +179,7 @@ namespace BTokenLib
         Peers.ForEach(p => p.AdvertizeBlock(block));
     }
 
-    public void AdvertizeTX(TX tX)
+    public void BroadcastTX(TX tX)
     {
       $"Advertize token {tX}.".Log(this, Token.LogEntryNotifier);
 

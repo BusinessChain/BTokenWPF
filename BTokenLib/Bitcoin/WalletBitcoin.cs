@@ -245,13 +245,6 @@ namespace BTokenLib
     }
 
 
-    public override void CreateImage(string path)
-    {
-      base.CreateImage(path);
-
-      StoreOutputs(OutputsSpendable, Path.Combine(path, "OutputsValue"));
-    }
-
     public override void InsertTX(TX tX, int heightBlock)
     {
       TXBitcoin tXBitcoin = tX as TXBitcoin;
