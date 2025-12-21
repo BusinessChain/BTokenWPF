@@ -221,7 +221,7 @@ namespace BTokenLib
       Database.Checkpoint();
     }
 
-    public Account GetCopyOfAccount(byte[] accountID)
+    Account GetCopyOfAccount(byte[] accountID)
     {
       if (Cache.TryGetValue(accountID, out Account accountCached))
         return new(accountCached);
@@ -229,6 +229,21 @@ namespace BTokenLib
         return new(accountStored);
       else
         throw new ProtocolException($"Account {accountID.ToHexString()} not found in database.");
+    }
+
+    public Account GetCopyOfAccountUnconfirmed(byte[] iDAccount)
+    {
+      if (!TryLock())
+        throw new SynchronizationLockException("Failed to acquire database lock.");
+
+      try
+      {
+        return ((PoolTXBToken)TXPool).GetCopyOfAccount(iDAccount);
+      }
+      finally
+      {
+        ReleaseLock();
+      }
     }
 
     void StageSpendInput(TXBToken tX)
@@ -463,75 +478,6 @@ namespace BTokenLib
         hashDatabase,
         unixTimeSeconds,
         nonce);
-    }
-
-    /// <summary> Creates a raw transaction ready to be signed by the caller. </summary>
-    /// <exception cref="ProtocolException">Thrown when transaction not invalid or inconsisten with current state.</exception>
-    /// <exception cref="SynchronizationLockException">Thrown when the required lock cannot be acquired.</exception>
-
-    public List<byte> CreateTXValueRaw(byte[] keyPublicSource, string addressDest, long valueOutput, double feePerByte)
-    {
-      byte[] addressAccountSource = Crypto.ComputeHash160(keyPublicSource, SHA256.Create());
-
-      Account accountSource = ((PoolTXBToken)TXPool).GetCopyOfAccount(addressAccountSource); 
-
-      long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
-
-        if (accountSource.Balance < valueOutput + fee)
-          throw new ProtocolException(
-            $"Not enough funds, balance {accountSource.Balance} sats " +
-            $"smaler than tX output value {valueOutput} plus fee {fee} totaling {valueOutput + fee}.");
-
-        List<byte> tXRaw = new();
-
-        tXRaw.Add((byte)TypesToken.ValueTransfer);
-        tXRaw.AddRange(keyPublicSource);
-        tXRaw.AddRange(BitConverter.GetBytes(accountSource.BlockHeightAccountCreated));
-        tXRaw.AddRange(BitConverter.GetBytes(accountSource.Nonce));
-        tXRaw.AddRange(BitConverter.GetBytes(fee));
-        tXRaw.Add(0x01); // count outputs
-        tXRaw.AddRange(BitConverter.GetBytes(valueOutput));
-        tXRaw.AddRange(addressDest.Base58CheckToPubKeyHash());
-
-        return tXRaw;
-    }
-
-    // Stattdessen soll der Caller ein Objekt TXData ooder TXValue machen,
-    // Nachher kann gemacht werden Token.Verify(TXObjekt)
-    // Danach kann der Kaller selber machen TXobjekt.CreateRaw(Wallet(für signieren))
-    // Und danach Token.Broadcast(TXObjekt)
-    public List<byte> CreateTXDataRaw(byte[] keyPublicSource, byte[] data, double feePerByte)
-    {
-      byte[] addressAccountSource = Crypto.ComputeHash160(keyPublicSource, SHA256.Create());
-
-      Account accountSource = ((PoolTXBToken)TXPool).GetCopyOfAccount(addressAccountSource);
-
-      long fee = (long)(feePerByte * (LENGTH_TX_DATA_SCAFFOLD + data.Length));
-
-      if (accountSource.Balance < fee)
-        throw new ProtocolException($"Not enough funds, balance {accountSource.Balance} sats fee {fee}.");
-
-      List<byte> tXRaw = new();
-
-      tXRaw.Add((byte)TypesToken.Data);
-
-      tXRaw.AddRange(keyPublicSource);
-      tXRaw.AddRange(BitConverter.GetBytes(accountSource.BlockHeightAccountCreated));
-      tXRaw.AddRange(BitConverter.GetBytes(accountSource.Nonce));
-      tXRaw.AddRange(BitConverter.GetBytes(fee));
-      tXRaw.Add(0x01);
-      tXRaw.AddRange(VarInt.GetBytes(data.Length));
-      tXRaw.AddRange(data);
-
-      return tXRaw;
-    }
-
-    public TX CreateTX(List<byte> tXRawSigned, byte[] signature)
-    {
-      tXRawSigned.Add((byte)signature.Length);
-      tXRawSigned.AddRange(signature);
-
-      return ParseTX(tXRawSigned.ToArray(), SHA256.Create());
     }
   }
 }

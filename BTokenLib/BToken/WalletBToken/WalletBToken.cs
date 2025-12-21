@@ -21,7 +21,6 @@ namespace BTokenLib
       ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
 
 
-
       public WalletBToken(string privKeyDec, TokenBToken token)
         : base(privKeyDec)
       {
@@ -60,27 +59,32 @@ namespace BTokenLib
 
       public override void SendTXValue(string addressDest, long value, double feePerByte)
       {
-        List<byte> tXRaw =
-          Token.CreateTXValueRaw(KeyPublic, addressDest, value, feePerByte);
-
-        SendRawTX(tXRaw);
+        SendTX(
+          new TXValueBuilder(
+            KeyPublic, 
+            addressDest, 
+            value, 
+            feePerByte));
       }
 
       public override void SendTXData(byte[] data, double feePerByte)
       {
-        List<byte> tXRaw =
-          Token.CreateTXDataRaw(KeyPublic, data, feePerByte);
-
-        SendRawTX(tXRaw);
+        SendTX(
+          new TXDataBuilder(
+            KeyPublic,
+            data,
+            feePerByte));
       }
 
-      void SendRawTX(List<byte> tXRaw)
+      void SendTX(TXBuilder tXBuilder)
       {
-        byte[] signature = GetSignature(tXRaw.ToArray());
+        Account accountSource = Token.GetCopyOfAccountUnconfirmed(Hash160PKeyPublic);
 
-        TX tX = Token.CreateTX(tXRaw, signature);
+        tXBuilder.CheckFee(accountSource.Balance);
 
-        Token.BroadcastTX(tX);
+        byte[] tXRaw = tXBuilder.CreateTXRaw(this, accountSource.BlockHeightAccountCreated, accountSource.Nonce);
+
+        Token.BroadcastTX(tXRaw.ToArray(), out TX tX);
 
         TXsUnconfirmedCreated.Add((tX, 0));
       }
@@ -119,7 +123,7 @@ namespace BTokenLib
           }
           catch (Exception ex)
           {
-            $"Exception when trying to rebroadcast yet unconfirmed transactions.".Log(this, Token.LogEntryNotifier);
+            $"{ex.GetType().Name} when trying to rebroadcast unconfirmed transactions:\n {ex.Message}.".Log(this, Token.LogEntryNotifier);
           }
         }
       }

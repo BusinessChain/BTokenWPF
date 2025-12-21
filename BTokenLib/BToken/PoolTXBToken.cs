@@ -50,30 +50,20 @@ namespace BTokenLib
 
       public Account GetCopyOfAccount(byte[] accountID)
       {
-        if (!Token.TryLock())
-          throw new SynchronizationLockException("Database busy.");
-
         Account account;
 
-        try
+        account = Token.GetCopyOfAccount(accountID);
+
+        if (TXsByIDAccountSource.TryGetValue(accountID, out List<TXBToken> tXsInPool))
         {
-          account = Token.GetCopyOfAccount(accountID);
-
-          if (TXsByIDAccountSource.TryGetValue(accountID, out List<TXBToken> tXsInPool))
-          {
-            account.Balance -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
-            account.Nonce += tXsInPool.Count;
-          }
-
-          if (OutputValuesByIDAccount.TryGetValue(accountID, out long valueTotal))
-            account.Balance += valueTotal;
-
-          return account;
+          account.Balance -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
+          account.Nonce += tXsInPool.Count;
         }
-        finally
-        {
-          Token.ReleaseLock();
-        }
+
+        if (OutputValuesByIDAccount.TryGetValue(accountID, out long valueTotal))
+          account.Balance += valueTotal;
+
+        return account;
       }
 
       public override void AddTX(TX tX)

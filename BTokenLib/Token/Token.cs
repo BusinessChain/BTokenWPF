@@ -166,17 +166,13 @@ namespace BTokenLib
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-    /// <summary>
-    /// May just throw any Exception if fails to broadcast the transaction.
-    /// I suspect we should not handle this exception for you. Users could
-    /// just be notified that his transaction did not get through, 
-    /// and show them the error message. 
-    /// From the perspective of an developer, if an application calls this method,
-    /// let's just bubble up the exception to the caller, they may want to decide on there own
-    /// if they want to retry or not.
-    /// </summary>
-    /// <param name="tX"></param>
-    /// <exception cref="Exception"></exception>
+    public void BroadcastTX(byte[] tXRaw, out TX tX)
+    {
+      tX = ParseTX(tXRaw, SHA256.Create());
+
+      BroadcastTX(tX);
+    }
+
     public void BroadcastTX(TX tX)
     {
       InsertTXUnconfirmed(tX);
@@ -199,6 +195,5 @@ namespace BTokenLib
 
       Wallet.InsertTXUnconfirmed(tX);
     }
-
   }
 }
