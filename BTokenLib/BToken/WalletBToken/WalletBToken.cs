@@ -9,13 +9,18 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    public partial class WalletBToken : Wallet
+    // Wenn die Wallet eine zum Token parallele Protokoll implementation macht, 
+    // Dann denke ich, sollte das Wallet Objekt nicht eine Unterklasse der Token sein. 
+    public partial class WalletBToken : Wallet 
     {
       TokenBToken Token;
 
       Account AccountWalletConfirmed;
       Account AccountWalletUnconfirmed;
       int SerialNumberTX;
+
+      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
+      List<TX> TXsUnconfirmedReceived = new();
 
       LiteDatabase Database;
       ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
@@ -46,48 +51,41 @@ namespace BTokenLib
         return Token.ParseTX(tXRaw.ToArray(), SHA256);
       }
 
-      List<(string address, long value, double feePerByte)> TXsQueueSend = new();
-
-      // Die Wallet muss selber einen Account mitführen, den sie als aktuell gültig betrachtet. 
-      // Zum Beispiel immer beim Versuch eine erfasste TX zu senden oder, wenn ein neue konfirmierte TX ankommt
-      // wird die konsistenz zur Token DB geprüft.
-
-      // Die Wallet über ein Interface an das Token ankoppeln.
-
-      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
-      List<TX> TXsUnconfirmedReceived = new();
-
       public override void SendTXValue(string addressDest, long value, double feePerByte)
       {
-        SendTX(
-          new TXValueBuilder(
-            KeyPublic, 
-            addressDest, 
-            value, 
-            feePerByte));
+        BuilderTXBTokenValue tXBuilder =
+          new(
+            this,
+            KeyPublic,
+            AccountWalletUnconfirmed,
+            addressDest,
+            value,
+            feePerByte);
+
+        SendBuilderTXBToken(tXBuilder);
       }
 
       public override void SendTXData(byte[] data, double feePerByte)
       {
-        SendTX(
-          new TXDataBuilder(
+        BuilderTXBTokenData tXBuilder =
+          new(
             KeyPublic,
+            AccountWalletUnconfirmed,
             data,
-            feePerByte));
+            feePerByte);
+
+        SendBuilderTXBToken(tXBuilder);
       }
 
-      void SendTX(TXBuilder tXBuilder)
+      private void SendBuilderTXBToken(BuilderTXBToken builderTXBToken)
       {
-        Account accountSource = Token.GetCopyOfAccountUnconfirmed(Hash160PKeyPublic);
+        builderTXBToken.CheckIfEnoughFundsAvailable(balance);
 
-        tXBuilder.CheckFee(accountSource.Balance);
-
-        byte[] tXRaw = tXBuilder.CreateTXRaw(this, accountSource.BlockHeightAccountCreated, accountSource.Nonce);
-
-        Token.BroadcastTX(tXRaw.ToArray(), out TX tX);
+        Token.BroadcastTX(builderTXBToken.CreateTXRaw(this), out TX tX);
 
         TXsUnconfirmedCreated.Add((tX, 0));
       }
+
 
       public override void InsertBlock(Block block)
       {
@@ -126,11 +124,6 @@ namespace BTokenLib
             $"{ex.GetType().Name} when trying to rebroadcast unconfirmed transactions:\n {ex.Message}.".Log(this, Token.LogEntryNotifier);
           }
         }
-      }
-
-      public override void InsertTXUnconfirmed(TX tX)
-      {
-
       }
 
       public override void ReverseBlock(Block block)

@@ -21,6 +21,68 @@ namespace BTokenLib
 
   public partial class WalletBitcoin : Wallet
   {
+    abstract class TXBuilder
+    {
+      public byte[] KeyPublicSource;
+
+      public double FeePerByte;
+      public long Fee;
+
+      public TXBuilder(byte[] keyPublicSource, double feePerByte)
+      {
+        KeyPublicSource = keyPublicSource;
+        FeePerByte = feePerByte;
+      }
+
+      public abstract void CheckFee(long fundsAccount);
+
+      public abstract byte[] CreateTXRaw(Wallet wallet, int blockHeightAccountCreated, int nonce);
+    }
+
+    class TXValueBuilder : TXBuilder
+    {
+      public string AddressDest;
+      public long Value;
+
+      public TXValueBuilder(byte[] keyPublicSource, string addressDest, long value, double feePerByte)
+        : base(keyPublicSource, feePerByte)
+      {
+        AddressDest = addressDest;
+        Value = value;
+      }
+
+      public override void CheckFee(long fundsAccount)
+      {
+        Fee = (long)(FeePerByte * LENGTH_TX_P2PKH);
+
+        if (fundsAccount < Value + Fee)
+          throw new ProtocolException(
+            $"Not enough funds, balance {fundsAccount} sats " +
+            $"smaller than tX output value {Value} plus fee {Fee} totaling {Value + Fee}.");
+      }
+
+      public override byte[] CreateTXRaw(Wallet wallet, int blockHeightAccountCreated, int nonce)
+      {
+        List<byte> tXRaw = new();
+
+        tXRaw.Add((byte)TypesToken.ValueTransfer);
+        tXRaw.AddRange(KeyPublicSource);
+        tXRaw.AddRange(BitConverter.GetBytes(blockHeightAccountCreated));
+        tXRaw.AddRange(BitConverter.GetBytes(nonce));
+        tXRaw.AddRange(BitConverter.GetBytes(Fee));
+        tXRaw.Add(0x01); // count outputs
+        tXRaw.AddRange(BitConverter.GetBytes(Value));
+        tXRaw.AddRange(AddressDest.Base58CheckToPubKeyHash());
+
+        byte[] signature = wallet.GetSignature(tXRaw.ToArray());
+
+        tXRaw.Add((byte)signature.Length);
+        tXRaw.AddRange(signature);
+
+        return tXRaw.ToArray();
+      }
+    }
+
     public TokenBitcoin Token;
 
     public byte[] PublicScript;
@@ -55,12 +117,28 @@ namespace BTokenLib
       PublicScript = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray();
     }
 
-    public override bool TryCreateTXValue(
-      string addressOutput, 
-      long valueOutput, 
-      double feePerByte, 
-      out TX tX)
+    void SendTX(TXBuilder tXBuilder)
     {
+      Account accountSource = Token.GetCopyOfAccountUnconfirmed(Hash160PKeyPublic);
+
+      tXBuilder.CheckFee(accountSource.Balance);
+
+      byte[] tXRaw = tXBuilder.CreateTXRaw(this, accountSource.BlockHeightAccountCreated, accountSource.Nonce);
+
+      Token.BroadcastTX(tXRaw.ToArray(), out TX tX);
+
+      TXsUnconfirmedCreated.Add((tX, 0));
+    }
+
+    public override void SendTXValue(string addressOutput, long valueOutput, double feePerByte)
+    {
+      SendTX(
+        new TXBitcoin(
+          KeyPublic,
+          addressDest,
+          value,
+          feePerByte));
+
       if (!TryCreateTXInputScaffold(
         sequence : 0,
         valueNettoMinimum: (long)(LENGTH_P2PKH_OUTPUT * feePerByte),
@@ -106,7 +184,7 @@ namespace BTokenLib
       return true;
     }
 
-    public override bool TryCreateTXData(byte[] data, int sequence, double feePerByte, out TX tX)
+    public override void SendTXData(byte[] data, double feePerByte)
     {
       if (!TryCreateTXInputScaffold(
         sequence,
@@ -227,7 +305,7 @@ namespace BTokenLib
       value = outputsSpendable.Sum(o => o.Value);
       feeTXInputScaffold = feePerTXInput * outputsSpendable.Count;
 
-      if (value - feeTXInputScaffold < valueNettoMinimum || outputsSpendable.Count == 0)
+      if (value - feeTXInputScaffold < valueNettoMinimum)
         return false;
 
       tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // version
@@ -245,19 +323,20 @@ namespace BTokenLib
     }
 
 
-    public override void InsertTX(TX tX, int heightBlock)
+    public override void InsertBlock(Block block)
     {
-      TXBitcoin tXBitcoin = tX as TXBitcoin;
+      foreach(TXBitcoin tX in block.TXs)
+      {
+        foreach (TXInputBitcoin tXInput in tX.Inputs)
+          if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
+            TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
 
-      foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
-        if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
-          TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
+        for (int i = 0; i < tX.TXOutputs.Count; i++)
+          if (TryAddTXOutputWallet(OutputsSpendable, tX, i))
+            TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
 
-      for (int i = 0; i < tXBitcoin.TXOutputs.Count; i++)
-        if (TryAddTXOutputWallet(OutputsSpendable, tXBitcoin, i))
-          TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
-
-      IndexTXs.Add(tX.Hash, tX);
+        IndexTXs.Add(tX.Hash, tX);
+      }
     }
 
     public override void ReverseBlock(Block block)

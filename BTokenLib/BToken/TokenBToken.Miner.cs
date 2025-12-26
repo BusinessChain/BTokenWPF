@@ -69,14 +69,14 @@ namespace BTokenLib
 
             byte[] dataAnchorToken = CreateAnchorToken(out Block block);
 
-            if (TokenParent.Wallet.TrySendTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken))
-            {
-              $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
+            TokenParent.Wallet.SendTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken);
+            
+            $"Mine block {block}.".Log(this, LogFile, LogEntryNotifier);
 
-              BlocksMinedCache.Add(block);
+            BlocksMinedCache.Add(block);
 
-              block.WriteToDisk(Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString()));
-            }
+            block.WriteToDisk(Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString()));
+            
           }
 
           ReleaseLock();

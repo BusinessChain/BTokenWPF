@@ -43,9 +43,6 @@ namespace BTokenLib
     const int COUNT_EVICTION_ACCOUNTS_FROM_CACHE = 200_000; // Read from configuration file
     const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
-    const int LENGTH_TX_P2PKH = 120;
-    const int LENGTH_TX_DATA_SCAFFOLD = 30;
-
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
@@ -107,7 +104,7 @@ namespace BTokenLib
       startIndex += 1;
 
       if (typeToken == TypesToken.ValueTransfer)
-        return new TXBTokenValueTransfer(buffer, ref startIndex, sHA256);
+        return new TXBTokenValue(buffer, ref startIndex, sHA256);
       
       if (typeToken == TypesToken.AnchorToken)
         return new TXBTokenAnchor(buffer, ref startIndex, sHA256);
@@ -331,7 +328,7 @@ namespace BTokenLib
           {
             ReverseSpendInputInCache(tX);
 
-            if (tX is TXBTokenValueTransfer tXTokenTransfer)
+            if (tX is TXBTokenValue tXTokenTransfer)
             {
               foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
                 ReverseOutputInCache(tXOutput);

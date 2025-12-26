@@ -43,7 +43,6 @@ namespace BTokenLib
       return Crypto.GetSignature(KeyPrivateDecimal, dataToBeSigned);
     }
       
-
     public abstract void SendTXValue(string address, long value, double feePerByte);
 
     public abstract void SendTXData(byte[] data, double feePerByte);

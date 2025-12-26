@@ -1,37 +1,38 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  public partial class TokenBToken : Token
+  public partial class TokenBitcoin : Token
   {
-    public partial class WalletBToken : Wallet
+    public partial class WalletBitcoin : Wallet
     {
-      abstract class TXBuilder
+      abstract class BuilderTXBitcoin
       {
         public byte[] KeyPublicSource;
 
         public double FeePerByte;
         public long Fee;
 
-        public TXBuilder(byte[] keyPublicSource, double feePerByte)
+        public BuilderTXBitcoin(byte[] keyPublicSource, double feePerByte)
         {
           KeyPublicSource = keyPublicSource;
           FeePerByte = feePerByte;
         }
 
-        public abstract void CheckFee(long fundsAccount);
+        public abstract void CheckIfEnoughFundsAvailable(long fundsAccount);
 
         public abstract byte[] CreateTXRaw(Wallet wallet, int blockHeightAccountCreated, int nonce);
       }
 
-      class TXValueBuilder : TXBuilder
+      class BuilderTXBitcoinValue : BuilderTXBitcoin
       {
         public string AddressDest;
         public long Value;
+
+        const int LENGTH_P2PKH_OUTPUT = 34;
+        const int LENGTH_P2PKH_INPUT = 180;
 
         public TXValueBuilder(byte[] keyPublicSource, string addressDest, long value, double feePerByte)
           : base(keyPublicSource, feePerByte)
@@ -40,8 +41,20 @@ namespace BTokenLib
           Value = value;
         }
 
-        public override void CheckFee(long fundsAccount)
+        public override void CheckIfEnoughFundsAvailable(long fundsAccount)
         {
+          long feePerTXInput = (long)(FeePerByte * LENGTH_P2PKH_INPUT);
+
+          long feeTXInputScaffold = feePerTXInput * OutputsSpendable.Count;
+
+          long fundsOutputsSpendable = OutputsSpendable.Sum(o => o.Value);
+
+          if (fundsOutputsSpendable - feeTXInputScaffold < valueNettoMinimum)
+            throw new ProtocolException(
+              $"Not enough funds, balance {fundsAccount} sats " +
+              $"smaller than tX output value {Value} plus fee {Fee} totaling {Value + Fee}.");
+
+          ///
           Fee = (long)(FeePerByte * LENGTH_TX_P2PKH);
 
           if (fundsAccount < Value + Fee)
@@ -72,8 +85,10 @@ namespace BTokenLib
         }
       }
 
-      class TXDataBuilder : TXBuilder
+      class TXDataBuilder : BuilderTXBToken
       {
+        const int LENGTH_TX_DATA_SCAFFOLD = 30;
+
         public byte[] Data;
 
         public TXDataBuilder(byte[] keyPublicSource, byte[] data, double feePerByte)

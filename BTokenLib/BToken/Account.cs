@@ -41,24 +41,6 @@ namespace BTokenLib
         Balance = account.Balance;
       }
 
-      public Account(FileStream fileStream)
-      {
-        fileStream.Read(ByteArraySerialized, 0, LENGTH_ACCOUNT);
-
-        int index = 0;
-
-        Array.Copy(ByteArraySerialized, ID, LENGTH_ID);
-        index += LENGTH_ID;
-
-        BlockHeightAccountCreated = BitConverter.ToInt32(ByteArraySerialized, index);
-        index += 4;
-
-        Nonce = BitConverter.ToInt32(ByteArraySerialized, index);
-        index += 4;
-
-        Balance = BitConverter.ToInt64(ByteArraySerialized, index);
-      }
-
       public void SpendTX(TXBToken tX)
       {
         if (BlockHeightAccountCreated != tX.BlockheightAccountCreated || Nonce != tX.Nonce)
@@ -80,24 +62,6 @@ namespace BTokenLib
       public override string ToString()
       {
         return ID.BinaryToBase58Check();
-      }
-
-      public byte[] Serialize()
-      {
-        int index = 0;
-
-        ID.CopyTo(ByteArraySerialized, index);
-        index += LENGTH_ID;
-
-        BitConverter.GetBytes(BlockHeightAccountCreated).CopyTo(ByteArraySerialized, index);
-        index += 4;
-
-        BitConverter.GetBytes(Nonce).CopyTo(ByteArraySerialized, index);
-        index += 4;
-
-        BitConverter.GetBytes(Balance).CopyTo(ByteArraySerialized, index);
-
-        return ByteArraySerialized;
       }
     }
   }

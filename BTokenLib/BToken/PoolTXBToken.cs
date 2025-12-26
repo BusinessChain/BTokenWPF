@@ -87,7 +87,7 @@ namespace BTokenLib
         else
           TXsByIDAccountSource.Add(tXBToken.IDAccountSource, new List<TXBToken>() { tXBToken });
 
-        if (tXBToken is TXBTokenValueTransfer tXValueTransfer)
+        if (tXBToken is TXBTokenValue tXValueTransfer)
           foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
             if (!OutputValuesByIDAccount.TryAdd(tXOutputBToken.IDAccount, tXOutputBToken.Value))
               OutputValuesByIDAccount[tXOutputBToken.IDAccount] += tXOutputBToken.Value;
@@ -135,7 +135,7 @@ namespace BTokenLib
           if (tXsByAccountSource.Count == 0)
             TXsByIDAccountSource.Remove(tX.IDAccountSource);
 
-          if (tX is TXBTokenValueTransfer tXValueTransfer)
+          if (tX is TXBTokenValue tXValueTransfer)
             foreach (TXOutputBToken tXOutput in tXValueTransfer.TXOutputs)
             {
               OutputValuesByIDAccount[tXOutput.IDAccount] -= tXOutput.Value;

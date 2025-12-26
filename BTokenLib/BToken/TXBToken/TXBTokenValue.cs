@@ -5,9 +5,9 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public class TXBTokenValueTransfer : TXBToken
+  public class TXBTokenValue : TXBToken
   {
-    public TXBTokenValueTransfer(byte[] buffer, ref int index, SHA256 sHA256)
+    public TXBTokenValue(byte[] buffer, ref int index, SHA256 sHA256)
     {
       int indexTxStart = index - 1;
 
