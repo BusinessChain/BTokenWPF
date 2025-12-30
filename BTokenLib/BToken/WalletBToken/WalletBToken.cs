@@ -9,8 +9,6 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    // Wenn die Wallet eine zum Token parallele Protokoll implementation macht, 
-    // Dann denke ich, sollte das Wallet Objekt nicht eine Unterklasse der Token sein. 
     public partial class WalletBToken : Wallet 
     {
       TokenBToken Token;
@@ -53,7 +51,7 @@ namespace BTokenLib
 
       public override void SendTXValue(string addressDest, long value, double feePerByte)
       {
-        BuilderTXBTokenValue tXBuilder =
+        BuilderTXBTokenValue builderTXBTokenValue =
           new(
             this,
             KeyPublic,
@@ -62,30 +60,31 @@ namespace BTokenLib
             value,
             feePerByte);
 
-        SendBuilderTXBToken(tXBuilder);
+        // Besser wäre eigentlich, das TX Objekt direkt selber zu erstellen
+        // und dann die serialisierte TXRaw zu versenden.
+
+        TX tX = Token.ParseTX(builderTXBTokenValue.TXRaw, SHA256);
+
+        TXsUnconfirmedCreated.Add((tX, 0));
+
+        Token.BroadcastTX(tX);
       }
 
       public override void SendTXData(byte[] data, double feePerByte)
       {
-        BuilderTXBTokenData tXBuilder =
-          new(
-            KeyPublic,
-            AccountWalletUnconfirmed,
-            data,
-            feePerByte);
+        BuilderTXBTokenData tXBuilder = new(
+          this,
+          KeyPublic,
+          AccountWalletUnconfirmed,
+          data,
+          feePerByte);
 
-        SendBuilderTXBToken(tXBuilder);
-      }
-
-      private void SendBuilderTXBToken(BuilderTXBToken builderTXBToken)
-      {
-        builderTXBToken.CheckIfEnoughFundsAvailable(balance);
-
-        Token.BroadcastTX(builderTXBToken.CreateTXRaw(this), out TX tX);
+        TX tX = Token.ParseTX(tXBuilder.TXRaw, SHA256);
 
         TXsUnconfirmedCreated.Add((tX, 0));
-      }
 
+        Token.BroadcastTX(tX);
+      }
 
       public override void InsertBlock(Block block)
       {

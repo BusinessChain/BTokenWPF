@@ -10,29 +10,20 @@ namespace BTokenLib
       abstract class BuilderTXBToken
       {
         public byte[] TXRaw;
-
-        public BuilderTXBToken()
-        { }
       }
 
       class BuilderTXBTokenValue : BuilderTXBToken
       {
-        public string AddressDest;
-        public long Value;
-
         const int LENGTH_TX_P2PKH = 120;
 
         public BuilderTXBTokenValue(Wallet wallet, byte[] keyPublicSource, Account accountSource, string addressDest, long value, double feePerByte)
         {
-          AddressDest = addressDest;
-          Value = value;
-
           long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
 
-          if (accountSource.Balance < Value + fee)
+          if (accountSource.Balance < value + fee)
             throw new ProtocolException(
               $"Not enough funds: balance {accountSource.Balance} " +
-              $"less than tX output value {Value} plus fee {fee} totaling {Value + fee}.");
+              $"less than tX output value {value} plus fee {fee} totaling {value + fee}.");
 
           List<byte> tXRaw = new();
 
@@ -42,8 +33,8 @@ namespace BTokenLib
           tXRaw.AddRange(BitConverter.GetBytes(accountSource.Nonce));
           tXRaw.AddRange(BitConverter.GetBytes(fee));
           tXRaw.Add(0x01); // count outputs
-          tXRaw.AddRange(BitConverter.GetBytes(Value));
-          tXRaw.AddRange(AddressDest.Base58CheckToPubKeyHash());
+          tXRaw.AddRange(BitConverter.GetBytes(value));
+          tXRaw.AddRange(addressDest.Base58CheckToPubKeyHash());
 
           byte[] signature = wallet.GetSignature(tXRaw.ToArray());
 
@@ -58,13 +49,10 @@ namespace BTokenLib
       {
         const int LENGTH_TX_DATA_SCAFFOLD = 30;
 
-        public byte[] Data;
 
         public BuilderTXBTokenData(Wallet wallet, byte[] keyPublicSource, Account accountSource, byte[] data, double feePerByte)
         {
-          Data = data;
-
-          long fee = (long)(feePerByte * (LENGTH_TX_DATA_SCAFFOLD + Data.Length));
+          long fee = (long)(feePerByte * (LENGTH_TX_DATA_SCAFFOLD + data.Length));
 
           if (accountSource.Balance < fee)
             throw new ProtocolException($"Not enough funds, balance {accountSource.Balance} less than fee {fee}.");
@@ -77,8 +65,8 @@ namespace BTokenLib
           tXRaw.AddRange(BitConverter.GetBytes(accountSource.Nonce));
           tXRaw.AddRange(BitConverter.GetBytes(fee));
           tXRaw.Add(0x01);
-          tXRaw.AddRange(VarInt.GetBytes(Data.Length));
-          tXRaw.AddRange(Data);
+          tXRaw.AddRange(VarInt.GetBytes(data.Length));
+          tXRaw.AddRange(data);
 
           byte[] signature = wallet.GetSignature(tXRaw.ToArray());
 

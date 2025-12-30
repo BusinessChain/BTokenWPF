@@ -166,13 +166,6 @@ namespace BTokenLib
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotImplementedException(); }
 
-    public void BroadcastTX(byte[] tXRaw, out TX tX)
-    {
-      tX = ParseTX(tXRaw, SHA256.Create());
-
-      BroadcastTX(tX);
-    }
-
     public void BroadcastTX(TX tX)
     {
       InsertTXUnconfirmed(tX);
