@@ -58,14 +58,17 @@ namespace BTokenLib
 
       List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
 
-      public override void SendTXValue(string addressOutput, long valueOutput, double feePerByte)
+      public List<TXOutputWallet> GetOutputsSpendable(long feePerTXInput)
       {
-        List<TXOutputWallet> outputsSpendable = OutputsSpendable
+        return OutputsSpendable
           .Where(o => o.Value > feePerTXInput)
           .Concat(OutputsSpendableUnconfirmed.Where(o => o.Value > feePerTXInput))
           .Except(OutputsSpentUnconfirmed, new EqualityComparerTXOutputWallet())
           .Take(VarInt.PREFIX_UINT16 - 1).ToList();
+      }
 
+      public override void SendTXValue(string addressOutput, long valueOutput, double feePerByte)
+      {
         //List<TXOutputWallet> outputsSpendable = new()
         //{
         //  new TXOutputWallet()
@@ -78,7 +81,7 @@ namespace BTokenLib
 
 
         BuilderTXBitcoinValue builderTXBitcoin =
-          new(KeyPublic, addressOutput, outputsSpendable, valueOutput, feePerByte);
+          new(this, addressOutput, valueOutput, feePerByte, sequence: 0);
 
         // Besser wäre eigentlich, das TX Objekt direkt selber zu erstellen
         // und dann die serialisierte TXRaw zu versenden.

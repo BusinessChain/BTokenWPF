@@ -13,18 +13,17 @@ namespace BTokenLib
       {
         public byte[] TXRaw;
 
-        public byte[] KeyPublicSource;
-
         public double FeePerByte;
         public long Fee;
+        protected WalletBitcoin Wallet;
 
-        public BuilderTXBitcoin(byte[] keyPublicSource, double feePerByte)
+        public BuilderTXBitcoin(WalletBitcoin wallet, double feePerByte)
         {
-          KeyPublicSource = keyPublicSource;
           FeePerByte = feePerByte;
+          Wallet = wallet;
         }
 
-        public void SignTX(Wallet wallet, List<byte> tXRaw)
+        protected void SignTX(List<byte> tXRaw)
         {
           List<List<byte>> signaturesPerInput = new();
           int countInputs = tXRaw[4];
@@ -35,12 +34,12 @@ namespace BTokenLib
             List<byte> tXRawSign = tXRaw.ToList();
             int indexRawSign = indexFirstInput + 36 * (i + 1) + 5 * i;
 
-            tXRawSign[indexRawSign++] = (byte)PublicScript.Length;
-            tXRawSign.InsertRange(indexRawSign, PublicScript);
+            tXRawSign[indexRawSign++] = (byte)Wallet.PublicScript.Length;
+            tXRawSign.InsertRange(indexRawSign, Wallet.PublicScript);
 
-            byte[] message = SHA256.ComputeHash(tXRawSign.ToArray());
+            byte[] message = Wallet.SHA256.ComputeHash(tXRawSign.ToArray());
 
-            byte[] signature = wallet.GetSignature(message);
+            byte[] signature = Wallet.GetSignature(message);
 
             List<byte> scriptSig = new();
 
@@ -48,8 +47,8 @@ namespace BTokenLib
             scriptSig.AddRange(signature);
             scriptSig.Add(0x01);
 
-            scriptSig.Add((byte)KeyPublic.Length);
-            scriptSig.AddRange(KeyPublic);
+            scriptSig.Add((byte)Wallet.KeyPublic.Length);
+            scriptSig.AddRange(Wallet.KeyPublic);
 
             signaturesPerInput.Add(scriptSig);
           }
@@ -80,30 +79,31 @@ namespace BTokenLib
         public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
         public BuilderTXBitcoinValue(
-          Wallet wallet,
-          byte[] keyPublicSource,
+          WalletBitcoin wallet,
           string addressDest,
-          List<TXOutputWallet> outputsSpendable,
           long valueOutput,
           double feePerByte,
           int sequence)
-          : base(keyPublicSource, feePerByte)
+          : base(wallet, feePerByte)
         {
+          long feePerInput = (long)(feePerByte * LENGTH_P2PKH_INPUT);
+
+          List<TXOutputWallet> outputsSpendable = wallet.GetOutputsSpendable(feePerInput);
           long valueInputs = outputsSpendable.Sum(o => o.Value);
 
-          long feeTX = (long)(feePerByte * LENGTH_P2PKH_INPUT * outputsSpendable.Count)
-            + (long)(LENGTH_P2PKH_OUTPUT * feePerByte)
-            + LENGTH_P2PKH_OVERHEAD;
+          long feePerOutput = (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
+          long feeTX = feePerInput * outputsSpendable.Count + feePerOutput + LENGTH_P2PKH_OVERHEAD;
 
           if (valueInputs < feeTX)
             throw new ProtocolException(
               $"Not enough funds held in unspent outputs: {valueInputs} sats." +
               $"Fee required by P2PKH transaction: {feeTX}. Reduce specified rate for fee per byte.");
 
+          long valueChange = valueInputs - valueOutput - feeTX - feePerOutput;
+
           // The premis is that the value of the change output has to be greater than the fee of one output,
           // so that a future spend of that output is economically feasible.
-          long valueChange = valueInputs - valueOutput - feeTX - (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
-          bool flagCreateOutputChange = valueChange > (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
+          bool flagCreateOutputChange = valueChange > feePerOutput;
 
           List<byte> tXRaw = new();
 
@@ -121,10 +121,9 @@ namespace BTokenLib
           if (flagCreateOutputChange)
           {
             tXRaw.Add(0x02);
-
             tXRaw.AddRange(BitConverter.GetBytes(valueChange));
-            tXRaw.Add((byte)PublicScript.Length);
-            tXRaw.AddRange(PublicScript);
+            tXRaw.Add((byte)Wallet.PublicScript.Length);
+            tXRaw.AddRange(Wallet.PublicScript);
           }
           else
             tXRaw.Add(0x01);
@@ -139,7 +138,7 @@ namespace BTokenLib
           tXRaw.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x00 }); // locktime
           tXRaw.AddRange(new byte[] { 0x01, 0x00, 0x00, 0x00 }); // sighash
 
-          SignTX(wallet, tXRaw);
+          SignTX(tXRaw);
         }
       }
     }
