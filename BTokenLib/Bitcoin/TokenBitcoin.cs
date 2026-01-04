@@ -15,6 +15,13 @@ namespace BTokenLib
     public const long BLOCK_REWARD_INITIAL = 5000000000;
     public const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
+    public const byte LENGTH_SCRIPT_P2PKH = 25;
+    public const int LENGTH_P2PKH_INPUT = 148;
+    public const int LENGTH_P2PKH_OUTPUT = 34;
+    public const int LENGTH_TX_OVERHEAD = 10;
+    public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
+    public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
+
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
@@ -149,7 +156,6 @@ namespace BTokenLib
       return tX;
     }
 
-
     public override List<string> GetSeedAddresses()
     {
       return new List<string>()
@@ -186,6 +192,5 @@ namespace BTokenLib
             //"134.19.118.183", "152.169.255.224",
         };
     }
-
   }
 }

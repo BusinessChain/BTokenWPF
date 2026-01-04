@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -9,7 +8,7 @@ namespace BTokenLib
 {
   public abstract class Wallet
   {
-    protected SHA256 SHA256 = SHA256.Create();
+    public SHA256 SHA256 = SHA256.Create();
 
     public string KeyPrivateDecimal;
     public byte[] KeyPublic;
@@ -43,9 +42,9 @@ namespace BTokenLib
       return Crypto.GetSignature(KeyPrivateDecimal, dataToBeSigned);
     }
       
-    public abstract void SendTXValue(string address, long value, double feePerByte);
+    public abstract void SendTXValue(string address, long value, double feePerByte, int sequence = 0);
 
-    public abstract void SendTXData(byte[] data, double feePerByte);
+    public abstract void SendTXData(byte[] data, double feePerByte, int sequence = 0);
 
     public abstract void InsertBlock(Block block);
 
