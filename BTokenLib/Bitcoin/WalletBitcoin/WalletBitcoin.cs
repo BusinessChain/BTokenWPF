@@ -41,6 +41,8 @@ namespace BTokenLib
       // Das muss eine Datanbank sein!!
       public Dictionary<byte[], TX> IndexTXs = new(new EqualityComparerByteArray());
 
+      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
+
 
       public WalletBitcoin(string privKeyDec, TokenBitcoin token)
         : base(privKeyDec)
@@ -50,32 +52,30 @@ namespace BTokenLib
         PublicScript = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray();
       }
 
-
-      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
-
-
       public override void SendTXValue(
         string addressOutput,
-        long valueOutput,
+        long value,
         double feePerByte,
         int sequence)
       {
         TXOutputBitcoin tXOutput = new()
         {
           Type = TXOutputBitcoin.TypesToken.P2PKH,
-          Value = valueOutput,
+          Value = value,
           Script = PREFIX_P2PKH.Concat(addressOutput.Base58CheckToPubKeyHash()).Concat(POSTFIX_P2PKH).ToArray()
         };
 
         SendTX(tXOutput, feePerByte, sequence);
       }
 
-      public override void SendTXData(byte[] data, double feePerByte, int sequence)
+      public override void SendTXData(
+        byte[] data, 
+        double feePerByte,
+        int sequence)
       {
         TXOutputBitcoin tXOutput = new()
         {
           Type = TXOutputBitcoin.TypesToken.Data,
-          Value = 0,
           Script = new List<byte>() { OP_RETURN, (byte)data.Length }.Concat(data).ToArray()
         };
 

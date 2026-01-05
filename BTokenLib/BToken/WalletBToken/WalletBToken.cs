@@ -23,6 +23,8 @@ namespace BTokenLib
       LiteDatabase Database;
       ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
 
+      public const byte OP_RETURN = 0x6A;
+
 
       public WalletBToken(string privKeyDec, TokenBToken token)
         : base(privKeyDec)
@@ -49,37 +51,58 @@ namespace BTokenLib
         return Token.ParseTX(tXRaw.ToArray(), SHA256);
       }
 
-      public override void SendTXValue(string addressDest, long value, double feePerByte)
+      public override void SendTXValue(
+        string addressDest,
+        long value,
+        double feePerByte,
+        int sequence)
       {
-        BuilderTXBTokenValue builderTXBTokenValue =
-          new(
-            this,
-            KeyPublic,
-            AccountWalletUnconfirmed,
-            addressDest,
-            value,
-            feePerByte);
+        TXOutputBToken tXOutput = new()
+        {
+          Type = TXOutputBToken.TypesToken.P2PKH,
+          Value = value,
+          Script = PREFIX_P2PKH.Concat(addressDest.Base58CheckToPubKeyHash()).Concat(POSTFIX_P2PKH).ToArray()
+        };
 
-        // Besser wäre eigentlich, das TX Objekt direkt selber zu erstellen
-        // und dann die serialisierte TXRaw zu versenden.
-
-        TX tX = Token.ParseTX(builderTXBTokenValue.TXRaw, SHA256);
-
-        TXsUnconfirmedCreated.Add((tX, 0));
-
-        Token.BroadcastTX(tX);
+        SendTX(tXOutput, feePerByte);
       }
 
-      public override void SendTXData(byte[] data, double feePerByte)
+      public override void SendTXData(
+        byte[] data,
+        double feePerByte,
+        int sequence)
       {
-        BuilderTXBTokenData tXBuilder = new(
-          this,
-          KeyPublic,
-          AccountWalletUnconfirmed,
-          data,
-          feePerByte);
+        TXOutputBToken tXOutput = new()
+        {
+          Type = TXOutputBToken.TypesToken.Data,
+          Script = new List<byte>() { OP_RETURN, (byte)data.Length }.Concat(data).ToArray()
+        };
 
-        TX tX = Token.ParseTX(tXBuilder.TXRaw, SHA256);
+        SendTX(tXOutput, feePerByte);
+      }
+
+      const int LENGTH_TX_P2PKH = 120;
+
+      void SendTX(TXOutputBToken tXOutput, double feePerByte)
+      {
+        long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
+
+        if (AccountWalletUnconfirmed.Balance < tXOutput.Value + fee)
+          throw new ProtocolException(
+            $"Not enough funds: balance {AccountWalletUnconfirmed.Balance} " +
+            $"less than tX output value {tXOutput.Value} plus fee {fee} totaling {tXOutput.Value + fee}.");
+
+        TXBToken tX = new()
+        {
+          KeyPublic = KeyPublic,
+          BlockheightAccountCreated = AccountWalletUnconfirmed.BlockHeightAccountCreated,
+          Nonce = AccountWalletUnconfirmed.Nonce,
+          Fee = fee
+        };
+
+        tX.TXOutputs.Add(tXOutput);
+
+        tX.Serialize(this);
 
         TXsUnconfirmedCreated.Add((tX, 0));
 

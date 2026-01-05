@@ -43,6 +43,9 @@ namespace BTokenLib
     const int COUNT_EVICTION_ACCOUNTS_FROM_CACHE = 200_000; // Read from configuration file
     const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
+    public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
+    public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
+
 
     public TokenBToken(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
