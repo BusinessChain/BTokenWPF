@@ -36,19 +36,21 @@ namespace BTokenLib
 
       public TX CreateTXCoinbase(long blockReward, int blockHeight)
       {
-        List<byte> tXRaw = new()
-      {
-        (byte)TypesToken.Coinbase
-      };
+        TXBToken tX = new()
+        {
+          KeyPublic = new byte[32],
+          BlockheightAccountCreated = blockHeight,
+        };
 
-        tXRaw.AddRange(BitConverter.GetBytes(blockHeight));
+        TXOutputBToken tXOutput = new()
+        {
+          Type = TXOutputBToken.TypesToken.P2PKH,
+          Script = BitConverter.GetBytes(blockReward).Concat(Hash160PKeyPublic).ToArray()
+        };
 
-        tXRaw.Add(0x01); // count outputs
+        tX.Serialize();
 
-        tXRaw.AddRange(BitConverter.GetBytes(blockReward));
-        tXRaw.AddRange(Hash160PKeyPublic);
-
-        return Token.ParseTX(tXRaw.ToArray(), SHA256);
+        return tX;
       }
 
       public override void SendTXValue(
@@ -60,8 +62,7 @@ namespace BTokenLib
         TXOutputBToken tXOutput = new()
         {
           Type = TXOutputBToken.TypesToken.P2PKH,
-          Value = value,
-          Script = PREFIX_P2PKH.Concat(addressDest.Base58CheckToPubKeyHash()).Concat(POSTFIX_P2PKH).ToArray()
+          Script = BitConverter.GetBytes(value).Concat(addressDest.Base58CheckToPubKeyHash()).ToArray()
         };
 
         SendTX(tXOutput, feePerByte);
@@ -75,7 +76,7 @@ namespace BTokenLib
         TXOutputBToken tXOutput = new()
         {
           Type = TXOutputBToken.TypesToken.Data,
-          Script = new List<byte>() { OP_RETURN, (byte)data.Length }.Concat(data).ToArray()
+          Script = VarInt.GetBytes(data.Length).Concat(data).ToArray()
         };
 
         SendTX(tXOutput, feePerByte);

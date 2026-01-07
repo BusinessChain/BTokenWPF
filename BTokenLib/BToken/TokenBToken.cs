@@ -21,14 +21,6 @@ namespace BTokenLib
     const long COUNT_SATOSHIS_PER_DAY_MINING = 500000;
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
-    public enum TypesToken
-    {
-      Coinbase = 0,
-      ValueTransfer = 1,
-      AnchorToken = 2,
-      Data = 3
-    }
-
     Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
     Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
 

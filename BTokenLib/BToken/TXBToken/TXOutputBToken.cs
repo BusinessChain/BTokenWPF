@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 
 namespace BTokenLib
@@ -17,8 +18,9 @@ namespace BTokenLib
 
       public TypesToken Type;
 
-      public byte[] IDAccount;
       public long Value;
+
+      public byte[] IDAccount;
 
       public byte[] Data;
 
@@ -39,6 +41,7 @@ namespace BTokenLib
         Array.Copy(buffer, index, IDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
         index += TXBToken.LENGTH_IDACCOUNT;
       }
+
     }
   }
 }

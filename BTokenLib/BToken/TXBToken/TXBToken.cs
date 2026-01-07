@@ -113,11 +113,24 @@ namespace BTokenLib
         return TXOutputs.Sum(t => t.Value);
       }
 
-      public void Serialize(WalletBToken wallet)
+      public void Serialize(Wallet wallet)
+      {
+        Serialize();
+
+        byte[] signature = wallet.GetSignature(TXRaw);
+
+        List<byte> tXRaw = TXRaw.ToList();
+
+        tXRaw.Add((byte)signature.Length);
+        tXRaw.AddRange(signature);
+
+        TXRaw = tXRaw.ToArray();
+      }
+
+      public void Serialize()
       {
         List<byte> tXRaw = new();
 
-        tXRaw.Add((byte)TypesToken.ValueTransfer);
         tXRaw.AddRange(KeyPublic);
         tXRaw.AddRange(BitConverter.GetBytes(BlockheightAccountCreated));
         tXRaw.AddRange(BitConverter.GetBytes(Nonce));
@@ -126,14 +139,9 @@ namespace BTokenLib
         tXRaw.Add((byte)TXOutputs.Count);
         foreach (TXOutputBToken output in TXOutputs)
         {
-          tXRaw.AddRange(BitConverter.GetBytes(output.Value));
-          tXRaw.AddRange(output.IDAccount);
+          tXRaw.Add((byte)output.Type);
+          tXRaw.AddRange(output.Script);
         }
-
-        byte[] signature = wallet.GetSignature(tXRaw.ToArray());
-
-        tXRaw.Add((byte)signature.Length);
-        tXRaw.AddRange(signature);
 
         TXRaw = tXRaw.ToArray();
       }
