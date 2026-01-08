@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 
 namespace BTokenLib
@@ -32,16 +31,38 @@ namespace BTokenLib
 
       public TXOutputBToken(byte[] buffer, ref int index)
       {
-        Value = BitConverter.ToInt64(buffer, index);
+        Type = (TypesToken)buffer[index];
+        index += 1;
 
-        index += 8;
+        if(Type == TypesToken.P2PKH)
+        {
+          Value = BitConverter.ToInt64(buffer, index);
+          index += 8;
 
-        IDAccount = new byte[TXBToken.LENGTH_IDACCOUNT];
+          IDAccount = new byte[TXBToken.LENGTH_IDACCOUNT];
 
-        Array.Copy(buffer, index, IDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
-        index += TXBToken.LENGTH_IDACCOUNT;
+          Array.Copy(buffer, index, IDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
+          index += TXBToken.LENGTH_IDACCOUNT;
+        }
+        else if(Type == TypesToken.Data)
+        {
+          Data = new byte[VarInt.GetInt(buffer, ref index)];
+          Array.Copy(buffer, index, Data, 0, Data.Length);
+          index += Data.Length;
+        }
+        else if(Type == TypesToken.AnchorToken)
+        {
+          Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
+          index += TokenAnchor.LENGTH_IDTOKEN;
+
+          Array.Copy(buffer, index, TokenAnchor.HashBlockReferenced, 0, TokenAnchor.HashBlockReferenced.Length);
+          index += TokenAnchor.HashBlockReferenced.Length;
+
+          Array.Copy(buffer, index, TokenAnchor.HashBlockPreviousReferenced, 0, TokenAnchor.HashBlockPreviousReferenced.Length);
+          index += TokenAnchor.HashBlockPreviousReferenced.Length;
+        }
       }
-
+    
     }
   }
 }

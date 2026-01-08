@@ -47,16 +47,11 @@ namespace BTokenLib
 
       int startIndexBeginningOfTXs = startIndex;
 
-      long blockReward = Token.BlockRewardInitial >> heightBlock / Token.PeriodHalveningBlockReward;
-
       TX tX;
 
       for (int t = 0; t < tXCount; t += 1)
       {
-        if(t == 0)
-          tX = Token.ParseTXCoinbase(Buffer, ref startIndex, SHA256, blockReward);
-        else
-          tX = Token.ParseTX(Buffer, ref startIndex, SHA256);
+        tX = Token.ParseTX(Buffer, ref startIndex, SHA256, flagIsCoinbase: t == 0);
 
         TXs.Add(tX);
 
@@ -88,13 +83,13 @@ namespace BTokenLib
       if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
         throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");
 
+      Header.Height = heightBlock;
       Header.CountTXs = TXs.Count;
       Header.CountBytesTXs = startIndex - startIndexBeginningOfTXs;
       Header.Fee = TXs.Sum(t => t.Fee);
       Header.FeePerByte = (double)Header.Fee / Header.CountBytesTXs;
 
-      if (blockReward + Header.Fee != TXs[0].GetValueOutputs())
-        throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
+      Token.VerifyCoinbase(Header, TXs[0].GetValueOutputs());
     }
 
     public byte[] ComputeMerkleRoot()

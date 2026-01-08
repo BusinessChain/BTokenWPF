@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -82,44 +81,33 @@ namespace BTokenLib
       return header;
     }
 
-    public override TX ParseTXCoinbase(byte[] buffer, ref int startIndex, SHA256 sHA256, long blockReward)
+    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
     {
-      TypesToken typeToken = (TypesToken)buffer[startIndex];
-      startIndex += 1;
-
-      if (typeToken != TypesToken.Coinbase)
-        throw new ProtocolException($"First tX of block is not of type coinbase.");
-
-      return new TXBTokenCoinbase(buffer, ref startIndex, sHA256);
+      return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
-    public override TX ParseTX(byte[] buffer, ref int startIndex, SHA256 sHA256)
+    public override void VerifyCoinbase(Header header, long valueOutputsTXCoinbase)
     {
-      TypesToken typeToken = (TypesToken)buffer[startIndex];
-      startIndex += 1;
+      long blockReward = BlockRewardInitial >> header.Height / PeriodHalveningBlockReward;
 
-      if (typeToken == TypesToken.ValueTransfer)
-        return new TXBTokenValue(buffer, ref startIndex, sHA256);
-      
-      if (typeToken == TypesToken.AnchorToken)
-        return new TXBTokenAnchor(buffer, ref startIndex, sHA256);
-      
-      if (typeToken == TypesToken.Data)
-        return new TXBTokenData(buffer, ref startIndex, sHA256);
+      if (blockReward + header.Fee != valueOutputsTXCoinbase)
+        throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
 
-      throw new ProtocolException($"Unknown / wrong token type {typeToken}.");
     }
 
     protected override void InsertBlockInDatabase(Block block)
     {
       try
       {
-        foreach (TXBToken tX in block.TXs)
+        for (int i = 0; i < block.TXs.Count; i += 1)
         {
+          TXBToken tX = block.TXs[i] as TXBToken;
+
           foreach (TXOutputBToken tXOutput in tX.TXOutputs)
             StageOutput(tXOutput, block.Header.Height);
 
-          StageSpendInput(tX);
+          if (i > 0)
+            StageSpendInput(tX);
         }
 
         foreach (var account in AccountsStaged)
@@ -240,11 +228,8 @@ namespace BTokenLib
 
     void StageSpendInput(TXBToken tX)
     {
-      if (tX is TXBTokenCoinbase)
-        return;
-      
-        Account accountStaged = GetCopyOfAccount(tX.IDAccountSource);
-        AccountsStaged.Add(accountStaged.ID, accountStaged);
+      Account accountStaged = GetCopyOfAccount(tX.IDAccountSource);
+      AccountsStaged.Add(accountStaged.ID, accountStaged);
 
       accountStaged.SpendTX(tX);
     }

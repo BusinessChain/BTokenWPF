@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -22,10 +21,6 @@ namespace BTokenLib
     public int SizeBlockMax;
 
     public TXPool TXPool;
-
-    const int COUNT_MAX_BYTES_IN_BLOCK_ARCHIVE = 400_000_000; // Read from configuration file
-    const int COUNT_MAX_ACCOUNTS_IN_CACHE = 5_000_000; // Read from configuration file
-    const double HYSTERESIS_COUNT_MAX_CACHE_ARCHIV = 0.9;
 
     public Wallet Wallet;
 
@@ -127,11 +122,9 @@ namespace BTokenLib
       }
     }
 
-    protected virtual void InsertBlockInDatabase(Block block)
-    { }
+    public virtual void VerifyCoinbase(Header header, long valueOutputsTXCoinbase) { }
 
-    public virtual void InsertBlockMined(byte[] hashBlock)
-    { throw new NotImplementedException(); }
+    protected virtual void InsertBlockInDatabase(Block block) { }
 
     protected virtual void ReverseBlockInCache(Block block) { }
                   
@@ -148,15 +141,7 @@ namespace BTokenLib
       return tX;
     }
 
-    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256);
-    
-    public abstract TX ParseTXCoinbase(byte[] buffer, ref int index, SHA256 sHA256, long blockReward);
-
-    public virtual void DeleteDB()
-    { throw new NotImplementedException(); }
-
-    public virtual List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
-    { throw new NotImplementedException(); }
+    public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase = false);
 
     public string GetName()
     {

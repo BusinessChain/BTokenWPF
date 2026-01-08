@@ -119,20 +119,11 @@ namespace BTokenLib
         nonce);
     }
 
-    public override TX ParseTXCoinbase(byte[] buffer, ref int index, SHA256 sHA256, long blockReward)
-    {
-      TXBitcoin tX = ParseTX(buffer, ref index, sHA256) as TXBitcoin;
-
-      tX.Fee = tX.GetValueOutputs() - blockReward;
-
-      return tX;
-    }
-
-    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256)
+    public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
     {
       TXBitcoin tX = new();
 
-      int tXStartIndex = index;
+      int indexTxStart = index;
 
       index += 4; // Version
 
@@ -151,7 +142,7 @@ namespace BTokenLib
 
       index += 4; //BYTE_LENGTH_LOCK_TIME
 
-      tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, tXStartIndex, index - tXStartIndex));
+      tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
 
       return tX;
     }

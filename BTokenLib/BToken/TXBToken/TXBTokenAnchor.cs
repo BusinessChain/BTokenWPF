@@ -5,52 +5,55 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public class TXBTokenAnchor : TXBToken
+  public partial class TokenBToken : Token
   {
-    public TokenAnchor TokenAnchor = new();
-
-
-    public TXBTokenAnchor(byte[] buffer, ref int index, SHA256 sHA256)
+    public class TXBTokenAnchor : TXBToken
     {
-      int indexTxStart = index - 1;
+      public TokenAnchor TokenAnchor = new();
 
-      ParseTXBTokenInput(buffer, ref index, sHA256);
 
-      Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
-      index += TokenAnchor.LENGTH_IDTOKEN;
+      public TXBTokenAnchor(byte[] buffer, ref int index, SHA256 sHA256)
+      {
+        int indexTxStart = index - 1;
 
-      Array.Copy(buffer, index, TokenAnchor.HashBlockReferenced, 0, TokenAnchor.HashBlockReferenced.Length);
-      index += TokenAnchor.HashBlockReferenced.Length;
+        ParseTXBTokenInput(buffer, ref index, sHA256);
 
-      Array.Copy(buffer, index, TokenAnchor.HashBlockPreviousReferenced, 0, TokenAnchor.HashBlockPreviousReferenced.Length);
-      index += TokenAnchor.HashBlockPreviousReferenced.Length;
+        Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
+        index += TokenAnchor.LENGTH_IDTOKEN;
 
-      CountBytes = index - indexTxStart;
+        Array.Copy(buffer, index, TokenAnchor.HashBlockReferenced, 0, TokenAnchor.HashBlockReferenced.Length);
+        index += TokenAnchor.HashBlockReferenced.Length;
 
-      Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, CountBytes));
+        Array.Copy(buffer, index, TokenAnchor.HashBlockPreviousReferenced, 0, TokenAnchor.HashBlockPreviousReferenced.Length);
+        index += TokenAnchor.HashBlockPreviousReferenced.Length;
 
-      VerifySignatureTX(indexTxStart, buffer, ref index);
-    }
+        CountBytes = index - indexTxStart;
 
-    public override long GetValueOutputs()
-    {
-      return 0;
-    }
+        Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, CountBytes));
 
-    public override List<TokenAnchor> GetTokenAnchors()
-    {
-      return new() { TokenAnchor };
-    }
+        VerifySignatureTX(indexTxStart, buffer, ref index);
+      }
 
-    public override List<(string label, string value)> GetLabelsValuePairs()
-    {
-      List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();
+      public override long GetValueOutputs()
+      {
+        return 0;
+      }
 
-      labelValuePairs.Add(($"IDToken", $"{TokenAnchor.IDToken.ToHexString()}"));
-      labelValuePairs.Add(($"HashBlockReferenced", $"{TokenAnchor.HashBlockReferenced.ToHexString()}"));
-      labelValuePairs.Add(($"HashBlockPreviousReferenced", $"{TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
+      public override List<TokenAnchor> GetTokenAnchors()
+      {
+        return new() { TokenAnchor };
+      }
 
-      return labelValuePairs;
+      public override List<(string label, string value)> GetLabelsValuePairs()
+      {
+        List<(string label, string value)> labelValuePairs = base.GetLabelsValuePairs();
+
+        labelValuePairs.Add(($"IDToken", $"{TokenAnchor.IDToken.ToHexString()}"));
+        labelValuePairs.Add(($"HashBlockReferenced", $"{TokenAnchor.HashBlockReferenced.ToHexString()}"));
+        labelValuePairs.Add(($"HashBlockPreviousReferenced", $"{TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
+
+        return labelValuePairs;
+      }
     }
   }
 }

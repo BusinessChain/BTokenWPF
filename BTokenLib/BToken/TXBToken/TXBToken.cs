@@ -35,9 +35,42 @@ namespace BTokenLib
       /// </summary>
       public int BlockheightAccountCreated;
 
-
       public List<TXOutputBToken> TXOutputs = new();
 
+
+      public TXBToken()
+      { }
+
+      public TXBToken(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
+      {
+        int indexTxStart = index;
+
+        Array.Copy(buffer, index, KeyPublic, 0, KeyPublic.Length);
+        index += KeyPublic.Length;
+
+        IDAccountSource = Crypto.ComputeHash160(KeyPublic, sHA256);
+
+        BlockheightAccountCreated = BitConverter.ToInt32(buffer, index);
+        index += 4;
+
+        Nonce = BitConverter.ToInt32(buffer, index);
+        index += 4;
+
+        Fee = BitConverter.ToInt64(buffer, index);
+        index += 8;
+
+        int countOutputs = VarInt.GetInt(buffer, ref index);
+
+        for (int i = 0; i < countOutputs; i++)
+          TXOutputs.Add(new(buffer, ref index));
+
+        Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
+
+        if (!flagIsCoinbase)
+          VerifySignatureTX(indexTxStart, buffer, ref index);
+
+        CountBytes = index - indexTxStart;
+      }
 
       public override bool IsSuccessorTo(TX tX)
       {
@@ -52,23 +85,6 @@ namespace BTokenLib
       public override List<TokenAnchor> GetTokenAnchors()
       {
         return new();
-      }
-
-      public void ParseTXBTokenInput(byte[] buffer, ref int index, SHA256 sHA256)
-      {
-        Array.Copy(buffer, index, KeyPublic, 0, KeyPublic.Length);
-        index += KeyPublic.Length;
-
-        IDAccountSource = Crypto.ComputeHash160(KeyPublic, sHA256);
-
-        BlockheightAccountCreated = BitConverter.ToInt32(buffer, index);
-        index += 4;
-
-        Nonce = BitConverter.ToInt32(buffer, index);
-        index += 4;
-
-        Fee = BitConverter.ToInt64(buffer, index);
-        index += 8;
       }
 
       public void VerifySignatureTX(int indexTxStart, byte[] buffer, ref int index)
@@ -136,7 +152,7 @@ namespace BTokenLib
         tXRaw.AddRange(BitConverter.GetBytes(Nonce));
         tXRaw.AddRange(BitConverter.GetBytes(Fee));
 
-        tXRaw.Add((byte)TXOutputs.Count);
+        tXRaw.AddRange(VarInt.GetBytes(TXOutputs.Count));
         foreach (TXOutputBToken output in TXOutputs)
         {
           tXRaw.Add((byte)output.Type);
