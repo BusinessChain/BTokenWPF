@@ -299,26 +299,11 @@ namespace BTokenLib
         {
           TXBToken tX = block.TXs[i] as TXBToken;
 
-          if (tX is TXBTokenCoinbase tXCoinbase)
-          {
-            foreach (TXOutputBToken tXOutput in tXCoinbase.TXOutputs)
-              ReverseOutputInCache(tXOutput);
-          }
-          else
-          {
+          if(i > 0)
             ReverseSpendInputInCache(tX);
 
-            if (tX is TXBTokenValue tXTokenTransfer)
-            {
-              foreach (TXOutputBToken tXOutput in tXTokenTransfer.TXOutputs)
-                ReverseOutputInCache(tXOutput);
-            }
-            else if (tX is TXBTokenAnchor tXBTokenAnchor)
-            { }
-            else if (tX is TXBTokenData tXBTokenData)
-            { }
-            else throw new ProtocolException($"Type of transaction {tX} is not supported by protocol.");
-          }
+          foreach (TXOutputBToken output in tX.TXOutputs)
+            ReverseOutputInCache(output);
 
           foreach (var account in AccountsStaged)
             Cache[account.Key] = account.Value;
@@ -361,7 +346,7 @@ namespace BTokenLib
       accountStaged.ReverseSpendTX(tX);
     }
 
-    public override List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
+    public List<byte[]> ParseHashesDB(byte[] buffer, int length, Header headerTip)
     {
       SHA256 sHA256 = SHA256.Create();
 

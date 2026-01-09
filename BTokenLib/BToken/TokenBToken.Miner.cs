@@ -123,7 +123,7 @@ namespace BTokenLib
       .Concat(block.Header.HashPrevious).ToArray();
     }
     
-    public override void InsertBlockMined(byte[] hashBlock)
+    public void InsertBlockMined(byte[] hashBlock)
     {
       try
       {

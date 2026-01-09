@@ -150,6 +150,24 @@ namespace BTokenLib
         Token.BroadcastTX(tX);
       }
 
+      public override void InsertTXUnconfirmed(TX tX)
+      {
+        TXBitcoin tXBitcoin = tX as TXBitcoin;
+
+        foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
+        {
+          TXOutputWallet tXOutputWallet = OutputsSpendable.Find(
+            o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) 
+            && o.Index == tXInput.OutputIndex);
+
+          if (tXOutputWallet != null)
+            OutputsSpentUnconfirmed.Add(tXOutputWallet);
+        }
+
+        for (int i = 0; i < tXBitcoin.TXOutputs.Count; i++)
+          TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
+      }
+
       public override void InsertBlock(Block block)
       {
         foreach (TXBitcoin tX in block.TXs)

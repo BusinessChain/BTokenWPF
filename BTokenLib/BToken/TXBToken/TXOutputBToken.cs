@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 
 namespace BTokenLib
@@ -22,6 +23,8 @@ namespace BTokenLib
       public byte[] IDAccount;
 
       public byte[] Data;
+
+      public TokenAnchor TokenAnchor = new();
 
       public byte[] Script;
 
@@ -62,7 +65,18 @@ namespace BTokenLib
           index += TokenAnchor.HashBlockPreviousReferenced.Length;
         }
       }
-    
+
+      public List<(string label, string value)> GetLabelsValuePairs()
+      {
+        List<(string label, string value)> labelValuePairs = new();
+
+        labelValuePairs.Add(($"IDToken", $"{TokenAnchor.IDToken.ToHexString()}"));
+        labelValuePairs.Add(($"HashBlockReferenced", $"{TokenAnchor.HashBlockReferenced.ToHexString()}"));
+        labelValuePairs.Add(($"HashBlockPreviousReferenced", $"{TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
+
+        return labelValuePairs;
+      }
+
     }
   }
 }

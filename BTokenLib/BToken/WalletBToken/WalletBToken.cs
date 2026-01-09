@@ -110,6 +110,18 @@ namespace BTokenLib
         Token.BroadcastTX(tX);
       }
 
+      public override void InsertTXUnconfirmed(TX tX)
+      {
+        TXBToken tXBToken = tX as TXBToken;
+
+        if (tXBToken.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
+          AccountWalletUnconfirmed.SpendTX(tXBToken);
+
+        foreach (TXOutputBToken output in tXBToken.TXOutputs)
+          if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
+            AccountWalletUnconfirmed.Balance += output.Value;
+      }
+
       public override void InsertBlock(Block block)
       {
         foreach (TXBToken tX in block.TXs)
@@ -117,11 +129,17 @@ namespace BTokenLib
           bool flagIndexTX = false;
 
           if (tX.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
+          {
             flagIndexTX = true;
+            AccountWalletConfirmed.SpendTX(tX);
+          }
 
           foreach (TXOutputBToken output in tX.TXOutputs)
             if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
+            {
               flagIndexTX = true;
+              AccountWalletConfirmed.Balance += output.Value;
+            }
 
           if (flagIndexTX)
             DatabaseTXCollection.Upsert(
@@ -156,15 +174,7 @@ namespace BTokenLib
 
       public override long GetBalance()
       {
-        try
-        {
-          Account accountUnconfirmed = Token.GetAccountUnconfirmed(Hash160PKeyPublic);
-          return accountUnconfirmed.Balance;
-        }
-        catch
-        {
-          return 0;
-        }
+        return AccountWalletUnconfirmed.Balance;
       }
     }
   }
