@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using System.Collections.Generic;
 
 
@@ -8,7 +7,7 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    public class PoolTXBToken : TXPool
+    public class PoolTXBToken
     {
       class TXBundle
       {
@@ -66,7 +65,7 @@ namespace BTokenLib
         return account;
       }
 
-      public override void AddTX(TX tX)
+      public void AddTX(TX tX)
       {
         TXBToken tXBToken = tX as TXBToken;
 
@@ -87,36 +86,15 @@ namespace BTokenLib
         else
           TXsByIDAccountSource.Add(tXBToken.IDAccountSource, new List<TXBToken>() { tXBToken });
 
-        if (tXBToken is TXBTokenValue tXValueTransfer)
-          foreach (TXOutputBToken tXOutputBToken in tXValueTransfer.TXOutputs)
+        foreach (TXOutputBToken tXOutputBToken in tXBToken.TXOutputs)
+          if (tXOutputBToken.Value > 0)
             if (!OutputValuesByIDAccount.TryAdd(tXOutputBToken.IDAccount, tXOutputBToken.Value))
               OutputValuesByIDAccount[tXOutputBToken.IDAccount] += tXOutputBToken.Value;
 
         InsertTXInTXBundlesSortedByFee(tXBToken);
       }
 
-      public Account ApplyTXsOnAccount(Account account)
-      {
-        Account accounUnconfirmed = new();
-
-        accounUnconfirmed.BlockHeightAccountCreated = account.BlockHeightAccountCreated;
-        accounUnconfirmed.Nonce = account.Nonce;
-        accounUnconfirmed.ID = account.ID;
-        accounUnconfirmed.Balance = account.Balance;
-
-        if (TXsByIDAccountSource.TryGetValue(account.ID, out List<TXBToken> tXsInPool))
-        {
-          accounUnconfirmed.Nonce = tXsInPool.Last().Nonce + 1;
-          accounUnconfirmed.Balance -= tXsInPool.Sum(t => t.GetValueOutputs() + t.Fee);
-        }
-
-        if (OutputValuesByIDAccount.TryGetValue(account.ID, out long valueOutputs))
-          accounUnconfirmed.Balance += valueOutputs;
-
-        return accounUnconfirmed;
-      }
-
-      public override void RemoveTXs(IEnumerable<byte[]> hashesTX)
+      public void RemoveTXs(IEnumerable<byte[]> hashesTX)
       {
         foreach (byte[] hashTX in hashesTX)
         {
@@ -135,14 +113,13 @@ namespace BTokenLib
           if (tXsByAccountSource.Count == 0)
             TXsByIDAccountSource.Remove(tX.IDAccountSource);
 
-          if (tX is TXBTokenValue tXValueTransfer)
-            foreach (TXOutputBToken tXOutput in tXValueTransfer.TXOutputs)
-            {
-              OutputValuesByIDAccount[tXOutput.IDAccount] -= tXOutput.Value;
+          foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+          {
+            OutputValuesByIDAccount[tXOutput.IDAccount] -= tXOutput.Value;
 
-              if (OutputValuesByIDAccount[tXOutput.IDAccount] == 0)
-                OutputValuesByIDAccount.Remove(tXOutput.IDAccount);
-            }
+            if (OutputValuesByIDAccount[tXOutput.IDAccount] == 0)
+              OutputValuesByIDAccount.Remove(tXOutput.IDAccount);
+          }
 
           TXBundlesSortedByFee.Clear();
           SequenceNumberTX = 0;
@@ -190,7 +167,7 @@ namespace BTokenLib
         TXBundlesSortedByFee.Insert(0, tXBundle);
       }
 
-      public override List<TX> GetTXs(int countBytesMax, out long feeTotal)
+      public List<TX> GetTXs(int countBytesMax, out long feeTotal)
       {
         List<TX> tXs = new();
         int countBytesCurrent = 0;
@@ -209,28 +186,6 @@ namespace BTokenLib
           }
 
         return tXs;
-      }
-
-      public override bool TryGetTX(byte[] hashTX, out TX tX)
-      {
-        lock (LOCK_TXsPool)
-        {
-          if (TXsByHash.TryGetValue(hashTX, out (TXBToken tX, int) itemTXPool))
-          {
-            tX = itemTXPool.tX;
-            return true;
-          }
-
-          tX = null;
-          return false;
-        }
-      }
-
-      public override void Clear()
-      {
-        TXsByHash.Clear();
-        TXsByIDAccountSource.Clear();
-        OutputValuesByIDAccount.Clear();
       }
     }
   }

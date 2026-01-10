@@ -64,6 +64,11 @@ namespace BTokenWPF
 
     void UpdateControlsNetwork()
     {
+      // Arbeite mit Token.Network.GetStatus()
+      // Dabei könnte ein xml oder json
+
+
+      /*
       List<Network.Peer> peers = Token.Network.GetPeers();
 
       LabelCountPeers.Content = $"Number of peers: {peers.Count}";
@@ -75,6 +80,7 @@ namespace BTokenWPF
 
       foreach (Network.Peer peer in peers)
         ListBoxPeers.Items.Add(new ListBoxItemPeer(peer));
+      */
     }
 
     void UpdateTextBoxWallet()
@@ -84,16 +90,18 @@ namespace BTokenWPF
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());
 
-      if (Token.Wallet is WalletBitcoin walletBitcoin)
-      {
-        foreach (TXOutputWallet tXOutputWallet in walletBitcoin.OutputsSpendable)
-          if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
-            ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "confirmed"));
+      // Hier mit Token.Wallet.GetStatus() und Json oder xml dokument arbeiten.
 
-        foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsSpendableUnconfirmed)
-          if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
-            ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "unconfirmed"));
-      }
+      //if (Token.Wallet is WalletBitcoin walletBitcoin)
+      //{
+      //  foreach (TXOutputWallet tXOutputWallet in walletBitcoin.OutputsSpendable)
+      //    if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
+      //      ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "confirmed"));
+
+      //  foreach (TXOutputWallet tXOutputWallet in Token.Wallet.OutputsSpendableUnconfirmed)
+      //    if (!Token.Wallet.OutputsSpentUnconfirmed.Contains(tXOutputWallet))
+      //      ListBoxWallet.Items.Add(new ListBoxItemWallet(tXOutputWallet, "unconfirmed"));
+      //}
     }
 
     void UpdateDBEntries()
@@ -109,10 +117,14 @@ namespace BTokenWPF
 
     void UpdateListBoxTXPool()
     {
+      // Nur noch BToken hat ein Pool, mit Json arbeiten.
+
+      /*
       ListBoxTXPool.Items.Clear();
 
       Token.TXPool.GetTXs(countMax: int.MaxValue, out long feeTXs)
         .ForEach(t => ListBoxTXPool.Items.Add(new ListBoxItemTX(t)));
+      */
     }
 
     void ListBoxTXPool_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

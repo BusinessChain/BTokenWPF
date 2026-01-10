@@ -194,12 +194,6 @@ namespace BTokenLib
         }
     }
 
-    public List<Peer> GetPeers()
-    {
-      lock (LOCK_Peers)
-        return Peers.ToList();
-    }
-
     public string GetStatus()
     {
       string messageStatus = "";

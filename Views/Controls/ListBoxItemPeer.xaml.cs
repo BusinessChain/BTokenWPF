@@ -5,6 +5,7 @@ namespace BTokenWPF.Views
 {
   public partial class ListBoxItemPeer : UserControl
   {
+    /*
     public ListBoxItemPeer(Network.Peer peer)
     {
       InitializeComponent();
@@ -13,5 +14,6 @@ namespace BTokenWPF.Views
       LabelState.Content = $"State: {peer.State}";
       LabelTimePeerCreation.Content = $"Time created: {peer.TimePeerCreation}";
     }
+    */
   }
 }

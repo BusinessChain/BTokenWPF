@@ -20,8 +20,6 @@ namespace BTokenLib
 
     public int SizeBlockMax;
 
-    public TXPool TXPool;
-
     public Wallet Wallet;
 
     public StreamWriter LogFile;
@@ -98,9 +96,6 @@ namespace BTokenLib
       InsertBlockInDatabase(block);
 
       Wallet.InsertBlock(block);
-
-      // Könnte in InsertBlockInDatabase verschoben werden, damit der derived Pool in der derived class deklariert wird.
-      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
     }
 
     public bool TryReverseBlock(Block block)
@@ -164,14 +159,16 @@ namespace BTokenLib
 
       try
       {
-        TXPool.AddTX(tX);
+        AddToTXPool(tX);
+        Wallet.InsertTXUnconfirmed(tX);
       }
       finally
       {
         ReleaseLock();
       }
-
-      Wallet.InsertTXUnconfirmed(tX);
     }
+
+    protected virtual void AddToTXPool(TX tX) { }
+
   }
 }

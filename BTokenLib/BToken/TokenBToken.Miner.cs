@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -21,8 +22,26 @@ namespace BTokenLib
 
     public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
 
+    bool IsMining;
 
-    protected override async void RunMining()
+    public void StartMining()
+    {
+      if (IsMining)
+        return;
+
+      IsMining = true;
+
+      $"Start {GetName()} miner".Log(this, LogEntryNotifier);
+
+      new Thread(RunMining).Start();
+    }
+
+    public void StopMining()
+    {
+      IsMining = false;
+    }
+
+    protected async void RunMining()
     {
       $"Miner starts.".Log(this, LogFile, LogEntryNotifier);
 

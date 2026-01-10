@@ -28,7 +28,6 @@ namespace BTokenLib
     {
       Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
-      TXPool = new PoolTXBitcoin(this);
       SizeBlockMax = SIZE_BLOCK_MAX;
 
       BlockRewardInitial = BLOCK_REWARD_INITIAL;

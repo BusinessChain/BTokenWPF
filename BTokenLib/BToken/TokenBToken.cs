@@ -27,6 +27,8 @@ namespace BTokenLib
     ILiteCollection<Account> DatabaseAccountCollection;
     ILiteCollection<BsonDocument> DatabaseMetaCollection;
 
+    PoolTXBToken TXPool;
+
     string PathRootDB;
     public const int COUNT_FILES_DB = 256;
     byte[] HashesFilesDB = new byte[COUNT_FILES_DB * 32];
@@ -92,7 +94,6 @@ namespace BTokenLib
 
       if (blockReward + header.Fee != valueOutputsTXCoinbase)
         throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
-
     }
 
     protected override void InsertBlockInDatabase(Block block)
@@ -117,6 +118,8 @@ namespace BTokenLib
       {
         AccountsStaged.Clear();
       }
+      
+      TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
 
       if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
         EvictBlockFromCache();
@@ -209,6 +212,11 @@ namespace BTokenLib
         return new(accountStored);
       else
         throw new ProtocolException($"Account {accountID.ToHexString()} not found in database.");
+    }
+
+    protected override void AddToTXPool(TX tX) 
+    {
+      TXPool.AddTX(tX);
     }
 
     public Account GetCopyOfAccountUnconfirmed(byte[] iDAccount)
