@@ -14,6 +14,9 @@ namespace BTokenLib
       public List<Inventory> Inventories = new();
 
 
+      public NotFoundMessage()
+        : base("notfound") { }
+
       public NotFoundMessage(byte[] buffer)
         : base("notfound", buffer)
       {
@@ -24,7 +27,6 @@ namespace BTokenLib
         for (int i = 0; i < inventoryCount; i++)
           Inventories.Add(Inventory.Parse(Payload, ref startIndex));
       }
-
 
       public NotFoundMessage(List<Inventory> inventories)
         : base("notfound")
@@ -40,6 +42,11 @@ namespace BTokenLib
 
         Payload = payload.ToArray();
         LengthDataPayload = Payload.Length;
+      }
+
+      public override MessageNetwork Create()
+      {
+        return new NotFoundMessage();
       }
     }
   }

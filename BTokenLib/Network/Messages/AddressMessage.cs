@@ -11,6 +11,8 @@ namespace BTokenLib
     {
       public List<NetworkAddress> NetworkAddresses = new();
 
+      public AddressMessage()
+        : base("addr") { }
 
       public AddressMessage(byte[] messagePayload)
         : base("addr", messagePayload)
@@ -32,6 +34,12 @@ namespace BTokenLib
 
           NetworkAddresses.Add(address);
         }
+      }
+
+
+      public override MessageNetwork Create()
+      {
+        return new AddressMessage();
       }
     }
   }

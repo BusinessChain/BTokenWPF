@@ -12,6 +12,8 @@ namespace BTokenLib
     {
       public List<Inventory> Inventories = new();
 
+      public InvMessage()
+        : base("inv") { }
 
       public InvMessage(List<Inventory> inventories)
         : base("inv")
@@ -44,6 +46,12 @@ namespace BTokenLib
           Inventories.Add(Inventory.Parse(
             Payload,
             ref startIndex));
+      }
+
+
+      public override MessageNetwork Create()
+      {
+        return new InvMessage();
       }
     }
   }

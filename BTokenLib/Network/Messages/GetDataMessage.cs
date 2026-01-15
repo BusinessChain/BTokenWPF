@@ -14,6 +14,11 @@ namespace BTokenLib
       public List<Inventory> Inventories = new();
 
 
+      public GetDataMessage()
+        : base("getdata")
+      {
+
+      }
 
       public GetDataMessage(byte[] buffer)
         : base("getdata", buffer)
@@ -30,7 +35,6 @@ namespace BTokenLib
             ref startIndex));
       }
 
-
       public GetDataMessage(List<Inventory> inventories)
         : base("getdata")
       {
@@ -45,6 +49,12 @@ namespace BTokenLib
 
         Payload = payload.ToArray();
         LengthDataPayload = Payload.Length;
+      }
+
+
+      public override MessageNetwork Create()
+      {
+        return new GetDataMessage();
       }
     }
   }

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Security.Cryptography;
-
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
@@ -13,6 +11,8 @@ namespace BTokenLib
     {
       public List<Header> Headers = new();
 
+      public HeadersMessage()
+        : base("headers") { }
 
       public HeadersMessage(List<Header> headers)
         : base("headers")
@@ -31,6 +31,12 @@ namespace BTokenLib
 
         Payload = payload.ToArray();
         LengthDataPayload = Payload.Length;
+      }
+
+
+      public override MessageNetwork Create()
+      {
+        return new HeadersMessage();
       }
     }
   }

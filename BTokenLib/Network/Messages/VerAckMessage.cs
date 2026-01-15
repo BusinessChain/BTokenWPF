@@ -13,6 +13,12 @@ namespace BTokenLib
       public VerAckMessage() 
         : base("verack")
       { }
+
+
+      public override MessageNetwork Create()
+      {
+        return new VerAckMessage();
+      }
     }
   }
 }

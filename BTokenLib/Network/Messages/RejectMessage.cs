@@ -30,6 +30,9 @@ namespace BTokenLib
       string RejectionReason;
       byte[] ExtraData;
 
+      public RejectMessage()
+        : base("reject") { }
+
       public RejectMessage(byte[] payload) 
         : base("reject", payload)
       {
@@ -114,6 +117,11 @@ namespace BTokenLib
       {
         return $"Code: {RejectionCode}, type: {MessageTypeRejected}, Reason: {RejectionReason}" +
           $"Extra data {ExtraData.ToHexString()}";
+      }
+
+      public override MessageNetwork Create()
+      {
+        return new RejectMessage();
       }
     }
   }

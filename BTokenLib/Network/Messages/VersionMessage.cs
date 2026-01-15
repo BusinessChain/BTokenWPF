@@ -8,6 +8,9 @@ namespace BTokenLib
   {
     class VersionMessage : MessageNetwork
     {
+      public VersionMessage()
+        : base("version") { }
+
       public VersionMessage(
         uint protocolVersion,
         ulong networkServicesLocal,
@@ -48,6 +51,11 @@ namespace BTokenLib
         byte[] byteArray = BitConverter.GetBytes(uint16);
         Array.Reverse(byteArray);
         return byteArray;
+      }
+
+      public override MessageNetwork Create()
+      {
+        return new VersionMessage();
       }
     }
   }

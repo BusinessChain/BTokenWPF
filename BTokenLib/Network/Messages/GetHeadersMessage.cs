@@ -9,6 +9,9 @@ namespace BTokenLib
   {
     class GetHeadersMessage : MessageNetwork
     {
+      public GetHeadersMessage()
+        : base("getheaders") { }
+
       public GetHeadersMessage(List<Header> headerLocator, uint versionProtocol)
         : base("getheaders")
       {
@@ -24,6 +27,13 @@ namespace BTokenLib
 
         Payload = payload.ToArray();
         LengthDataPayload = Payload.Length;
+      }
+
+
+
+      public override MessageNetwork Create()
+      {
+        return new GetHeadersMessage();
       }
     }
   }

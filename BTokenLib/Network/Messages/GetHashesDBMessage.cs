@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.Generic;
 
 
 namespace BTokenLib
@@ -13,6 +13,12 @@ namespace BTokenLib
       public GetHashesDBMessage()
         : base("getHashesDB")
       { }
+
+
+      public override MessageNetwork Create()
+      {
+        return new GetHashesDBMessage();
+      }
     }
   }
 }

@@ -5,7 +5,7 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class MessageNetwork
+    abstract class MessageNetwork
     {
       public string Command;
 
@@ -38,6 +38,9 @@ namespace BTokenLib
         Command = command;
         Payload = payload;
       }
+
+      public abstract MessageNetwork Create();
+      public abstract void RunMessage(Peer peer);
     }
   }
 }

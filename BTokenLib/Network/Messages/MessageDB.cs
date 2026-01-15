@@ -11,11 +11,18 @@ namespace BTokenLib
   {
     class MessageDB : MessageNetwork
     {
-      public MessageDB(byte[] dataDB)
-        : base(
-            "dataDB",
-            dataDB)
+      public MessageDB()
+        : base("dataDB")
       { }
+
+      public MessageDB(byte[] dataDB)
+        : base("dataDB",dataDB)
+      { }
+
+      public override MessageNetwork Create()
+      {
+        return new MessageDB();
+      }
     }
   }
 }

@@ -17,7 +17,6 @@ namespace BTokenLib
     partial class Peer
     {
       Network Network;
-      Token Token;
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
@@ -55,6 +54,8 @@ namespace BTokenLib
       CancellationTokenSource Cancellation = new();
       const int TIMEOUT_VERACK_MILLISECONDS = 5000;
 
+      Dictionary<string, MessageNetwork> CommandsPeerProtocol = new();
+
       const int CommandSize = 12;
       const int LengthSize = 4;
       const int ChecksumSize = 4;
@@ -79,11 +80,11 @@ namespace BTokenLib
 
       public Peer(
         Network network,
-        Token token,
+        int sizeBlockMax,
         IPAddress ip,
         ConnectionType connection) : this(
-          network, 
-          token, 
+          network,
+          sizeBlockMax,
           ip,
           new TcpClient(),
           connection)
@@ -91,13 +92,12 @@ namespace BTokenLib
 
       public Peer(
         Network network,
-        Token token,
+        int sizeBlockMax,
         IPAddress ip,
         TcpClient tcpClient,
         ConnectionType connection)
       {
         Network = network;
-        Token = token;
 
         TcpClient = tcpClient;
         IPAddress = ip;
@@ -105,7 +105,16 @@ namespace BTokenLib
 
         CreateLogFile($"{ip}-{Connection}");
 
-        Payload = new byte[Token.SizeBlockMax];
+        Payload = new byte[sizeBlockMax];
+      }
+
+      void LoadPeerProtocol()
+      {
+        CommandsPeerProtocol.Add("verack", new VerAckMessage());
+        CommandsPeerProtocol.Add("version",new VersionMessage());
+        CommandsPeerProtocol.Add("ping", new PingMessage());
+        CommandsPeerProtocol.Add("pong", new PongMessage());
+        CommandsPeerProtocol.Add("addr", new AddressMessage());
       }
 
       void CreateLogFile(string name)
@@ -147,7 +156,7 @@ namespace BTokenLib
 
       public async Task Connect()
       {
-        $"Connect.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Connect.".Log(this, LogFile, Network.LogEntryNotifier);
 
         if (!TcpClient.Connected)
           await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
@@ -176,7 +185,7 @@ namespace BTokenLib
           await ListenForNextMessage();
         while (Command != "verack");
 
-        $"Received verack.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Received verack.".Log(this, LogFile, Network.LogEntryNotifier);
         ResetTimer();
 
         SetStateIdle();
@@ -232,17 +241,17 @@ namespace BTokenLib
         try
         {
           await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
-          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}".Log(this, LogFile, Token.LogEntryNotifier);
+          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}".Log(this, LogFile, Network.LogEntryNotifier);
         }
         catch (Exception ex)
         {
-          $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFile, Token.LogEntryNotifier);
+          $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFile, Network.LogEntryNotifier);
         }
       }
 
       public async Task AdvertizeTX(TX tX)
       {
-        $"Advertize token {tX}.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Advertize token {tX}.".Log(this, LogFile, Network.LogEntryNotifier);
 
         InvMessage invMessage = new(new List<Inventory> {
           new(InventoryType.MSG_TX, tX.Hash)
@@ -254,7 +263,7 @@ namespace BTokenLib
       public async Task RequestDB()
       {
         $"Start downloading DB {HashDBDownload.ToHexString()}."
-          .Log(this, LogFile, Token.LogEntryNotifier);
+          .Log(this, LogFile, Network.LogEntryNotifier);
 
         State = StateProtocol.DBDownload;
 
@@ -272,7 +281,7 @@ namespace BTokenLib
         HeaderDownload = headerDownload;
         BlockDownload = blockDownload;
 
-        $"Start downloading block {BlockDownload}.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Start downloading block {BlockDownload}.".Log(this, LogFile, Network.LogEntryNotifier);
 
         ResetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
@@ -292,7 +301,7 @@ namespace BTokenLib
         if (headers.Count > 1)
           logText += $" ... {headers.Last()}.";
 
-        logText.Log(this, LogFile, Token.LogEntryNotifier);
+        logText.Log(this, LogFile, Network.LogEntryNotifier);
 
         await SendMessage(new HeadersMessage(headers));
       }
@@ -304,14 +313,14 @@ namespace BTokenLib
           if(State != StateProtocol.Idle)
           {
             $"Is not idle when attempting to send block {block} but in state {State}."
-              .Log(this, LogFile, Token.LogEntryNotifier);
+              .Log(this, LogFile, Network.LogEntryNotifier);
             return;
           }
 
           State = StateProtocol.HeaderDownload;
         }
 
-        $"Advertize block {block}.".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Advertize block {block}.".Log(this, LogFile, Network.LogEntryNotifier);
 
         await SendHeaders(new List<Header>() { block.Header });
 
@@ -362,7 +371,7 @@ namespace BTokenLib
 
       public void Dispose()
       {
-        $"Dispose {Connection}".Log(this, LogFile, Token.LogEntryNotifier);
+        $"Dispose {Connection}".Log(this, LogFile, Network.LogEntryNotifier);
 
         Cancellation.Cancel();
 

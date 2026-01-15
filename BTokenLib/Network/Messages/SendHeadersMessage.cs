@@ -12,6 +12,11 @@ namespace BTokenLib
     {
       public SendHeadersMessage() 
         : base("sendheaders") { }
+
+      public override MessageNetwork Create()
+      {
+        return new SendHeadersMessage();
+      }
     }
   }
 }

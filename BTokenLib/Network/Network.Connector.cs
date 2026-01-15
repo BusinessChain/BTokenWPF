@@ -185,14 +185,13 @@ namespace BTokenLib
 
           if (peer != null)
           {
-            $"Connection with peer {peer} already established.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
+            $"Connection with peer {peer} already established.".Log(this, LogEntryNotifier);
             return;
           }
 
           peer = new(
             this,
-            Token,
+            Token.SizeBlockMax,
             IPAddress.Parse(iP),
             ConnectionType.OUTBOUND);
 
@@ -238,7 +237,7 @@ namespace BTokenLib
         return;
       }
 
-      $"Start TCP listener on port {Port}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+      $"Start TCP listener on port {Port}.".Log(this, LogEntryNotifier);
 
       while (true)
       {
@@ -249,8 +248,7 @@ namespace BTokenLib
         if (remoteIP.ToString() != "84.74.69.100")
           continue;
 
-        $"Received inbound request on port {Port} from {remoteIP}."
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"Received inbound request on port {Port} from {remoteIP}.".Log(this, LogEntryNotifier);
 
         while (true)
         {
@@ -271,8 +269,7 @@ namespace BTokenLib
 
         if (peer != null)
         {
-          $"Peer {peer} is already connected but received inbound connection request, therefore initiate synchronization."
-            .Log(this, Token.LogFile, Token.LogEntryNotifier);
+          $"Peer {peer} is already connected but received inbound connection request, therefore initiate synchronization.".Log(this, LogEntryNotifier);
 
           await peer.SendGetHeaders(Token.Network.GetLocator());
 
@@ -307,7 +304,7 @@ namespace BTokenLib
           {
             peer = new(
               this,
-              Token,
+              Token.SizeBlockMax,
               remoteIP,
               tcpClient,
               ConnectionType.INBOUND);
