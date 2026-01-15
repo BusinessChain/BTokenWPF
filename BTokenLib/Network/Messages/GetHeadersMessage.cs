@@ -35,6 +35,11 @@ namespace BTokenLib
       {
         return new GetHeadersMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

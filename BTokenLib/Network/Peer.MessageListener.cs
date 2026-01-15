@@ -54,17 +54,14 @@ namespace BTokenLib
 
             flagMessageMayNotFollowConsensusRules = true;
 
-            // vielleicht all commandos auf Peer level. Aber wie mache ich trennung
-            // von exklusiv BToken bzw. Bitcoin unterstützten Commandos.
             await ListenForNextMessage();
 
             if (!CommandsPeerProtocol.TryGetValue(Command, out MessageNetwork messageNetwork))
-              if (!Network.CommandsNetworkProtocol.TryGetValue(Command, out messageNetwork))
                 continue;
 
             await ReadBytes(messageNetwork.Payload, LengthDataPayload);
 
-            messageNetwork.RunMessage(this); // This may alter the state of this peer.
+            messageNetwork.RunMessage(this);
           }
         }
         catch (Exception ex)

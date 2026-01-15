@@ -38,6 +38,11 @@ namespace BTokenLib
       {
         return new HeadersMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

@@ -7,11 +7,17 @@ namespace BTokenLib
 {
   public partial class Network
   {
-    Dictionary<string, MessageNetwork> CommandsNetworkProtocol = new();
-
-    public bool TryGetCommandNetworkProtocol(string command, out MessageNetwork messageNetwork)
+    List<MessageNetwork> GetMessagesProtocolNetwork()
     {
+      return new List<MessageNetwork>()
+      {
+        new GetDataMessage(),
+        new InvMessage(),
+        new GetHashesDBMessage(),
+        new MessageDB()
+      };
 
+      // Allenfalls hier die Token spezifischen commandos ranhängen.
     }
 
 

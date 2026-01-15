@@ -41,6 +41,11 @@ namespace BTokenLib
       {
         return new AddressMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

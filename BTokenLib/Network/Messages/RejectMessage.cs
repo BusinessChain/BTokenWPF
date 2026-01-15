@@ -123,6 +123,11 @@ namespace BTokenLib
       {
         return new RejectMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

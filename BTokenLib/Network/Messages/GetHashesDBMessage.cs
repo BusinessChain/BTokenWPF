@@ -19,6 +19,11 @@ namespace BTokenLib
       {
         return new GetHashesDBMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

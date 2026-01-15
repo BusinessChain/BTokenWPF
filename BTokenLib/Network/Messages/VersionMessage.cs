@@ -57,6 +57,11 @@ namespace BTokenLib
       {
         return new VersionMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

@@ -23,6 +23,11 @@ namespace BTokenLib
       {
         return new MessageBlock();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

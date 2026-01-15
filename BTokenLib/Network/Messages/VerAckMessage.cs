@@ -19,6 +19,11 @@ namespace BTokenLib
       {
         return new VerAckMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

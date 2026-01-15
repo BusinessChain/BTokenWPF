@@ -48,6 +48,11 @@ namespace BTokenLib
       {
         return new NotFoundMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

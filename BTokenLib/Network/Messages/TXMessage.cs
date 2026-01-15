@@ -17,9 +17,14 @@ namespace BTokenLib
         LengthDataPayload = Payload.Length;
       }
 
-      public override TXMessage Create()
+      public override MessageNetwork Create()
       {
-        return new FeeFilterMessage();
+        return new TXMessage();
+      }
+
+      public override void RunMessage(Peer peer)
+      {
+
       }
     }
   }

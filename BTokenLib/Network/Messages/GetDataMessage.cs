@@ -56,6 +56,12 @@ namespace BTokenLib
       {
         return new GetDataMessage();
       }
+
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

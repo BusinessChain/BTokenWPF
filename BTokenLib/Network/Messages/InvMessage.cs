@@ -53,6 +53,11 @@ namespace BTokenLib
       {
         return new InvMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

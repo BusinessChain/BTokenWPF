@@ -25,6 +25,11 @@ namespace BTokenLib
       {
         return new FeeFilterMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

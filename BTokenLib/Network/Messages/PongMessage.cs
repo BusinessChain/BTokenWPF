@@ -24,6 +24,11 @@ namespace BTokenLib
       {
         return new PongMessage();
       }
+
+      public override void RunMessage(Peer peer)
+      {
+
+      }
     }
   }
 }

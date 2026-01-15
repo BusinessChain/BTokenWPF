@@ -110,11 +110,25 @@ namespace BTokenLib
 
       void LoadPeerProtocol()
       {
-        CommandsPeerProtocol.Add("verack", new VerAckMessage());
-        CommandsPeerProtocol.Add("version",new VersionMessage());
-        CommandsPeerProtocol.Add("ping", new PingMessage());
-        CommandsPeerProtocol.Add("pong", new PongMessage());
-        CommandsPeerProtocol.Add("addr", new AddressMessage());
+        List<MessageNetwork> messagesProtocolPeer = new()
+        {
+          new VerAckMessage(),
+          new VersionMessage(),
+          new PingMessage(),
+          new PongMessage(),
+          new AddressMessage(),
+          new FeeFilterMessage(),
+          new GetHeadersMessage(),
+          new HeadersMessage(),
+          new MessageBlock(),
+          new NotFoundMessage(),
+          new RejectMessage(),
+          new SendHeadersMessage(),
+          new TXMessage(),
+        };
+
+        messagesProtocolPeer.Concat(Network.GetMessagesProtocolNetwork()).ToList()
+          .ForEach(m => CommandsPeerProtocol.Add(m.Command, m));
       }
 
       void CreateLogFile(string name)
