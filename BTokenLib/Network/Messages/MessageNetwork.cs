@@ -32,15 +32,16 @@ namespace BTokenLib
         int indexPayloadOffset,
         int lengthPayload)
       {
-        OffsetPayload = indexPayloadOffset;
-        LengthDataPayload = lengthPayload;
-
         Command = command;
         Payload = payload;
+
+        OffsetPayload = indexPayloadOffset;
+        LengthDataPayload = lengthPayload;
       }
 
       public abstract MessageNetwork Create();
-      public abstract void RunMessage(Peer peer);
+
+      public abstract void RunMessage(Peer peer, MessageNetwork messageNetworkOld);
     }
   }
 }

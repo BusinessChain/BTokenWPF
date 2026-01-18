@@ -58,9 +58,14 @@ namespace BTokenLib
         return new VersionMessage();
       }
 
-      public override void RunMessage(Peer peer)
+      public override void RunMessage(Peer peer, MessageNetwork messageNetworkOld)
       {
+        if (peer.State == Peer.StateProtocol.AwaitVersion)
+        {
+          peer.SendMessage(new VerAckMessage());
 
+          peer.SendVersionMessage();
+        }
       }
     }
   }

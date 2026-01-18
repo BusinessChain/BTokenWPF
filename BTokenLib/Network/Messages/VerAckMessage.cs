@@ -20,9 +20,13 @@ namespace BTokenLib
         return new VerAckMessage();
       }
 
-      public override void RunMessage(Peer peer)
+      public override void RunMessage(Peer peer, MessageNetwork messageNetworkOld)
       {
+        peer.Log($"Received verack.");
+        peer.SetTimer();
 
+        if (peer.State == Peer.StateProtocol.AwaitVerack)
+          peer.State = Peer.StateProtocol.Idle;
       }
     }
   }

@@ -200,19 +200,18 @@ namespace BTokenLib
       }
       catch (Exception ex)
       {
-        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}.".Log(this, LogEntryNotifier);
 
         return;
       }
 
       try
       {
-        await peer.Connect();
+        await peer.Start();
       }
       catch (Exception ex)
       {
-        $"Could not connect to {peer}: {ex.Message}"
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
+        $"Could not start {peer}: {ex.Message}".Log(this, LogEntryNotifier);
 
         peer.Dispose();
 
@@ -329,8 +328,8 @@ namespace BTokenLib
 
         try
         {
-          await peer.Connect();
-          $"Connected to inbound peer {peer}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+          await peer.Start();
+          $"Start inbound peer {peer}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
         }
         catch (Exception ex)
         {

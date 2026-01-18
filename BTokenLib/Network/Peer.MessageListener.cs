@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Linq;
 using System.Text;
 using System.Net.Sockets;
@@ -13,66 +14,56 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      public async Task StartMessageListener()
+      public async Task SendVersionMessage()
       {
-        // innerhalb 10 minuten max 5 (empirisch bestimmen) non_bulk messages akzeptieren
-        bool flagMessageMayNotFollowConsensusRules = false;
+        await SendMessage(new VersionMessage(
+          protocolVersion: ProtocolVersion,
+          networkServicesLocal: 0,
+          unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+          networkServicesRemote: 0,
+          iPAddressRemote: IPAddress.Loopback,
+          portRemote: Network.Port,
+          iPAddressLocal: IPAddress.Loopback,
+          portLocal: Network.Port,
+          nonce: 0,
+          userAgent: UserAgent,
+          blockchainHeight: 0,
+          relayOption: 0x01));
 
+        SetTimer("Await 'verack'.", TIMEOUT_HANDSHAKE_MILLISECONDS);
+
+        State = StateProtocol.AwaitVerack;
+      }
+
+      public async Task StartStateMachine()
+      {
         try
         {
+          if (Connection == ConnectionType.OUTBOUND)
+          {
+            await SendVersionMessage();
+          }
+          else
+          {
+            SetTimer("Await 'version'.", TIMEOUT_HANDSHAKE_MILLISECONDS);
+
+            State = StateProtocol.AwaitVersion;
+          }
+
           while (true)
           {
-            // Divide messages into solicited and unsolicited messages.
-
-            // Solicited messages are messages that we asked for. These messages are by definition never spam.
-            // If a solicited message contains data that violates the protocol, a ProtocolException should be thrown,
-            // in which case the peer is disconnected for 24 hours. This mey happen even when the peer had no malicious intent,
-            // but that doesnt matter, as connections to peers should be randomized and continuously shuffled anyway,
-            // because the network layer should be kept trustless.
-
-            // Unsolicited messages may be blocks, transactions, protocol command.
-            // Here we should deploy a DoS throttle for each category. 
-            // Since blocks on average can be created only one every 10 minutes, 
-            // We can be generous an allow an average of one block message per minute over a ten minute window.
-            // With transactions, we can accept a tlps [transaction load per second] of G * Blocksize / 600 [Bytes/s]
-            // G is some generosity margins such that temporary burst demand may be satisfied.
-            // In BToken that would be 1'000'000 / 600 = 1.6 kB/s worth of transaction. We can bump this up to 5 kB/s
-            // worth of transaction that we accept, if a peer send us more, we will disconnect.
-            // DoS limiters for protocol commands have to be assessed seperately for each command.
-
-            // Bezüglich log file per peer: Das logfile der peers gibt es nur im debug modus.
-            if(flagMessagePossible_DoS_Attack)
-            {
-              // increment DoS counter
-              // introduce a fixed Message/time metric for DoS detection. The network protocol
-              // shoud be designed in such a way that a few messages per minutes are enough.
-              // Assuming there are on average 
-
-              //if (counterPossibleDOSMessages > max)
-              //  throw new ProtocolException("Received too many possible DoS messages from peer.");
-            }
-
-            flagMessageMayNotFollowConsensusRules = true;
-
-            await ListenForNextMessage();
-
-            if (!CommandsPeerProtocol.TryGetValue(Command, out MessageNetwork messageNetwork))
-                continue;
-
-            await ReadBytes(messageNetwork.Payload, LengthDataPayload);
-
-            messageNetwork.RunMessage(this);
+            await RunNextMessage();
           }
         }
         catch (Exception ex)
         {
-          $"{ex.GetType().Name} in listener: \n{ex.Message}".Log(this, LogFile, Network.LogEntryNotifier);
+          Log($"{ex.GetType().Name} in listener: \n{ex.Message}");
 
           Dispose();
         }
       }
 
-      async Task ListenForNextMessage()
+      async Task RunNextMessage()
       {
         byte[] magicByte = new byte[1];
 
@@ -86,40 +77,54 @@ namespace BTokenLib
 
         await ReadBytes(MessageHeader, MessageHeader.Length);
 
-        LengthDataPayload = BitConverter.ToInt32(MessageHeader, CommandSize);
+        string command = Encoding.ASCII.GetString(MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
 
-        if (LengthDataPayload > Payload.Length)
-          throw new ProtocolException($"Message payload too big exceeding {Payload.Length} bytes.");
+        MessageNetwork messageNetworkOld = MessageNetworkCurrent;
 
-        Command = Encoding.ASCII.GetString(MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
+        MessageNetworkCurrent = CommandsPeerProtocol[command];
+        MessageNetworkCurrent.LengthDataPayload = BitConverter.ToInt32(MessageHeader, CommandSize);
+
+        if (MessageNetworkCurrent.LengthDataPayload > MessageNetworkCurrent.Payload.Length)
+          throw new ProtocolException($"Received network message payload length exceeds the allowed length of {MessageNetworkCurrent.Payload.Length} bytes for message {MessageNetworkCurrent.Command}.");
+
+        await ReadBytes(MessageNetworkCurrent.Payload, MessageNetworkCurrent.LengthDataPayload);
+
+        MessageNetworkCurrent.RunMessage(this, messageNetworkOld);
       }
 
       async Task ReadBytes(byte[] buffer, int bytesToRead)
       {
         int offset = 0;
 
-        while (bytesToRead > 0)
+        try
         {
-          int chunkSize = await NetworkStream.ReadAsync(
-            buffer,
-            offset,
-            bytesToRead,
-            Cancellation.Token)
-            .ConfigureAwait(false);
+          while (bytesToRead > 0)
+          {
+            int chunkSize = await NetworkStream.ReadAsync(
+              buffer,
+              offset,
+              bytesToRead,
+              Cancellation.Token)
+              .ConfigureAwait(false);
 
-          if (chunkSize == 0)
-            throw new IOException(
-              "Stream returns 0 bytes signifying end of stream.");
+            if (chunkSize == 0)
+              throw new IOException("Stream returns 0 bytes signifying end of stream.");
 
-          offset += chunkSize;
-          bytesToRead -= chunkSize;
+            offset += chunkSize;
+            bytesToRead -= chunkSize;
+          }
+        }
+        catch (OperationCanceledException)
+        {
+          Log($"Timeout occured when waiting for next message.");
+          throw;
         }
       }
 
-      void ResetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
+      public void SetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
       {
         if (descriptionTimeOut != "")
-          $"Set timeout for '{descriptionTimeOut}' to {millisecondsTimer} ms.".Log(this, LogFile, Network.LogEntryNotifier);
+          Log($"Set timeout for '{descriptionTimeOut}' to {millisecondsTimer} ms.");
 
         Cancellation.CancelAfter(millisecondsTimer);
       }

@@ -22,7 +22,8 @@ namespace BTokenLib
 
       public enum StateProtocol
       {
-        NotConnected,
+        AwaitVerack,
+        AwaitVersion,
         Idle,
         HeaderDownload,
         DBDownload,
@@ -32,7 +33,7 @@ namespace BTokenLib
         Busy
       }
 
-      public StateProtocol State = StateProtocol.NotConnected;
+      public StateProtocol State = StateProtocol.AwaitVersion;
       public bool FlagInitialSyncCompleted;
 
       public Header HeaderDownload;
@@ -52,18 +53,14 @@ namespace BTokenLib
       bool FlagNetworkStreamIsLocked;
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
-      const int TIMEOUT_VERACK_MILLISECONDS = 5000;
+      public const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
 
-      Dictionary<string, MessageNetwork> CommandsPeerProtocol = new();
+      public Dictionary<string, MessageNetwork> CommandsPeerProtocol = new();
+      public MessageNetwork MessageNetworkCurrent;
 
       const int CommandSize = 12;
       const int LengthSize = 4;
       const int ChecksumSize = 4;
-
-      string Command;
-
-      public byte[] Payload;
-      public int LengthDataPayload;
 
       const int HeaderSize = CommandSize + LengthSize + ChecksumSize;
       byte[] MessageHeader = new byte[HeaderSize];
@@ -71,6 +68,7 @@ namespace BTokenLib
 
       public SHA256 SHA256 = SHA256.Create();
 
+      public ILogEntryNotifier LogEntryNotifier;
       StreamWriter LogFile;
 
       public DateTime TimePeerCreation = DateTime.Now;
@@ -104,8 +102,6 @@ namespace BTokenLib
         Connection = connection;
 
         CreateLogFile($"{ip}-{Connection}");
-
-        Payload = new byte[sizeBlockMax];
       }
 
       void LoadPeerProtocol()
@@ -168,43 +164,16 @@ namespace BTokenLib
           append: true);
       }
 
-      public async Task Connect()
+      public async Task Start()
       {
-        $"Connect.".Log(this, LogFile, Network.LogEntryNotifier);
+        $"Start peer - {Connection}.".Log(this, LogEntryNotifier);
 
         if (!TcpClient.Connected)
           await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
 
         NetworkStream = TcpClient.GetStream();
 
-        await SendMessage(new VersionMessage(
-          protocolVersion: ProtocolVersion,
-          networkServicesLocal: 0,
-          unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-          networkServicesRemote: 0,
-          iPAddressRemote: IPAddress.Loopback,
-          portRemote: Network.Port,
-          iPAddressLocal: IPAddress.Loopback,
-          portLocal: Network.Port,
-          nonce: 0,
-          userAgent: UserAgent,
-          blockchainHeight: 0,
-          relayOption: 0x01));
-
-        await SendMessage(new VerAckMessage());
-
-        ResetTimer("Await verack", TIMEOUT_VERACK_MILLISECONDS);
-
-        do
-          await ListenForNextMessage();
-        while (Command != "verack");
-
-        $"Received verack.".Log(this, LogFile, Network.LogEntryNotifier);
-        ResetTimer();
-
-        SetStateIdle();
-
-        StartMessageListener();
+        StartStateMachine();
       }
 
       public async Task SendMessage(MessageNetwork message)
@@ -414,6 +383,11 @@ namespace BTokenLib
             $"lifeTime minutes: {lifeTime}\n" +
             $"State: {State}\n" +
             $"Connection: {Connection}\n";
+      }
+
+      public void Log(string messageLog)
+      {
+        messageLog.Log(this, LogEntryNotifier);
       }
 
       public override string ToString()

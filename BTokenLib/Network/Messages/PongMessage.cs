@@ -6,18 +6,15 @@ namespace BTokenLib
   {
     class PongMessage : MessageNetwork
     {
-      public UInt64 Nonce;
-
-
       public PongMessage()
         : base("pong")
       { }
 
-      public PongMessage(byte[] payload) 
+      public PongMessage(byte[] payload, int lengthDataPayload) 
         : base("pong")
       {
         Payload = payload;
-        LengthDataPayload = Payload.Length;
+        LengthDataPayload = lengthDataPayload;
       }
 
       public override MessageNetwork Create()
@@ -25,9 +22,17 @@ namespace BTokenLib
         return new PongMessage();
       }
 
-      public override void RunMessage(Peer peer)
+      public override void RunMessage(Peer peer, MessageNetwork messageNetworkOld)
       {
+        PingMessage messagePing = messageNetworkOld as PingMessage;
 
+        if (messagePing == null)
+          throw new ProtocolException("Transistion into state 'pong' from other than state 'ping' is not supported.");
+
+        if (messagePing.Payload != Payload)
+          throw new ProtocolException("'Pong' message did not return same nonce as sended in 'ping' message.");
+
+        peer.MessageNetworkCurrent = null;
       }
     }
   }
