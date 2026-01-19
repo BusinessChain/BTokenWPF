@@ -1,66 +1,68 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 
 namespace BTokenLib
 {
   partial class Network
   {
-    class GetDataMessage : MessageNetwork
+    partial class Peer
     {
-      public List<Inventory> Inventories = new();
-
-
-      public GetDataMessage()
-        : base("getdata")
+      class GetDataMessage : MessageNetwork
       {
+        public List<Inventory> Inventories = new();
 
-      }
 
-      public GetDataMessage(byte[] buffer)
-        : base("getdata", buffer)
-      {
-        int startIndex = 0;
+        public GetDataMessage()
+          : base("getdata")
+        {
 
-        int inventoryCount = VarInt.GetInt(
-          Payload,
-          ref startIndex);
+        }
 
-        for (int i = 0; i < inventoryCount; i++)
-          Inventories.Add(Inventory.Parse(
+        public GetDataMessage(byte[] buffer)
+          : base("getdata", buffer)
+        {
+          int startIndex = 0;
+
+          int inventoryCount = VarInt.GetInt(
             Payload,
-            ref startIndex));
-      }
+            ref startIndex);
 
-      public GetDataMessage(List<Inventory> inventories)
-        : base("getdata")
-      {
-        Inventories = inventories;
+          for (int i = 0; i < inventoryCount; i++)
+            Inventories.Add(Inventory.Parse(
+              Payload,
+              ref startIndex));
+        }
 
-        List<byte> payload = new();
+        public GetDataMessage(List<Inventory> inventories)
+          : base("getdata")
+        {
+          Inventories = inventories;
 
-        payload.AddRange(VarInt.GetBytes(Inventories.Count()));
+          List<byte> payload = new();
 
-        for (int i = 0; i < Inventories.Count(); i++)
-          payload.AddRange(Inventories[i].GetBytes());
+          payload.AddRange(VarInt.GetBytes(Inventories.Count()));
 
-        Payload = payload.ToArray();
-        LengthDataPayload = Payload.Length;
-      }
+          for (int i = 0; i < Inventories.Count(); i++)
+            payload.AddRange(Inventories[i].GetBytes());
 
-
-      public override MessageNetwork Create()
-      {
-        return new GetDataMessage();
-      }
+          Payload = payload.ToArray();
+          LengthDataPayload = Payload.Length;
+        }
 
 
-      public override void RunMessage(Peer peer)
-      {
+        public override MessageNetwork Create()
+        {
+          return new GetDataMessage();
+        }
 
+
+        public override void RunMessage(Peer peer)
+        {
+
+        }
       }
     }
   }

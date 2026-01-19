@@ -6,65 +6,68 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class VersionMessage : MessageNetwork
+    partial class Peer
     {
-      public VersionMessage()
-        : base("version") { }
-
-      public VersionMessage(
-        uint protocolVersion,
-        ulong networkServicesLocal,
-        long unixTimeSeconds,
-        ulong networkServicesRemote,
-        IPAddress iPAddressRemote,
-        ushort portRemote,
-        IPAddress iPAddressLocal,
-        ushort portLocal,
-        ulong nonce,
-        string userAgent,
-        int blockchainHeight,
-        byte relayOption) 
-        : base("version")
+      class VersionMessage : MessageNetwork
       {
-        List<byte> versionPayload = new();
+        public VersionMessage()
+          : base("version") { }
 
-        versionPayload.AddRange(BitConverter.GetBytes(protocolVersion));
-        versionPayload.AddRange(BitConverter.GetBytes(networkServicesLocal));
-        versionPayload.AddRange(BitConverter.GetBytes(unixTimeSeconds));
-        versionPayload.AddRange(BitConverter.GetBytes(networkServicesRemote));
-        versionPayload.AddRange(iPAddressRemote.GetAddressBytes());
-        versionPayload.AddRange(GetBytes(portRemote));
-        versionPayload.AddRange(BitConverter.GetBytes(networkServicesLocal));
-        versionPayload.AddRange(iPAddressLocal.GetAddressBytes());
-        versionPayload.AddRange(GetBytes(portLocal));
-        versionPayload.AddRange(BitConverter.GetBytes(nonce));
-        versionPayload.AddRange(VarString.GetBytes(userAgent));
-        versionPayload.AddRange(BitConverter.GetBytes(blockchainHeight));
-        versionPayload.Add(relayOption);
-
-        Payload = versionPayload.ToArray();
-        LengthDataPayload = Payload.Length;
-      }
-
-      byte[] GetBytes(UInt16 uint16)
-      {
-        byte[] byteArray = BitConverter.GetBytes(uint16);
-        Array.Reverse(byteArray);
-        return byteArray;
-      }
-
-      public override MessageNetwork Create()
-      {
-        return new VersionMessage();
-      }
-
-      public override void RunMessage(Peer peer, MessageNetwork messageNetworkOld)
-      {
-        if (peer.State == Peer.StateProtocol.AwaitVersion)
+        public VersionMessage(
+          uint protocolVersion,
+          ulong networkServicesLocal,
+          long unixTimeSeconds,
+          ulong networkServicesRemote,
+          IPAddress iPAddressRemote,
+          ushort portRemote,
+          IPAddress iPAddressLocal,
+          ushort portLocal,
+          ulong nonce,
+          string userAgent,
+          int blockchainHeight,
+          byte relayOption)
+          : base("version")
         {
-          peer.SendMessage(new VerAckMessage());
+          List<byte> versionPayload = new();
 
-          peer.SendVersionMessage();
+          versionPayload.AddRange(BitConverter.GetBytes(protocolVersion));
+          versionPayload.AddRange(BitConverter.GetBytes(networkServicesLocal));
+          versionPayload.AddRange(BitConverter.GetBytes(unixTimeSeconds));
+          versionPayload.AddRange(BitConverter.GetBytes(networkServicesRemote));
+          versionPayload.AddRange(iPAddressRemote.GetAddressBytes());
+          versionPayload.AddRange(GetBytes(portRemote));
+          versionPayload.AddRange(BitConverter.GetBytes(networkServicesLocal));
+          versionPayload.AddRange(iPAddressLocal.GetAddressBytes());
+          versionPayload.AddRange(GetBytes(portLocal));
+          versionPayload.AddRange(BitConverter.GetBytes(nonce));
+          versionPayload.AddRange(VarString.GetBytes(userAgent));
+          versionPayload.AddRange(BitConverter.GetBytes(blockchainHeight));
+          versionPayload.Add(relayOption);
+
+          Payload = versionPayload.ToArray();
+          LengthDataPayload = Payload.Length;
+        }
+
+        byte[] GetBytes(UInt16 uint16)
+        {
+          byte[] byteArray = BitConverter.GetBytes(uint16);
+          Array.Reverse(byteArray);
+          return byteArray;
+        }
+
+        public override MessageNetwork Create()
+        {
+          return new VersionMessage();
+        }
+
+        public override void RunMessage(Peer peer)
+        {
+          if (peer.State == StateProtocol.AwaitVersion)
+          {
+            peer.SendMessage(new VerAckMessage());
+
+            peer.SendVersionMessage();
+          }
         }
       }
     }

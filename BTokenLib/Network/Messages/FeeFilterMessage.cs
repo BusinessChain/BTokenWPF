@@ -8,27 +8,30 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class FeeFilterMessage : MessageNetwork
+    partial class Peer
     {
-      public ulong FeeFilterValue { get; private set; }
-
-      public FeeFilterMessage()
-        : base("feefilter")
-      { }
-
-      public FeeFilterMessage(byte[] messagePayload)
-        : base("feefilter", messagePayload)
-      { }
-
-
-      public override MessageNetwork Create()
+      class FeeFilterMessage : MessageNetwork
       {
-        return new FeeFilterMessage();
-      }
+        public ulong FeeFilterValue { get; private set; }
 
-      public override void RunMessage(Peer peer)
-      {
+        public FeeFilterMessage()
+          : base("feefilter")
+        { }
 
+        public FeeFilterMessage(byte[] messagePayload)
+          : base("feefilter", messagePayload)
+        { }
+
+
+        public override MessageNetwork Create()
+        {
+          return new FeeFilterMessage();
+        }
+
+        public override void RunMessage(Peer peer)
+        {
+
+        }
       }
     }
   }

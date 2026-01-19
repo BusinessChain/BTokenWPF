@@ -8,19 +8,22 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class SendHeadersMessage : MessageNetwork
+    partial class Peer
     {
-      public SendHeadersMessage() 
-        : base("sendheaders") { }
-
-      public override MessageNetwork Create()
+      class SendHeadersMessage : MessageNetwork
       {
-        return new SendHeadersMessage();
-      }
+        public SendHeadersMessage()
+          : base("sendheaders") { }
 
-      public override void RunMessage(Peer peer)
-      {
+        public override MessageNetwork Create()
+        {
+          return new SendHeadersMessage();
+        }
 
+        public override void RunMessage(Peer peer)
+        {
+
+        }
       }
     }
   }

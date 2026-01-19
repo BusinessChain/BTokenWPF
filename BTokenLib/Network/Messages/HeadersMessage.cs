@@ -7,41 +7,44 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class HeadersMessage : MessageNetwork
+    partial class Peer
     {
-      public List<Header> Headers = new();
-
-      public HeadersMessage()
-        : base("headers") { }
-
-      public HeadersMessage(List<Header> headers)
-        : base("headers")
+      class HeadersMessage : MessageNetwork
       {
-        Headers = headers;
+        public List<Header> Headers = new();
 
-        List<byte> payload = new();
+        public HeadersMessage()
+          : base("headers") { }
 
-        payload.AddRange(VarInt.GetBytes(Headers.Count));
-
-        foreach (Header header in Headers)
+        public HeadersMessage(List<Header> headers)
+          : base("headers")
         {
-          payload.AddRange(header.Serialize());
-          payload.Add(0);
+          Headers = headers;
+
+          List<byte> payload = new();
+
+          payload.AddRange(VarInt.GetBytes(Headers.Count));
+
+          foreach (Header header in Headers)
+          {
+            payload.AddRange(header.Serialize());
+            payload.Add(0);
+          }
+
+          Payload = payload.ToArray();
+          LengthDataPayload = Payload.Length;
         }
 
-        Payload = payload.ToArray();
-        LengthDataPayload = Payload.Length;
-      }
 
+        public override MessageNetwork Create()
+        {
+          return new HeadersMessage();
+        }
 
-      public override MessageNetwork Create()
-      {
-        return new HeadersMessage();
-      }
+        public override void RunMessage(Peer peer)
+        {
 
-      public override void RunMessage(Peer peer)
-      {
-
+        }
       }
     }
   }

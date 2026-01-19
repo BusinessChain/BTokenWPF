@@ -1,62 +1,64 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace BTokenLib
 {
   partial class Network
   {
-    class InvMessage : MessageNetwork
+    partial class Peer
     {
-      public List<Inventory> Inventories = new();
-
-      public InvMessage()
-        : base("inv") { }
-
-      public InvMessage(List<Inventory> inventories)
-        : base("inv")
+      class InvMessage : MessageNetwork
       {
-        Inventories = inventories;
+        public List<Inventory> Inventories = new();
 
-        List<byte> payload = new();
+        public InvMessage()
+          : base("inv") { }
 
-        payload.AddRange(VarInt.GetBytes(inventories.Count));
+        public InvMessage(List<Inventory> inventories)
+          : base("inv")
+        {
+          Inventories = inventories;
 
-        Inventories.ForEach(
-          i => payload.AddRange(i.GetBytes()));
+          List<byte> payload = new();
 
-        Payload = payload.ToArray();
-        LengthDataPayload = Payload.Length;
-      }
+          payload.AddRange(VarInt.GetBytes(inventories.Count));
 
-      public InvMessage(byte[] buffer)
-        : base(
-            "inv",
-            buffer)
-      {
-        int startIndex = 0;
+          Inventories.ForEach(
+            i => payload.AddRange(i.GetBytes()));
 
-        int inventoryCount = VarInt.GetInt(
-          Payload,
-          ref startIndex);
+          Payload = payload.ToArray();
+          LengthDataPayload = Payload.Length;
+        }
 
-        for (int i = 0; i < inventoryCount; i++)
-          Inventories.Add(Inventory.Parse(
+        public InvMessage(byte[] buffer)
+          : base(
+              "inv",
+              buffer)
+        {
+          int startIndex = 0;
+
+          int inventoryCount = VarInt.GetInt(
             Payload,
-            ref startIndex));
-      }
+            ref startIndex);
+
+          for (int i = 0; i < inventoryCount; i++)
+            Inventories.Add(Inventory.Parse(
+              Payload,
+              ref startIndex));
+        }
 
 
-      public override MessageNetwork Create()
-      {
-        return new InvMessage();
-      }
+        public override MessageNetwork Create()
+        {
+          return new InvMessage();
+        }
 
-      public override void RunMessage(Peer peer)
-      {
+        public override void RunMessage(Peer peer)
+        {
 
+        }
       }
     }
   }

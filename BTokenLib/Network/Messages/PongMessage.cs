@@ -4,35 +4,38 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class PongMessage : MessageNetwork
+    partial class Peer
     {
-      public PongMessage()
-        : base("pong")
-      { }
-
-      public PongMessage(byte[] payload, int lengthDataPayload) 
-        : base("pong")
+      class PongMessage : MessageNetwork
       {
-        Payload = payload;
-        LengthDataPayload = lengthDataPayload;
-      }
+        public PongMessage()
+          : base("pong")
+        { }
 
-      public override MessageNetwork Create()
-      {
-        return new PongMessage();
-      }
+        public PongMessage(byte[] payload, int lengthDataPayload)
+          : base("pong")
+        {
+          Payload = payload;
+          LengthDataPayload = lengthDataPayload;
+        }
 
-      public override void RunMessage(Peer peer, MessageNetwork messageNetworkOld)
-      {
-        PingMessage messagePing = messageNetworkOld as PingMessage;
+        public override MessageNetwork Create()
+        {
+          return new PongMessage();
+        }
 
-        if (messagePing == null)
-          throw new ProtocolException("Transistion into state 'pong' from other than state 'ping' is not supported.");
+        public override void RunMessage(Peer peer)
+        {
+          PingMessage messagePing = messageNetworkOld as PingMessage;
 
-        if (messagePing.Payload != Payload)
-          throw new ProtocolException("'Pong' message did not return same nonce as sended in 'ping' message.");
+          if (messagePing == null)
+            throw new ProtocolException("Transistion into state 'pong' from other than state 'ping' is not supported.");
 
-        peer.MessageNetworkCurrent = null;
+          if (messagePing.Payload != Payload)
+            throw new ProtocolException("'Pong' message did not return same nonce as sended in 'ping' message.");
+
+          peer.MessageNetworkCurrent = null;
+        }
       }
     }
   }

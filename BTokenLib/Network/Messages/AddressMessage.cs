@@ -7,44 +7,47 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class AddressMessage : MessageNetwork
+    partial class Peer
     {
-      public List<NetworkAddress> NetworkAddresses = new();
-
-      public AddressMessage()
-        : base("addr") { }
-
-      public AddressMessage(byte[] messagePayload)
-        : base("addr", messagePayload)
+      class AddressMessage : MessageNetwork
       {
-        int startIndex = 0;
+        public List<NetworkAddress> NetworkAddresses = new();
 
-        int addressesCount = VarInt.GetInt(
-          Payload,
-          ref startIndex);
+        public AddressMessage()
+          : base("addr") { }
 
-        for (int i = 0; i < addressesCount; i++)
+        public AddressMessage(byte[] messagePayload)
+          : base("addr", messagePayload)
         {
-          NetworkAddress address = NetworkAddress.ParseAddress(
-              Payload, ref startIndex);
+          int startIndex = 0;
 
-          if (NetworkAddresses.Any(
-            a => a.IPAddress.ToString() == address.IPAddress.ToString()))
-            throw new ProtocolException("Duplicate network address advertized.");
+          int addressesCount = VarInt.GetInt(
+            Payload,
+            ref startIndex);
 
-          NetworkAddresses.Add(address);
+          for (int i = 0; i < addressesCount; i++)
+          {
+            NetworkAddress address = NetworkAddress.ParseAddress(
+                Payload, ref startIndex);
+
+            if (NetworkAddresses.Any(
+              a => a.IPAddress.ToString() == address.IPAddress.ToString()))
+              throw new ProtocolException("Duplicate network address advertized.");
+
+            NetworkAddresses.Add(address);
+          }
         }
-      }
 
 
-      public override MessageNetwork Create()
-      {
-        return new AddressMessage();
-      }
+        public override MessageNetwork Create()
+        {
+          return new AddressMessage();
+        }
 
-      public override void RunMessage(Peer peer)
-      {
+        public override void RunMessage(Peer peer)
+        {
 
+        }
       }
     }
   }

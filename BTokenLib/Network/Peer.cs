@@ -22,6 +22,7 @@ namespace BTokenLib
 
       public enum StateProtocol
       {
+        SendVersion,
         AwaitVerack,
         AwaitVersion,
         Idle,
@@ -55,8 +56,8 @@ namespace BTokenLib
       CancellationTokenSource Cancellation = new();
       public const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
 
-      public Dictionary<string, MessageNetwork> CommandsPeerProtocol = new();
-      public MessageNetwork MessageNetworkCurrent;
+      Dictionary<StateProtocol, MessageNetwork> CommandsPeerProtocol = new();
+      MessageNetwork MessageNetworkCurrent;
 
       const int CommandSize = 12;
       const int LengthSize = 4;
@@ -176,7 +177,7 @@ namespace BTokenLib
         StartStateMachine();
       }
 
-      public async Task SendMessage(MessageNetwork message)
+      async Task SendMessage(MessageNetwork message)
       {
         while (true)
         {
@@ -219,7 +220,7 @@ namespace BTokenLib
 
       public async Task SendGetHeaders(List<Header> locator)
       {
-        ResetTimer("Get headers.", TIMEOUT_RESPONSE_MILLISECONDS);
+        SetTimer("Get headers.", TIMEOUT_RESPONSE_MILLISECONDS);
 
         try
         {
@@ -242,6 +243,7 @@ namespace BTokenLib
 
         await SendMessage(invMessage);
       }
+      
 
       public async Task RequestDB()
       {
@@ -250,7 +252,7 @@ namespace BTokenLib
 
         State = StateProtocol.DBDownload;
 
-        ResetTimer("receive DB", TIMEOUT_RESPONSE_MILLISECONDS);
+        SetTimer("receive DB", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()
@@ -266,7 +268,7 @@ namespace BTokenLib
 
         $"Start downloading block {BlockDownload}.".Log(this, LogFile, Network.LogEntryNotifier);
 
-        ResetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
+        SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(
           new List<Inventory>()

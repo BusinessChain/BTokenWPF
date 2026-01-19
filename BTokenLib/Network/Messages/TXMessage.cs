@@ -5,26 +5,29 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class TXMessage : MessageNetwork
+    partial class Peer
     {
-      public TXMessage()
-        : base("tx") { }
-
-      public TXMessage(byte[] tXRaw) 
-        : base("tx")
+      class TXMessage : MessageNetwork
       {
-        Payload = tXRaw;
-        LengthDataPayload = Payload.Length;
-      }
+        public TXMessage()
+          : base("tx") { }
 
-      public override MessageNetwork Create()
-      {
-        return new TXMessage();
-      }
+        public TXMessage(byte[] tXRaw)
+          : base("tx")
+        {
+          Payload = tXRaw;
+          LengthDataPayload = Payload.Length;
+        }
 
-      public override void RunMessage(Peer peer)
-      {
+        public override MessageNetwork Create()
+        {
+          return new TXMessage();
+        }
 
+        public override void RunMessage(Peer peer)
+        {
+
+        }
       }
     }
   }

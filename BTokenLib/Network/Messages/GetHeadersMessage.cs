@@ -7,38 +7,41 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class GetHeadersMessage : MessageNetwork
+    partial class Peer
     {
-      public GetHeadersMessage()
-        : base("getheaders") { }
-
-      public GetHeadersMessage(List<Header> headerLocator, uint versionProtocol)
-        : base("getheaders")
+      class GetHeadersMessage : MessageNetwork
       {
-        List<byte> payload = new();
+        public GetHeadersMessage()
+          : base("getheaders") { }
 
-        payload.AddRange(BitConverter.GetBytes(versionProtocol));
-        payload.AddRange(VarInt.GetBytes(headerLocator.Count()));
+        public GetHeadersMessage(List<Header> headerLocator, uint versionProtocol)
+          : base("getheaders")
+        {
+          List<byte> payload = new();
 
-        for (int i = 0; i < headerLocator.Count(); i++)
-          payload.AddRange(headerLocator.ElementAt(i).Hash);
+          payload.AddRange(BitConverter.GetBytes(versionProtocol));
+          payload.AddRange(VarInt.GetBytes(headerLocator.Count()));
 
-        payload.AddRange("0000000000000000000000000000000000000000000000000000000000000000".ToBinary());
+          for (int i = 0; i < headerLocator.Count(); i++)
+            payload.AddRange(headerLocator.ElementAt(i).Hash);
 
-        Payload = payload.ToArray();
-        LengthDataPayload = Payload.Length;
-      }
+          payload.AddRange("0000000000000000000000000000000000000000000000000000000000000000".ToBinary());
+
+          Payload = payload.ToArray();
+          LengthDataPayload = Payload.Length;
+        }
 
 
 
-      public override MessageNetwork Create()
-      {
-        return new GetHeadersMessage();
-      }
+        public override MessageNetwork Create()
+        {
+          return new GetHeadersMessage();
+        }
 
-      public override void RunMessage(Peer peer)
-      {
+        public override void RunMessage(Peer peer)
+        {
 
+        }
       }
     }
   }

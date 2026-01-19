@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 
 namespace BTokenLib
@@ -14,39 +13,21 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      public async Task SendVersionMessage()
-      {
-        await SendMessage(new VersionMessage(
-          protocolVersion: ProtocolVersion,
-          networkServicesLocal: 0,
-          unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-          networkServicesRemote: 0,
-          iPAddressRemote: IPAddress.Loopback,
-          portRemote: Network.Port,
-          iPAddressLocal: IPAddress.Loopback,
-          portLocal: Network.Port,
-          nonce: 0,
-          userAgent: UserAgent,
-          blockchainHeight: 0,
-          relayOption: 0x01));
-
-        SetTimer("Await 'verack'.", TIMEOUT_HANDSHAKE_MILLISECONDS);
-
-        State = StateProtocol.AwaitVerack;
-      }
-
       public async Task StartStateMachine()
       {
         try
         {
           if (Connection == ConnectionType.OUTBOUND)
-          {
-            await SendVersionMessage();
+          {// Jeder state hat eine ReceiveMessage funktion. Diese wird vom state genutzt
+            // um in den nächsten State zu gehen. Es kann natürlich auch sein, dass 
+            // er im gleichen State bleibt. Wenn man in einem State kommt, wird dort typischerweise
+            // das timeout definiert innerhalb welchem der nächste State eintreffen sollte. 
+            MessageNetworkCurrent = CommandsPeerProtocol[StateProtocol.SendVersion];
+            MessageNetworkCurrent.RunMessage(this);
           }
           else
           {
             SetTimer("Await 'version'.", TIMEOUT_HANDSHAKE_MILLISECONDS);
-
             State = StateProtocol.AwaitVersion;
           }
 
@@ -92,6 +73,27 @@ namespace BTokenLib
         MessageNetworkCurrent.RunMessage(this, messageNetworkOld);
       }
 
+      async Task EnterState()
+      {
+        await SendMessage(new VersionMessage(
+          protocolVersion: ProtocolVersion,
+          networkServicesLocal: 0,
+          unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+          networkServicesRemote: 0,
+          iPAddressRemote: IPAddress.Loopback,
+          portRemote: Network.Port,
+          iPAddressLocal: IPAddress.Loopback,
+          portLocal: Network.Port,
+          nonce: 0,
+          userAgent: UserAgent,
+          blockchainHeight: 0,
+          relayOption: 0x01));
+
+        SetTimer("Await 'verack'.", TIMEOUT_HANDSHAKE_MILLISECONDS);
+
+        State = StateProtocol.AwaitVerack;
+      }
+
       async Task ReadBytes(byte[] buffer, int bytesToRead)
       {
         int offset = 0;
@@ -121,7 +123,7 @@ namespace BTokenLib
         }
       }
 
-      public void SetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
+      void SetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
       {
         if (descriptionTimeOut != "")
           Log($"Set timeout for '{descriptionTimeOut}' to {millisecondsTimer} ms.");
