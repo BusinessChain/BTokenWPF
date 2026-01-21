@@ -71,15 +71,10 @@ namespace BTokenLib
 
       $"Start Network.".Log(this, Token.LogFile, LogEntryNotifier);
 
-      StartPeerConnector();
+      StartPeerOutboundConnector();
 
       if (EnableInboundConnections)
         StartPeerInboundConnector();
-
-      do
-      {
-        await Task.Delay(10000).ConfigureAwait(false);
-      } while (Peers.Count == 0 || !Peers.All(p => p.FlagInitialSyncCompleted));
     }
 
     void LoadBlocksFromArchive()

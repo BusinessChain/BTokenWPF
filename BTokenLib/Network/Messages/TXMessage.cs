@@ -7,7 +7,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class TXMessage : MessageNetwork
+      class TXMessage : MessageNetworkProtocol
       {
         public TXMessage()
           : base("tx") { }
@@ -19,7 +19,7 @@ namespace BTokenLib
           LengthDataPayload = Payload.Length;
         }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new TXMessage();
         }

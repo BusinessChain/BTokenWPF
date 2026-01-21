@@ -10,25 +10,16 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class VerAckMessage : MessageNetwork
+      class VerAckMessage : MessageNetworkProtocol
       {
         public VerAckMessage()
           : base("verack")
         { }
 
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new VerAckMessage();
-        }
-
-        public override void RunMessage(Peer peer)
-        {
-          peer.Log($"Received verack.");
-          peer.SetTimer();
-
-          if (peer.State == StateProtocol.AwaitVerack)
-            peer.State = StateProtocol.Idle;
         }
       }
     }

@@ -7,21 +7,6 @@ namespace BTokenLib
 {
   public partial class Network
   {
-    List<MessageNetwork> GetMessagesProtocolNetwork()
-    {
-      return new List<MessageNetwork>()
-      {
-        new GetDataMessage(),
-        new InvMessage(),
-        new GetHashesDBMessage(),
-        new MessageDB()
-      };
-
-      // Allenfalls hier die Token spezifischen commandos ranhängen.
-    }
-
-
-
     void ReceivedCommand(string command, Peer peer)
     {
       if (command == "headers")

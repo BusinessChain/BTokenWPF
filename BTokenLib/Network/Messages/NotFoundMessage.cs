@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class NotFoundMessage : MessageNetwork
+      class NotFoundMessage : MessageNetworkProtocol
       {
         public List<Inventory> Inventories = new();
 
@@ -45,7 +45,7 @@ namespace BTokenLib
           LengthDataPayload = Payload.Length;
         }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new NotFoundMessage();
         }

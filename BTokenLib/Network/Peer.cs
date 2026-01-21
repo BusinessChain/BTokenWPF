@@ -22,8 +22,7 @@ namespace BTokenLib
 
       public enum StateProtocol
       {
-        SendVersion,
-        AwaitVerack,
+        Handshake,
         AwaitVersion,
         Idle,
         HeaderDownload,
@@ -33,9 +32,6 @@ namespace BTokenLib
         Disposed,
         Busy
       }
-
-      public StateProtocol State = StateProtocol.AwaitVersion;
-      public bool FlagInitialSyncCompleted;
 
       public Header HeaderDownload;
       public Block BlockDownload;
@@ -55,17 +51,6 @@ namespace BTokenLib
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
       public const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
-
-      Dictionary<StateProtocol, MessageNetwork> CommandsPeerProtocol = new();
-      MessageNetwork MessageNetworkCurrent;
-
-      const int CommandSize = 12;
-      const int LengthSize = 4;
-      const int ChecksumSize = 4;
-
-      const int HeaderSize = CommandSize + LengthSize + ChecksumSize;
-      byte[] MessageHeader = new byte[HeaderSize];
-      byte[] MagicBytes = new byte[4] { 0xF9, 0xBE, 0xB4, 0xD9 };
 
       public SHA256 SHA256 = SHA256.Create();
 
@@ -103,29 +88,6 @@ namespace BTokenLib
         Connection = connection;
 
         CreateLogFile($"{ip}-{Connection}");
-      }
-
-      void LoadPeerProtocol()
-      {
-        List<MessageNetwork> messagesProtocolPeer = new()
-        {
-          new VerAckMessage(),
-          new VersionMessage(),
-          new PingMessage(),
-          new PongMessage(),
-          new AddressMessage(),
-          new FeeFilterMessage(),
-          new GetHeadersMessage(),
-          new HeadersMessage(),
-          new MessageBlock(),
-          new NotFoundMessage(),
-          new RejectMessage(),
-          new SendHeadersMessage(),
-          new TXMessage(),
-        };
-
-        messagesProtocolPeer.Concat(Network.GetMessagesProtocolNetwork()).ToList()
-          .ForEach(m => CommandsPeerProtocol.Add(m.Command, m));
       }
 
       void CreateLogFile(string name)
@@ -177,7 +139,7 @@ namespace BTokenLib
         StartStateMachine();
       }
 
-      async Task SendMessage(MessageNetwork message)
+      async Task SendMessage(MessageNetworkProtocol message)
       {
         while (true)
         {
@@ -244,7 +206,6 @@ namespace BTokenLib
         await SendMessage(invMessage);
       }
       
-
       public async Task RequestDB()
       {
         $"Start downloading DB {HashDBDownload.ToHexString()}."

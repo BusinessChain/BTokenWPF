@@ -7,7 +7,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class MessageBlock : MessageNetwork
+      class MessageBlock : MessageNetworkProtocol
       {
 
         public MessageBlock()
@@ -21,7 +21,7 @@ namespace BTokenLib
               lengthPayload)
         { }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new MessageBlock();
         }

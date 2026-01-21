@@ -9,7 +9,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class InvMessage : MessageNetwork
+      class InvMessage : MessageNetworkProtocol
       {
         public List<Inventory> Inventories = new();
 
@@ -50,7 +50,7 @@ namespace BTokenLib
         }
 
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new InvMessage();
         }

@@ -6,7 +6,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class PongMessage : MessageNetwork
+      class PongMessage : MessageNetworkProtocol
       {
         public PongMessage()
           : base("pong")
@@ -19,7 +19,7 @@ namespace BTokenLib
           LengthDataPayload = lengthDataPayload;
         }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new PongMessage();
         }

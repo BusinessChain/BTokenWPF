@@ -9,7 +9,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class RejectMessage : MessageNetwork
+      class RejectMessage : MessageNetworkProtocol
       {
         const int LENGTH_EXTRA_DATA_TX_AND_BLOCK = 32;
 
@@ -120,7 +120,7 @@ namespace BTokenLib
             $"Extra data {ExtraData.ToHexString()}";
         }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new RejectMessage();
         }

@@ -7,7 +7,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class PingMessage : MessageNetwork
+      class PingMessage : MessageNetworkProtocol
       {
         public UInt64 Nonce;
 
@@ -23,7 +23,7 @@ namespace BTokenLib
           LengthDataPayload = Payload.Length;
         }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new PingMessage();
         }

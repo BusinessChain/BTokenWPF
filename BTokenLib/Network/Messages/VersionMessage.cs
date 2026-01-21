@@ -8,7 +8,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class VersionMessage : MessageNetwork
+      class VersionMessage : MessageNetworkProtocol
       {
         public VersionMessage()
           : base("version") { }
@@ -55,19 +55,9 @@ namespace BTokenLib
           return byteArray;
         }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new VersionMessage();
-        }
-
-        public override void RunMessage(Peer peer)
-        {
-          if (peer.State == StateProtocol.AwaitVersion)
-          {
-            peer.SendMessage(new VerAckMessage());
-
-            peer.SendVersionMessage();
-          }
         }
       }
     }

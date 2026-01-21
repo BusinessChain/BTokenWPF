@@ -38,7 +38,7 @@ namespace BTokenLib
       CountMaxPeers++;
     }
 
-    async Task StartPeerConnector()
+    async Task StartPeerOutboundConnector()
     {
       Random randomGenerator = new();
 

@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class FeeFilterMessage : MessageNetwork
+      class FeeFilterMessage : MessageNetworkProtocol
       {
         public ulong FeeFilterValue { get; private set; }
 
@@ -23,7 +23,7 @@ namespace BTokenLib
         { }
 
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new FeeFilterMessage();
         }

@@ -9,7 +9,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class GetHeadersMessage : MessageNetwork
+      class GetHeadersMessage : MessageNetworkProtocol
       {
         public GetHeadersMessage()
           : base("getheaders") { }
@@ -33,7 +33,7 @@ namespace BTokenLib
 
 
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new GetHeadersMessage();
         }

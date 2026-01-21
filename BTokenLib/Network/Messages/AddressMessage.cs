@@ -9,7 +9,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class AddressMessage : MessageNetwork
+      class AddressMessage : MessageNetworkProtocol
       {
         public List<NetworkAddress> NetworkAddresses = new();
 
@@ -39,7 +39,7 @@ namespace BTokenLib
         }
 
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new AddressMessage();
         }

@@ -10,12 +10,12 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class SendHeadersMessage : MessageNetwork
+      class SendHeadersMessage : MessageNetworkProtocol
       {
         public SendHeadersMessage()
           : base("sendheaders") { }
 
-        public override MessageNetwork Create()
+        public override MessageNetworkProtocol Create()
         {
           return new SendHeadersMessage();
         }
