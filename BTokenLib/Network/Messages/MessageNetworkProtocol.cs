@@ -12,9 +12,9 @@ namespace BTokenLib
     {
       class MessageNetworkProtocol
       {
-        const int CommandSize = 12;
-        const int LengthSize = 4;
-        const int ChecksumSize = 4;
+        public const int CommandSize = 12;
+        public const int LengthSize = 4;
+        public const int ChecksumSize = 4;
 
         const int HeaderSize = CommandSize + LengthSize + ChecksumSize;
         byte[] MessageHeader = new byte[HeaderSize];

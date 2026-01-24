@@ -20,6 +20,10 @@ namespace BTokenLib
         {
           peer.SetTimer();
 
+          Task taskReceiveNextMessage = peer.ReceiveNextMessage();
+          Task taskReceiveNextCommand = peer.Network.ReceiveNextCommand();
+
+
           MessageNetworkProtocol message = await peer.ReceiveNextMessage();
 
           if (message.Command == "headers")

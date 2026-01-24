@@ -46,8 +46,6 @@ namespace BTokenLib
       const UInt32 ProtocolVersion = 70015;
       public IPAddress IPAddress;
       TcpClient TcpClient;
-      readonly object LOCK_FlagNetworkStreamIsLocked = new();
-      bool FlagNetworkStreamIsLocked;
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
       public const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
@@ -136,48 +134,101 @@ namespace BTokenLib
 
         NetworkStream = TcpClient.GetStream();
 
-        StartStateMachine();
+        await Handshake();
       }
+
+      async Task Handshake()
+      {
+        SetTimer("Timeout handshake.", TIMEOUT_HANDSHAKE_MILLISECONDS);
+
+        if (Connection == ConnectionType.OUTBOUND)
+          SendVersion();
+
+        bool flagReceivedVersion = false;
+        bool flagReceivedVerack = false;
+
+        while (!flagReceivedVersion || !flagReceivedVerack)
+        {
+          MessageNetworkProtocol message = await ReceiveNextMessage();
+
+          if (message.Command == "verack")
+          {
+            flagReceivedVerack = true;
+          }
+          else if (message.Command == "version")
+          {
+            flagReceivedVersion = true;
+            SendMessage(new VerAckMessage());
+
+            if (Connection == ConnectionType.INBOUND)
+              SendVersion();
+          }
+        }
+      }
+
+
+      SemaphoreSlim SemaphoreSendMessage = new(1);
 
       async Task SendMessage(MessageNetworkProtocol message)
       {
-        while (true)
+        await SemaphoreSendMessage.WaitAsync().ConfigureAwait(false);
+        
+        try
         {
-          lock (LOCK_FlagNetworkStreamIsLocked)
-            if (!FlagNetworkStreamIsLocked)
-            {
-              FlagNetworkStreamIsLocked = true;
-              break;
-            }
+          NetworkStream.Write(
+            MessageNetworkProtocol.MagicBytes, 
+            0, 
+            MessageNetworkProtocol.MagicBytes.Length);
 
-          await Task.Delay(500).ConfigureAwait(false);
-        }
+          byte[] command = Encoding.ASCII.GetBytes(
+            message.Command.PadRight(MessageNetworkProtocol.CommandSize, '\0'));
+          NetworkStream.Write(command, 0, command.Length);
 
-        NetworkStream.Write(MagicBytes, 0, MagicBytes.Length);
+          byte[] payloadLength = BitConverter.GetBytes(message.LengthDataPayload);
+          NetworkStream.Write(payloadLength, 0, payloadLength.Length);
 
-        byte[] command = Encoding.ASCII.GetBytes(
-          message.Command.PadRight(CommandSize, '\0'));
-        NetworkStream.Write(command, 0, command.Length);
+          byte[] checksum = SHA256.ComputeHash(
+            SHA256.ComputeHash(
+              message.Payload,
+              message.OffsetPayload,
+              message.LengthDataPayload));
 
-        byte[] payloadLength = BitConverter.GetBytes(message.LengthDataPayload);
-        NetworkStream.Write(payloadLength, 0, payloadLength.Length);
+          NetworkStream.Write(checksum, 0, MessageNetworkProtocol.ChecksumSize);
 
-        byte[] checksum = SHA256.ComputeHash(
-          SHA256.ComputeHash(
+          NetworkStream.Write(
             message.Payload,
             message.OffsetPayload,
-            message.LengthDataPayload));
+            message.LengthDataPayload);
+        }
+        finally
+        {
+          SemaphoreSendMessage.Release();
+        }
+      }
 
-        NetworkStream.Write(checksum, 0, ChecksumSize);
+      public void BroadcastTX(TX tX)
+      {
+        InvMessage invMessage = new(new List<Inventory> {
+            new(InventoryType.MSG_TX, tX.Hash)});
 
-        await NetworkStream.WriteAsync(
-          message.Payload,
-          message.OffsetPayload,
-          message.LengthDataPayload)
-          .ConfigureAwait(false);
+        SendMessage(invMessage);
+      }
 
-        lock (LOCK_FlagNetworkStreamIsLocked)
-          FlagNetworkStreamIsLocked = false;
+      public async Task SendVersion()
+      {
+        await SendMessage(new VersionMessage(
+              protocolVersion: ProtocolVersion,
+              networkServicesLocal: 0,
+              unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+              networkServicesRemote: 0,
+              iPAddressRemote: IPAddress.Loopback,
+              portRemote: Network.Port,
+              iPAddressLocal: IPAddress.Loopback,
+              portLocal: Network.Port,
+              nonce: 0,
+              userAgent: UserAgent,
+              blockchainHeight: 0,
+              relayOption: 0x01));
       }
 
       public async Task SendGetHeaders(List<Header> locator)

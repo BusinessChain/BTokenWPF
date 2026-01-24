@@ -65,20 +65,19 @@ namespace BTokenLib
 
     public async Task Start()
     {
-      $"Load Blocks from disk.".Log(this, Token.LogFile, LogEntryNotifier);
+      $"Start Network.".Log(this, LogEntryNotifier);
+
+      StartPeerConnector();
 
       LoadBlocksFromArchive();
 
-      $"Start Network.".Log(this, Token.LogFile, LogEntryNotifier);
-
-      StartPeerOutboundConnector();
-
-      if (EnableInboundConnections)
-        StartPeerInboundConnector();
+      StartSynchronizer();
     }
 
     void LoadBlocksFromArchive()
     {
+      $"Load Blocks from disk.".Log(this, LogEntryNotifier);
+
       int heightBlockNext = Directory.GetFiles(PathBlockArchive, "*.blk")
       .Select(Path.GetFileNameWithoutExtension)
       .Where(name => int.TryParse(name, out _))
@@ -112,17 +111,6 @@ namespace BTokenLib
       HeaderTip ??= HeaderGenesis;
     }
 
-
-    public bool TryLoadHeader(byte[] hash, out Header header)
-    {
-      header = HeaderTip;
-
-      while(header != null && !header.Hash.IsAllBytesEqual(hash))
-        header = header.HeaderPrevious;
-
-      return header != null;
-    }
-
     public bool TryLoadBlock(byte[] hash, out Block block)
     {
       block = null;
@@ -131,6 +119,16 @@ namespace BTokenLib
         return TryLoadBlock(header.Height, out block);
 
       return false;
+    }
+
+    bool TryLoadHeader(byte[] hash, out Header header)
+    {
+      header = HeaderTip;
+
+      while (header != null && !header.Hash.IsAllBytesEqual(hash))
+        header = header.HeaderPrevious;
+
+      return header != null;
     }
 
     public bool TryLoadBlock(int blockHeight, out Block block)
@@ -180,13 +178,7 @@ namespace BTokenLib
 
       lock (LOCK_Peers)
         foreach (Peer peer in Peers)
-        {
-          InvMessage invMessage = new(new List<Inventory> {
-            new(InventoryType.MSG_TX, tX.Hash)
-          });
-
-          peer.SendMessage(invMessage);
-        }
+          peer.BroadcastTX(tX);
     }
 
     public string GetStatus()
@@ -218,6 +210,11 @@ namespace BTokenLib
         $"{messageStatus} \n " +
         $"{statusPeers} \n " +
         $"Count peers: {countPeers}";
+    }
+
+    public void Log(string messageLog)
+    {
+      messageLog.Log(this, LogEntryNotifier);
     }
 
     public override string ToString()

@@ -21,19 +21,7 @@ namespace BTokenLib
           peer.SetTimer("Timeout handshake.", TIMEOUT_HANDSHAKE_MILLISECONDS);
 
           if (peer.Connection == ConnectionType.OUTBOUND)
-            peer.SendMessage(new VersionMessage(
-              protocolVersion: ProtocolVersion,
-              networkServicesLocal: 0,
-              unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-              networkServicesRemote: 0,
-              iPAddressRemote: IPAddress.Loopback,
-              portRemote: peer.Network.Port,
-              iPAddressLocal: IPAddress.Loopback,
-              portLocal: peer.Network.Port,
-              nonce: 0,
-              userAgent: UserAgent,
-              blockchainHeight: 0,
-              relayOption: 0x01));
+            peer.SendVersion();
 
           bool flagReceivedVersion = false;
           bool flagReceivedVerack = false;
@@ -42,17 +30,20 @@ namespace BTokenLib
           {
             MessageNetworkProtocol message = await peer.ReceiveNextMessage();
 
-            if (message is VerAckMessage)
+            if (message.Command == "verack")
             {
               flagReceivedVerack = true;
             }
-            else if (message is VersionMessage)
+            else if (message.Command == "version")
             {
               flagReceivedVersion = true;
               peer.SendMessage(new VerAckMessage());
+
+              if (peer.Connection == ConnectionType.INBOUND)
+                peer.SendVersion();
             }
           }
-
+            
           return StateProtocol.Idle;
         }
       }

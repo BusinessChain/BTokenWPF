@@ -23,7 +23,7 @@ namespace BTokenLib
         { StateProtocol.HeaderDownload, new StateHeaderDownload() },
       };
 
-      StateProtocol StateCurrent = StateProtocol.Handshake;
+      public StateProtocol StateCurrent = StateProtocol.Handshake;
 
 
       public async Task StartStateMachine()

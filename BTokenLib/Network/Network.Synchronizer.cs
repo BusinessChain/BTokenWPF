@@ -50,10 +50,9 @@ namespace BTokenLib
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
 
-    public void StartSync()
+    public void StartSynchronizer()
     {
-      $"Try start synchronization of token {Token.GetName()}. Send getheaders to all peers."
-        .Log(this, Token.LogFile, Token.LogEntryNotifier);
+      $"Try start synchronization of token {Token.GetName()}. Send getheaders to all peers.".Log(this, LogEntryNotifier);
 
       if (IsStateSync)
         return;

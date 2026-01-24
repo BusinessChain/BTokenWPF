@@ -32,34 +32,18 @@ namespace BTokenLib
 
     List<string> IPAddresses = new();
 
-
-    public void IncrementCountMaxPeers()
+    async Task StartPeerConnector()
     {
-      CountMaxPeers++;
-    }
+      //if (EnableInboundConnections)
+      //  StartPeerInboundConnector();
 
-    async Task StartPeerOutboundConnector()
-    {
       Random randomGenerator = new();
 
-      try
+      while (true)
       {
-        while (true)
+        try
         {
-          while (true)
-          {
-            if (FlagEnableOutboundConnections)
-              lock (this)
-                if (State != StateNetwork.ConnectingPeerInbound)
-                {
-                  State = StateNetwork.ConnectingPeerOutbound;
-                  break;
-                }
-
-            Task.Delay(2000).ConfigureAwait(false);
-          }
-
-          Peers.RemoveAll(p => p.State == Peer.StateProtocol.Disposed);
+          Peers.RemoveAll(p => p.StateCurrent == Peer.StateProtocol.Disposed);
 
           int countPeersCreate = CountMaxPeers - Peers.Count;
 
@@ -67,41 +51,24 @@ namespace BTokenLib
           {
             List<string> iPAddresses = LoadIPAddresses(countPeersCreate, randomGenerator);
 
-            if (iPAddresses.Count > 0)
-            {
-              var createPeerTasks = new Task[iPAddresses.Count];
+            var createPeerTasks = iPAddresses
+              .Select(ip => CreatePeer(ip))
+              .ToArray();
 
-              try
-              {
-                Parallel.For(
-                  0,
-                  iPAddresses.Count,
-                  i => createPeerTasks[i] = CreatePeer(iPAddresses[i]));
-              }
-              catch(Exception ex)
-              {
-                $"{ex.GetType().Name} on line 79:\n {ex.Message}".Log(this, Token.LogEntryNotifier);
-              }
-
-              await Task.WhenAll(createPeerTasks);
-            }
+            await Task.WhenAll(createPeerTasks);
           }
 
-          lock (this)
-            State = StateNetwork.Idle;
-
-          int timespanRandomSeconds = TIMESPAN_LOOP_PEER_CONNECTOR_SECONDS / 2 
+          int timespanRandomSeconds = TIMESPAN_LOOP_PEER_CONNECTOR_SECONDS / 2
             + randomGenerator.Next(TIMESPAN_LOOP_PEER_CONNECTOR_SECONDS);
 
           await Task.Delay(1000 * timespanRandomSeconds).ConfigureAwait(false);
         }
-      }
-      catch (Exception ex)
-      {
-        Debug.WriteLine($"{this}: {ex.GetType().Name} = {ex.Message}");
+        catch (Exception ex)
+        {
+          Log($"{ex.GetType().Name} in StartPeerConnector of protocol {Token}. Restart node."); 
 
-        $"{ex.GetType().Name} in StartPeerConnector of protocol {Token}. This is a bug."
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
+          await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        }
       }
     }
 
@@ -144,18 +111,18 @@ namespace BTokenLib
         }
 
         foreach (FileInfo fileIPAddressActive in DirectoryPeersActive.EnumerateFiles())
-          IPAddresses.RemoveAll(iP =>
-          fileIPAddressActive.Name.GetIPFromFileName() == iP);
+          IPAddresses.RemoveAll(iP => fileIPAddressActive.Name.GetIPFromFileName() == iP);
       }
 
-      while (
-        iPAddresses.Count < maxCount &&
-        IPAddresses.Count > 0)
+      while (iPAddresses.Count < maxCount && IPAddresses.Count > 0)
       {
         int randomIndex = randomGenerator.Next(IPAddresses.Count);
 
-        iPAddresses.Add(IPAddresses[randomIndex]);
+        string iPAddress = IPAddresses[randomIndex];
         IPAddresses.RemoveAt(randomIndex);
+
+        if (!Peers.Any(p => p.IPAddress.ToString() == iPAddress))
+          iPAddresses.Add(iPAddress);
       }
 
       return iPAddresses;
@@ -175,48 +142,21 @@ namespace BTokenLib
 
     async Task CreatePeer(string iP)
     {
-      Peer peer = null;
-
       try
       {
-        lock (LOCK_Peers)
-        {
-          peer = Peers.Find(p => p.IPAddress.ToString() == iP);
+        Peer peer = new(
+          this,
+          Token.SizeBlockMax,
+          IPAddress.Parse(iP),
+          ConnectionType.OUTBOUND);
 
-          if (peer != null)
-          {
-            $"Connection with peer {peer} already established.".Log(this, LogEntryNotifier);
-            return;
-          }
-
-          peer = new(
-            this,
-            Token.SizeBlockMax,
-            IPAddress.Parse(iP),
-            ConnectionType.OUTBOUND);
-
-          Peers.Add(peer);
-        }
-      }
-      catch (Exception ex)
-      {
-        $"{ex.GetType().Name} when creating peer {iP}:\n{ex.Message}.".Log(this, LogEntryNotifier);
-
-        return;
-      }
-
-      try
-      {
         await peer.Start();
+
+        Peers.Add(peer);
       }
       catch (Exception ex)
       {
-        $"Could not start {peer}: {ex.Message}".Log(this, LogEntryNotifier);
-
-        peer.Dispose();
-
-        lock (LOCK_Peers)
-          Peers.Remove(peer);
+        $"Could not start {iP}: {ex.Message}".Log(this, LogEntryNotifier);
       }
     }
 
@@ -230,13 +170,11 @@ namespace BTokenLib
       }
       catch(Exception ex)
       {
-        $"Failed to listen on port {Port}.\n {ex.Message}"
-          .Log(this, Token.LogFile, Token.LogEntryNotifier);
-
+        Log($"Failed to listen on port {Port}.\n {ex.Message}");
         return;
       }
 
-      $"Start TCP listener on port {Port}.".Log(this, LogEntryNotifier);
+      Log($"Start TCP listener on port {Port}.");
 
       while (true)
       {
@@ -247,7 +185,7 @@ namespace BTokenLib
         if (remoteIP.ToString() != "84.74.69.100")
           continue;
 
-        $"Received inbound request on port {Port} from {remoteIP}.".Log(this, LogEntryNotifier);
+        Log($"Received inbound request on port {Port} from {remoteIP}.");
 
         while (true)
         {
@@ -258,7 +196,7 @@ namespace BTokenLib
               break;
             }
 
-          Task.Delay(1000).ConfigureAwait(false);
+          await Task.Delay(1000).ConfigureAwait(false);
         }
 
         Peer peer = null;
@@ -268,7 +206,8 @@ namespace BTokenLib
 
         if (peer != null)
         {
-          $"Peer {peer} is already connected but received inbound connection request, therefore initiate synchronization.".Log(this, LogEntryNotifier);
+          Log($"Peer {peer} is already connected but received inbound connection request," +
+            $"therefore initiate synchronization.");
 
           await peer.SendGetHeaders(Token.Network.GetLocator());
 
@@ -329,13 +268,12 @@ namespace BTokenLib
         try
         {
           await peer.Start();
-          $"Start inbound peer {peer}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+          Log($"Start inbound peer {peer}.");
         }
         catch (Exception ex)
         {
-          ($"Failed to connect to inbound peer {remoteIP}: " +
-            $"\n{ex.GetType().Name}: {ex.Message}")
-            .Log(this, Token.LogFile, Token.LogEntryNotifier);
+          Log($"Failed to connect to inbound peer {remoteIP}:\n" +
+            $"{ex.GetType().Name}: {ex.Message}");
 
           peer.Dispose();
 
