@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace BTokenLib
 {
@@ -11,39 +13,76 @@ namespace BTokenLib
     {
       class HeadersMessage : MessageNetworkProtocol
       {
+        Token Token;
         public List<Header> Headers = new();
+        HeaderchainDownload HeaderchainDownload = new();
 
-        public HeadersMessage()
-          : base("headers") { }
+        public SHA256 SHA256 = SHA256.Create();
 
-        public HeadersMessage(List<Header> headers)
+        public HeadersMessage(Token token)
+          : this(token, new List<Header>()) 
+        { }
+
+        public HeadersMessage(Token token, List<Header> headers)
           : base("headers")
         {
+          Token = token;
+
           Headers = headers;
 
-          List<byte> payload = new();
-
-          payload.AddRange(VarInt.GetBytes(Headers.Count));
-
-          foreach (Header header in Headers)
+          if(Headers.Any())
           {
-            payload.AddRange(header.Serialize());
-            payload.Add(0);
+            int indexPayload = 0;
+
+            byte[] headersCountVarIntFormat = VarInt.GetBytes(Headers.Count);
+            Array.Copy(headersCountVarIntFormat, 0, Payload, indexPayload, headersCountVarIntFormat.Length);
+
+            indexPayload += headersCountVarIntFormat.Length;
+
+            foreach (Header header in Headers)
+            {
+              byte[] headerSerialized = header.Serialize();
+              Array.Copy(headerSerialized, 0, Payload, indexPayload, headerSerialized.Length);
+              indexPayload += headerSerialized.Length;
+
+              Payload[indexPayload] = 0;
+              indexPayload += 1;
+            }
+            LengthDataPayload = indexPayload;
           }
-
-          Payload = payload.ToArray();
-          LengthDataPayload = Payload.Length;
         }
 
 
-        public override MessageNetworkProtocol Create()
+        public override void ParsePayload()
         {
-          return new HeadersMessage();
+          int startIndex = 0;
+          int countHeaders = VarInt.GetInt(Payload, ref startIndex);
+
+          for (int i = 0; i < countHeaders; i += 1)
+          {
+            Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
+            Headers.Add(header);
+            startIndex += 1; // Number of transaction in the block, which in the header is always 0
+          }
         }
 
-        public override void RunMessage(Peer peer)
+        public override async Task Run(Peer peer)
         {
+          if(HeaderchainDownload.Locator == null)
+            HeaderchainDownload.LoadLocator(peer.Network.GetLocator());
 
+          if (Headers.Count == 0 && HeaderchainDownload.IsStrongerThanHeaderTipLocator())
+          {
+            if (HeaderchainDownload.IsFork)
+              peer.Network.TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor());
+
+            peer.Network.StartSynchronizationBlocks(HeaderchainDownload); // when sync is finished set HeaderchainDownload.Locator = null
+          }
+          else if (Headers.Any())
+          {
+            HeaderchainDownload.TryInsertHeaders(Headers);
+            peer.SendGetHeaders(HeaderchainDownload.Locator);
+          }
         }
       }
     }

@@ -127,7 +127,7 @@ namespace BTokenLib
 
       public async Task Start()
       {
-        $"Start peer - {Connection}.".Log(this, LogEntryNotifier);
+        Log($"Start peer - {Connection}.");
 
         if (!TcpClient.Connected)
           await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
@@ -135,6 +135,11 @@ namespace BTokenLib
         NetworkStream = TcpClient.GetStream();
 
         await Handshake();
+
+        StartMessageListener();
+
+        if (Connection == ConnectionType.OUTBOUND)
+          SendGetHeaders(Network.GetLocator()); // GetLocator() should contain a lock.
       }
 
       async Task Handshake()
@@ -166,6 +171,30 @@ namespace BTokenLib
         }
       }
 
+      public void StartBlockDownload()
+      {
+        if (!Network.TryFetchHeaderDownload(out Header headerDownload))
+          return;
+
+        if (!Network.PoolBlocks.TryTake(out Block blockDownload))
+          blockDownload = new Block(Network.Token);
+
+        BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
+
+        blockMessage.HeaderDownload = headerDownload;
+        blockMessage.BlockDownload = blockDownload;
+
+        Log($"Start downloading block {blockDownload}.");
+
+        SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
+
+        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, headerDownload.Hash));
+      }
+
+      void InsertBlock(Block block)
+      {
+        Network.InsertBlock(block);
+      }
 
       SemaphoreSlim SemaphoreSendMessage = new(1);
 
@@ -266,27 +295,21 @@ namespace BTokenLib
 
         SetTimer("receive DB", TIMEOUT_RESPONSE_MILLISECONDS);
 
-        await SendMessage(new GetDataMessage(
-          new List<Inventory>()
-          {
-              new Inventory(InventoryType.MSG_DB, HashDBDownload)
-          }));
+        await SendMessage(new GetDataMessage(InventoryType.MSG_DB, HashDBDownload));
       }
 
       public async Task RequestBlock(Header headerDownload, Block blockDownload)
       {
-        HeaderDownload = headerDownload;
-        BlockDownload = blockDownload;
+        BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
 
-        $"Start downloading block {BlockDownload}.".Log(this, LogFile, Network.LogEntryNotifier);
+        HeaderDownload = headerDownload;
+        blockMessage.BlockDownload = blockDownload;
+
+        Log($"Start downloading block {blockDownload}.");
 
         SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
-        await SendMessage(new GetDataMessage(
-          new List<Inventory>()
-          {
-            new Inventory(InventoryType.MSG_BLOCK, headerDownload.Hash)
-          }));
+        await SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, headerDownload.Hash));
       }
 
       public async Task SendHeaders(List<Header> headers)

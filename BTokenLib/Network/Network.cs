@@ -65,13 +65,11 @@ namespace BTokenLib
 
     public async Task Start()
     {
-      $"Start Network.".Log(this, LogEntryNotifier);
+      Log($"Start Network.");
 
       StartPeerConnector();
 
       LoadBlocksFromArchive();
-
-      StartSynchronizer();
     }
 
     void LoadBlocksFromArchive()

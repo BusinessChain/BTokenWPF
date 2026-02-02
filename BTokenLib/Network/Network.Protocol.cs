@@ -200,8 +200,13 @@ namespace BTokenLib
       {
         AddressMessage addressMessage = new(Payload);
 
-        Network.AddNetworkAddressesAdvertized(
-          addressMessage.NetworkAddresses);
+        foreach (NetworkAddress address in addressMessage.NetworkAddresses)
+        {
+          string addressString = address.IPAddress.ToString();
+
+          if (!IPAddresses.Contains(addressString))
+            IPAddresses.Add(addressString);
+        }
       }
       else if (command == "sendheaders")
       {

@@ -19,19 +19,21 @@ namespace BTokenLib
       Dictionary<StateProtocol, StateProtocolPeer> StatesPeerProtocol = new()
       {
         { StateProtocol.Handshake, new StateHandshake() },
-        { StateProtocol.Idle, new StateIdle() },
-        { StateProtocol.HeaderDownload, new StateHeaderDownload() },
+        { StateProtocol.Idle, new StateIdle() }
       };
 
       public StateProtocol StateCurrent = StateProtocol.Handshake;
 
 
-      public async Task StartStateMachine()
+      async Task StartMessageListener()
       {
         try
         {
           while (true)
-            StateCurrent = await StatesPeerProtocol[StateCurrent].Run(this);
+          {
+            MessageNetworkProtocol message = await ReceiveNextMessage();
+            message.Run(this);
+          }
         }
         catch (Exception ex)
         {
@@ -40,10 +42,44 @@ namespace BTokenLib
         }
       }
 
+      static readonly byte[] MagicBytes = new byte[4] { 0xF9, 0xBE, 0xB4, 0xD9 };
+      readonly Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new()
+      {
+        {"getheaders", new GetDataMessage()},
+        {"headers", new HeadersMessage() }
+      };
+
       async Task<MessageNetworkProtocol> ReceiveNextMessage()
       {
-        await MessageNetwork.Receive(this);
-        return MessageNetwork;
+        byte[] byteFromStream = new byte[4];
+        await ReadBytes(byteFromStream, 4);
+
+        if (!byteFromStream.IsAllBytesEqual(MagicBytes))
+          throw new ProtocolException($"Did receive something else insead of magic word 'f9 be b4 d9'.");
+
+        byte[] command = new byte[12];
+        await ReadBytes(command, command.Length);
+        string commandString = Encoding.ASCII.GetString(command).TrimEnd('\0');
+
+        MessageNetworkProtocol message = MessagesNetworkProtocol[commandString];
+
+        byte[] lenght = new byte[4];
+        await ReadBytes(lenght, lenght.Length);
+        uint lengthDataPayload = BitConverter.ToUInt32(lenght);
+
+        if (lengthDataPayload > message.Payload.Length)
+          throw new ProtocolException($"Received network message payload length " +
+            $"exceeds the allowed length of {message.Payload.Length} bytes for message {commandString}.");
+        
+          byte[] checksum = new byte[4];
+        await ReadBytes(checksum, 4);
+
+        await ReadBytes(message.Payload, (int)lengthDataPayload);
+        message.LengthDataPayload = (int)lengthDataPayload;
+
+        message.ParsePayload();
+
+        return message;
       }
 
       async Task ReadBytes(byte[] buffer, int bytesToRead)

@@ -3,7 +3,6 @@ using System.IO;
 using System.Net;
 using System.Linq;
 using System.Net.Sockets;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -32,10 +31,11 @@ namespace BTokenLib
 
     List<string> IPAddresses = new();
 
+
     async Task StartPeerConnector()
     {
-      //if (EnableInboundConnections)
-      //  StartPeerInboundConnector();
+      if (EnableInboundConnections)
+        StartPeerInboundConnector();
 
       Random randomGenerator = new();
 
@@ -49,13 +49,11 @@ namespace BTokenLib
 
           if (countPeersCreate > 0)
           {
-            List<string> iPAddresses = LoadIPAddresses(countPeersCreate, randomGenerator);
+            List<IPAddress> iPAddresses = LoadIPAddresses(countPeersCreate, randomGenerator);
 
             var createPeerTasks = iPAddresses
-              .Select(ip => CreatePeer(ip))
+              .Select(ip => CreatePeer(new TcpClient(), ConnectionType.OUTBOUND, ip))
               .ToArray();
-
-            await Task.WhenAll(createPeerTasks);
           }
 
           int timespanRandomSeconds = TIMESPAN_LOOP_PEER_CONNECTOR_SECONDS / 2
@@ -65,14 +63,14 @@ namespace BTokenLib
         }
         catch (Exception ex)
         {
-          Log($"{ex.GetType().Name} in StartPeerConnector of protocol {Token}. Restart node."); 
+          Log($"{ex.GetType().Name} in peer connector background process:\n {ex.Message}");
 
           await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         }
       }
     }
 
-    List<string> LoadIPAddresses(int maxCount, Random randomGenerator)
+    List<IPAddress> LoadIPAddresses(int maxCount, Random randomGenerator)
     {
       List<string> iPAddresses = new();
 
@@ -125,39 +123,7 @@ namespace BTokenLib
           iPAddresses.Add(iPAddress);
       }
 
-      return iPAddresses;
-    }
-
-    void AddNetworkAddressesAdvertized(
-      List<NetworkAddress> addresses)
-    {
-      foreach (NetworkAddress address in addresses)
-      {
-        string addressString = address.IPAddress.ToString();
-
-        if (!IPAddresses.Contains(addressString))
-          IPAddresses.Add(addressString);
-      }
-    }
-
-    async Task CreatePeer(string iP)
-    {
-      try
-      {
-        Peer peer = new(
-          this,
-          Token.SizeBlockMax,
-          IPAddress.Parse(iP),
-          ConnectionType.OUTBOUND);
-
-        await peer.Start();
-
-        Peers.Add(peer);
-      }
-      catch (Exception ex)
-      {
-        $"Could not start {iP}: {ex.Message}".Log(this, LogEntryNotifier);
-      }
+      return iPAddresses.Select(iP => IPAddress.Parse(iP)).ToList();
     }
 
     async Task StartPeerInboundConnector()
@@ -166,129 +132,104 @@ namespace BTokenLib
 
       try
       {
+        Log($"Start TCP listener on port {Port}.");
         tcpListener.Start(COUNT_MAX_INBOUND_CONNECTIONS);
       }
-      catch(Exception ex)
+      catch (Exception ex)
       {
-        Log($"Failed to listen on port {Port}.\n {ex.Message}");
+        Log($"Failed to start TCP listener on port {Port}.\n {ex.Message}");
         return;
       }
 
-      Log($"Start TCP listener on port {Port}.");
-
       while (true)
       {
-        TcpClient tcpClient = await tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
-
-        IPAddress remoteIP = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
-
-        if (remoteIP.ToString() != "84.74.69.100")
-          continue;
-
-        Log($"Received inbound request on port {Port} from {remoteIP}.");
-
-        while (true)
+        try
         {
-          lock (this)
-            if (State == StateNetwork.Idle)
-            {
-              State = StateNetwork.ConnectingPeerInbound;
-              break;
-            }
+          TcpClient tcpClient = await tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
 
-          await Task.Delay(1000).ConfigureAwait(false);
-        }
+          IPAddress remoteIP = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address;
 
-        Peer peer = null;
+          Log($"Received inbound request on port {Port} from {remoteIP}.");
 
-        lock (LOCK_Peers)
-          peer = Peers.Find(p => p.IPAddress.Equals(remoteIP));
-
-        if (peer != null)
-        {
-          Log($"Peer {peer} is already connected but received inbound connection request," +
-            $"therefore initiate synchronization.");
-
-          await peer.SendGetHeaders(Token.Network.GetLocator());
-
-          continue;
-        }
-
-        lock (LOCK_Peers)
-        {
-          string rejectionString = "";
-
-          if (Peers.Count(p => p.Connection == ConnectionType.INBOUND) >= COUNT_MAX_INBOUND_CONNECTIONS)
-            rejectionString = $"Max number ({COUNT_MAX_INBOUND_CONNECTIONS}) of inbound connections reached.";
-
-          foreach (FileInfo iPDisposed in DirectoryPeersDisposed.EnumerateFiles())
+          if (!ValidateInboundPeer(remoteIP))
           {
-            if (
-              iPDisposed.Name.Contains(remoteIP.ToString()) &&
-              iPDisposed.Name.Contains(ConnectionType.INBOUND.ToString()))
+            tcpClient.Dispose();
+            continue;
+          }
+
+          CreatePeer(tcpClient, ConnectionType.INBOUND, remoteIP);
+        }
+        catch (Exception ex)
+        {
+          Log($"{ex.GetType().Name} in peer connector background process:\n {ex.Message}");
+
+          await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        }
+      }
+    }
+
+    bool ValidateInboundPeer(IPAddress remoteIP)
+    {
+      string rejectionString = "";
+
+      lock (LOCK_Peers)
+      {
+        if (Peers.Any(p => p.IPAddress.Equals(remoteIP)))
+          rejectionString = $"Peer {remoteIP} already connected.";
+        else if (Peers.Count(p => p.Connection == ConnectionType.INBOUND) >= COUNT_MAX_INBOUND_CONNECTIONS)
+          rejectionString = $"Max number ({COUNT_MAX_INBOUND_CONNECTIONS}) of inbound connections reached.";
+      }
+
+      if (rejectionString == "")
+      {
+        if (remoteIP.ToString() != "84.74.69.100")
+          rejectionString = $"Peer {remoteIP} not on whitelist.";
+        else
+          foreach (FileInfo iPDisposed in DirectoryPeersDisposed.EnumerateFiles())
+            if (iPDisposed.Name.Contains(remoteIP.ToString()) && iPDisposed.Name.Contains(ConnectionType.INBOUND.ToString()))
             {
               int secondsBanned = TIMESPAN_PEER_BANNED_SECONDS -
                 (int)(DateTime.Now - iPDisposed.CreationTime).TotalSeconds;
 
-              if (0 < secondsBanned)
+              if (secondsBanned > 0)
               {
                 rejectionString = $"{iPDisposed.Name} is banned for {secondsBanned} seconds.";
                 break;
               }
             }
-          }
+      }
 
-          if (rejectionString == "")
-          {
-            peer = new(
-              this,
-              Token.SizeBlockMax,
-              remoteIP,
-              tcpClient,
-              ConnectionType.INBOUND);
+      if (rejectionString != "")
+      {
+        Log($"Inbound peer {remoteIP} rejected: \n{rejectionString}");
+        return false;
+      }
 
-            Peers.Add(peer);
+      return true;
+    }
 
-            $"Created inbound connection {peer}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-          }
-          else
-          {
-            $"Failed to create inbound peer {remoteIP}: \n{rejectionString}"
-              .Log(this, Token.LogFile, Token.LogEntryNotifier);
+    async Task CreatePeer(TcpClient tcpClient, ConnectionType connection, IPAddress iP)
+    {
+      try
+      {
+        Peer peer = new(
+          this,
+          Token.SizeBlockMax,
+          iP,
+          tcpClient,
+          connection);
 
-            tcpClient.Dispose();
+        await peer.Start();
 
-            lock (this)
-              State = StateNetwork.Idle;
-
-            continue;
-          }
-        }
-
-        try
-        {
-          await peer.Start();
-          Log($"Start inbound peer {peer}.");
-        }
-        catch (Exception ex)
-        {
-          Log($"Failed to connect to inbound peer {remoteIP}:\n" +
-            $"{ex.GetType().Name}: {ex.Message}");
-
-          peer.Dispose();
-
-          lock (LOCK_Peers)
-            Peers.Remove(peer);
-
-          lock (this)
-            State = StateNetwork.Idle;
-
-          continue;
-        }
-
-        lock (this)
-          State = StateNetwork.Idle;
+        lock (LOCK_Peers)
+          Peers.Add(peer);
+      }
+      catch (Exception ex)
+      {
+        Log($"Could not create peer {iP}: {ex.Message}");
+        tcpClient.Dispose();
       }
     }
   }
 }
+

@@ -36,6 +36,10 @@ namespace BTokenLib
               ref startIndex));
         }
 
+        public GetDataMessage(InventoryType inventoryType, byte[] hash)
+          : this(new List<Inventory>() { new Inventory(inventoryType, hash) })
+        { }
+
         public GetDataMessage(List<Inventory> inventories)
           : base("getdata")
         {
@@ -52,14 +56,13 @@ namespace BTokenLib
           LengthDataPayload = Payload.Length;
         }
 
-
         public override MessageNetworkProtocol Create()
         {
           return new GetDataMessage();
         }
 
 
-        public override void RunMessage(Peer peer)
+        public override void Run(Peer peer)
         {
 
         }

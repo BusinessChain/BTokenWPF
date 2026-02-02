@@ -4,27 +4,33 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  public class HeaderchainDownload
+  partial class Network
   {
-    public List<Header> Locator;
-
-    public Header HeaderTipTokenInitial;
-
-    public Header HeaderTip;
-    public Header HeaderRoot;
-
-    public bool IsFork;
-
-
-    public HeaderchainDownload(List<Header> locator)
+    class HeaderchainDownload
     {
-      HeaderTipTokenInitial = locator.First();
-      Locator = locator;
-    }
+      public List<Header> Locator;
 
-    public bool TryInsertHeaders(List<Header> headers)
-    {
-      foreach (Header header in headers)
+      public Header HeaderTipTokenInitial;
+
+      public Header HeaderTip;
+      public Header HeaderRoot;
+
+      public bool IsFork;
+
+
+      public HeaderchainDownload()
+      { }
+
+      public void LoadLocator(List<Header> locator)
+      {
+        HeaderTipTokenInitial = locator.First();
+        HeaderTip = null;
+        HeaderRoot = null;
+        Locator = locator;
+        IsFork = false;
+      }
+
+      public bool TryInsertHeader(Header header)
       {
         if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
           return false;
@@ -61,32 +67,40 @@ namespace BTokenLib
           Locator[0] = header;
         }
         else return false;
+
+        return true;
+      }
+      public bool TryInsertHeaders(List<Header> headers)
+      {
+        foreach (Header header in headers)
+          if (!TryInsertHeader(header))
+            return false;
+
+        return true;
       }
 
-      return true;
-    }
+      public bool IsStrongerThanHeaderTipLocator()
+      {
+        if (HeaderTip == null)
+          return false;
 
-    public bool IsStrongerThan(Header header)
-    {
-      if (HeaderTip == null)
-        return false;
+        return HeaderTip.DifficultyAccumulated > Locator[0].DifficultyAccumulated;
+      }
 
-      return HeaderTip.DifficultyAccumulated > header.DifficultyAccumulated;
-    }
+      public bool IsWeakerThan(Header header)
+      {
+        return HeaderTip == null || HeaderTip.DifficultyAccumulated < header.DifficultyAccumulated;
+      }
 
-    public bool IsWeakerThan(Header header)
-    {
-      return HeaderTip == null || HeaderTip.DifficultyAccumulated < header.DifficultyAccumulated;
-    }
+      public int GetHeightAncestor()
+      {
+        return HeaderRoot.HeaderPrevious.Height;
+      }
 
-    public int GetHeightAncestor()
-    {
-      return HeaderRoot.HeaderPrevious.Height;
-    }
-
-    public override string ToString()
-    {
-      return $"{Locator.First()} ... {Locator.Last()}";
+      public override string ToString()
+      {
+        return $"{Locator.First()} ... {Locator.Last()}";
+      }
     }
   }
 }

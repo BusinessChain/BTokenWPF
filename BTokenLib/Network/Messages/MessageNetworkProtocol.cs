@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      class MessageNetworkProtocol
+      abstract class MessageNetworkProtocol
       {
         public const int CommandSize = 12;
         public const int LengthSize = 4;
@@ -52,31 +52,9 @@ namespace BTokenLib
           LengthDataPayload = lengthPayload;
         }
 
-        public async Task Receive(Peer peer)
-        {
-          byte[] magicByte = new byte[1];
+        public abstract Task Run(Peer peer);
 
-          for (int i = 0; i < MagicBytes.Length; i++)
-          {
-            await peer.ReadBytes(magicByte, 1);
-
-            if (MagicBytes[i] != magicByte[0])
-              i = magicByte[0] == MagicBytes[0] ? 0 : -1;
-          }
-
-          await peer.ReadBytes(MessageHeader, MessageHeader.Length);
-
-          string command = Encoding.ASCII.GetString(
-            MessageHeader.Take(CommandSize).ToArray()).TrimEnd('\0');
-
-          LengthDataPayload = BitConverter.ToInt32(MessageHeader, CommandSize);
-
-          if (LengthDataPayload > Payload.Length)
-            throw new ProtocolException($"Received network message payload length " +
-              $"exceeds the allowed length of {Payload.Length} bytes for message {Command}.");
-
-          await peer.ReadBytes(Payload, LengthDataPayload);
-        }
+        public abstract void ParsePayload();
       }
     }
   }
