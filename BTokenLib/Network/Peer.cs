@@ -136,43 +136,17 @@ namespace BTokenLib
 
         await Handshake();
 
-        StartMessageListener();
+        StartMessageReceiver();
 
         if (Connection == ConnectionType.OUTBOUND)
           SendGetHeaders(Network.GetLocator()); // GetLocator() should contain a lock.
       }
 
-      async Task Handshake()
-      {
-        SetTimer("Timeout handshake.", TIMEOUT_HANDSHAKE_MILLISECONDS);
-
-        if (Connection == ConnectionType.OUTBOUND)
-          SendVersion();
-
-        bool flagReceivedVersion = false;
-        bool flagReceivedVerack = false;
-
-        while (!flagReceivedVersion || !flagReceivedVerack)
-        {
-          MessageNetworkProtocol message = await ReceiveNextMessage();
-
-          if (message.Command == "verack")
-          {
-            flagReceivedVerack = true;
-          }
-          else if (message.Command == "version")
-          {
-            flagReceivedVersion = true;
-            SendMessage(new VerAckMessage());
-
-            if (Connection == ConnectionType.INBOUND)
-              SendVersion();
-          }
-        }
-      }
-
       public void StartBlockDownload()
       {
+        BlockDownload = null;
+        HeaderDownload = null;
+
         if (!Network.TryFetchHeaderDownload(out Header headerDownload))
           return;
 
@@ -188,51 +162,14 @@ namespace BTokenLib
 
         SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
-        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, headerDownload.Hash));
+        SendMessage(new GetDataMessage(
+          InventoryType.MSG_BLOCK,
+          headerDownload.Hash));
       }
 
       void InsertBlock(Block block)
       {
         Network.InsertBlock(block);
-      }
-
-      SemaphoreSlim SemaphoreSendMessage = new(1);
-
-      async Task SendMessage(MessageNetworkProtocol message)
-      {
-        await SemaphoreSendMessage.WaitAsync().ConfigureAwait(false);
-        
-        try
-        {
-          NetworkStream.Write(
-            MessageNetworkProtocol.MagicBytes, 
-            0, 
-            MessageNetworkProtocol.MagicBytes.Length);
-
-          byte[] command = Encoding.ASCII.GetBytes(
-            message.Command.PadRight(MessageNetworkProtocol.CommandSize, '\0'));
-          NetworkStream.Write(command, 0, command.Length);
-
-          byte[] payloadLength = BitConverter.GetBytes(message.LengthDataPayload);
-          NetworkStream.Write(payloadLength, 0, payloadLength.Length);
-
-          byte[] checksum = SHA256.ComputeHash(
-            SHA256.ComputeHash(
-              message.Payload,
-              message.OffsetPayload,
-              message.LengthDataPayload));
-
-          NetworkStream.Write(checksum, 0, MessageNetworkProtocol.ChecksumSize);
-
-          NetworkStream.Write(
-            message.Payload,
-            message.OffsetPayload,
-            message.LengthDataPayload);
-        }
-        finally
-        {
-          SemaphoreSendMessage.Release();
-        }
       }
 
       public void BroadcastTX(TX tX)
@@ -296,20 +233,6 @@ namespace BTokenLib
         SetTimer("receive DB", TIMEOUT_RESPONSE_MILLISECONDS);
 
         await SendMessage(new GetDataMessage(InventoryType.MSG_DB, HashDBDownload));
-      }
-
-      public async Task RequestBlock(Header headerDownload, Block blockDownload)
-      {
-        BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
-
-        HeaderDownload = headerDownload;
-        blockMessage.BlockDownload = blockDownload;
-
-        Log($"Start downloading block {blockDownload}.");
-
-        SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
-
-        await SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, headerDownload.Hash));
       }
 
       public async Task SendHeaders(List<Header> headers)
@@ -391,7 +314,7 @@ namespace BTokenLib
 
       public void Dispose()
       {
-        $"Dispose {Connection}".Log(this, LogFile, Network.LogEntryNotifier);
+        Log($"Dispose {Connection}.");
 
         Cancellation.Cancel();
 

@@ -13,21 +13,24 @@ namespace BTokenLib
     public Header Header;
     public List<TX> TXs = new();
 
+    // The buffer is constant in size [SizeBlockMax]
+    // LengthDataPayload signifies the length of used data in buffer.
     public byte[] Buffer;
-    public int LengthBufferPayload;
+    public int LengthDataPayload;
 
     public SHA256 SHA256 = SHA256.Create();
 
 
     public Block(Token token) 
-      : this(token, new byte[token.SizeBlockMax])
+      : this(
+          token, 
+          new byte[token.SizeBlockMax])
     { }
 
     public Block(Token token, byte[] buffer)
     {
       Token = token;
       Buffer = buffer;
-      LengthBufferPayload = buffer.Length;
     }
 
     public void Parse(int heightBlock)
@@ -154,7 +157,7 @@ namespace BTokenLib
         startIndex += TXs[i].TXRaw.Length;
       }
 
-      LengthBufferPayload = startIndex;
+      LengthDataPayload = startIndex;
     }
 
     public void WriteToDisk(string pathFileBlock, bool flagEnableAtomicSave = true)

@@ -154,7 +154,7 @@ namespace BTokenLib
             if (Network.TryLoadBlock(inventory.Hash, out Block block))
             {
               $"Send block {inventory}.".Log(this, LogFile, Token.LogEntryNotifier);
-              await SendMessage(new MessageBlock(block.Buffer, block.LengthBufferPayload));
+              await SendMessage(new MessageBlock(block.Buffer, block.LengthDataPayload));
             }
             else
               await SendMessage(new NotFoundMessage(

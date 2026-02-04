@@ -13,21 +13,18 @@ namespace BTokenLib
     {
       class HeadersMessage : MessageNetworkProtocol
       {
-        Token Token;
         public List<Header> Headers = new();
         HeaderchainDownload HeaderchainDownload = new();
 
         public SHA256 SHA256 = SHA256.Create();
 
-        public HeadersMessage(Token token)
-          : this(token, new List<Header>()) 
+        public HeadersMessage()
+          : this(new List<Header>()) 
         { }
 
-        public HeadersMessage(Token token, List<Header> headers)
+        public HeadersMessage(List<Header> headers)
           : base("headers")
         {
-          Token = token;
-
           Headers = headers;
 
           if(Headers.Any())
@@ -52,23 +49,11 @@ namespace BTokenLib
           }
         }
 
-
-        public override void ParsePayload()
+        public override void Run(Peer peer)
         {
-          int startIndex = 0;
-          int countHeaders = VarInt.GetInt(Payload, ref startIndex);
+          ParsePayload(peer.Network.Token);
 
-          for (int i = 0; i < countHeaders; i += 1)
-          {
-            Header header = Token.ParseHeader(Payload, ref startIndex, SHA256);
-            Headers.Add(header);
-            startIndex += 1; // Number of transaction in the block, which in the header is always 0
-          }
-        }
-
-        public override async Task Run(Peer peer)
-        {
-          if(HeaderchainDownload.Locator == null)
+          if (HeaderchainDownload.Locator == null)
             HeaderchainDownload.LoadLocator(peer.Network.GetLocator());
 
           if (Headers.Count == 0 && HeaderchainDownload.IsStrongerThanHeaderTipLocator())
@@ -82,6 +67,19 @@ namespace BTokenLib
           {
             HeaderchainDownload.TryInsertHeaders(Headers);
             peer.SendGetHeaders(HeaderchainDownload.Locator);
+          }
+        }
+
+        void ParsePayload(Token token)
+        {
+          int startIndex = 0;
+          int countHeaders = VarInt.GetInt(Payload, ref startIndex);
+
+          for (int i = 0; i < countHeaders; i += 1)
+          {
+            Header header = token.ParseHeader(Payload, ref startIndex, SHA256);
+            Headers.Add(header);
+            startIndex += 1; // Number of transaction in the block, which in the header is always 0
           }
         }
       }

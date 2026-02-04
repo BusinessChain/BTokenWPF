@@ -20,16 +20,28 @@ namespace BTokenLib
           : base(
               "block",
               bufferBlock,
-              0,
               lengthPayload)
         { }
 
-        public override void ParsePayload()
+        public override byte[] GetPayloadBuffer()
+        {
+          return BlockDownload.Buffer;
+        }
+
+        public override void Run(Peer peer)
+        {
+          ParsePayload();
+
+          peer.InsertBlock(BlockDownload);
+          peer.StartBlockDownload();
+        }
+
+        void ParsePayload()
         {
           if (HeaderDownload == null)
             throw new ProtocolException($"Received unrequested block message.");
 
-          BlockDownload.LengthBufferPayload = LengthDataPayload;
+          BlockDownload.LengthDataPayload = LengthDataPayload;
 
           BlockDownload.Parse(HeaderDownload.Height);
 
@@ -37,16 +49,6 @@ namespace BTokenLib
             throw new ProtocolException(
               $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
               $"Requested was {HeaderDownload}.");
-        }
-
-        public override async Task Run(Peer peer)
-        {
-          peer.InsertBlock(BlockDownload);
-
-          BlockDownload = null;
-          HeaderDownload = null;
-
-          peer.StartBlockDownload();
         }
       }
     }

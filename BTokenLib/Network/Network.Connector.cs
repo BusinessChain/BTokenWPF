@@ -226,7 +226,7 @@ namespace BTokenLib
       }
       catch (Exception ex)
       {
-        Log($"Could not create peer {iP}: {ex.Message}");
+        Log($"Could not start peer {iP}: {ex.Message}");
         tcpClient.Dispose();
       }
     }

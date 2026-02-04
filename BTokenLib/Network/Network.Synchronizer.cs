@@ -201,39 +201,16 @@ namespace BTokenLib
       FlagSyncBlocksExit = false;
 
       int heightHeaderTipOld = HeaderTip.Height;
-      int countdownTimeoutSeconds = 0;
 
       lock (LOCK_Peers)
         Peers.ForEach(p => p.StartBlockDownload());
 
-      // beim insert des letztes blockes wird der Reorg getriggert. Sollten die Blöcke 
-      // nicht ankommen, muss ein Timeout getriggert werden.
+      // beim insert des letztes blockes wird der Reorg getriggert.
+      // Ein Timeout gibt es nicht. Im Prinzip wird einfach ewig versucht zu syncen.
+      // Sollte jedoch während der Sync eine stärkere Headerchain bekannt werden, 
+      // wird auf diese umgesynct. Beim syncen die DB nicht manipulieren, alles nur
+      // mit Cache machen. Tiefe reorgs werden abgelehnt, müssen manuell getriggert werden.
 
-      StartTimerSyncHeaders(); // hier sollte ein timeout abgewarted werden. Bei erreichen
-                               // des Timeouts, VIELLEIcht braucht es kein timeout, wenn irgendeinmal einfach 
-                               // alle peer verbraucht sind. Jeder peer hat sein eigenes Timeout.
-
-      while (!FlagSyncBlocksExit)
-      {
-        if (countdownTimeoutSeconds < TIMEOUT_BLOCKDOWNLOAD_SECONDS * 10 * TimeoutAdjustementFactor)
-        {
-          if (heightHeaderTipOld == HeaderTip.Height)
-            countdownTimeoutSeconds += 1;
-          else
-          {
-            heightHeaderTipOld = HeaderTip.Height;
-            countdownTimeoutSeconds = 0;
-          }
-        }
-        else
-        {
-          Log($"Exiting block synchronization of token {Token.GetName()} due to timeout in synchronizator.");
-          FlagSyncBlocksExit = true;
-          break;
-        }
-
-        await Task.Delay(100).ConfigureAwait(false);
-      }
 
       if (headerchainDownload.IsFork)
       {
@@ -276,6 +253,7 @@ namespace BTokenLib
     {
       lock (LOCK_FetchHeaderDownload)
       {
+        if(HeadersDownloading.tryg)
         var itemHeaderDownloading = HeadersDownloading
           .FirstOrDefault(h => h.Value.Hash.IsAllBytesEqual(block.Header.Hash));
 
@@ -285,7 +263,7 @@ namespace BTokenLib
         HeadersDownloading.Remove(itemHeaderDownloading.Key);
       }
 
-      int heightBlock = headerDownload.Height;
+      int heightBlock = block.Header.Height;
 
       lock (LOCK_BlockInsertion) // evt. mit lock this arbeiten
       {
