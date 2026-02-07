@@ -13,10 +13,11 @@ namespace BTokenLib
     {
       class HeadersMessage : MessageNetworkProtocol
       {
-        public List<Header> Headers = new();
-        HeaderchainDownload HeaderchainDownload = new();
+        List<Header> Headers = new();
+        HeaderchainDownload HeaderchainDownload;
 
-        public SHA256 SHA256 = SHA256.Create();
+        SHA256 SHA256 = SHA256.Create();
+
 
         public HeadersMessage()
           : this(new List<Header>()) 
@@ -49,26 +50,6 @@ namespace BTokenLib
           }
         }
 
-        public override void Run(Peer peer)
-        {
-          ParsePayload(peer.Network.Token);
-
-          if (HeaderchainDownload.Locator == null)
-            HeaderchainDownload.LoadLocator(peer.Network.GetLocator());
-
-          if (Headers.Count == 0 && HeaderchainDownload.IsStrongerThanHeaderTipLocator())
-          {
-            if (HeaderchainDownload.IsFork)
-              peer.Network.TryReverseBlockchainToHeight(HeaderchainDownload.GetHeightAncestor());
-
-            peer.Network.StartSynchronizationBlocks(HeaderchainDownload); // when sync is finished set HeaderchainDownload.Locator = null
-          }
-          else if (Headers.Any())
-          {
-            HeaderchainDownload.TryInsertHeaders(Headers);
-            peer.SendGetHeaders(HeaderchainDownload.Locator);
-          }
-        }
 
         void ParsePayload(Token token)
         {
@@ -82,6 +63,26 @@ namespace BTokenLib
             startIndex += 1; // Number of transaction in the block, which in the header is always 0
           }
         }
+
+        public override void Run(Peer peer)
+        {
+          if (HeaderchainDownload == null)
+            HeaderchainDownload = new(peer.Network.GetLocator());
+
+          ParsePayload(peer.Network.Token);
+
+          if (Headers.Any())
+          {
+            HeaderchainDownload.TryInsertHeaders(Headers);
+            peer.SendGetHeaders(HeaderchainDownload.Locator);
+          }
+          else
+          {
+            peer.Network.StartSynchronizationBlocks(HeaderchainDownload);
+            HeaderchainDownload = null;
+          }
+        }
+
       }
     }
   }

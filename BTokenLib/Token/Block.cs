@@ -160,12 +160,10 @@ namespace BTokenLib
       LengthDataPayload = startIndex;
     }
 
-    public void WriteToDisk(string pathFileBlock, bool flagEnableAtomicSave = true)
+    public void WriteToDisk(string pathDirectory)
     {
-      string pathTemp = pathFileBlock;
-
-      if (flagEnableAtomicSave)
-        pathTemp += ".tmp";
+      string pathFileBlock = Path.Combine(pathDirectory, Header.Height.ToString());
+      string pathTemp = pathFileBlock + ".tmp";
 
       using (FileStream fileStream = new(pathTemp, FileMode.Create, FileAccess.Write))
       {
@@ -181,8 +179,7 @@ namespace BTokenLib
         fileStream.Flush(true);
       }
 
-      if (flagEnableAtomicSave)
-        File.Move(pathTemp, pathFileBlock, overwrite: true);
+      File.Move(pathTemp, pathFileBlock, overwrite: true);
     }
 
     public override string ToString()

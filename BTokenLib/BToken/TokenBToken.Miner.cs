@@ -94,7 +94,7 @@ namespace BTokenLib
 
             BlocksMinedCache.Add(block);
 
-            block.WriteToDisk(Path.Combine(PathBlocksMined, block.Header.Hash.ToHexString()));
+            block.WriteToDisk(PathBlocksMined);
           }
 
           ReleaseLock();
@@ -150,7 +150,7 @@ namespace BTokenLib
 
         if (blockMined == null)
         {
-          blockMined = new(this, File.ReadAllBytes(Path.Combine(PathBlocksMined, hashBlock.ToHexString())));
+          blockMined = new(this, File.ReadAllBytes(Path.Combine(PathBlocksMined, blockMined.Header.Height.ToString())));
           blockMined.Parse(Network.HeaderTip.Height + 1);
         }
 

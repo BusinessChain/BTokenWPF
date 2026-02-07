@@ -18,16 +18,10 @@ namespace BTokenLib
       public bool IsFork;
 
 
-      public HeaderchainDownload()
-      { }
-
-      public void LoadLocator(List<Header> locator)
+      public HeaderchainDownload(List<Header> locator)
       {
-        HeaderTipTokenInitial = locator.First();
-        HeaderTip = null;
-        HeaderRoot = null;
         Locator = locator;
-        IsFork = false;
+        HeaderTipTokenInitial = locator.First();
       }
 
       public bool TryInsertHeader(Header header)
@@ -70,6 +64,7 @@ namespace BTokenLib
 
         return true;
       }
+      
       public bool TryInsertHeaders(List<Header> headers)
       {
         foreach (Header header in headers)
@@ -77,14 +72,6 @@ namespace BTokenLib
             return false;
 
         return true;
-      }
-
-      public bool IsStrongerThanHeaderTipLocator()
-      {
-        if (HeaderTip == null)
-          return false;
-
-        return HeaderTip.DifficultyAccumulated > Locator[0].DifficultyAccumulated;
       }
 
       public bool IsWeakerThan(Header header)

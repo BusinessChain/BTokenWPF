@@ -21,18 +21,17 @@ namespace BTokenLib
     bool FlagSyncDBAbort;
     List<byte[]> HashesDB;
 
-    object LOCK_FetchHeaderDownload = new();
     ConcurrentBag<Block> PoolBlocks = new();
 
     object LOCK_ChargeHashDB = new();
 
     Peer PeerSync;
-    HeaderchainDownload HeaderchainDownload;
+    HeaderchainDownload HeaderchainDownloadInstance;
     bool FlagSyncHeadersExit;
     const int TIMEOUT_HEADERSYNC_SECONDS = 5;
     double TimeoutAdjustementFactor = 1.0;
 
-    int HeightInsertion;
+    int HeightInsertionNext;
     object LOCK_BlockInsertion = new();
     const int CAPACITY_MAX_QueueBlocksInsertion = 20;
     Dictionary<int, Block> QueueBlockInsertion = new();
@@ -186,18 +185,24 @@ namespace BTokenLib
       }
     }
 
-    async Task StartSynchronizationBlocks(HeaderchainDownload headerchainDownload)
+    void StartSynchronizationBlocks(HeaderchainDownload headerchainDownload)
     {
+      // hier einen Entscheidungsmechanismus einbauen um zu schauen,ob überhaupt stärker is als main branch,
+      // und ob eine bereits laufende synchronisation unterbrochen und geswitched werden soll. 
       lock (LOCK_IsStateSync)
         if (IsStateSync)
           return;
         else
           IsStateSync = true;
 
+      // Evt. ein Synchrinzer objekt einführen, welches instanziert wird.
+      // Allenfalls kann HeaderDownload und Synchronizer zu einem Objekt verschmolzen werden.
+      HeaderchainDownloadInstance = headerchainDownload;
+
       HeadersDownloading.Clear();
       QueueBlockInsertion.Clear();
-      HeaderDownloadNext = headerchainDownload.HeaderRoot;
-      HeightInsertion = HeaderDownloadNext.Height;
+      HeaderDownloadNext = HeaderchainDownloadInstance.HeaderRoot;
+      HeightInsertionNext = HeaderDownloadNext.Height;
       FlagSyncBlocksExit = false;
 
       int heightHeaderTipOld = HeaderTip.Height;
@@ -219,20 +224,91 @@ namespace BTokenLib
         else
           TryReverseBlockchainToHeight(headerchainDownload.GetHeightAncestor());
       }
+    }
 
-      lock (LOCK_IsStateSync)
+    void InsertBlock(Block block)
+    {
+      int heightBlock = block.Header.Height;
+
+      lock (LOCK_BlockInsertion)
       {
-        Token.ReleaseLock();
-        IsStateSync = false;
-        PeerSync = null;
+        if (heightBlock < HeightInsertionNext || !QueueBlockInsertion.TryAdd(heightBlock, block))
+        {
+          PoolBlocks.Add(block);
+          return;
+        }
+
+        HeadersDownloading.Remove(heightBlock);
+
+        // Vielleicht ist der Block mit HeightInsertionNext nicht da, muss auch ok sein.
+        while (QueueBlockInsertion.Remove(HeightInsertionNext, out block))
+        {
+          // Allenfalls kann IsFork dynamisch auf false gesetzt werden nach dem reorg.
+          // HeaderchainDownload und Syncer zu einem Objekt zusammen ist, kann IsFork immer 
+          // gerade anzeigen wo wir sind.
+          if (HeaderchainDownloadInstance.IsFork && HeightInsertionNext <= HeaderTip.Height + 1)
+          {
+            block.WriteToDisk(PathBlockArchiveFork);
+          }
+          else
+          {
+            block.WriteToDisk(PathBlockArchiveMain);
+
+            try
+            {
+              block.Header.AppendToHeader(HeaderTip);
+
+              Token.InsertBlock(block);
+
+              HeaderTip.HeaderNext = block.Header;
+              HeaderTip = HeaderTip.HeaderNext;
+
+              DatabaseHeaderCollection.Upsert(new BsonDocument
+              {
+                ["_id"] = block.Header.Hash,
+                ["buffer"] = block.Header.Serialize()
+              });
+            }
+            catch (Exception ex)
+            {
+              $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+
+              File.Delete(pathBlockTemp);
+
+              FlagSyncBlocksExit = true;
+              return;
+            }
+          }
+
+          PoolBlocks.Add(block);
+
+          HeightInsertionNext += 1;
+        }
+
+        if (HeaderTip.Height == HeaderchainDownloadInstance.HeaderTip.Height)
+        {
+          Log($"Downloading blocks completed.");
+          FlagSyncBlocksExit = true;
+        }
       }
+    }
 
-      $"Synchronization of {Token.GetName()} completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
+    bool TryFetchHeaderDownload(out Header headerDownload)
+    {
+      headerDownload = null;
 
-      Peer peerNextSync = Peers.Find(p => p.HeightHeaderTipLastCommunicated != HeaderTip.Height);
+      lock (LOCK_BlockInsertion)
+        if ((QueueBlockInsertion.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
+          && HeadersDownloading.Any())
+          headerDownload = HeadersDownloading[HeadersDownloading.Keys.Min()];
+        else if (HeaderDownloadNext != null)
+        {
+          headerDownload = HeaderDownloadNext;
+          HeaderDownloadNext = HeaderDownloadNext.HeaderNext;
+          HeadersDownloading.Add(headerDownload.Height, headerDownload);
+        }
 
-      if (peerNextSync != null)
-        peerNextSync.SendGetHeaders(GetLocator());
+      return headerDownload != null;
     }
 
     public void Reorganize()
@@ -247,95 +323,6 @@ namespace BTokenLib
 
       Directory.Delete(PathBlockArchiveFork, recursive: true);
       PathBlockArchive = PathBlockArchiveMain;
-    }
-
-    void InsertBlock(Block block)
-    {
-      lock (LOCK_FetchHeaderDownload)
-      {
-        if(HeadersDownloading.tryg)
-        var itemHeaderDownloading = HeadersDownloading
-          .FirstOrDefault(h => h.Value.Hash.IsAllBytesEqual(block.Header.Hash));
-
-        if (itemHeaderDownloading.Value == null)
-          return;
-
-        HeadersDownloading.Remove(itemHeaderDownloading.Key);
-      }
-
-      int heightBlock = block.Header.Height;
-
-      lock (LOCK_BlockInsertion) // evt. mit lock this arbeiten
-      {
-        if (heightBlock < HeightInsertion || QueueBlockInsertion.ContainsKey(heightBlock))
-          PoolBlocks.Add(block);
-        if (heightBlock > HeightInsertion)
-          QueueBlockInsertion.Add(heightBlock, block);
-        else
-          do
-          {
-            string pathBlock = Path.Combine(PathBlockArchive, block.Header.Height.ToString());
-            string pathBlockTemp = pathBlock + ".tmp";
-
-            block.WriteToDisk(pathBlockTemp, flagEnableAtomicSave: false);
-
-            try
-            {
-              block.Header.AppendToHeader(HeaderTip);
-
-              Token.InsertBlock(block);
-
-              HeaderTip.HeaderNext = block.Header;
-              HeaderTip = block.Header;
-
-              DatabaseHeaderCollection.Upsert(new BsonDocument
-              {
-                ["_id"] = block.Header.Hash,
-                ["buffer"] = block.Header.Serialize()
-              });
-
-              File.Move(pathBlockTemp, pathBlock, overwrite: true);
-            }
-            catch (Exception ex)
-            {
-              $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-              File.Delete(pathBlockTemp);
-
-              FlagSyncBlocksExit = true;
-              return;
-            }
-
-            PoolBlocks.Add(block);
-
-            HeightInsertion += 1;
-
-          } while (QueueBlockInsertion.Remove(HeightInsertion, out block));
-
-        if (HeaderTip.Height == HeaderchainDownload.HeaderTip.Height)
-        {
-          $"Downloading blocks completed.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-          FlagSyncBlocksExit = true;
-        }
-      }
-    }
-
-    bool TryFetchHeaderDownload(out Header headerDownload)
-    {
-      headerDownload = null;
-
-      lock (LOCK_FetchHeaderDownload)
-        if ((QueueBlockInsertion.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null) 
-          && HeadersDownloading.Any())
-          headerDownload = HeadersDownloading[HeadersDownloading.Keys.Min()];
-        else if (HeaderDownloadNext != null)
-        {
-          headerDownload = HeaderDownloadNext;
-          HeaderDownloadNext = HeaderDownloadNext.HeaderNext;
-          HeadersDownloading.Add(headerDownload.Height, headerDownload);
-        }
-
-      return headerDownload != null;
     }
 
     bool TryGetPeerIdle(out Peer peer)
