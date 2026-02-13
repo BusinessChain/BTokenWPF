@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace BTokenLib
 {
   partial class Network
   {
-    class HeaderchainDownload
-    {
+    partial class Synchronization
+    {      
+      Network Network;
+
       public List<Header> Locator;
 
       public Header HeaderTipTokenInitial;
@@ -18,8 +21,10 @@ namespace BTokenLib
       public bool IsFork;
 
 
-      public HeaderchainDownload(List<Header> locator)
+      public Synchronization(Peer peer, List<Header> locator)
       {
+        Network = peer.Network;
+        Peers.Add(peer);
         Locator = locator;
         HeaderTipTokenInitial = locator.First();
       }
@@ -77,6 +82,50 @@ namespace BTokenLib
       public bool IsWeakerThan(Header header)
       {
         return HeaderTip == null || HeaderTip.DifficultyAccumulated < header.DifficultyAccumulated;
+      }
+
+      Dictionary<int, Header> HeadersDownloading = new();
+      Header HeaderDownloadNext;
+      int HeightInsertionNext;
+
+      object LOCK_Peers = new();
+      List<Peer> Peers = new();
+
+      public void StartSynchronization()
+      {
+        HeaderDownloadNext = HeaderRoot;
+        HeightInsertionNext = HeaderRoot.Height;
+
+        int heightHeaderTipOld = HeaderTip.Height;
+
+        lock (LOCK_Peers)
+          Peers.ForEach(p => p.StartBlockDownload());
+      }
+
+      object LOCK_BlockInsertion = new();
+      ConcurrentBag<Block> PoolBlocks = new();
+      int ID_Synchronization;
+
+      public void InsertBlock(Block block)
+      {
+        int heightBlock = block.Header.Height;
+
+        lock (LOCK_BlockInsertion)
+        {
+          if (TryAddBlockToQueueBlocks(heightBlock, block))
+          {
+            HeadersDownloading.Remove(heightBlock);
+
+            if (GetDifficultyAccumulatedHeaderTip() > Network.GetDifficultyAccumulatedHeaderTip())
+            {
+              Network.Reorganize(this);
+            }
+          }
+          else
+          {
+            PoolBlocks.Add(block);
+          }
+        }
       }
 
       public int GetHeightAncestor()

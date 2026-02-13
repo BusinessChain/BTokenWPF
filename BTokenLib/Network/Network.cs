@@ -210,6 +210,13 @@ namespace BTokenLib
         $"Count peers: {countPeers}";
     }
 
+    readonly object Lock_StateNetwork = new object();
+    double GetDifficultyAccumulatedHeaderTip()
+    {
+      lock (Lock_StateNetwork)
+        return HeaderTip.DifficultyAccumulated;
+    }
+
     public void Log(string messageLog)
     {
       messageLog.Log(this, LogEntryNotifier);

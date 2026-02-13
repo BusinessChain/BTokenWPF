@@ -22,16 +22,10 @@ namespace BTokenLib
         { }
 
         public MessageNetworkProtocol(string command, byte[] payload)
-          : this(
-              command,
-              payload,
-              payload.Length)
+          : this(command, payload, payload.Length)
         { }
 
-        public MessageNetworkProtocol(
-          string command,
-          byte[] payload,
-          int lengthPayload)
+        public MessageNetworkProtocol(string command, byte[] payload, int lengthPayload)
         {
           Command = command;
           Payload = payload;

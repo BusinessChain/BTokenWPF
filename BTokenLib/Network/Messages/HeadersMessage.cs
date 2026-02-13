@@ -14,7 +14,6 @@ namespace BTokenLib
       class HeadersMessage : MessageNetworkProtocol
       {
         List<Header> Headers = new();
-        HeaderchainDownload HeaderchainDownload;
 
         SHA256 SHA256 = SHA256.Create();
 
@@ -56,31 +55,22 @@ namespace BTokenLib
           int startIndex = 0;
           int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
+          if (countHeaders > 2000)
+            throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
+
           for (int i = 0; i < countHeaders; i += 1)
           {
             Header header = token.ParseHeader(Payload, ref startIndex, SHA256);
             Headers.Add(header);
-            startIndex += 1; // Number of transaction in the block, which in the header is always 0
+            startIndex += 1; // Number of transaction in the block, which in the standalone header is always 0
           }
         }
 
         public override void Run(Peer peer)
         {
-          if (HeaderchainDownload == null)
-            HeaderchainDownload = new(peer.Network.GetLocator());
-
           ParsePayload(peer.Network.Token);
 
-          if (Headers.Any())
-          {
-            HeaderchainDownload.TryInsertHeaders(Headers);
-            peer.SendGetHeaders(HeaderchainDownload.Locator);
-          }
-          else
-          {
-            peer.Network.StartSynchronizationBlocks(HeaderchainDownload);
-            HeaderchainDownload = null;
-          }
+          peer.ReceiveHeadersMessage(Headers);          
         }
 
       }

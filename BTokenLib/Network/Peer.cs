@@ -16,7 +16,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      Network Network;
+      public Network Network;
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
@@ -33,6 +33,7 @@ namespace BTokenLib
         Busy
       }
 
+      Synchronization HeaderchainDownload;
       public Header HeaderDownload;
       public Block BlockDownload;
 
@@ -59,18 +60,6 @@ namespace BTokenLib
 
       public int HeightHeaderTipLastCommunicated;
 
-
-      public Peer(
-        Network network,
-        int sizeBlockMax,
-        IPAddress ip,
-        ConnectionType connection) : this(
-          network,
-          sizeBlockMax,
-          ip,
-          new TcpClient(),
-          connection)
-      { }
 
       public Peer(
         Network network,
@@ -142,6 +131,24 @@ namespace BTokenLib
           SendGetHeaders(Network.GetLocator()); // GetLocator() should contain a lock.
       }
 
+
+      public void ReceiveHeadersMessage(List<Header> headers)
+      {
+        if (HeaderchainDownload == null)
+          HeaderchainDownload = new(this, Network.GetLocator());
+
+        if (headers.Any())
+        {
+          HeaderchainDownload.TryInsertHeaders(headers);
+          SendGetHeaders(HeaderchainDownload.Locator);
+        }
+        else if (HeaderchainDownload.HeaderTip.DifficultyAccumulated > Network.GetDifficultyAccumulatedHeaderTip())
+        {
+          Network.StartSynchronization(HeaderchainDownload);
+          HeaderchainDownload = null;
+        }
+      }
+
       public void StartBlockDownload()
       {
         BlockDownload = null;
@@ -169,7 +176,7 @@ namespace BTokenLib
 
       void InsertBlock(Block block)
       {
-        Network.InsertBlock(block);
+        HeaderchainDownload.InsertBlock(block);
       }
 
       public void BroadcastTX(TX tX)

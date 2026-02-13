@@ -12,7 +12,7 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    const int SIZE_BLOCK_MAX = 1 << 22; // 4 MB
+    const int SIZE_BLOCK_MAX = 1 << 20; // 1 MB
 
     const long BLOCK_REWARD_INITIAL = 200000000000000; // 200 BTK
     const int PERIOD_HALVENING_BLOCK_REWARD = 105000;

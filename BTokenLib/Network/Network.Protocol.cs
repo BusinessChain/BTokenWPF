@@ -224,6 +224,5 @@ namespace BTokenLib
         $"Get reject message: {rejectMessage.GetReasonReject()}".Log(this, LogFile, Token.LogEntryNotifier);
       }
     }
-
   }
 }

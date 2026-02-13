@@ -32,7 +32,8 @@ namespace BTokenLib
       readonly Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new()
       {
         {"getheaders", new GetDataMessage()},
-        {"headers", new HeadersMessage()}
+        {"headers", new HeadersMessage()},
+        {"block", new BlockMessage()}
       };
 
       async Task StartMessageReceiver()
@@ -50,6 +51,27 @@ namespace BTokenLib
           Dispose();
           Log($"{ex.GetType().Name} in message receiver: \n{ex.Message}");
         }
+      }
+
+      async Task<MessageNetworkProtocol> ReceiveMessageNext()
+      {
+        await ReadBytes(MagicBytesRead, 4);
+
+        await ReadBytes(CommandRead, CommandRead.Length);
+        string commandString = Encoding.ASCII.GetString(CommandRead).TrimEnd('\0');
+
+        MessageNetworkProtocol message = MessagesNetworkProtocol[commandString];
+
+        await ReadBytes(LengthRead, LengthRead.Length);
+        message.LengthDataPayload = BitConverter.ToInt32(LengthRead);
+
+        await ReadBytes(ChecksumRead, 4);
+
+        byte[] bufferPayloadMessage = message.GetPayloadBuffer();
+
+        await ReadBytes(bufferPayloadMessage, message.LengthDataPayload);
+
+        return message;
       }
 
       async Task ReadBytes(byte[] buffer, int bytesToRead)
@@ -79,27 +101,6 @@ namespace BTokenLib
           Log($"Timeout occured when waiting for next message.");
           throw;
         }
-      }
-
-      async Task<MessageNetworkProtocol> ReceiveMessageNext()
-      {
-        await ReadBytes(MagicBytesRead, 4);
-
-        await ReadBytes(CommandRead, CommandRead.Length);
-        string commandString = Encoding.ASCII.GetString(CommandRead).TrimEnd('\0');
-
-        MessageNetworkProtocol message = MessagesNetworkProtocol[commandString];
-
-        await ReadBytes(LengthRead, LengthRead.Length);
-        message.LengthDataPayload = BitConverter.ToInt32(LengthRead);
-
-        await ReadBytes(ChecksumRead, 4);
-
-        byte[] bufferPayloadMessage = message.GetPayloadBuffer();
-
-        await ReadBytes(bufferPayloadMessage, message.LengthDataPayload);
-
-        return message;
       }
 
 
