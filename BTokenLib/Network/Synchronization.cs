@@ -20,6 +20,19 @@ namespace BTokenLib
 
       public bool IsFork;
 
+      Dictionary<int, Header> HeadersDownloading = new();
+      Header HeaderDownloadNext;
+      int HeightInsertionNext;
+
+      object LOCK_Peers = new();
+      List<Peer> Peers = new();
+
+      object LOCK_BlockInsertion = new();
+      ConcurrentBag<Block> PoolBlocks = new();
+      int HeightTipQueueBlocks;
+      public double DifficultyAccumulatedHeightTip;
+      Dictionary<int, Block> QueueBlocks = new();
+
 
       public Synchronization(Peer peer, List<Header> locator)
       {
@@ -41,7 +54,7 @@ namespace BTokenLib
           if (indexHeaderAncestor == -1)
             return false;
 
-          IsFork = indexHeaderAncestor != 0;
+          IsFork = indexHeaderAncestor > 0;
 
           Header headerAncestor = Locator[indexHeaderAncestor];
 
@@ -70,13 +83,11 @@ namespace BTokenLib
         return true;
       }
       
-      public bool TryInsertHeaders(List<Header> headers)
+      public void InsertHeaders(List<Header> headers)
       {
         foreach (Header header in headers)
           if (!TryInsertHeader(header))
-            return false;
-
-        return true;
+            break;
       }
 
       public bool IsWeakerThan(Header header)
@@ -84,14 +95,7 @@ namespace BTokenLib
         return HeaderTip == null || HeaderTip.DifficultyAccumulated < header.DifficultyAccumulated;
       }
 
-      Dictionary<int, Header> HeadersDownloading = new();
-      Header HeaderDownloadNext;
-      int HeightInsertionNext;
-
-      object LOCK_Peers = new();
-      List<Peer> Peers = new();
-
-      public void StartSynchronization()
+      public void Start()
       {
         HeaderDownloadNext = HeaderRoot;
         HeightInsertionNext = HeaderRoot.Height;
@@ -99,38 +103,78 @@ namespace BTokenLib
         int heightHeaderTipOld = HeaderTip.Height;
 
         lock (LOCK_Peers)
-          Peers.ForEach(p => p.StartBlockDownload());
+          Peers.ForEach(p => StartBlockDownload(p));
       }
 
-      object LOCK_BlockInsertion = new();
-      ConcurrentBag<Block> PoolBlocks = new();
-      int ID_Synchronization;
+      bool TryFetchHeaderDownload(out Header headerDownload)
+      {
+        headerDownload = null;
 
-      public void InsertBlock(Block block)
+        lock (LOCK_BlockInsertion)
+          if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
+            && HeadersDownloading.Any())
+            headerDownload = HeadersDownloading[HeadersDownloading.Keys.Min()];
+          else if (HeaderDownloadNext != null)
+          {
+            headerDownload = HeaderDownloadNext;
+            HeaderDownloadNext = HeaderDownloadNext.HeaderNext;
+            HeadersDownloading.Add(headerDownload.Height, headerDownload);
+          }
+
+        return headerDownload != null;
+      }
+
+      void StartBlockDownload(Peer peer)
+      {
+        if (!TryFetchHeaderDownload(out Header headerDownload))
+          return;
+
+        if (!PoolBlocks.TryTake(out Block blockDownload))
+          blockDownload = new Block(Network.Token);
+
+        peer.StartBlockDownload(headerDownload, blockDownload);
+      }
+
+      public void InsertBlock(Block block, Peer peer)
       {
         int heightBlock = block.Header.Height;
 
         lock (LOCK_BlockInsertion)
         {
-          if (TryAddBlockToQueueBlocks(heightBlock, block))
-          {
-            HeadersDownloading.Remove(heightBlock);
+          HeadersDownloading.Remove(heightBlock);
 
-            if (GetDifficultyAccumulatedHeaderTip() > Network.GetDifficultyAccumulatedHeaderTip())
-            {
-              Network.Reorganize(this);
-            }
-          }
-          else
+          if (heightBlock <= HeightTipQueueBlocks || !QueueBlocks.TryAdd(heightBlock, block))
+            return;
+
+          if (HeightTipQueueBlocks == 0)
           {
-            PoolBlocks.Add(block);
+
+            HeightTipQueueBlocks = heightBlock;
+            DifficultyAccumulatedHeightTip += block.Header.DifficultyAccumulated;
           }
+          else if (heightBlock == HeightTipQueueBlocks + 1)
+            do
+            {
+              HeightTipQueueBlocks++;
+              DifficultyAccumulatedHeightTip += block.Header.DifficultyAccumulated;
+            }
+            while (QueueBlocks.TryGetValue(HeightTipQueueBlocks, out block));
+
+          Network.SynchronizeTo(this);
         }
+
+        StartBlockDownload(peer);
       }
 
-      public int GetHeightAncestor()
+
+      int HeightHeaderPopNextQueue;
+
+      public bool PopBlock(out Block block)
       {
-        return HeaderRoot.HeaderPrevious.Height;
+        if (HeightHeaderPopNextQueue == 0)
+          HeightHeaderPopNextQueue = QueueBlocks.Keys.Min();
+
+        return QueueBlocks.Remove(HeightHeaderPopNextQueue++, out block);
       }
 
       public override string ToString()

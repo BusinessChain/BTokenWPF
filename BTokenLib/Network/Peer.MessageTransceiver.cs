@@ -38,19 +38,31 @@ namespace BTokenLib
 
       async Task StartMessageReceiver()
       {
-        try
+        DateTime timeEventExceptionLast = DateTime.UtcNow;
+        TimeSpan oneHour = TimeSpan.FromHours(1);
+        int banScore = 0;
+
+        while (banScore < 3)
         {
-          while (true)
+          try
           {
             MessageNetworkProtocol message = await ReceiveMessageNext();
             message.Run(this);
           }
+          catch (Exception ex)
+          {
+            if (DateTime.UtcNow - timeEventExceptionLast < oneHour)
+              banScore += 1;
+            else
+              banScore = 1;
+
+            timeEventExceptionLast = DateTime.UtcNow;
+
+            Log($"{ex.GetType().Name} in message receiver: \n{ex.Message}\nBan score: {banScore}");
+          }
         }
-        catch (Exception ex)
-        {
-          Dispose();
-          Log($"{ex.GetType().Name} in message receiver: \n{ex.Message}");
-        }
+
+        Dispose();
       }
 
       async Task<MessageNetworkProtocol> ReceiveMessageNext()

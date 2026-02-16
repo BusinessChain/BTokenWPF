@@ -16,12 +16,6 @@ namespace BTokenLib
         public BlockMessage()
           : base("block") { }
 
-        public BlockMessage(byte[] bufferBlock, int lengthPayload)
-          : base(
-              "block",
-              bufferBlock,
-              lengthPayload)
-        { }
 
         public override byte[] GetPayloadBuffer()
         {
@@ -33,7 +27,6 @@ namespace BTokenLib
           ParsePayload();
 
           peer.InsertBlock(BlockDownload);
-          peer.StartBlockDownload();
         }
 
         void ParsePayload()

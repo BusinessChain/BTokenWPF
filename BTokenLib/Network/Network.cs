@@ -211,6 +211,7 @@ namespace BTokenLib
     }
 
     readonly object Lock_StateNetwork = new object();
+
     double GetDifficultyAccumulatedHeaderTip()
     {
       lock (Lock_StateNetwork)

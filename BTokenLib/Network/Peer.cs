@@ -33,7 +33,7 @@ namespace BTokenLib
         Busy
       }
 
-      Synchronization HeaderchainDownload;
+      Synchronization Synchronization;
       public Header HeaderDownload;
       public Block BlockDownload;
 
@@ -134,32 +134,22 @@ namespace BTokenLib
 
       public void ReceiveHeadersMessage(List<Header> headers)
       {
-        if (HeaderchainDownload == null)
-          HeaderchainDownload = new(this, Network.GetLocator());
+        if (Synchronization == null)
+          Synchronization = new(this, Network.GetLocator());
 
         if (headers.Any())
         {
-          HeaderchainDownload.TryInsertHeaders(headers);
-          SendGetHeaders(HeaderchainDownload.Locator);
+          Synchronization.InsertHeaders(headers); // muss intern gelockt sein
+          SendGetHeaders(Synchronization.Locator);
         }
-        else if (HeaderchainDownload.HeaderTip.DifficultyAccumulated > Network.GetDifficultyAccumulatedHeaderTip())
+        else if (Synchronization.GetDifficultyAccumulatedHeaderTip() > Network.GetDifficultyAccumulatedHeaderTip())
         {
-          Network.StartSynchronization(HeaderchainDownload);
-          HeaderchainDownload = null;
+          Network.StartSynchronization(Synchronization);
         }
       }
 
-      public void StartBlockDownload()
+      public void StartBlockDownload(Header headerDownload, Block blockDownload)
       {
-        BlockDownload = null;
-        HeaderDownload = null;
-
-        if (!Network.TryFetchHeaderDownload(out Header headerDownload))
-          return;
-
-        if (!Network.PoolBlocks.TryTake(out Block blockDownload))
-          blockDownload = new Block(Network.Token);
-
         BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
 
         blockMessage.HeaderDownload = headerDownload;
@@ -176,7 +166,7 @@ namespace BTokenLib
 
       void InsertBlock(Block block)
       {
-        HeaderchainDownload.InsertBlock(block);
+        Synchronization.InsertBlock(block, this);
       }
 
       public void BroadcastTX(TX tX)

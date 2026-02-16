@@ -135,19 +135,19 @@ namespace BTokenLib
 
     List<Synchronization> SynchronizationsInProgress = new();
 
-    void StartSynchronization(Synchronization headerchainDownload)
+    void StartSynchronization(Synchronization synchronization)
     {
       lock (SynchronizationsInProgress)
       {
         if (SynchronizationsInProgress.Any())
           foreach (Synchronization synchronizationInProgress in SynchronizationsInProgress)
-            if (synchronizationInProgress.TryMerge(headerchainDownload)) // schwächer oder stärker, aber auf selben Branch
+            if (synchronizationInProgress.TryMerge(synchronization)) // schwächer oder stärker, aber auf selben Branch
               return;
 
-        SynchronizationsInProgress.Add(headerchainDownload);
+        SynchronizationsInProgress.Add(synchronization);
       }
 
-      headerchainDownload.StartSynchronization(); //rename headerchainDownload to synchronizations
+      synchronization.Start();
     }
 
     void InsertBlock(Block block)
@@ -178,40 +178,17 @@ namespace BTokenLib
       }
     }
 
-    bool TryFetchHeaderDownload(out Header headerDownload)
+    bool SynchronizeTo(Synchronization synchronization)
     {
-      headerDownload = null;
-
-      lock (LOCK_BlockInsertion)
-        if ((QueueBlockInsertion.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
-          && HeadersDownloading.Any())
-          headerDownload = HeadersDownloading[HeadersDownloading.Keys.Min()];
-        else if (HeaderDownloadNext != null)
-        {
-          headerDownload = HeaderDownloadNext;
-          HeaderDownloadNext = HeaderDownloadNext.HeaderNext;
-          HeadersDownloading.Add(headerDownload.Height, headerDownload);
-        }
-
-      return headerDownload != null;
-    }
-
-    public void Reorganize(queue)
-    {
-      List<Block> blocks = QueueBlocks.GetBlocks();
-
-      int heightInsertionNext = HeaderRoot.Height;
-
-      Network.RewindToHeight(heightInsertionNext);
-
-
-      foreach (Block block in blocks)
+      lock (Lock_StateNetwork)
       {
-        Network.InsertBlock(block);
+        if (synchronization.DifficultyAccumulatedHeightTip > HeaderTip.DifficultyAccumulated)
+        {
+          RewindToHeight(synchronization.HeaderRoot.Height);
 
-        PoolBlocks.Add(block);
-
-        heightInsertionNext += 1;
+          while(synchronization.PopBlock(out Block block))
+            InsertBlock(block);
+        }
       }
 
 
