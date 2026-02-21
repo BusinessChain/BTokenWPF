@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
@@ -13,7 +12,8 @@ namespace BTokenLib
     {
       class HeadersMessage : MessageNetworkProtocol
       {
-        List<Header> Headers = new();
+        Header HeaderRoot;
+        Header HeaderTip;
 
         SHA256 SHA256 = SHA256.Create();
 
@@ -50,27 +50,55 @@ namespace BTokenLib
         }
 
 
-        void ParsePayload(Token token)
+
+        //Not DoS save yet, when unsolicited zero headers or orphans are received.
+        public override void Run(Peer peer)
         {
           int startIndex = 0;
           int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
           if (countHeaders > 2000)
             throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
-
-          for (int i = 0; i < countHeaders; i += 1)
+          else if(countHeaders > 0)
           {
-            Header header = token.ParseHeader(Payload, ref startIndex, SHA256);
-            Headers.Add(header);
-            startIndex += 1; // Number of transaction in the block, which in the standalone header is always 0
+            for (int i = 0; i < countHeaders; i += 1)
+            {
+              Header header = peer.Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
+              int countTXs = VarInt.GetInt(Payload, ref startIndex);
+
+              if (HeaderRoot == null)
+              {
+                if(!peer.Network.TryConnectHeaderToChain(header))
+                {
+                  peer.SendGetHeaders(peer.Network.GetLocator());
+                  return;
+                }
+
+                HeaderRoot = header;
+                HeaderTip = header;
+              }
+              else
+              {
+                header.AppendToHeader(HeaderTip);
+                HeaderTip.HeaderNext = header;
+                HeaderTip = HeaderTip.HeaderNext;
+              }
+            }
+
+            peer.SendGetHeaders(new List<Header> { HeaderTip });
           }
-        }
+          else if (countHeaders == 0 && HeaderRoot != null)
+          {
+            double difficultyAccumulatedLocal = peer.Network.GetDifficultyAccumulatedHeaderTip();
 
-        public override void Run(Peer peer)
-        {
-          ParsePayload(peer.Network.Token);
+            if (HeaderTip.DifficultyAccumulated > difficultyAccumulatedLocal)
+              peer.ReceiveHeaderchain(HeaderRoot, HeaderTip);
+            else if(HeaderTip.DifficultyAccumulated < difficultyAccumulatedLocal)
+              peer.SendHeaders(); // sende hier alle headers so, damit sie bei ihm gerade die stärkere mainchain ergeben
 
-          peer.ReceiveHeadersMessage(Headers);          
+            HeaderRoot = null;
+            HeaderTip = null;
+          }    
         }
 
       }

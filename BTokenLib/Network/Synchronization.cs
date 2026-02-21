@@ -11,104 +11,47 @@ namespace BTokenLib
     {      
       Network Network;
 
-      public List<Header> Locator;
-
-      public Header HeaderTipTokenInitial;
-
       public Header HeaderTip;
       public Header HeaderRoot;
 
-      public bool IsFork;
-
       Dictionary<int, Header> HeadersDownloading = new();
       Header HeaderDownloadNext;
-      int HeightInsertionNext;
-
-      object LOCK_Peers = new();
-      List<Peer> Peers = new();
 
       object LOCK_BlockInsertion = new();
-      ConcurrentBag<Block> PoolBlocks = new();
+      Dictionary<int, Block> QueueBlocks = new();
       int HeightTipQueueBlocks;
       public double DifficultyAccumulatedHeightTip;
-      Dictionary<int, Block> QueueBlocks = new();
+      int HeightHeaderPopNextQueue;
+      ConcurrentBag<Block> PoolBlocks = new();
 
 
-      public Synchronization(Peer peer, List<Header> locator)
+      public Synchronization(Header headerRoot, Header headerTip)
       {
-        Network = peer.Network;
-        Peers.Add(peer);
-        Locator = locator;
-        HeaderTipTokenInitial = locator.First();
+        HeaderRoot = headerRoot;
+        HeaderTip = headerTip;
       }
 
-      public bool TryInsertHeader(Header header)
+      public bool TryExtendHeaderchain(Header headerRoot, Header headerTip)
       {
-        if (Locator.Any(h => h.Hash.IsAllBytesEqual(header.Hash)))
-          return false;
-
-        if (HeaderRoot == null)
+        while(!headerRoot.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
         {
-          int indexHeaderAncestor = Locator.FindIndex(h => h.Hash.IsAllBytesEqual(header.HashPrevious));
+          headerRoot = headerRoot.HeaderNext;
 
-          if (indexHeaderAncestor == -1)
+          if (headerRoot == null)
             return false;
-
-          IsFork = indexHeaderAncestor > 0;
-
-          Header headerAncestor = Locator[indexHeaderAncestor];
-
-          if (headerAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
-            headerAncestor = headerAncestor.HeaderNext;
-          else
-          {
-            header.AppendToHeader(headerAncestor);
-            HeaderRoot = header;
-            HeaderTip = header;
-
-            Locator = Locator.Skip(indexHeaderAncestor).ToList();
-            Locator.Insert(0, header);
-          }
         }
-        else if (header.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
-        {
-          header.AppendToHeader(HeaderTip);
-          HeaderTip.HeaderNext = header;
-          HeaderTip = header;
 
-          Locator[0] = header;
-        }
-        else return false;
+        headerRoot.AppendToHeader(HeaderTip);
+        HeaderTip.HeaderNext = headerRoot;
+        HeaderTip = headerTip;
 
         return true;
       }
-      
-      public void InsertHeaders(List<Header> headers)
-      {
-        foreach (Header header in headers)
-          if (!TryInsertHeader(header))
-            break;
-      }
 
-      public bool IsWeakerThan(Header header)
-      {
-        return HeaderTip == null || HeaderTip.DifficultyAccumulated < header.DifficultyAccumulated;
-      }
-
-      public void Start()
-      {
-        HeaderDownloadNext = HeaderRoot;
-        HeightInsertionNext = HeaderRoot.Height;
-
-        int heightHeaderTipOld = HeaderTip.Height;
-
-        lock (LOCK_Peers)
-          Peers.ForEach(p => StartBlockDownload(p));
-      }
-
-      bool TryFetchHeaderDownload(out Header headerDownload)
+      public bool TryFetchBlockDownload(out Header headerDownload, out Block blockDownload)
       {
         headerDownload = null;
+        blockDownload = null;
 
         lock (LOCK_BlockInsertion)
           if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
@@ -121,21 +64,16 @@ namespace BTokenLib
             HeadersDownloading.Add(headerDownload.Height, headerDownload);
           }
 
-        return headerDownload != null;
-      }
+        if (headerDownload == null)
+          return false;
 
-      void StartBlockDownload(Peer peer)
-      {
-        if (!TryFetchHeaderDownload(out Header headerDownload))
-          return;
-
-        if (!PoolBlocks.TryTake(out Block blockDownload))
+        if (!PoolBlocks.TryTake(out blockDownload))
           blockDownload = new Block(Network.Token);
 
-        peer.StartBlockDownload(headerDownload, blockDownload);
+        return true;
       }
 
-      public void InsertBlock(Block block, Peer peer)
+      public void InsertBlock(Block block)
       {
         int heightBlock = block.Header.Height;
 
@@ -148,7 +86,6 @@ namespace BTokenLib
 
           if (HeightTipQueueBlocks == 0)
           {
-
             HeightTipQueueBlocks = heightBlock;
             DifficultyAccumulatedHeightTip += block.Header.DifficultyAccumulated;
           }
@@ -162,12 +99,7 @@ namespace BTokenLib
 
           Network.SynchronizeTo(this);
         }
-
-        StartBlockDownload(peer);
       }
-
-
-      int HeightHeaderPopNextQueue;
 
       public bool PopBlock(out Block block)
       {
@@ -175,11 +107,6 @@ namespace BTokenLib
           HeightHeaderPopNextQueue = QueueBlocks.Keys.Min();
 
         return QueueBlocks.Remove(HeightHeaderPopNextQueue++, out block);
-      }
-
-      public override string ToString()
-      {
-        return $"{Locator.First()} ... {Locator.Last()}";
       }
     }
   }

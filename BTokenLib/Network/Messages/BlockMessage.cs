@@ -24,13 +24,6 @@ namespace BTokenLib
 
         public override void Run(Peer peer)
         {
-          ParsePayload();
-
-          peer.InsertBlock(BlockDownload);
-        }
-
-        void ParsePayload()
-        {
           if (HeaderDownload == null)
             throw new ProtocolException($"Received unrequested block message.");
 
@@ -42,6 +35,11 @@ namespace BTokenLib
             throw new ProtocolException(
               $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
               $"Requested was {HeaderDownload}.");
+
+          peer.InsertBlock(BlockDownload);
+
+          HeaderDownload = null;
+          BlockDownload = null;
         }
       }
     }

@@ -132,24 +132,23 @@ namespace BTokenLib
       }
 
 
-      public void ReceiveHeadersMessage(List<Header> headers)
+      public void ReceiveHeaderchain(Header headerRoot, Header headerTip)
       {
-        if (Synchronization == null)
-          Synchronization = new(this, Network.GetLocator());
-
-        if (headers.Any())
-        {
-          Synchronization.InsertHeaders(headers); // muss intern gelockt sein
-          SendGetHeaders(Synchronization.Locator);
-        }
-        else if (Synchronization.GetDifficultyAccumulatedHeaderTip() > Network.GetDifficultyAccumulatedHeaderTip())
-        {
-          Network.StartSynchronization(Synchronization);
-        }
+        Synchronization = Network.ReceiveHeaderchain(headerRoot, headerTip);
+        StartBlockDownload();
       }
 
-      public void StartBlockDownload(Header headerDownload, Block blockDownload)
+      void InsertBlock(Block block)
       {
+        Synchronization.InsertBlock(block);
+        StartBlockDownload();
+      }
+
+      public void StartBlockDownload()
+      {
+        if (Synchronization?.TryFetchBlockDownload(out Header headerDownload, out Block blockDownload) != true)
+          return;
+        
         BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
 
         blockMessage.HeaderDownload = headerDownload;
@@ -159,14 +158,7 @@ namespace BTokenLib
 
         SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
 
-        SendMessage(new GetDataMessage(
-          InventoryType.MSG_BLOCK,
-          headerDownload.Hash));
-      }
-
-      void InsertBlock(Block block)
-      {
-        Synchronization.InsertBlock(block, this);
+        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, headerDownload.Hash));
       }
 
       public void BroadcastTX(TX tX)

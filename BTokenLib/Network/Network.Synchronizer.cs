@@ -23,7 +23,6 @@ namespace BTokenLib
     object LOCK_ChargeHashDB = new();
 
     Peer PeerSync;
-    Synchronization HeaderchainDownloadInstance;
     bool FlagSyncHeadersExit;
     const int TIMEOUT_HEADERSYNC_SECONDS = 5;
     double TimeoutAdjustementFactor = 1.0;
@@ -97,57 +96,23 @@ namespace BTokenLib
       return true;
     }
 
-    async Task StartTimerSyncHeaders()
-    {
-      Header headerTipOld = Synchronization.HeaderTip;
-      int countdownTimeoutSeconds = 0;
-
-      while (!FlagSyncHeadersExit)
-      {
-        if (countdownTimeoutSeconds < TIMEOUT_HEADERSYNC_SECONDS * TimeoutAdjustementFactor)
-        {
-          if (headerTipOld == Synchronization.HeaderTip)
-            countdownTimeoutSeconds += 1;
-          else
-          {
-            headerTipOld = Synchronization.HeaderTip;
-            countdownTimeoutSeconds = 0;
-          }
-        }
-        else
-        {
-          $"Exiting header synchronization of token {Token.GetName()} due to timeout in synchronizator.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-          
-          lock (LOCK_IsStateSync)
-          {
-            PeerSync = null;
-            IsStateSync = false;
-            Token.ReleaseLock();
-          }
-
-          break;
-        }
-
-        await Task.Delay(1000).ConfigureAwait(false);
-      }
-    }
-
-
     List<Synchronization> SynchronizationsInProgress = new();
 
-    void StartSynchronization(Synchronization synchronization)
+    Synchronization ReceiveHeaderchain(Header headerRoot, Header headerTip)
     {
       lock (SynchronizationsInProgress)
       {
-        if (SynchronizationsInProgress.Any())
-          foreach (Synchronization synchronizationInProgress in SynchronizationsInProgress)
-            if (synchronizationInProgress.TryMerge(synchronization)) // schwächer oder stärker, aber auf selben Branch
-              return;
+        if (headerTip.DifficultyAccumulated <= SynchronizationsInProgress[0].DifficultyAccumulatedHeightTip)
+          return null;
 
-        SynchronizationsInProgress.Add(synchronization);
+        foreach (Synchronization syncInProgress in SynchronizationsInProgress)
+          if (syncInProgress.TryExtendHeaderchain(headerRoot, headerTip))
+            return syncInProgress;
+
+        Synchronization syncNew = new(headerRoot, headerTip);
+        SynchronizationsInProgress.Add(syncNew);
+        return syncNew;
       }
-
-      synchronization.Start();
     }
 
     void InsertBlock(Block block)
@@ -186,9 +151,13 @@ namespace BTokenLib
         {
           RewindToHeight(synchronization.HeaderRoot.Height);
 
-          while(synchronization.PopBlock(out Block block))
-            InsertBlock(block);
+          // if anything fails here, restore blockchain
+          while (synchronization.PopBlock(out Block block))
+            InsertBlock(block); 
         }
+
+        // Switch "synchronization"
+
       }
 
 
@@ -204,6 +173,27 @@ namespace BTokenLib
 
       Directory.Delete(PathBlockArchiveFork, recursive: true);
       PathBlockArchive = PathBlockArchiveMain;
+    }
+
+    bool TryConnectHeaderToChain(Header header)
+    {
+      lock (Lock_StateNetwork)
+      {
+        Header headerInChain = HeaderTip;
+
+        do
+        {
+          if (header.HashPrevious.IsAllBytesEqual(headerInChain.Hash))
+          {
+            header.AppendToHeader(headerInChain);
+            return true;
+          }
+
+          headerInChain = headerInChain.HeaderPrevious;
+        } while (headerInChain != null);
+
+        return false;
+      }
     }
 
     bool TryGetPeerIdle(out Peer peer)

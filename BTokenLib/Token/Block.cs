@@ -42,7 +42,6 @@ namespace BTokenLib
       int startIndex = 0;
 
       Header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
-
       int tXCount = VarInt.GetInt(Buffer, ref startIndex);
 
       if (tXCount == 0)
