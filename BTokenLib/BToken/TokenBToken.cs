@@ -96,7 +96,7 @@ namespace BTokenLib
         throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
     }
 
-    protected override void InsertBlockInDatabase(Block block)
+    public override void InsertBlock(Block block)
     {
       try
       {
@@ -123,6 +123,8 @@ namespace BTokenLib
 
       if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
         EvictBlockFromCache();
+
+      Wallet.InsertBlock(block);
     }
 
     void EvictBlockFromCache()

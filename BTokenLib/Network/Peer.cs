@@ -33,15 +33,10 @@ namespace BTokenLib
         Busy
       }
 
-      Synchronization Synchronization;
-      public Header HeaderDownload;
-      public Block BlockDownload;
+      public Synchronization Synchronization;
 
       public byte[] HashDBDownload;
-      public List<byte[]> HashesDB;
            
-      ulong FeeFilterValue;
-
       const string UserAgent = "/BTokenCore:0.0.0/";
       public ConnectionType Connection;
       const UInt32 ProtocolVersion = 70015;
@@ -57,8 +52,6 @@ namespace BTokenLib
       StreamWriter LogFile;
 
       public DateTime TimePeerCreation = DateTime.Now;
-
-      public int HeightHeaderTipLastCommunicated;
 
 
       public Peer(
@@ -131,36 +124,6 @@ namespace BTokenLib
           SendGetHeaders(Network.GetLocator()); // GetLocator() should contain a lock.
       }
 
-
-      public void ReceiveHeaderchain(Header headerRoot, Header headerTip)
-      {
-        Synchronization = Network.ReceiveHeaderchain(headerRoot, headerTip);
-        StartBlockDownload();
-      }
-
-      void InsertBlock(Block block)
-      {
-        Synchronization.InsertBlock(block);
-        StartBlockDownload();
-      }
-
-      public void StartBlockDownload()
-      {
-        if (Synchronization?.TryFetchBlockDownload(out Header headerDownload, out Block blockDownload) != true)
-          return;
-        
-        BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
-
-        blockMessage.HeaderDownload = headerDownload;
-        blockMessage.BlockDownload = blockDownload;
-
-        Log($"Start downloading block {blockDownload}.");
-
-        SetTimer("Receive block", TIMEOUT_RESPONSE_MILLISECONDS);
-
-        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, headerDownload.Hash));
-      }
-
       public void BroadcastTX(TX tX)
       {
         InvMessage invMessage = new(new List<Inventory> {
@@ -169,7 +132,13 @@ namespace BTokenLib
         SendMessage(invMessage);
       }
 
-      public async Task SendVersion()
+      void RequestBlock()
+      {
+        (MessagesNetworkProtocol["block"] as BlockMessage)
+          .RequestBlock(this);
+      }
+
+      async Task SendVersion()
       {
         await SendMessage(new VersionMessage(
               protocolVersion: ProtocolVersion,
@@ -186,7 +155,7 @@ namespace BTokenLib
               relayOption: 0x01));
       }
 
-      public async Task SendGetHeaders(List<Header> locator)
+      async Task SendGetHeaders(List<Header> locator)
       {
         SetTimer("Get headers.", TIMEOUT_RESPONSE_MILLISECONDS);
 
@@ -259,46 +228,10 @@ namespace BTokenLib
         SetStateIdle();
       }
 
-      public bool TryRequestIdlePeer()
-      {
-        lock (this)
-          if (State == StateProtocol.Idle)
-          {
-            State = StateProtocol.Busy;
-            return true;
-          }
-
-        return false;
-      }
-
-      public bool IsStateIdle()
-      {
-        lock (this)
-          return State == StateProtocol.Idle;
-      }
-
       public void SetStateIdle()
       {
         lock (this)
           State = StateProtocol.Idle;
-      }
-
-      public bool IsStateSync()
-      {
-        lock (this)
-          return State == StateProtocol.HeaderDownload;
-      }
-
-      bool IsStateAwaitingGetDataTX()
-      {
-        lock (this)
-          return State == StateProtocol.GetData;
-      }
-
-      public bool IsStateDBDownload()
-      {
-        lock (this)
-          return State == StateProtocol.DBDownload;
       }
 
       public void Dispose()

@@ -12,6 +12,7 @@ namespace BTokenLib
     {
       class HeadersMessage : MessageNetworkProtocol
       {
+        Network Network;
         Header HeaderRoot;
         Header HeaderTip;
 
@@ -48,8 +49,6 @@ namespace BTokenLib
             LengthDataPayload = indexPayload;
           }
         }
-
-
 
         //Not DoS save yet, when unsolicited zero headers or orphans are received.
         public override void Run(Peer peer)
@@ -88,19 +87,9 @@ namespace BTokenLib
             peer.SendGetHeaders(new List<Header> { HeaderTip });
           }
           else if (countHeaders == 0 && HeaderRoot != null)
-          {
-            double difficultyAccumulatedLocal = peer.Network.GetDifficultyAccumulatedHeaderTip();
-
-            if (HeaderTip.DifficultyAccumulated > difficultyAccumulatedLocal)
-              peer.ReceiveHeaderchain(HeaderRoot, HeaderTip);
-            else if(HeaderTip.DifficultyAccumulated < difficultyAccumulatedLocal)
-              peer.SendHeaders(); // sende hier alle headers so, damit sie bei ihm gerade die stärkere mainchain ergeben
-
-            HeaderRoot = null;
-            HeaderTip = null;
-          }    
+            if (Network.TryReceiveHeaderchain(HeaderRoot, HeaderTip, out peer.Synchronization))
+              peer.RequestBlock();
         }
-
       }
     }
   }

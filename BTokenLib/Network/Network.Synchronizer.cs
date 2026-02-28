@@ -29,7 +29,6 @@ namespace BTokenLib
 
     int HeightInsertionNext;
     object LOCK_BlockInsertion = new();
-    const int CAPACITY_MAX_QueueBlocksInsertion = 20;
     Dictionary<int, Block> QueueBlockInsertion = new();
     Dictionary<int, Header> HeadersDownloading = new();
     const int TIMEOUT_BLOCKDOWNLOAD_SECONDS = 120;
@@ -44,29 +43,7 @@ namespace BTokenLib
 
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
-
-    List<Header> GetLocator()
-    {
-      Header header = HeaderTip;
-      List<Header> locator = new();
-      int depth = 0;
-      int nextLocationDepth = 0;
-
-      while (header != null)
-      {
-        if (depth == nextLocationDepth || header.HeaderPrevious == null)
-        {
-          locator.Add(header);
-          nextLocationDepth = 2 * nextLocationDepth + 1;
-        }
-
-        depth++;
-        header = header.HeaderPrevious;
-      }
-
-      return locator;
-    }
-    
+        
     bool TryReverseBlockchainToHeight(int heightBlockAncestor)
     {
       int heightBlock = Directory.GetFiles(PathBlockArchive)
@@ -98,82 +75,35 @@ namespace BTokenLib
 
     List<Synchronization> SynchronizationsInProgress = new();
 
-    Synchronization ReceiveHeaderchain(Header headerRoot, Header headerTip)
+    bool TryReceiveHeaderchain(
+      Header headerRoot, Header headerTip, 
+      out Synchronization sync)
     {
+      sync = null;
+
       lock (SynchronizationsInProgress)
       {
-        if (headerTip.DifficultyAccumulated <= SynchronizationsInProgress[0].DifficultyAccumulatedHeightTip)
-          return null;
+        foreach(Synchronization syncInProgress in SynchronizationsInProgress)
+        {
+          if (syncInProgress == SynchronizationsInProgress.First()
+            && syncInProgress.DifficultyAccumulated >= headerTip.DifficultyAccumulated)
+            return false;
 
-        foreach (Synchronization syncInProgress in SynchronizationsInProgress)
           if (syncInProgress.TryExtendHeaderchain(headerRoot, headerTip))
-            return syncInProgress;
-
-        Synchronization syncNew = new(headerRoot, headerTip);
-        SynchronizationsInProgress.Add(syncNew);
-        return syncNew;
-      }
-    }
-
-    void InsertBlock(Block block)
-    {
-      try
-      {
-        block.Header.AppendToHeader(HeaderTip);
-
-        Token.InsertBlock(block);
-
-        HeaderTip.HeaderNext = block.Header;
-        HeaderTip = HeaderTip.HeaderNext;
-
-        DatabaseHeaderCollection.Upsert(new BsonDocument
-        {
-          ["_id"] = block.Header.Hash,
-          ["buffer"] = block.Header.Serialize()
-        });
-      }
-      catch (Exception ex)
-      {
-        $"Abort Sync. Insertion of block {block} failed:\n {ex.Message}.".Log(this, Token.LogFile, Token.LogEntryNotifier);
-
-        File.Delete(pathBlockTemp);
-
-        FlagSyncBlocksExit = true;
-        return;
-      }
-    }
-
-    bool SynchronizeTo(Synchronization synchronization)
-    {
-      lock (Lock_StateNetwork)
-      {
-        if (synchronization.DifficultyAccumulatedHeightTip > HeaderTip.DifficultyAccumulated)
-        {
-          RewindToHeight(synchronization.HeaderRoot.Height);
-
-          // if anything fails here, restore blockchain
-          while (synchronization.PopBlock(out Block block))
-            InsertBlock(block); 
+          {
+            sync = syncInProgress;
+            return true;
+          }
         }
 
-        // Switch "synchronization"
-
+        sync = new(headerRoot, headerTip);
+        SynchronizationsInProgress.Add(sync);
+        return true;
       }
-
-
-
-      ///Alt
-      foreach (string pathFile in Directory.GetFiles(PathBlockArchiveFork))
-      {
-        string newPathFile = Path.Combine(PathBlockArchiveMain, Path.GetFileName(pathFile));
-
-        File.Delete(newPathFile);
-        File.Move(pathFile, newPathFile);
-      }
-
-      Directory.Delete(PathBlockArchiveFork, recursive: true);
-      PathBlockArchive = PathBlockArchiveMain;
     }
+
+
+
 
     bool TryConnectHeaderToChain(Header header)
     {
@@ -194,14 +124,6 @@ namespace BTokenLib
 
         return false;
       }
-    }
-
-    bool TryGetPeerIdle(out Peer peer)
-    {
-      lock (LOCK_Peers)
-        peer = Peers.Find(p => p.TryRequestIdlePeer());
-
-      return peer != null;
     }
 
     async Task SyncDB(Peer peer)

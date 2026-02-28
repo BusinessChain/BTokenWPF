@@ -89,13 +89,13 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public void InsertBlock(Block block)
+    public virtual void InsertBlock(Block block) 
     {
-      $"Insert block {block}.".Log(this, LogEntryNotifier);
-
-      InsertBlockInDatabase(block);
-
-      Wallet.InsertBlock(block);
+      DatabaseHeaderCollection.Upsert(new BsonDocument
+      {
+        ["_id"] = block.Header.Hash,
+        ["buffer"] = block.Header.Serialize()
+      });
     }
 
     public bool TryReverseBlock(Block block)
@@ -119,7 +119,6 @@ namespace BTokenLib
 
     public virtual void VerifyCoinbase(Header header, long valueOutputsTXCoinbase) { }
 
-    protected virtual void InsertBlockInDatabase(Block block) { }
 
     protected virtual void ReverseBlockInCache(Block block) { }
                   

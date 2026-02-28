@@ -10,6 +10,7 @@ namespace BTokenLib
     {
       class BlockMessage : MessageNetworkProtocol
       {
+        Network Network;
         public Header HeaderDownload;
         public Block BlockDownload;
 
@@ -36,10 +37,25 @@ namespace BTokenLib
               $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
               $"Requested was {HeaderDownload}.");
 
-          peer.InsertBlock(BlockDownload);
+          peer.Synchronization.InsertBlock(BlockDownload);
 
-          HeaderDownload = null;
-          BlockDownload = null;
+          Network.SynchronizationLocal.SynchronizeTo(peer.Synchronization);
+
+          RequestBlock(peer);
+        }
+
+        public void RequestBlock(Peer peer)
+        {
+          if (peer.Synchronization.TryFetchBlockDownload(
+            out Header headerDownload,
+            out Block blockDownload))
+          {
+            HeaderDownload = headerDownload;
+            BlockDownload = blockDownload;
+
+            peer.SendMessage(new GetDataMessage(
+              InventoryType.MSG_BLOCK, headerDownload.Hash));
+          }
         }
       }
     }

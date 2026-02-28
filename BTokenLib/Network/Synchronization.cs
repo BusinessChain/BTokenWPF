@@ -7,22 +7,27 @@ namespace BTokenLib
 {
   partial class Network
   {
-    partial class Synchronization
-    {      
-      Network Network;
+    class Synchronization
+    {
+      Token Token;
 
-      public Header HeaderTip;
-      public Header HeaderRoot;
+      Header HeaderRoot;
+      Header HeaderTip;
 
       Dictionary<int, Header> HeadersDownloading = new();
       Header HeaderDownloadNext;
 
       object LOCK_BlockInsertion = new();
+      const int CAPACITY_MAX_QueueBlocksInsertion = 20;
       Dictionary<int, Block> QueueBlocks = new();
-      int HeightTipQueueBlocks;
-      public double DifficultyAccumulatedHeightTip;
+      Header HeaderTipBlockchain;
+      public double DifficultyAccumulated;
       int HeightHeaderPopNextQueue;
       ConcurrentBag<Block> PoolBlocks = new();
+
+      bool FlagIsAborted;
+
+      readonly object LOCK_Synchronization = new object();
 
 
       public Synchronization(Header headerRoot, Header headerTip)
@@ -31,9 +36,21 @@ namespace BTokenLib
         HeaderTip = headerTip;
       }
 
+
+      // Einerseits DB rewinden und re-einspielen andererseits muss
+      // SynchronizationLocal irgendwie durch peer.Synchronization werden. 
+      public void SynchronizeTo(Synchronization synchronization)
+      {
+        lock (LOCK_Synchronization)
+          if (DifficultyAccumulated < synchronization.DifficultyAccumulated)
+          {
+            Token.Rewind();
+          }
+      }
+
       public bool TryExtendHeaderchain(Header headerRoot, Header headerTip)
       {
-        while(!headerRoot.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
+        while (!headerRoot.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
         {
           headerRoot = headerRoot.HeaderNext;
 
@@ -53,6 +70,9 @@ namespace BTokenLib
         headerDownload = null;
         blockDownload = null;
 
+        if (FlagIsAborted)
+          return false;
+
         lock (LOCK_BlockInsertion)
           if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
             && HeadersDownloading.Any())
@@ -68,7 +88,7 @@ namespace BTokenLib
           return false;
 
         if (!PoolBlocks.TryTake(out blockDownload))
-          blockDownload = new Block(Network.Token);
+          blockDownload = new Block(Token);
 
         return true;
       }
@@ -79,25 +99,29 @@ namespace BTokenLib
 
         lock (LOCK_BlockInsertion)
         {
+          if (!QueueBlocks.TryAdd(heightBlock, block))
+          {
+            PoolBlocks.Add(block);
+            return;
+          }
+
           HeadersDownloading.Remove(heightBlock);
 
-          if (heightBlock <= HeightTipQueueBlocks || !QueueBlocks.TryAdd(heightBlock, block))
-            return;
-
-          if (HeightTipQueueBlocks == 0)
-          {
-            HeightTipQueueBlocks = heightBlock;
-            DifficultyAccumulatedHeightTip += block.Header.DifficultyAccumulated;
-          }
-          else if (heightBlock == HeightTipQueueBlocks + 1)
+          if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
             do
             {
-              HeightTipQueueBlocks++;
-              DifficultyAccumulatedHeightTip += block.Header.DifficultyAccumulated;
-            }
-            while (QueueBlocks.TryGetValue(HeightTipQueueBlocks, out block));
+              try
+              {
+                Token?.InsertBlock(block);
+              }
+              catch
+              {
+                FlagIsAborted = true;
+                return;
+              }
 
-          Network.SynchronizeTo(this);
+              HeaderTipBlockchain = block.Header;
+            } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
         }
       }
 
