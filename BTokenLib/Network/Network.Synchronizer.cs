@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using LiteDB;
+using System.ComponentModel;
 
 
 namespace BTokenLib
@@ -105,21 +106,13 @@ namespace BTokenLib
     readonly object LOCK_SynchronizationLocal = new object(); 
     Synchronization SynchronizationLocal;
 
-    void SynchronizeTo(Synchronization synchronization)
+    void UpdateSynchronization(Synchronization synchronization)
     {
-      lock (LOCK_SynchronizationLocal) 
-        if (/*zu tiefer height Ancestor*/)
-        {
-          synchronization.FlagIsAborted = true;
-          Log($"Can not sync to Synchronization because fork height too deep.");
-        }
-        else if (SynchronizationLocal.DifficultyAccumulated < synchronization.DifficultyAccumulated)
-        {
-          SynchronizationLocal.RewindToHeight(synchronization.GetHeightAncestor());
-          SynchronizationLocal.TransferDatabaseTo(synchronization);
+      lock (LOCK_SynchronizationLocal)
+        if (SynchronizationLocal.TrySwitchSynchronizationWith(synchronization))
           SynchronizationLocal = synchronization;
-          SynchronizationLocal.RollForwardToTip();
-        }
+
+      // Wo werden deaktivierte Syncs weggeschmissen?
     }
 
     bool TryConnectHeaderToChain(Header header)

@@ -21,8 +21,7 @@ namespace BTokenLib
       const int CAPACITY_MAX_QueueBlocksInsertion = 20;
       Dictionary<int, Block> QueueBlocks = new();
       Header HeaderTipBlockchain;
-      public double DifficultyAccumulated;
-      int HeightHeaderPopNextQueue;
+      double DifficultyAccumulated;
       ConcurrentBag<Block> PoolBlocks = new();
 
       public bool FlagIsAborted;
@@ -111,12 +110,29 @@ namespace BTokenLib
         }
       }
 
-      public bool PopBlock(out Block block)
+      public bool IsStrongerThan(Synchronization synchronization)
       {
-        if (HeightHeaderPopNextQueue == 0)
-          HeightHeaderPopNextQueue = QueueBlocks.Keys.Min();
+        return DifficultyAccumulated > synchronization.DifficultyAccumulated;
+      }
 
-        return QueueBlocks.Remove(HeightHeaderPopNextQueue++, out block);
+      public bool TrySwitchSynchronizationWith(Synchronization synchronization)
+      {
+        if (DifficultyAccumulated < synchronization.DifficultyAccumulated)
+        {
+          synchronization.Token = Token;
+
+          if (TryRewindToHeight(synchronization.GetHeightAncestor())
+            && synchronization.TryRollForwardToTip())
+          {
+            Token = null;
+            return true;
+          }
+
+          synchronization.Token = null;
+          synchronization.FlagIsAborted = true;
+        }
+
+        return false;
       }
     }
   }
