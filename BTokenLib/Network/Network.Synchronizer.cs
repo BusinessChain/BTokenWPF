@@ -102,8 +102,25 @@ namespace BTokenLib
       }
     }
 
+    readonly object LOCK_SynchronizationLocal = new object(); 
+    Synchronization SynchronizationLocal;
 
-
+    void SynchronizeTo(Synchronization synchronization)
+    {
+      lock (LOCK_SynchronizationLocal) 
+        if (/*zu tiefer height Ancestor*/)
+        {
+          synchronization.FlagIsAborted = true;
+          Log($"Can not sync to Synchronization because fork height too deep.");
+        }
+        else if (SynchronizationLocal.DifficultyAccumulated < synchronization.DifficultyAccumulated)
+        {
+          SynchronizationLocal.RewindToHeight(synchronization.GetHeightAncestor());
+          SynchronizationLocal.TransferDatabaseTo(synchronization);
+          SynchronizationLocal = synchronization;
+          SynchronizationLocal.RollForwardToTip();
+        }
+    }
 
     bool TryConnectHeaderToChain(Header header)
     {

@@ -39,7 +39,7 @@ namespace BTokenLib
 
           peer.Synchronization.InsertBlock(BlockDownload);
 
-          Network.SynchronizationLocal.SynchronizeTo(peer.Synchronization);
+          Network.SynchronizeTo(peer.Synchronization);
 
           RequestBlock(peer);
         }

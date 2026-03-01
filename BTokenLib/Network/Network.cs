@@ -133,9 +133,6 @@ namespace BTokenLib
       return locator;
     }
     
-    // In dieser Synchronization ist die Datenabank permament angebunden.
-    Synchronization SynchronizationLocal;
-
     public bool TryLoadBlock(byte[] hash, out Block block)
     {
       block = null;

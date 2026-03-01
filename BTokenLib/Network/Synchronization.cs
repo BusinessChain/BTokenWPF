@@ -25,27 +25,13 @@ namespace BTokenLib
       int HeightHeaderPopNextQueue;
       ConcurrentBag<Block> PoolBlocks = new();
 
-      bool FlagIsAborted;
-
-      readonly object LOCK_Synchronization = new object();
+      public bool FlagIsAborted;
 
 
       public Synchronization(Header headerRoot, Header headerTip)
       {
         HeaderRoot = headerRoot;
         HeaderTip = headerTip;
-      }
-
-
-      // Einerseits DB rewinden und re-einspielen andererseits muss
-      // SynchronizationLocal irgendwie durch peer.Synchronization werden. 
-      public void SynchronizeTo(Synchronization synchronization)
-      {
-        lock (LOCK_Synchronization)
-          if (DifficultyAccumulated < synchronization.DifficultyAccumulated)
-          {
-            Token.Rewind();
-          }
       }
 
       public bool TryExtendHeaderchain(Header headerRoot, Header headerTip)
