@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using LiteDB;
-using System.ComponentModel;
 
 
 namespace BTokenLib
@@ -14,105 +13,44 @@ namespace BTokenLib
   {
     const int TIME_LOOP_SYNCHRONIZER_SECONDS = 60;
 
-    readonly object LOCK_IsStateSync = new();
-    public bool IsStateSync;
-    public DateTime TimeStartLastSync;
-
-    bool FlagSyncDBAbort;
-    List<byte[]> HashesDB;
-
-    object LOCK_ChargeHashDB = new();
-
-    Peer PeerSync;
-    bool FlagSyncHeadersExit;
-    const int TIMEOUT_HEADERSYNC_SECONDS = 5;
-    double TimeoutAdjustementFactor = 1.0;
-
-    int HeightInsertionNext;
-    object LOCK_BlockInsertion = new();
-    Dictionary<int, Block> QueueBlockInsertion = new();
-    Dictionary<int, Header> HeadersDownloading = new();
-    const int TIMEOUT_BLOCKDOWNLOAD_SECONDS = 120;
-    Header HeaderDownloadNext;
-
-    bool FlagSyncBlocksExit;
-
-    public string PathBlockArchive;
-    public string PathBlockArchiveMain = "PathBlockArchiveMain";
-    public string PathBlockArchiveFork = "PathBlockArchiveFork";
-    public string PathFileHeaderchain;
-
-    public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
-
-        
-    bool TryReverseBlockchainToHeight(int heightBlockAncestor)
-    {
-      int heightBlock = Directory.GetFiles(PathBlockArchive)
-        .Select(f => Path.GetFileName(f))
-        .Select(name => int.TryParse(name, out int value) ? value : -1)
-        .DefaultIfEmpty(-1)
-        .Max();
-
-      while (heightBlockAncestor < heightBlock && TryLoadBlock(heightBlock, out Block block))
-        if (Token.TryReverseBlock(block))
-          heightBlock -= 1;
-
-      if (heightBlockAncestor != heightBlock)
-        return false;
-
-      if (PathBlockArchive == PathBlockArchiveMain)
-      {
-        Directory.CreateDirectory(PathBlockArchiveFork);
-        PathBlockArchive = PathBlockArchiveFork;
-      }
-      else if (PathBlockArchive == PathBlockArchiveFork)
-      {
-        Directory.Delete(PathBlockArchiveFork, recursive: true);
-        PathBlockArchive = PathBlockArchiveMain;
-      }
-
-      return true;
-    }
-
+    readonly object LOCK_Synchronizations = new object();
+    Synchronization SynchronizationLocal;
     List<Synchronization> SynchronizationsInProgress = new();
 
-    bool TryReceiveHeaderchain(
-      Header headerRoot, Header headerTip, 
-      out Synchronization sync)
+    bool TryInsertSynchronization(ref Synchronization sync)
     {
-      sync = null;
-
-      lock (SynchronizationsInProgress)
+      // bei diesem Lock sollten keine Blöcke mehr in die Syncs inserted werden.
+      // LOCK_BlockInsertion muss evt mit LOCK_Synchronizations zusammengelegt werden.
+      lock (LOCK_Synchronizations) 
       {
-        foreach(Synchronization syncInProgress in SynchronizationsInProgress)
+        if (sync.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
         {
-          if (syncInProgress == SynchronizationsInProgress.First()
-            && syncInProgress.DifficultyAccumulated >= headerTip.DifficultyAccumulated)
-            return false;
+          foreach (Synchronization syncInProgress in SynchronizationsInProgress)
+            if (syncInProgress.TryMergeSynchronization(sync))
+            {
+              sync = syncInProgress;
+              return true;
+            }
 
-          if (syncInProgress.TryExtendHeaderchain(headerRoot, headerTip))
-          {
-            sync = syncInProgress;
-            return true;
-          }
+          SynchronizationsInProgress.Add(sync);
+          return true;
         }
 
-        sync = new(headerRoot, headerTip);
-        SynchronizationsInProgress.Add(sync);
-        return true;
+        return false;
       }
     }
-
-    readonly object LOCK_SynchronizationLocal = new object(); 
-    Synchronization SynchronizationLocal;
 
     void UpdateSynchronization(Synchronization synchronization)
     {
-      lock (LOCK_SynchronizationLocal)
-        if (SynchronizationLocal.TrySwitchSynchronizationWith(synchronization))
+      lock (LOCK_Synchronizations)
+      {
+        if (SynchronizationLocal.TryReorgToken(synchronization))
           SynchronizationLocal = synchronization;
 
-      // Wo werden deaktivierte Syncs weggeschmissen?
+        foreach (Synchronization syncInProgress in SynchronizationsInProgress)
+          if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
+            syncInProgress.FlagIsAborted = true;
+      }
     }
 
     bool TryConnectHeaderToChain(Header header)
@@ -134,10 +72,6 @@ namespace BTokenLib
 
         return false;
       }
-    }
-
-    async Task SyncDB(Peer peer)
-    {
     }
   }
 }

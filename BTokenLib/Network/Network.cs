@@ -20,10 +20,16 @@ namespace BTokenLib
     object LOCK_Peers = new();
     List<Peer> Peers = new();
 
+    public string PathBlockArchive;
+    public string PathBlockArchiveMain = "PathBlockArchiveMain";
+    public string PathBlockArchiveFork = "PathBlockArchiveFork";
+    public string PathFileHeaderchain;
+
     DirectoryInfo DirectoryPeers;
     DirectoryInfo DirectoryPeersActive;
     DirectoryInfo DirectoryPeersArchive;
     DirectoryInfo DirectoryPeersDisposed;
+    public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
     public Header HeaderTip;
     public Header HeaderGenesis;
@@ -186,12 +192,6 @@ namespace BTokenLib
 
           return false;
         }
-    }
-
-    public void AdvertizeBlockToNetwork(Block block)
-    {
-      lock (LOCK_Peers)
-        Peers.ForEach(p => p.AdvertizeBlock(block));
     }
 
     public void BroadcastTX(TX tX)

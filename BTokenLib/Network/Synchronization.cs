@@ -13,6 +13,7 @@ namespace BTokenLib
 
       Header HeaderRoot;
       Header HeaderTip;
+      Header HeaderTipBlockchain;
 
       Dictionary<int, Header> HeadersDownloading = new();
       Header HeaderDownloadNext;
@@ -20,8 +21,6 @@ namespace BTokenLib
       object LOCK_BlockInsertion = new();
       const int CAPACITY_MAX_QueueBlocksInsertion = 20;
       Dictionary<int, Block> QueueBlocks = new();
-      Header HeaderTipBlockchain;
-      double DifficultyAccumulated;
       ConcurrentBag<Block> PoolBlocks = new();
 
       public bool FlagIsAborted;
@@ -84,52 +83,52 @@ namespace BTokenLib
 
         lock (LOCK_BlockInsertion)
         {
-          if (!QueueBlocks.TryAdd(heightBlock, block))
-          {
-            PoolBlocks.Add(block);
-            return;
-          }
-
           HeadersDownloading.Remove(heightBlock);
 
-          if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
-            do
-            {
-              try
+          if (QueueBlocks.TryAdd(heightBlock, block))
+          {
+            if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
+              do
               {
-                Token?.InsertBlock(block);
-              }
-              catch
-              {
-                FlagIsAborted = true;
-                return;
-              }
+                HeaderTipBlockchain = block.Header;
 
-              HeaderTipBlockchain = block.Header;
-            } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
+                try
+                {
+                  Token?.InsertBlock(block);
+                }
+                catch
+                {
+                  FlagIsAborted = true;
+                  return;
+                }
+              } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
+          }
+          else
+            PoolBlocks.Add(block);
         }
       }
-
-      public bool IsStrongerThan(Synchronization synchronization)
+          
+      public bool IsHeaderTipStrongerThanBlockTip(Synchronization sync)
       {
-        return DifficultyAccumulated > synchronization.DifficultyAccumulated;
+        return HeaderTip.DifficultyAccumulated >
+          sync.HeaderTipBlockchain.DifficultyAccumulated;
       }
 
-      public bool TrySwitchSynchronizationWith(Synchronization synchronization)
+      public bool TryReorgToken(Synchronization sync)
       {
-        if (DifficultyAccumulated < synchronization.DifficultyAccumulated)
+        if (HeaderTipBlockchain.DifficultyAccumulated < sync.HeaderTipBlockchain.DifficultyAccumulated)
         {
-          synchronization.Token = Token;
+          sync.Token = Token;
 
-          if (TryRewindToHeight(synchronization.GetHeightAncestor())
-            && synchronization.TryRollForwardToTip())
+          if (TryRewindToHeight(sync.GetHeightAncestor())
+            && sync.TryRollForwardToTip())
           {
             Token = null;
             return true;
           }
 
-          synchronization.Token = null;
-          synchronization.FlagIsAborted = true;
+          sync.Token = null;
+          sync.FlagIsAborted = true;
         }
 
         return false;

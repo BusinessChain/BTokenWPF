@@ -46,9 +46,9 @@ namespace BTokenLib
 
         public void RequestBlock(Peer peer)
         {
-          if (peer.Synchronization.TryFetchBlockDownload(
+          if (peer.Synchronization?.TryFetchBlockDownload(
             out Header headerDownload,
-            out Block blockDownload))
+            out Block blockDownload) == true)
           {
             HeaderDownload = headerDownload;
             BlockDownload = blockDownload;

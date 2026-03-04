@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Threading;
 
 namespace BTokenLib
 {
@@ -58,7 +59,7 @@ namespace BTokenLib
 
           if (countHeaders > 2000)
             throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
-          else if(countHeaders > 0)
+          else if (countHeaders > 0)
           {
             for (int i = 0; i < countHeaders; i += 1)
             {
@@ -67,7 +68,7 @@ namespace BTokenLib
 
               if (HeaderRoot == null)
               {
-                if(!peer.Network.TryConnectHeaderToChain(header))
+                if (!peer.Network.TryConnectHeaderToChain(header))
                 {
                   peer.SendGetHeaders(peer.Network.GetLocator());
                   return;
@@ -87,8 +88,14 @@ namespace BTokenLib
             peer.SendGetHeaders(new List<Header> { HeaderTip });
           }
           else if (countHeaders == 0 && HeaderRoot != null)
-            if (Network.TryReceiveHeaderchain(HeaderRoot, HeaderTip, out peer.Synchronization))
+          {
+            peer.Synchronization = new Synchronization(HeaderRoot, HeaderTip);
+
+            if (Network.TryInsertSynchronization(ref peer.Synchronization))
               peer.RequestBlock();
+            else
+              peer.Synchronization.FlagIsAborted = true;
+          }
         }
       }
     }
