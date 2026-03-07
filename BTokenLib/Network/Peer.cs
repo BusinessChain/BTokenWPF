@@ -193,47 +193,6 @@ namespace BTokenLib
         await SendMessage(new GetDataMessage(InventoryType.MSG_DB, HashDBDownload));
       }
 
-      public async Task SendHeaders(List<Header> headers)
-      {
-        string logText = $"Send {headers.Count} headers.";
-
-        if (headers.Count > 0)
-          logText += $" {headers.First()}";
-        if (headers.Count > 1)
-          logText += $" ... {headers.Last()}.";
-
-        logText.Log(this, LogFile, Network.LogEntryNotifier);
-
-        await SendMessage(new HeadersMessage(headers));
-      }
-
-      public async Task AdvertizeBlock(Block block)
-      {
-        lock(this)
-        {
-          if(State != StateProtocol.Idle)
-          {
-            $"Is not idle when attempting to send block {block} but in state {State}."
-              .Log(this, LogFile, Network.LogEntryNotifier);
-            return;
-          }
-
-          State = StateProtocol.HeaderDownload;
-        }
-
-        $"Advertize block {block}.".Log(this, LogFile, Network.LogEntryNotifier);
-
-        await SendHeaders(new List<Header>() { block.Header });
-
-        SetStateIdle();
-      }
-
-      public void SetStateIdle()
-      {
-        lock (this)
-          State = StateProtocol.Idle;
-      }
-
       public void Dispose()
       {
         Log($"Dispose {Connection}.");
@@ -243,8 +202,6 @@ namespace BTokenLib
         TcpClient.Dispose();
 
         LogFile.Dispose();
-
-        State = StateProtocol.Disposed;
 
         string pathLogFile = ((FileStream)LogFile.BaseStream).Name;
         string nameLogFile = Path.GetFileName(pathLogFile);
@@ -263,7 +220,6 @@ namespace BTokenLib
           return
             $"\nStatus peer {this}:\n" +
             $"lifeTime minutes: {lifeTime}\n" +
-            $"State: {State}\n" +
             $"Connection: {Connection}\n";
       }
 

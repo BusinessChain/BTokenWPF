@@ -21,15 +21,15 @@ namespace BTokenLib
 
 
         public HeadersMessage()
-          : this(new List<Header>()) 
+          : this(null) 
         { }
 
-        public HeadersMessage(List<Header> headers)
+        public HeadersMessage(Header headerRoot)
           : base("headers")
         {
-          Headers = headers;
+          HeaderRoot = headerRoot;
 
-          if(Headers.Any())
+          if(HeaderRoot != null)
           {
             int indexPayload = 0;
 

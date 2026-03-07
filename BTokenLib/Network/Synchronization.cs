@@ -32,19 +32,21 @@ namespace BTokenLib
         HeaderTip = headerTip;
       }
 
-      public bool TryExtendHeaderchain(Header headerRoot, Header headerTip)
+      public bool TryMerge(Synchronization sync)
       {
-        while (!headerRoot.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
-        {
-          headerRoot = headerRoot.HeaderNext;
+        Header headerRootSync = sync.HeaderRoot;
 
-          if (headerRoot == null)
+        while (!headerRootSync.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
+        {
+          headerRootSync = headerRootSync.HeaderNext;
+
+          if (headerRootSync == null)
             return false;
         }
 
-        headerRoot.AppendToHeader(HeaderTip);
-        HeaderTip.HeaderNext = headerRoot;
-        HeaderTip = headerTip;
+        headerRootSync.AppendToHeader(HeaderTip);
+        HeaderTip.HeaderNext = headerRootSync;
+        HeaderTip = sync.HeaderTip;
 
         return true;
       }
@@ -81,6 +83,8 @@ namespace BTokenLib
       {
         int heightBlock = block.Header.Height;
 
+        // Hier auch den TryLockSynchronization beziehen und nach 
+        // Insert wieder freigeben.
         lock (LOCK_BlockInsertion)
         {
           HeadersDownloading.Remove(heightBlock);

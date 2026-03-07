@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using LiteDB;
+using System.Threading;
 
 
 namespace BTokenLib
@@ -13,36 +14,73 @@ namespace BTokenLib
   {
     const int TIME_LOOP_SYNCHRONIZER_SECONDS = 60;
 
-    readonly object LOCK_Synchronizations = new object();
+    readonly object LOCK_FlagSynchronizationsLocked = new object();
+    bool FlagSynchronizationsLocked;
     Synchronization SynchronizationLocal;
     List<Synchronization> SynchronizationsInProgress = new();
 
     bool TryInsertSynchronization(ref Synchronization sync)
     {
-      // bei diesem Lock sollten keine Blöcke mehr in die Syncs inserted werden.
-      // LOCK_BlockInsertion muss evt mit LOCK_Synchronizations zusammengelegt werden.
-      lock (LOCK_Synchronizations) 
+      if (!TryLockSynchronizations())
+        return false;
+
+      try
       {
         if (sync.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
         {
           foreach (Synchronization syncInProgress in SynchronizationsInProgress)
-            if (syncInProgress.TryMergeSynchronization(sync))
+            if (syncInProgress.TryMerge(sync))
             {
               sync = syncInProgress;
-              return true;
+              goto Skip_Add2SynchronizationsInProgress;
             }
 
           SynchronizationsInProgress.Add(sync);
+
+        Skip_Add2SynchronizationsInProgress:
+
           return true;
         }
-
-        return false;
       }
+      finally
+      {
+        ReleaseLockSynchronizations();
+      }
+
+      return false;
+    }
+
+    bool TryLockSynchronizations()
+    {
+      int randomTimeout = Random.Shared.Next(5,10);
+
+      while (randomTimeout > 0)
+      {
+        lock (LOCK_FlagSynchronizationsLocked)
+        {
+          if(!FlagSynchronizationsLocked)
+          {
+            FlagSynchronizationsLocked = true;
+            return true;
+          }
+        }
+
+        Thread.Sleep(10);
+        randomTimeout -= 1;
+      }
+
+      return false;
+    }
+
+    void ReleaseLockSynchronizations()
+    {
+      lock (LOCK_FlagSynchronizationsLocked)
+        FlagSynchronizationsLocked = false;
     }
 
     void UpdateSynchronization(Synchronization synchronization)
     {
-      lock (LOCK_Synchronizations)
+      if(TryLockSynchronizations())
       {
         if (SynchronizationLocal.TryReorgToken(synchronization))
           SynchronizationLocal = synchronization;
@@ -50,6 +88,8 @@ namespace BTokenLib
         foreach (Synchronization syncInProgress in SynchronizationsInProgress)
           if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
             syncInProgress.FlagIsAborted = true;
+
+        ReleaseLockSynchronizations();
       }
     }
 
