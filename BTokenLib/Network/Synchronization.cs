@@ -120,7 +120,8 @@ namespace BTokenLib
 
       public bool TryReorgToken(Synchronization sync)
       {
-        if (HeaderTipBlockchain.DifficultyAccumulated < sync.HeaderTipBlockchain.DifficultyAccumulated)
+        if (HeaderTipBlockchain.DifficultyAccumulated 
+          < sync.HeaderTipBlockchain.DifficultyAccumulated)
         {
           sync.Token = Token;
 
@@ -136,6 +137,28 @@ namespace BTokenLib
         }
 
         return false;
+      }
+
+      public List<Header> GetLocator()
+      {
+        Header header = HeaderTip;
+        List<Header> locator = new();
+        int depth = 0;
+        int nextLocationDepth = 0;
+
+        while (header != null)
+        {
+          if (depth == nextLocationDepth || header.HeaderPrevious == null)
+          {
+            locator.Add(header);
+            nextLocationDepth = 2 * nextLocationDepth + 1;
+          }
+
+          depth++;
+          header = header.HeaderPrevious;
+        }
+
+        return locator;
       }
     }
   }

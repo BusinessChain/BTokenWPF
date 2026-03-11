@@ -142,6 +142,5 @@ namespace BTokenWPF
 
       new WindowToken(token).Show();
     }
-
   }
 }

@@ -18,10 +18,6 @@ namespace BTokenLib
       "00000000FFFF0000000000000000000000000000000000000000000000000000".ToBinary());
 
 
-    public HeaderBitcoin()
-    {
-    }
-
     public HeaderBitcoin(
       byte[] headerHash,
       uint version,

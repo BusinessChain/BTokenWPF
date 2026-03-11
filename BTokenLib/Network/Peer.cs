@@ -121,7 +121,7 @@ namespace BTokenLib
         StartMessageReceiver();
 
         if (Connection == ConnectionType.OUTBOUND)
-          SendGetHeaders(Network.GetLocator()); // GetLocator() should contain a lock.
+          SendGetHeaders(Network.GetLocator());
       }
 
       public void BroadcastTX(TX tX)

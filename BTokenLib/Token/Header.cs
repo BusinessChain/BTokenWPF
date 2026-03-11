@@ -25,14 +25,10 @@ namespace BTokenLib
     public int Height;
     public int CountTXs;
 
-    public int CountBytesTXs;
-    public long CountBytesTXsAccumulated;
-
     public double Difficulty;
     public double DifficultyAccumulated;
 
     public long Fee;
-    public double FeePerByte;
 
 
     public Header()
@@ -60,33 +56,12 @@ namespace BTokenLib
 
     public virtual void AppendToHeader(Header headerPrevious)
     {
-      Height = headerPrevious.Height + 1;
-
       if (!HashPrevious.IsAllBytesEqual(headerPrevious.Hash))
         throw new ProtocolException($"Header {this} references header previous {HashPrevious.ToHexString()} but attempts to append to {headerPrevious}.");
 
+      Height = headerPrevious.Height + 1;
       HeaderPrevious = headerPrevious;
       DifficultyAccumulated = headerPrevious.DifficultyAccumulated + Difficulty;
-      CountBytesTXsAccumulated = headerPrevious.CountBytesTXsAccumulated + CountBytesTXs;
-
-      if (headerPrevious.HeaderParent != null)
-      {
-        Header headerParent = headerPrevious.HeaderParent.HeaderNext;
-
-        while (true)
-        {
-          if (headerParent == null)
-            throw new ProtocolException($"Cannot append header {this} to header {headerPrevious} because it is not anchored in parent chain.");
-
-          if(headerParent.HashesChild.Any(h => h.Value.IsAllBytesEqual(Hash)))
-          {
-            HeaderParent = headerParent;
-            break;
-          }
-
-          headerParent = headerParent.HeaderNext;
-        }
-      }
     }
 
     public void ComputeHash()

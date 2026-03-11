@@ -75,10 +75,10 @@ namespace BTokenLib
 
       StartPeerConnector();
 
-      LoadBlocksFromArchive();
+      LoadSynchronizationFromDisk();
     }
 
-    void LoadBlocksFromArchive()
+    void LoadSynchronizationFromDisk()
     {
       // Load initial Synchronization from Token database
       // Connect Token database.
@@ -119,24 +119,8 @@ namespace BTokenLib
 
     List<Header> GetLocator()
     {
-      Header header = HeaderTip;
-      List<Header> locator = new();
-      int depth = 0;
-      int nextLocationDepth = 0;
-
-      while (header != null)
-      {
-        if (depth == nextLocationDepth || header.HeaderPrevious == null)
-        {
-          locator.Add(header);
-          nextLocationDepth = 2 * nextLocationDepth + 1;
-        }
-
-        depth++;
-        header = header.HeaderPrevious;
-      }
-
-      return locator;
+      lock (LOCK_FlagSynchronizationsLocked)
+        return SynchronizationLocal.GetLocator();
     }
     
     public bool TryLoadBlock(byte[] hash, out Block block)

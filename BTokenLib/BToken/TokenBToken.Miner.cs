@@ -52,7 +52,7 @@ namespace BTokenLib
       int timerCreateNextToken = 0;
       int timeMinerLoopMilliseconds = 100;
 
-      FeeSatoshiPerByteAnchorToken = TokenParent.Network.HeaderTip.FeePerByte;
+      FeeSatoshiPerByteAnchorToken = TokenParent.Network.GetFeeRate();
 
       if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
         FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;

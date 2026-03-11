@@ -119,7 +119,6 @@ namespace BTokenLib
 
     public virtual void VerifyCoinbase(Header header, long valueOutputsTXCoinbase) { }
 
-
     protected virtual void ReverseBlockInCache(Block block) { }
                   
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);

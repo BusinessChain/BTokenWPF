@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+
 
 namespace BTokenLib
 {
@@ -50,6 +52,30 @@ namespace BTokenLib
       BitConverter.GetBytes(Nonce).CopyTo(buffer, 100);
 
       return buffer;
+    }
+
+    public override void AppendToHeader(Header headerPrevious)
+    {
+      base.AppendToHeader(headerPrevious);
+
+      if (headerPrevious.HeaderParent != null)
+      {
+        Header headerParent = headerPrevious.HeaderParent.HeaderNext;
+
+        while (true)
+        {
+          if (headerParent == null)
+            throw new ProtocolException($"Cannot append header {this} to header {headerPrevious} because it is not anchored in parent chain.");
+
+          if (headerParent.HashesChild.Any(h => h.Value.IsAllBytesEqual(Hash)))
+          {
+            HeaderParent = headerParent;
+            break;
+          }
+
+          headerParent = headerParent.HeaderNext;
+        }
+      }
     }
   }
 }

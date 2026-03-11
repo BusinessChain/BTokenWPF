@@ -57,13 +57,11 @@ namespace BTokenLib
       while (randomTimeout > 0)
       {
         lock (LOCK_FlagSynchronizationsLocked)
-        {
-          if(!FlagSynchronizationsLocked)
+          if (!FlagSynchronizationsLocked)
           {
             FlagSynchronizationsLocked = true;
             return true;
           }
-        }
 
         Thread.Sleep(10);
         randomTimeout -= 1;
@@ -78,12 +76,12 @@ namespace BTokenLib
         FlagSynchronizationsLocked = false;
     }
 
-    void UpdateSynchronization(Synchronization synchronization)
+    void UpdateSynchronization(Synchronization sync)
     {
       if(TryLockSynchronizations())
       {
-        if (SynchronizationLocal.TryReorgToken(synchronization))
-          SynchronizationLocal = synchronization;
+        if (SynchronizationLocal.TryReorgToken(sync))
+          SynchronizationLocal = sync;
 
         foreach (Synchronization syncInProgress in SynchronizationsInProgress)
           if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
@@ -93,7 +91,7 @@ namespace BTokenLib
       }
     }
 
-    bool TryConnectHeaderToChain(Header header)
+    bool TryConnectHeaderToChain(ref Header header)
     {
       lock (Lock_StateNetwork)
       {

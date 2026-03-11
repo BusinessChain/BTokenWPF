@@ -9,59 +9,11 @@ namespace BTokenLib
   {
     void ReceivedCommand(string command, Peer peer)
     {
-      if (command == "headers")
-      {
-        $"Receiving headers message.".Log(this, LogFile, Token.LogEntryNotifier);
-
-        int startIndex = 0;
-        int countHeaders = VarInt.GetInt(Payload, ref startIndex);
-        List<Header> headers = new();
-
-        for (int i = 0; i < countHeaders; i += 1)
-        {
-          headers.Add(Token.ParseHeader(Payload, ref startIndex, SHA256));
-          startIndex += 1; // Number of transaction in the block, which in the header is always 0
-        }
-
-        // Es wäre doch sinnvoller hier gerade die Payload zu übergeben, dann muss der Peer nicht
-        // selber den Parser aufrufen.
-        Network.TryReceiveHeaders(this, headers, ref flagMessageMayNotFollowConsensusRules);
-      }
-      else if (command == "block")
-      {
-        if (HeaderDownload == null)
-          throw new ProtocolException($"Received unrequested block message.");
-        //else
-        //Subtract message count DoS metric.
-
-        BlockDownload.LengthBufferPayload = LengthDataPayload;
-
-        BlockDownload.Parse(HeaderDownload.Height);
-
-        $"Received block {BlockDownload}.".Log(this, LogFile, Token.LogEntryNotifier);
-
-        if (!BlockDownload.Header.Hash.IsAllBytesEqual(HeaderDownload.Hash))
-          throw new ProtocolException(
-            $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
-            $"Requested was {HeaderDownload}.");
-
-        ResetTimer();
-
-        Network.InsertBlock(this, ref flagMessageMayNotFollowConsensusRules);
-      }
-      else if (command == "tx")
+      if (command == "tx")
       {
         TX tX = Token.ParseTX(tXRaw, SHA256);
 
-        try
-        {
-          Token.InsertTXUnconfirmed(tX);
-          $"Received TX {tX}.".Log(this, LogFile, Token.LogEntryNotifier);
-        }
-        catch (Exception ex)
-        {
-          $"Rejected inbound TX {tX}\n {ex.GetType().Name}: {ex.Message}.".Log(this, LogFile, Token.LogEntryNotifier);
-        }
+        Token.InsertTXUnconfirmed(tX);
       }
       else if (command == "getheaders")
       {
@@ -72,11 +24,9 @@ namespace BTokenLib
         int headersCount = VarInt.GetInt(Payload, ref startIndex);
 
         $"Received getHeaders with {headersCount} locator hashes."
-          .Log(this, LogFile, Token.LogEntryNotifier);
 
         if (!Token.TryLock())
         {
-          $"... but Token is locked.".Log(this, LogFile, Token.LogEntryNotifier);
           continue;
         }
 
@@ -87,19 +37,11 @@ namespace BTokenLib
 
         if (Network.TryLoadHeader(hashHeaderAncestor, out Header header))
         {
-          $"In getheaders locator common ancestor is {header}."
-            .Log(this, LogFile, Token.LogEntryNotifier);
-
           while (header.HeaderNext != null && headers.Count < 2000)
           {
             headers.Add(header.HeaderNext);
             header = header.HeaderNext;
           }
-
-          if (headers.Any())
-            $"Send headers {headers.First()}...{headers.Last()}.".Log(this, LogFile, Token.LogEntryNotifier);
-          else
-            $"Send empty headers.".Log(this, LogFile, Token.LogEntryNotifier);
 
           SendHeaders(headers);
         }
@@ -108,8 +50,6 @@ namespace BTokenLib
       }
       else if (command == "hashesDB")
       {
-        $"Receiving DB hashes.".Log(this, LogFile, Token.LogEntryNotifier);
-
         //HashesDB = Token.ParseHashesDB(
         //  Payload,
         //  LengthDataPayload,
