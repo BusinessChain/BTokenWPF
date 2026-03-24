@@ -86,7 +86,7 @@ namespace BTokenLib
       return timestampsPast[timestampsPast.Count / 2];
     }
 
-    public static uint GetNextTarget(HeaderBitcoin header)
+    static uint GetNextTarget(HeaderBitcoin header)
     {
       if (((header.Height + 1) % RETARGETING_BLOCK_INTERVAL) != 0)
         return header.NBits;

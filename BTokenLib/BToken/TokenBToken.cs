@@ -424,6 +424,9 @@ namespace BTokenLib
             index,
             HeaderBToken.COUNT_HEADER_BYTES));
 
+      uint version = BitConverter.ToUInt32(buffer, index);
+      index += 4;
+
       byte[] hashHeaderPrevious = new byte[32];
       Array.Copy(buffer, index, hashHeaderPrevious, 0, 32);
       index += 32;
@@ -436,10 +439,6 @@ namespace BTokenLib
       Array.Copy(buffer, index, hashDatabase, 0, 32);
       index += 32;
 
-      uint unixTimeSeconds = BitConverter.ToUInt32(
-        buffer, index);
-      index += 4;
-
       uint nonce = BitConverter.ToUInt32(buffer, index);
       index += 4;
 
@@ -448,7 +447,6 @@ namespace BTokenLib
         hashHeaderPrevious,
         merkleRootHash,
         hashDatabase,
-        unixTimeSeconds,
         nonce);
     }
   }

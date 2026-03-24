@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
@@ -9,6 +10,9 @@ namespace BTokenLib
   {
     class Synchronization
     {
+      Synchronization SynchronizationRoot;
+      List<Synchronization> SynchronizationBranches = new();
+
       Token Token;
 
       Header HeaderRoot;
@@ -25,11 +29,137 @@ namespace BTokenLib
 
       public bool FlagIsAborted;
 
+      bool FlagSynchronizationLocked;
+
 
       public Synchronization(Header headerRoot, Header headerTip)
       {
         HeaderRoot = headerRoot;
         HeaderTip = headerTip;
+      }
+
+      bool TryLockSynchronization()
+      {
+        int randomTimeout = Random.Shared.Next(5, 10);
+
+        while (randomTimeout > 0)
+        {
+          lock (this)
+            if (!FlagSynchronizationLocked)
+            {
+              FlagSynchronizationLocked = true;
+              return true;
+            }
+
+          Thread.Sleep(10);
+          randomTimeout -= 1;
+        }
+
+        return false;
+      }
+
+      void ReleaseLockSynchronizations()
+      {
+        lock (this)
+          FlagSynchronizationLocked = false;
+      }
+
+      public bool TryInsertHeaderchain(Header header, out Synchronization sync)
+      {
+        return TryInsertHeaderchain(header, out sync, flagLockSynchronization: true);
+      }
+
+      bool TryInsertHeaderchain(Header header, out Synchronization sync, bool flagLockSynchronization)
+      {
+        sync = null;
+
+        if (header == null)
+          return false;
+
+        if (flagLockSynchronization && !TryLockSynchronization())
+          return false;
+
+        try
+        {
+          Header headerAncestor = HeaderTip;
+
+          while (!headerAncestor.Hash.IsAllBytesEqual(header.HashPrevious))
+          {
+            if (headerAncestor == HeaderRoot)
+            {
+              foreach (Synchronization syncBranch in SynchronizationBranches)
+                if (syncBranch.TryInsertHeaderchain(header, out sync, flagLockSynchronization: false))
+                  return true;
+
+              return false;
+            }
+
+            headerAncestor = headerAncestor.HeaderPrevious;
+          }
+
+          // Header ancestor found.
+          // Skip duplicates
+          // B
+          while (headerAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
+          {
+            headerAncestor = headerAncestor.HeaderNext;
+            header = header.HeaderNext;
+
+            if (header == null)
+              return false;
+          }
+
+          // Skipped all duplicates, definitive header ancestor and header root found.
+          // Falls keine Fork, Headerchain verlängern und Sync returnen, ansonsten in den Branches schauen
+          // headerAncestor = C
+          // header = X
+          if (headerAncestor == HeaderTip)
+          {
+            while (header != null)
+            {
+              header.AppendToHeader(HeaderTip);
+              HeaderTip.HeaderNext = header;
+              HeaderTip = header;
+              header = header.HeaderNext;
+            }
+
+            sync = this;
+            return true;
+          }
+          else
+          {
+            Synchronization syncBranch = SynchronizationBranches
+              .Find(s => s.HeaderRoot.Hash.IsAllBytesEqual(header.Hash));
+
+            if (syncBranch != null)
+            {
+              header = header.HeaderNext;
+              return syncBranch.TryInsertHeaderchain(header, out sync, flagLockSynchronization: false);
+            }
+            else
+            {
+              Header headerRoot = header;
+              Header headerTip = headerAncestor;
+
+              while (header != null)
+              {
+                header.AppendToHeader(headerTip);
+                headerTip.HeaderNext = header;
+                headerTip = header;
+                header = header.HeaderNext;
+              }
+
+              sync = new Synchronization(headerRoot, headerTip);
+              SynchronizationBranches.Add(sync);
+              return true;
+            }
+          }
+        }
+        finally
+        {
+          if (flagLockSynchronization)
+            ReleaseLockSynchronizations();
+        }
       }
 
       public bool TryMerge(Synchronization sync)

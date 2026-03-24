@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
 
+
 namespace BTokenLib
 {
   partial class Network
@@ -52,53 +53,6 @@ namespace BTokenLib
         }
 
 
-        Header ParseHeader(ref int index)
-        {
-          byte[] hash = SHA256.ComputeHash(
-          SHA256.ComputeHash(
-            Payload,
-            index,
-            HeaderBitcoin.COUNT_HEADER_BYTES));
-
-          uint version = BitConverter.ToUInt32(Payload, index);
-          index += 4;
-
-          byte[] previousHeaderHash = new byte[32];
-          Array.Copy(Payload, index, previousHeaderHash, 0, 32);
-          index += 32;
-
-          byte[] merkleRootHash = new byte[32];
-          Array.Copy(Payload, index, merkleRootHash, 0, 32);
-          index += 32;
-
-          uint unixTimeSeconds = BitConverter.ToUInt32(Payload, index);
-          index += 4;
-
-          bool isBlockTimePremature = unixTimeSeconds >
-            (DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 2 * 60 * 60);
-
-          if (isBlockTimePremature)
-            throw new ProtocolException($"Timestamp premature {new DateTime(unixTimeSeconds).Date}.");
-
-          uint nBits = BitConverter.ToUInt32(Payload, index);
-          index += 4;
-
-          if (hash.IsGreaterThan(nBits))
-            throw new ProtocolException($"Header hash {hash.ToHexString()} greater than NBits {nBits}.");
-
-          uint nonce = BitConverter.ToUInt32(Payload, index);
-          index += 4;
-
-          return new Header(
-            hash,
-            version,
-            previousHeaderHash,
-            merkleRootHash,
-            unixTimeSeconds,
-            nBits,
-            nonce);
-        }
-
         //Not DoS save yet, when unsolicited zero headers or orphans are received.
         public override void Run(Peer peer)
         {
@@ -114,7 +68,7 @@ namespace BTokenLib
 
             for (int i = 0; i < countHeaders; i += 1)
             {
-              Header header = ParseHeader(ref startIndex);
+              Header header = Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
               int countTXs = VarInt.GetInt(Payload, ref startIndex);
 
               if (headerRoot == null)
@@ -132,13 +86,6 @@ namespace BTokenLib
 
             if (HeaderRoot == null)
             {
-              if (!peer.Network.TryConnectHeaderToChain(ref headerRoot))
-              {
-                // Hier Dos Counter machen, damit bei tiefer Fork kein deadlock.
-                peer.SendGetHeaders(peer.Network.GetLocator());
-                return;
-              }
-
               HeaderRoot = headerRoot;
               HeaderTip = headerTip;
             }
@@ -153,12 +100,16 @@ namespace BTokenLib
           }
           else if (countHeaders == 0 && HeaderRoot != null)
           {
-            peer.Synchronization = new Synchronization(HeaderRoot, HeaderTip);
-
-            if (Network.TryInsertSynchronization(ref peer.Synchronization))
+            if (Network.SynchronizationRoot.TryInsertHeaderchain(HeaderRoot, out peer.Synchronization))
               peer.RequestBlock();
             else
-              peer.Synchronization.FlagIsAborted = true;
+            {
+              // Ich nehme an, das passiert meistens wenn Sync schon gelockt ist oder bei Orphan
+              // Hier Dos Counter machen.
+            }
+
+            HeaderRoot = null;
+            HeaderTip = null;
           }
         }
       }

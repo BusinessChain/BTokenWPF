@@ -82,7 +82,7 @@ namespace BTokenLib
     {
       // Load initial Synchronization from Token database
       // Connect Token database.
-      $"Load Blocks from disk.".Log(this, LogEntryNotifier);
+      Log($"Load Blocks from disk.");
 
       int heightBlockNext = Directory.GetFiles(PathBlockArchive, "*.blk")
       .Select(Path.GetFileNameWithoutExtension)
@@ -119,8 +119,8 @@ namespace BTokenLib
 
     List<Header> GetLocator()
     {
-      lock (LOCK_FlagSynchronizationsLocked)
-        return SynchronizationLocal.GetLocator();
+      lock (SynchronizationRoot)
+        return SynchronizationRoot.GetLocator();
     }
     
     public bool TryLoadBlock(byte[] hash, out Block block)

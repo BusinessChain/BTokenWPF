@@ -1,11 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Collections.Generic;
-
-using LiteDB;
-using System.Threading;
 
 
 namespace BTokenLib
@@ -16,7 +12,7 @@ namespace BTokenLib
 
     readonly object LOCK_FlagSynchronizationsLocked = new object();
     bool FlagSynchronizationsLocked;
-    Synchronization SynchronizationLocal;
+    Synchronization SynchronizationRoot;
     List<Synchronization> SynchronizationsInProgress = new();
 
     bool TryInsertSynchronization(ref Synchronization sync)
@@ -26,7 +22,7 @@ namespace BTokenLib
 
       try
       {
-        if (sync.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
+        if (sync.IsHeaderTipStrongerThanBlockTip(SynchronizationRoot))
         {
           foreach (Synchronization syncInProgress in SynchronizationsInProgress)
             if (syncInProgress.TryMerge(sync))
@@ -80,35 +76,14 @@ namespace BTokenLib
     {
       if(TryLockSynchronizations())
       {
-        if (SynchronizationLocal.TryReorgToken(sync))
-          SynchronizationLocal = sync;
+        if (SynchronizationRoot.TryReorgToken(sync))
+          SynchronizationRoot = sync;
 
         foreach (Synchronization syncInProgress in SynchronizationsInProgress)
-          if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationLocal))
+          if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationRoot))
             syncInProgress.FlagIsAborted = true;
 
         ReleaseLockSynchronizations();
-      }
-    }
-
-    bool TryConnectHeaderToChain(ref Header header)
-    {
-      lock (Lock_StateNetwork)
-      {
-        Header headerInChain = HeaderTip;
-
-        do
-        {
-          if (header.HashPrevious.IsAllBytesEqual(headerInChain.Hash))
-          {
-            header.AppendToHeader(headerInChain);
-            return true;
-          }
-
-          headerInChain = headerInChain.HeaderPrevious;
-        } while (headerInChain != null);
-
-        return false;
       }
     }
   }

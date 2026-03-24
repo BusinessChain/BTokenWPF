@@ -82,8 +82,8 @@ namespace BTokenLib
       uint version = BitConverter.ToUInt32(buffer, index);
       index += 4;
 
-      byte[] previousHeaderHash = new byte[32];
-      Array.Copy(buffer, index, previousHeaderHash, 0, 32);
+      byte[] hashHeaderPrevious = new byte[32];
+      Array.Copy(buffer, index, hashHeaderPrevious, 0, 32);
       index += 32;
 
       byte[] merkleRootHash = new byte[32];
@@ -111,7 +111,7 @@ namespace BTokenLib
       return new HeaderBitcoin(
         hash,
         version,
-        previousHeaderHash,
+        hashHeaderPrevious,
         merkleRootHash,
         unixTimeSeconds,
         nBits,

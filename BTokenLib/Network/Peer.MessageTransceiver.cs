@@ -58,7 +58,10 @@ namespace BTokenLib
 
             timeEventExceptionLast = DateTime.UtcNow;
 
-            Log($"{ex.GetType().Name} in message receiver: \n{ex.Message}\nBan score: {banScore}");
+            Log(
+              $"{ex.GetType().Name} in message receiver: " +
+              $"\n{ex.Message}\n" +
+              $"Ban score: {banScore}");
           }
         }
 

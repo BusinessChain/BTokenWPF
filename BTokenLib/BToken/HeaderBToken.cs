@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public class HeaderBToken : Header
   {
-    public const int COUNT_HEADER_BYTES = 104;
+    public const int COUNT_HEADER_BYTES = 108;
 
     // Statt den aktuellen DB Hash, könnte auch der diesem Block vorangehende DB Hash
     // aufgeführt werden. Dies hätte beim Mining der vorteil, dass das Inserten des 
@@ -25,12 +25,10 @@ namespace BTokenLib
       byte[] hashPrevious,
       byte[] merkleRootHash,
       byte[] hashDatabase,
-      uint unixTimeSeconds,
       uint nonce) : base(
         headerHash,
         hashPrevious,
         merkleRootHash,
-        unixTimeSeconds,
         nonce)
     {
       Difficulty = 1;
