@@ -31,6 +31,8 @@ namespace BTokenLib
     DirectoryInfo DirectoryPeersDisposed;
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
+    Synchronization SynchronizationRoot;
+
     public Header HeaderTip;
     public Header HeaderGenesis;
 
@@ -117,7 +119,7 @@ namespace BTokenLib
       HeaderTip ??= HeaderGenesis;
     }
 
-    List<Header> GetLocator()
+    List<byte[]> GetLocator()
     {
       lock (SynchronizationRoot)
         return SynchronizationRoot.GetLocator();

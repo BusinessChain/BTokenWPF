@@ -87,9 +87,7 @@ namespace BTokenLib
 
       Header.Height = heightBlock;
       Header.CountTXs = TXs.Count;
-      Header.CountBytesTXs = startIndex - startIndexBeginningOfTXs;
       Header.Fee = TXs.Sum(t => t.Fee);
-      Header.FeePerByte = (double)Header.Fee / Header.CountBytesTXs;
 
       Token.VerifyCoinbase(Header, TXs[0].GetValueOutputs());
     }

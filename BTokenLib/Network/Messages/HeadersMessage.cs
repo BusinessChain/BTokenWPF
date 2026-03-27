@@ -15,8 +15,6 @@ namespace BTokenLib
       class HeadersMessage : MessageNetworkProtocol
       {
         Network Network;
-        Header HeaderRoot;
-        Header HeaderTip;
 
         SHA256 SHA256 = SHA256.Create();
 
@@ -53,7 +51,6 @@ namespace BTokenLib
         }
 
 
-        //Not DoS save yet, when unsolicited zero headers or orphans are received.
         public override void Run(Peer peer)
         {
           int startIndex = 0;
@@ -63,54 +60,60 @@ namespace BTokenLib
             throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
           else if (countHeaders > 0)
           {
-            Header headerRoot = null;
-            Header headerTip = null;
+            Header headerRoot = ParseHeaderchain(countHeaders, ref startIndex);
 
-            for (int i = 0; i < countHeaders; i += 1)
-            {
-              Header header = Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
-              int countTXs = VarInt.GetInt(Payload, ref startIndex);
-
-              if (headerRoot == null)
+            if (peer.Synchronization == null)
+              if (Network.SynchronizationRoot.TryCreateNewSynchronization(headerRoot, out peer.Synchronization))
               {
-                headerRoot = header;
-                headerTip = header;
+                peer.SendGetHeaders();
               }
               else
               {
-                header.AppendToHeader(headerTip);
-                headerTip.HeaderNext = header;
-                headerTip = header;
+                // Passiert wenn Sync schon gelockt ist oder bei Orphan oder duplicate.
+                // Hier Dos Counter machen.
+              }
+            else
+            {
+              if (peer.Synchronization.TryExtendHeaderchain(headerRoot, out byte[] hashHeaderTip))
+              {
+                peer.SendGetHeaders();
+              }
+              else
+              {
+                if (!Network.SynchronizationRoot.TryCreateNewSynchronization(headerRoot, out peer.Synchronization))
+                {
+                  // Passiert wenn Sync schon gelockt ist oder bei Orphan oder duplicate.
+                  // Hier Dos Counter machen.
+                }
               }
             }
-
-            if (HeaderRoot == null)
-            {
-              HeaderRoot = headerRoot;
-              HeaderTip = headerTip;
-            }
-            else
-            {
-              headerRoot.AppendToHeader(HeaderTip);
-              HeaderTip.HeaderNext = headerRoot;
-              HeaderTip = headerTip;
-            }
-
-            peer.SendGetHeaders(new List<Header> { HeaderTip });
           }
-          else if (countHeaders == 0 && HeaderRoot != null)
+          else if (countHeaders == 0 && peer.Synchronization != null)
+            peer.RequestBlock();
+        }
+
+        Header ParseHeaderchain(int countHeaders, ref int startIndex)
+        {
+          Header headerRoot = Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
+          VarInt.GetInt(Payload, ref startIndex);
+
+          Header headerTip = headerRoot;
+
+          countHeaders -= 1;
+
+          while (countHeaders > 0)
           {
-            if (Network.SynchronizationRoot.TryInsertHeaderchain(HeaderRoot, out peer.Synchronization))
-              peer.RequestBlock();
-            else
-            {
-              // Ich nehme an, das passiert meistens wenn Sync schon gelockt ist oder bei Orphan
-              // Hier Dos Counter machen.
-            }
+            Header header = Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
+            VarInt.GetInt(Payload, ref startIndex);
 
-            HeaderRoot = null;
-            HeaderTip = null;
+            header.AppendToHeader(headerTip);
+            headerTip.HeaderNext = header;
+            headerTip = header;
+
+            countHeaders -= 1;
           }
+
+          return headerRoot;
         }
       }
     }

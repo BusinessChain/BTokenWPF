@@ -212,12 +212,7 @@ namespace BTokenLib
     {
       try
       {
-        Peer peer = new(
-          this,
-          Token.SizeBlockMax,
-          iP,
-          tcpClient,
-          connection);
+        Peer peer = new(this, iP, tcpClient, connection);
 
         await peer.Start();
 

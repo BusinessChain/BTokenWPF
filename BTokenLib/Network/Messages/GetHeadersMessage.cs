@@ -14,7 +14,7 @@ namespace BTokenLib
         public GetHeadersMessage()
           : base("getheaders") { }
 
-        public GetHeadersMessage(List<Header> headerLocator, uint versionProtocol)
+        public GetHeadersMessage(List<byte[]> headerLocator, uint versionProtocol)
           : base("getheaders")
         {
           List<byte> payload = new();
@@ -23,7 +23,7 @@ namespace BTokenLib
           payload.AddRange(VarInt.GetBytes(headerLocator.Count()));
 
           for (int i = 0; i < headerLocator.Count(); i++)
-            payload.AddRange(headerLocator.ElementAt(i).Hash);
+            payload.AddRange(headerLocator.ElementAt(i));
 
           payload.AddRange("0000000000000000000000000000000000000000000000000000000000000000".ToBinary());
 

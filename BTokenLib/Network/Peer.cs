@@ -16,7 +16,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      public Network Network;
+      Network Network;
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
@@ -35,7 +35,7 @@ namespace BTokenLib
 
       public Synchronization Synchronization;
 
-      public byte[] HashDBDownload;
+      byte[] HashDBDownload;
            
       const string UserAgent = "/BTokenCore:0.0.0/";
       public ConnectionType Connection;
@@ -44,19 +44,17 @@ namespace BTokenLib
       TcpClient TcpClient;
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
-      public const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
 
-      public SHA256 SHA256 = SHA256.Create();
+      SHA256 SHA256 = SHA256.Create();
 
-      public ILogEntryNotifier LogEntryNotifier;
+      ILogEntryNotifier LogEntryNotifier;
       StreamWriter LogFile;
 
-      public DateTime TimePeerCreation = DateTime.Now;
+      DateTime TimePeerCreation = DateTime.Now;
 
 
       public Peer(
         Network network,
-        int sizeBlockMax,
         IPAddress ip,
         TcpClient tcpClient,
         ConnectionType connection)
@@ -155,24 +153,32 @@ namespace BTokenLib
               relayOption: 0x01));
       }
 
-      async Task SendGetHeaders(List<Header> locator)
+      async Task SendGetHeaders()
+      {
+        if (Synchronization == null)
+          throw new InvalidOperationException($"Calles SendGetHeader without locator argument and peer has no Synchonization");
+        else
+          await SendGetHeaders(new List<byte[]> { Synchronization.HeaderTip.Hash });
+      }
+
+      async Task SendGetHeaders(List<byte[]> locator)
       {
         SetTimer("Get headers.", TIMEOUT_RESPONSE_MILLISECONDS);
 
         try
         {
           await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
-          $"Send getheaders. Locator: {locator.First()} ... {locator.Last()}".Log(this, LogFile, Network.LogEntryNotifier);
+          Log($"Send getheaders. Locator: {locator.First().ToHexString()} ... {locator.Last().ToHexString()}");
         }
         catch (Exception ex)
         {
-          $"Exception {ex.GetType().Name} when sending getheaders message.".Log(this, LogFile, Network.LogEntryNotifier);
+          Log($"Exception {ex.GetType().Name} when sending getheaders message.");
         }
       }
 
       public async Task AdvertizeTX(TX tX)
       {
-        $"Advertize token {tX}.".Log(this, LogFile, Network.LogEntryNotifier);
+        Log($"Advertize token {tX}.");
 
         InvMessage invMessage = new(new List<Inventory> {
           new(InventoryType.MSG_TX, tX.Hash)
@@ -226,11 +232,6 @@ namespace BTokenLib
       public void Log(string messageLog)
       {
         messageLog.Log(this, LogEntryNotifier);
-      }
-
-      public override string ToString()
-      {
-        return $"{Network} [{IPAddress}|{Connection}]";
       }
     }
   }

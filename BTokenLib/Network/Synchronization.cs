@@ -16,13 +16,12 @@ namespace BTokenLib
       Token Token;
 
       Header HeaderRoot;
-      Header HeaderTip;
+      public Header HeaderTip;
       Header HeaderTipBlockchain;
 
       Dictionary<int, Header> HeadersDownloading = new();
       Header HeaderDownloadNext;
 
-      object LOCK_BlockInsertion = new();
       const int CAPACITY_MAX_QueueBlocksInsertion = 20;
       Dictionary<int, Block> QueueBlocks = new();
       ConcurrentBag<Block> PoolBlocks = new();
@@ -97,9 +96,6 @@ namespace BTokenLib
             headerAncestor = headerAncestor.HeaderPrevious;
           }
 
-          // Header ancestor found.
-          // Skip duplicates
-          // B
           while (headerAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
           {
             headerAncestor = headerAncestor.HeaderNext;
@@ -109,10 +105,6 @@ namespace BTokenLib
               return false;
           }
 
-          // Skipped all duplicates, definitive header ancestor and header root found.
-          // Falls keine Fork, Headerchain verlängern und Sync returnen, ansonsten in den Branches schauen
-          // headerAncestor = C
-          // header = X
           if (headerAncestor == HeaderTip)
           {
             while (header != null)
@@ -213,15 +205,17 @@ namespace BTokenLib
       {
         int heightBlock = block.Header.Height;
 
-        // Hier auch den TryLockSynchronization beziehen und nach 
-        // Insert wieder freigeben.
-        lock (LOCK_BlockInsertion)
+        if (FlagIsAborted || !TryLockSynchronization())
+          return;
+
+        try
         {
           HeadersDownloading.Remove(heightBlock);
 
           if (QueueBlocks.TryAdd(heightBlock, block))
           {
-            if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
+            if (heightBlock == HeaderRoot.Height 
+              || heightBlock == HeaderTipBlockchain?.Height + 1)
               do
               {
                 HeaderTipBlockchain = block.Header;
@@ -239,6 +233,22 @@ namespace BTokenLib
           }
           else
             PoolBlocks.Add(block);
+        }
+        finally
+        {
+          ReleaseLockSynchronizations();
+        }
+
+        if (TryLockSynchronizations())
+        {
+          if (SynchronizationRoot.TryReorgToken(sync))
+            SynchronizationRoot = sync;
+
+          foreach (Synchronization syncInProgress in SynchronizationsInProgress)
+            if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationRoot))
+              syncInProgress.FlagIsAborted = true;
+
+          ReleaseLockSynchronizations();
         }
       }
           
@@ -269,10 +279,10 @@ namespace BTokenLib
         return false;
       }
 
-      public List<Header> GetLocator()
+      public List<byte[]> GetLocator()
       {
         Header header = HeaderTip;
-        List<Header> locator = new();
+        List<byte[]> locator = new();
         int depth = 0;
         int nextLocationDepth = 0;
 
@@ -280,7 +290,7 @@ namespace BTokenLib
         {
           if (depth == nextLocationDepth || header.HeaderPrevious == null)
           {
-            locator.Add(header);
+            locator.Add(header.Hash);
             nextLocationDepth = 2 * nextLocationDepth + 1;
           }
 

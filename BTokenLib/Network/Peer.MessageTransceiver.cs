@@ -17,8 +17,8 @@ namespace BTokenLib
     {
       MessageNetworkProtocol MessageNetwork;
 
+      const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
       public StateProtocol StateCurrent = StateProtocol.Handshake;
-
 
       public const int CommandSize = 12;
       public const int ChecksumSize = 4;
