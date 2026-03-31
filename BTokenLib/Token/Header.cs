@@ -62,6 +62,8 @@ namespace BTokenLib
       Height = headerPrevious.Height + 1;
       HeaderPrevious = headerPrevious;
       DifficultyAccumulated = headerPrevious.DifficultyAccumulated + Difficulty;
+
+      HeaderNext?.AppendToHeader(this);
     }
 
     public void ComputeHash()

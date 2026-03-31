@@ -63,20 +63,15 @@ namespace BTokenLib
           FlagSynchronizationLocked = false;
       }
 
-      public bool TryInsertHeaderchain(Header header, out Synchronization sync)
+      public Synchronization GetSynchronization(Header header)
       {
-        return TryInsertHeaderchain(header, out sync, flagLockSynchronization: true);
+        return GetSynchronization(header, flagLockSynchronization: true);
       }
 
-      bool TryInsertHeaderchain(Header header, out Synchronization sync, bool flagLockSynchronization)
+      Synchronization GetSynchronization(Header header, bool flagLockSynchronization)
       {
-        sync = null;
-
-        if (header == null)
-          return false;
-
         if (flagLockSynchronization && !TryLockSynchronization())
-          return false;
+          return null;
 
         try
         {
@@ -87,10 +82,12 @@ namespace BTokenLib
             if (headerAncestor == HeaderRoot)
             {
               foreach (Synchronization syncBranch in SynchronizationBranches)
-                if (syncBranch.TryInsertHeaderchain(header, out sync, flagLockSynchronization: false))
+              {
+                if (syncBranch.GetSynchronization(header, flagLockSynchronization: false))
                   return true;
 
-              return false;
+                return false;
+              }
             }
 
             headerAncestor = headerAncestor.HeaderPrevious;
@@ -110,13 +107,11 @@ namespace BTokenLib
             while (header != null)
             {
               header.AppendToHeader(HeaderTip);
-              HeaderTip.HeaderNext = header;
               HeaderTip = header;
               header = header.HeaderNext;
             }
 
-            sync = this;
-            return true;
+            return this;
           }
           else
           {
@@ -125,8 +120,12 @@ namespace BTokenLib
 
             if (syncBranch != null)
             {
-              header = header.HeaderNext;
-              return syncBranch.TryInsertHeaderchain(header, out sync, flagLockSynchronization: false);
+              Header headerRoot = header.HeaderNext;
+
+              if (headerRoot != null)
+                return syncBranch.GetSynchronization(headerRoot, flagLockSynchronization: false);
+              else
+                return null;
             }
             else
             {
@@ -136,14 +135,13 @@ namespace BTokenLib
               while (header != null)
               {
                 header.AppendToHeader(headerTip);
-                headerTip.HeaderNext = header;
                 headerTip = header;
                 header = header.HeaderNext;
               }
 
-              sync = new Synchronization(headerRoot, headerTip);
+              Synchronization sync = new(headerRoot, headerTip);
               SynchronizationBranches.Add(sync);
-              return true;
+              return sync;
             }
           }
         }

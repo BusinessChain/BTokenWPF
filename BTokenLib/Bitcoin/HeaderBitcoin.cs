@@ -46,9 +46,7 @@ namespace BTokenLib
 
     public override void AppendToHeader(Header headerPrevious)
     {
-      base.AppendToHeader(headerPrevious);
-
-      uint medianTimePastSeconds = GetMedianTimePastSeconds(HeaderPrevious);
+      uint medianTimePastSeconds = GetMedianTimePastSeconds(headerPrevious);
 
       if (UnixTimeSeconds < medianTimePastSeconds)
         throw new ProtocolException(string.Format(
@@ -56,11 +54,13 @@ namespace BTokenLib
           DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds),
           DateTimeOffset.FromUnixTimeSeconds(medianTimePastSeconds)));
 
-      uint targetBitsNew = GetNextTarget((HeaderBitcoin)HeaderPrevious);
+      uint targetBitsNew = GetNextTarget((HeaderBitcoin)headerPrevious);
 
       if (NBits != targetBitsNew)
         throw new ProtocolException(
           $"nBits {NBits} not equal to target nBits {targetBitsNew} in header {this}.");
+
+      base.AppendToHeader(headerPrevious);
     }
 
     static uint GetMedianTimePastSeconds(Header header)

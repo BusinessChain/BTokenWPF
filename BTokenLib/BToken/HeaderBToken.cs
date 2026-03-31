@@ -54,8 +54,6 @@ namespace BTokenLib
 
     public override void AppendToHeader(Header headerPrevious)
     {
-      base.AppendToHeader(headerPrevious);
-
       if (headerPrevious.HeaderParent != null)
       {
         Header headerParent = headerPrevious.HeaderParent.HeaderNext;
@@ -74,6 +72,8 @@ namespace BTokenLib
           headerParent = headerParent.HeaderNext;
         }
       }
+
+      base.AppendToHeader(headerPrevious);
     }
   }
 }

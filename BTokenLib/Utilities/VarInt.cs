@@ -63,21 +63,35 @@ namespace BTokenLib
        
     public static int GetInt(byte[] buffer, ref int startIndex)
     {
-      int prefix = buffer[startIndex];
+      byte prefix = buffer[startIndex];
       startIndex++;
 
+      ulong value;
+
+      if (prefix < 0xfd)
+      {
+        value = prefix;
+      }
       if (prefix == PREFIX_UINT16)
       {
-        prefix = BitConverter.ToUInt16(buffer, startIndex);
+        value = BitConverter.ToUInt16(buffer, startIndex);
         startIndex += 2;
       }
       else if (prefix == PREFIX_UINT32)
       {
-        prefix = BitConverter.ToInt32(buffer, startIndex);
+        value = BitConverter.ToUInt32(buffer, startIndex);
         startIndex += 4;
       }
+      else // PREFIX_UINT64 (0xff)
+      {
+        value = BitConverter.ToUInt64(buffer, startIndex);
+        startIndex += 8;
+      }
 
-      return prefix;
+      if (value > int.MaxValue)
+        throw new ProtocolException($"VarInt too large: {value}");
+
+      return (int)value;
     }
   }
 }

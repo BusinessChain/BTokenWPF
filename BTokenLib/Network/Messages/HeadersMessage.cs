@@ -20,7 +20,7 @@ namespace BTokenLib
 
 
         public HeadersMessage()
-          : this(null) 
+          : this(null)
         { }
 
         public HeadersMessage(Header headerRoot)
@@ -28,7 +28,7 @@ namespace BTokenLib
         {
           HeaderRoot = headerRoot;
 
-          if(HeaderRoot != null)
+          if (HeaderRoot != null)
           {
             int indexPayload = 0;
 
@@ -53,43 +53,30 @@ namespace BTokenLib
 
         public override void Run(Peer peer)
         {
+          IncrementDoSCounter();
+
           int startIndex = 0;
           int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
           if (countHeaders > 2000)
             throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
-          else if (countHeaders > 0)
-          {
-            Header headerRoot = ParseHeaderchain(countHeaders, ref startIndex);
 
-            if (peer.Synchronization == null)
-              if (Network.SynchronizationRoot.TryCreateNewSynchronization(headerRoot, out peer.Synchronization))
-              {
-                peer.SendGetHeaders();
-              }
-              else
-              {
-                // Passiert wenn Sync schon gelockt ist oder bei Orphan oder duplicate.
-                // Hier Dos Counter machen.
-              }
-            else
-            {
-              if (peer.Synchronization.TryExtendHeaderchain(headerRoot, out byte[] hashHeaderTip))
-              {
-                peer.SendGetHeaders();
-              }
-              else
-              {
-                if (!Network.SynchronizationRoot.TryCreateNewSynchronization(headerRoot, out peer.Synchronization))
-                {
-                  // Passiert wenn Sync schon gelockt ist oder bei Orphan oder duplicate.
-                  // Hier Dos Counter machen.
-                }
-              }
-            }
+          if (countHeaders == 0)
+          {
+            if (peer.Synchronization != null)
+              peer.RequestBlock();
+
+            return;
           }
-          else if (countHeaders == 0 && peer.Synchronization != null)
-            peer.RequestBlock();
+
+          Header headerRoot = ParseHeaderchain(countHeaders, ref startIndex);
+
+          if (peer.Synchronization != null && peer.Synchronization.TryExtendHeaderchain(headerRoot))
+            DecrementDoSCounter();
+          else
+            peer.Synchronization = Network.SynchronizationRoot.GetSynchronization(headerRoot);
+
+          peer.SendGetHeaders();          
         }
 
         Header ParseHeaderchain(int countHeaders, ref int startIndex)

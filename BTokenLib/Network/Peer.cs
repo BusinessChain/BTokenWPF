@@ -156,7 +156,7 @@ namespace BTokenLib
       async Task SendGetHeaders()
       {
         if (Synchronization == null)
-          throw new InvalidOperationException($"Calles SendGetHeader without locator argument and peer has no Synchonization");
+          await SendGetHeaders(Network.SynchronizationRoot.GetLocator());
         else
           await SendGetHeaders(new List<byte[]> { Synchronization.HeaderTip.Hash });
       }
