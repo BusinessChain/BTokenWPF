@@ -36,6 +36,9 @@ namespace BTokenLib
       Version = version;
       NBits = nBits;
 
+      BlockRewardInitial = 5000000000; // 200 BTK;
+      PeriodHalveningBlockReward = 210000;
+
       Difficulty = ComputeDifficultyFromNBits(nBits);
     }
 
@@ -44,7 +47,7 @@ namespace BTokenLib
       return MAX_TARGET / (double)UInt256.ParseFromCompact(nBits);
     }
 
-    public override void AppendToHeader(Header headerPrevious)
+    public override Header AppendToHeader(Header headerPrevious)
     {
       uint medianTimePastSeconds = GetMedianTimePastSeconds(headerPrevious);
 
@@ -60,7 +63,7 @@ namespace BTokenLib
         throw new ProtocolException(
           $"nBits {NBits} not equal to target nBits {targetBitsNew} in header {this}.");
 
-      base.AppendToHeader(headerPrevious);
+      return base.AppendToHeader(headerPrevious);
     }
 
     static uint GetMedianTimePastSeconds(Header header)

@@ -37,23 +37,21 @@ namespace BTokenLib
               $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
               $"Requested was {HeaderDownload}.");
 
-          peer.Synchronization.InsertBlock(BlockDownload);
+          Network.SynchronizationRoot.InsertBlock(ref BlockDownload);
 
-          RequestBlock(peer);
+          if (BlockDownload != null)
+          {
+            HeaderDownload = BlockDownload.Header;
+            peer.SendBlockRequest(HeaderDownload.Hash);
+          }
         }
 
-        public void RequestBlock(Peer peer)
+        public void RequestBlock(Block blockDownload)
         {
-          if (peer.Synchronization?.TryFetchBlockDownload(
-            out Header headerDownload,
-            out Block blockDownload) == true)
-          {
-            HeaderDownload = headerDownload;
-            BlockDownload = blockDownload;
+          HeaderDownload = blockDownload.Header;
+          BlockDownload = blockDownload;
 
-            peer.SendMessage(new GetDataMessage(
-              InventoryType.MSG_BLOCK, headerDownload.Hash));
-          }
+          peer.SendBlockRequest(HeaderDownload.Hash);
         }
       }
     }

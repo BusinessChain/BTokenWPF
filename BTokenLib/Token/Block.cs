@@ -89,7 +89,7 @@ namespace BTokenLib
       Header.CountTXs = TXs.Count;
       Header.Fee = TXs.Sum(t => t.Fee);
 
-      Token.VerifyCoinbase(Header, TXs[0].GetValueOutputs());
+      Header.VerifyCoinbase(TXs[0].GetValueOutputs());
     }
 
     public byte[] ComputeMerkleRoot()

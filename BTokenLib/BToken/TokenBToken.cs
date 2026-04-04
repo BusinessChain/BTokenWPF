@@ -52,9 +52,6 @@ namespace BTokenLib
 
       SizeBlockMax = SIZE_BLOCK_MAX;
 
-      BlockRewardInitial = BLOCK_REWARD_INITIAL;
-      PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
-
       DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
       DatabaseMetaCollection = Database.GetCollection<BsonDocument>("meta");
 
@@ -86,14 +83,6 @@ namespace BTokenLib
     public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
     {
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
-    }
-
-    public override void VerifyCoinbase(Header header, long valueOutputsTXCoinbase)
-    {
-      long blockReward = BlockRewardInitial >> header.Height / PeriodHalveningBlockReward;
-
-      if (blockReward + header.Fee != valueOutputsTXCoinbase)
-        throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
     }
 
     public override void InsertBlock(Block block)

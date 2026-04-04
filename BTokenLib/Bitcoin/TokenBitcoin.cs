@@ -30,9 +30,6 @@ namespace BTokenLib
 
       SizeBlockMax = SIZE_BLOCK_MAX;
 
-      BlockRewardInitial = BLOCK_REWARD_INITIAL;
-      PeriodHalveningBlockReward = PERIOD_HALVENING_BLOCK_REWARD;
-
       IDToken = new byte[3] { (byte)'B', (byte)'T', (byte)'C' };
 
       Network = new Network(

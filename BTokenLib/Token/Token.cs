@@ -15,9 +15,6 @@ namespace BTokenLib
 
     public Token TokenParent;
 
-    public long BlockRewardInitial;
-    public int PeriodHalveningBlockReward;
-
     public int SizeBlockMax;
 
     public Wallet Wallet;
@@ -116,8 +113,6 @@ namespace BTokenLib
         return false;
       }
     }
-
-    public virtual void VerifyCoinbase(Header header, long valueOutputsTXCoinbase) { }
 
     protected virtual void ReverseBlockInCache(Block block) { }
                   

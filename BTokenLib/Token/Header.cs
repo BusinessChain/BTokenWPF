@@ -28,6 +28,9 @@ namespace BTokenLib
     public double Difficulty;
     public double DifficultyAccumulated;
 
+    public long BlockRewardInitial;
+    public int PeriodHalveningBlockReward;
+
     public long Fee;
 
 
@@ -54,7 +57,7 @@ namespace BTokenLib
 
     public abstract byte[] Serialize();
 
-    public virtual void AppendToHeader(Header headerPrevious)
+    public virtual Header AppendToHeader(Header headerPrevious)
     {
       if (!HashPrevious.IsAllBytesEqual(headerPrevious.Hash))
         throw new ProtocolException($"Header {this} references header previous {HashPrevious.ToHexString()} but attempts to append to {headerPrevious}.");
@@ -63,8 +66,13 @@ namespace BTokenLib
       HeaderPrevious = headerPrevious;
       DifficultyAccumulated = headerPrevious.DifficultyAccumulated + Difficulty;
 
-      HeaderNext?.AppendToHeader(this);
+      if (HeaderNext != null)
+        return HeaderNext.AppendToHeader(this);
+      else
+        return this;
     }
+
+    public virtual void VerifyCoinbase(long valueOutputsTXCoinbase) { }
 
     public void ComputeHash()
     {

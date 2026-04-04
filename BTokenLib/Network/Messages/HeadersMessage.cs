@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Threading;
 
 
 namespace BTokenLib
@@ -15,6 +14,8 @@ namespace BTokenLib
       class HeadersMessage : MessageNetworkProtocol
       {
         Network Network;
+
+        Block BlockDownload;
 
         SHA256 SHA256 = SHA256.Create();
 
@@ -53,30 +54,35 @@ namespace BTokenLib
 
         public override void Run(Peer peer)
         {
-          IncrementDoSCounter();
+          IncrementDOSCounter();
 
           int startIndex = 0;
           int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
           if (countHeaders > 2000)
             throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
-
-          if (countHeaders == 0)
+          else if(countHeaders > 0)
           {
-            if (peer.Synchronization != null)
-              peer.RequestBlock();
+            Header headerRoot = ParseHeaderchain(countHeaders, ref startIndex);
 
-            return;
+            if (Network.SynchronizationRoot.TryExtendHeaderchain(
+              headerRoot,
+              out List<byte[]> headerslocator,
+              ref BlockDownload))
+            {
+              DecrementDOSCounter();
+            }
+
+            peer.SendGetHeaders(headerslocator);
           }
+          else if (countHeaders == 0)
+          {
+            BlockMessage blockMessage = peer.MessagesNetworkProtocol["block"] as BlockMessage;
+            blockMessage.HeaderDownload = BlockDownload.Header;
+            blockMessage.BlockDownload = BlockDownload;
 
-          Header headerRoot = ParseHeaderchain(countHeaders, ref startIndex);
-
-          if (peer.Synchronization != null && peer.Synchronization.TryExtendHeaderchain(headerRoot))
-            DecrementDoSCounter();
-          else
-            peer.Synchronization = Network.SynchronizationRoot.GetSynchronization(headerRoot);
-
-          peer.SendGetHeaders();          
+            peer.SendBlockRequest(BlockDownload.Header.Hash);
+          }
         }
 
         Header ParseHeaderchain(int countHeaders, ref int startIndex)

@@ -33,6 +33,9 @@ namespace BTokenLib
     {
       Difficulty = 1;
       HashDatabase = hashDatabase;
+
+      BlockRewardInitial = 200000000000000; // 200 BTK;
+      PeriodHalveningBlockReward = 105000;
     }
 
     public override byte[] Serialize()
@@ -52,7 +55,7 @@ namespace BTokenLib
       return buffer;
     }
 
-    public override void AppendToHeader(Header headerPrevious)
+    public override Header AppendToHeader(Header headerPrevious)
     {
       if (headerPrevious.HeaderParent != null)
       {
@@ -73,7 +76,15 @@ namespace BTokenLib
         }
       }
 
-      base.AppendToHeader(headerPrevious);
+      return base.AppendToHeader(headerPrevious);
+    }
+
+    public override void VerifyCoinbase(long valueOutputsTXCoinbase)
+    {
+      long blockReward = BlockRewardInitial >> Height / PeriodHalveningBlockReward;
+
+      if (blockReward + Fee != valueOutputsTXCoinbase)
+        throw new ProtocolException($"Output values of coinbase not equal to blockReward plus tx fees.");
     }
   }
 }

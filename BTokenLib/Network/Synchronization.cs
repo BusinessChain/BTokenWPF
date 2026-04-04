@@ -57,10 +57,28 @@ namespace BTokenLib
         return false;
       }
 
-      void ReleaseLockSynchronizations()
+      void ReleaseLockSynchronization()
       {
         lock (this)
           FlagSynchronizationLocked = false;
+      }
+
+      public bool TryExtendHeaderchain(Header header, out List<byte[]> locator)
+      {
+        // If !TryExtendHeaderchain -> possibly create new Sync -> return false anyway.
+        // return true if TryExtendHeaderchain succeeds or if cannot lock;
+
+        if (!TryLockSynchronization())
+          return true;
+
+        try
+        {
+
+        }
+        finally
+        {
+          ReleaseLockSynchronization();
+        }
       }
 
       public Synchronization GetSynchronization(Header header)
@@ -83,11 +101,13 @@ namespace BTokenLib
             {
               foreach (Synchronization syncBranch in SynchronizationBranches)
               {
-                if (syncBranch.GetSynchronization(header, flagLockSynchronization: false))
-                  return true;
+                Synchronization sync = syncBranch.GetSynchronization(header, flagLockSynchronization: false);
 
-                return false;
+                if (sync != null)
+                  return sync;
               }
+
+              return null;
             }
 
             headerAncestor = headerAncestor.HeaderPrevious;
@@ -99,18 +119,12 @@ namespace BTokenLib
             header = header.HeaderNext;
 
             if (header == null)
-              return false;
+              return null;
           }
 
           if (headerAncestor == HeaderTip)
           {
-            while (header != null)
-            {
-              header.AppendToHeader(HeaderTip);
-              HeaderTip = header;
-              header = header.HeaderNext;
-            }
-
+            HeaderTip = header.AppendToHeader(HeaderTip);
             return this;
           }
           else
@@ -130,14 +144,7 @@ namespace BTokenLib
             else
             {
               Header headerRoot = header;
-              Header headerTip = headerAncestor;
-
-              while (header != null)
-              {
-                header.AppendToHeader(headerTip);
-                headerTip = header;
-                header = header.HeaderNext;
-              }
+              Header headerTip = headerAncestor.AppendToHeader(headerRoot);
 
               Synchronization sync = new(headerRoot, headerTip);
               SynchronizationBranches.Add(sync);
@@ -199,7 +206,7 @@ namespace BTokenLib
         return true;
       }
 
-      public void InsertBlock(Block block)
+      public void InsertBlock(ref Block block)
       {
         int heightBlock = block.Header.Height;
 

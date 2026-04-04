@@ -129,11 +129,10 @@ namespace BTokenLib
 
         SendMessage(invMessage);
       }
-
-      void RequestBlock()
+   
+      public void SendBlockRequest(byte[] hashBlock)
       {
-        (MessagesNetworkProtocol["block"] as BlockMessage)
-          .RequestBlock(this);
+        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, hashBlock));
       }
 
       async Task SendVersion()
@@ -151,14 +150,6 @@ namespace BTokenLib
               userAgent: UserAgent,
               blockchainHeight: 0,
               relayOption: 0x01));
-      }
-
-      async Task SendGetHeaders()
-      {
-        if (Synchronization == null)
-          await SendGetHeaders(Network.SynchronizationRoot.GetLocator());
-        else
-          await SendGetHeaders(new List<byte[]> { Synchronization.HeaderTip.Hash });
       }
 
       async Task SendGetHeaders(List<byte[]> locator)
