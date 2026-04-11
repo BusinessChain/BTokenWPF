@@ -130,11 +130,6 @@ namespace BTokenLib
         SendMessage(invMessage);
       }
    
-      public void SendBlockRequest(byte[] hashBlock)
-      {
-        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, hashBlock));
-      }
-
       async Task SendVersion()
       {
         await SendMessage(new VersionMessage(

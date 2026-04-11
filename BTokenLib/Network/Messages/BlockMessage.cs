@@ -23,6 +23,7 @@ namespace BTokenLib
           return BlockDownload.Buffer;
         }
 
+        // Insert Dos Counter.
         public override void Run(Peer peer)
         {
           if (HeaderDownload == null)
@@ -39,19 +40,7 @@ namespace BTokenLib
 
           Network.SynchronizationRoot.InsertBlock(ref BlockDownload);
 
-          if (BlockDownload != null)
-          {
-            HeaderDownload = BlockDownload.Header;
-            peer.SendBlockRequest(HeaderDownload.Hash);
-          }
-        }
-
-        public void RequestBlock(Block blockDownload)
-        {
-          HeaderDownload = blockDownload.Header;
-          BlockDownload = blockDownload;
-
-          peer.SendBlockRequest(HeaderDownload.Hash);
+          peer.SendBlockRequest(BlockDownload);
         }
       }
     }

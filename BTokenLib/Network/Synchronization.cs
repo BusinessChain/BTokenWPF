@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Diagnostics.Eventing.Reader;
 
 namespace BTokenLib
 {
@@ -16,7 +17,7 @@ namespace BTokenLib
       Token Token;
 
       Header HeaderRoot;
-      public Header HeaderTip;
+      Header HeaderTip;
       Header HeaderTipBlockchain;
 
       Dictionary<int, Header> HeadersDownloading = new();
@@ -63,33 +64,16 @@ namespace BTokenLib
           FlagSynchronizationLocked = false;
       }
 
-      public bool TryExtendHeaderchain(Header header, out List<byte[]> locator)
+      public bool TryExtendHeaderchain(
+        Header header, 
+        out List<byte[]> locator,
+        ref Block blockDownload)
       {
-        // If !TryExtendHeaderchain -> possibly create new Sync -> return false anyway.
-        // return true if TryExtendHeaderchain succeeds or if cannot lock;
-
-        if (!TryLockSynchronization())
-          return true;
-
-        try
+        if (header == null || !TryLockSynchronization())
         {
-
+          locator = null;
+          return false;
         }
-        finally
-        {
-          ReleaseLockSynchronization();
-        }
-      }
-
-      public Synchronization GetSynchronization(Header header)
-      {
-        return GetSynchronization(header, flagLockSynchronization: true);
-      }
-
-      Synchronization GetSynchronization(Header header, bool flagLockSynchronization)
-      {
-        if (flagLockSynchronization && !TryLockSynchronization())
-          return null;
 
         try
         {
@@ -99,83 +83,51 @@ namespace BTokenLib
           {
             if (headerAncestor == HeaderRoot)
             {
-              foreach (Synchronization syncBranch in SynchronizationBranches)
-              {
-                Synchronization sync = syncBranch.GetSynchronization(header, flagLockSynchronization: false);
+              foreach (Synchronization sync in SynchronizationBranches)
+                if (sync.TryExtendHeaderchain(header, out locator, ref blockDownload))
+                  return true;
 
-                if (sync != null)
-                  return sync;
-              }
-
-              return null;
+              locator = GetLocator();
+              return false;
             }
 
             headerAncestor = headerAncestor.HeaderPrevious;
           }
 
-          while (headerAncestor.HeaderNext?.Hash.IsAllBytesEqual(header.Hash) == true)
+          while (headerAncestor != HeaderTip)
           {
+            if (headerAncestor.HeaderNext.Hash.IsAllBytesEqual(header.Hash) == false)
+            {
+              foreach (Synchronization sync in SynchronizationBranches)
+                if (sync.HeaderRoot.Hash.IsAllBytesEqual(header.Hash))
+                  return sync.TryExtendHeaderchain(header.HeaderNext, out locator, ref blockDownload);
+
+              Header headerTip = header.AppendToHeader(headerAncestor);
+              Synchronization syncBranch = new(header, headerTip);
+              SynchronizationBranches.Add(syncBranch);
+
+              locator = new List<byte[]> { headerTip.Hash };
+              return false;
+            }
+
+            if (header.HeaderNext == null)
+            {
+              locator = null;
+              return false;
+            }
+
             headerAncestor = headerAncestor.HeaderNext;
             header = header.HeaderNext;
-
-            if (header == null)
-              return null;
           }
 
-          if (headerAncestor == HeaderTip)
-          {
-            HeaderTip = header.AppendToHeader(HeaderTip);
-            return this;
-          }
-          else
-          {
-            Synchronization syncBranch = SynchronizationBranches
-              .Find(s => s.HeaderRoot.Hash.IsAllBytesEqual(header.Hash));
-
-            if (syncBranch != null)
-            {
-              Header headerRoot = header.HeaderNext;
-
-              if (headerRoot != null)
-                return syncBranch.GetSynchronization(headerRoot, flagLockSynchronization: false);
-              else
-                return null;
-            }
-            else
-            {
-              Header headerRoot = header;
-              Header headerTip = headerAncestor.AppendToHeader(headerRoot);
-
-              Synchronization sync = new(headerRoot, headerTip);
-              SynchronizationBranches.Add(sync);
-              return sync;
-            }
-          }
+          HeaderTip = header.AppendToHeader(HeaderTip);
+          locator = new List<byte[]> { HeaderTip.Hash };
+          return true;
         }
         finally
         {
-          if (flagLockSynchronization)
-            ReleaseLockSynchronizations();
+          ReleaseLockSynchronization();
         }
-      }
-
-      public bool TryMerge(Synchronization sync)
-      {
-        Header headerRootSync = sync.HeaderRoot;
-
-        while (!headerRootSync.HashPrevious.IsAllBytesEqual(HeaderTip.Hash))
-        {
-          headerRootSync = headerRootSync.HeaderNext;
-
-          if (headerRootSync == null)
-            return false;
-        }
-
-        headerRootSync.AppendToHeader(HeaderTip);
-        HeaderTip.HeaderNext = headerRootSync;
-        HeaderTip = sync.HeaderTip;
-
-        return true;
       }
 
       public bool TryFetchBlockDownload(out Header headerDownload, out Block blockDownload)

@@ -73,15 +73,12 @@ namespace BTokenLib
               DecrementDOSCounter();
             }
 
+            if(headerslocator != null)
             peer.SendGetHeaders(headerslocator);
           }
           else if (countHeaders == 0)
           {
-            BlockMessage blockMessage = peer.MessagesNetworkProtocol["block"] as BlockMessage;
-            blockMessage.HeaderDownload = BlockDownload.Header;
-            blockMessage.BlockDownload = BlockDownload;
-
-            peer.SendBlockRequest(BlockDownload.Header.Hash);
+            peer.SendBlockRequest(BlockDownload);
           }
         }
 
