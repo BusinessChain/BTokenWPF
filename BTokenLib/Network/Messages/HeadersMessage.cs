@@ -76,9 +76,10 @@ namespace BTokenLib
             if(headerslocator != null)
             peer.SendGetHeaders(headerslocator);
           }
-          else if (countHeaders == 0)
+          else if (countHeaders == 0 && BlockDownload?.Header == null)
           {
             peer.SendBlockRequest(BlockDownload);
+            BlockDownload = null;
           }
         }
 

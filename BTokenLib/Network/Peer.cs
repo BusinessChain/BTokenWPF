@@ -33,8 +33,6 @@ namespace BTokenLib
         Busy
       }
 
-      public Synchronization Synchronization;
-
       byte[] HashDBDownload;
            
       const string UserAgent = "/BTokenCore:0.0.0/";

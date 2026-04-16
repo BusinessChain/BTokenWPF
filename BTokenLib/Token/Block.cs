@@ -33,7 +33,7 @@ namespace BTokenLib
       Buffer = buffer;
     }
 
-    public void Parse(int heightBlock)
+    public void Parse()
     {
       Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
       Dictionary<byte[], TX> tXAnchorWinners = new(new EqualityComparerByteArray());
@@ -41,17 +41,21 @@ namespace BTokenLib
       TXs.Clear();
       int startIndex = 0;
 
-      Header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
-      int tXCount = VarInt.GetInt(Buffer, ref startIndex);
+      Header header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
 
-      if (tXCount == 0)
+      if (!header.Hash.IsAllBytesEqual(Header.Hash))
+        throw new ProtocolException($"Received unexpected block {header} expected was {Header}.");
+
+      Header.CountTXs = VarInt.GetInt(Buffer, ref startIndex);
+
+      if (Header.CountTXs == 0)
         throw new ProtocolException($"Block {this} lacks coinbase transaction.");
 
       int startIndexBeginningOfTXs = startIndex;
 
       TX tX;
 
-      for (int t = 0; t < tXCount; t += 1)
+      for (int t = 0; t < Header.CountTXs; t += 1)
       {
         tX = Token.ParseTX(Buffer, ref startIndex, SHA256, flagIsCoinbase: t == 0);
 
@@ -85,8 +89,6 @@ namespace BTokenLib
       if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
         throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");
 
-      Header.Height = heightBlock;
-      Header.CountTXs = TXs.Count;
       Header.Fee = TXs.Sum(t => t.Fee);
 
       Header.VerifyCoinbase(TXs[0].GetValueOutputs());

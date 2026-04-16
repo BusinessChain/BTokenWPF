@@ -148,16 +148,15 @@ namespace BTokenLib
         }
       }
       
-      async Task SendBlockRequest(Block blockDownload)
+      void SendBlockRequest(Block blockDownload)
       {
-        if(blockDownload == null)
+        if (blockDownload?.Header == null)
           return;
 
         BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
-        blockMessage.HeaderDownload = blockDownload.Header;
         blockMessage.BlockDownload = blockDownload;
 
-        await SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, blockDownload.Header.Hash));
+        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, blockDownload.Header.Hash));
       }
 
       async Task Handshake()

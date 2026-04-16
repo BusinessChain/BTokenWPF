@@ -32,6 +32,8 @@ namespace BTokenLib
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
     Synchronization SynchronizationRoot;
+    readonly object LOCK_FlagSyncLocked = new object();
+    bool FlagSyncLocked;
 
     public Header HeaderTip;
     public Header HeaderGenesis;
@@ -117,6 +119,75 @@ namespace BTokenLib
         }
 
       HeaderTip ??= HeaderGenesis;
+    }
+
+    bool TryLockSynchronization()
+    {
+      int randomTimeout = Random.Shared.Next(5, 10);
+
+      while (randomTimeout > 0)
+      {
+        lock (LOCK_FlagSyncLocked)
+          if (!FlagSyncLocked)
+          {
+            FlagSyncLocked = true;
+            return true;
+          }
+
+        Thread.Sleep(100);
+        randomTimeout -= 1;
+      }
+
+      return false;
+    }
+
+
+    public void InsertBlock(Block block)
+    {
+      if (!TryLockSynchronization())
+        return;
+
+      try
+      {
+        SynchronizationRoot.TryInsertBlock(block, out SynchronizationRoot);
+
+        if (!HeadersDownloading.Remove(heightBlock)) // muss mit Hash statt mit height arbeiten.
+        {
+
+        }
+
+        if (QueueBlocks.TryAdd(heightBlock, block))
+          if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
+            do
+            {
+              HeaderTipBlockchain = block.Header;
+
+              try
+              {
+                Token?.InsertBlock(block);
+              }
+              catch
+              {
+                FlagIsAborted = true;
+                return;
+              }
+            } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
+
+        SynchronizationRoot.TryReorgToken(this);
+
+
+
+        if (SynchronizationRoot.TryReorgToken(sync))
+          SynchronizationRoot = sync;
+
+        foreach (Synchronization syncInProgress in SynchronizationsInProgress)
+          if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationRoot))
+            syncInProgress.FlagIsAborted = true;
+      }
+      finally
+      {
+        SynchronizationRoot.ReleaseLockSynchronization();
+      }
     }
 
     List<byte[]> GetLocator()

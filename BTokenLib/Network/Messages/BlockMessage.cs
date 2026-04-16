@@ -11,7 +11,6 @@ namespace BTokenLib
       class BlockMessage : MessageNetworkProtocol
       {
         Network Network;
-        public Header HeaderDownload;
         public Block BlockDownload;
 
         public BlockMessage()
@@ -23,22 +22,16 @@ namespace BTokenLib
           return BlockDownload.Buffer;
         }
 
-        // Insert Dos Counter.
         public override void Run(Peer peer)
         {
-          if (HeaderDownload == null)
+          if (BlockDownload?.Header == null)
             throw new ProtocolException($"Received unrequested block message.");
 
           BlockDownload.LengthDataPayload = LengthDataPayload;
 
-          BlockDownload.Parse(HeaderDownload.Height);
+          BlockDownload.Parse();
 
-          if (!BlockDownload.Header.Hash.IsAllBytesEqual(HeaderDownload.Hash))
-            throw new ProtocolException(
-              $"Received unexpected block {BlockDownload} at height {BlockDownload.Header.Height} from peer {this}.\n" +
-              $"Requested was {HeaderDownload}.");
-
-          Network.SynchronizationRoot.InsertBlock(ref BlockDownload);
+          Network.InsertBlock(BlockDownload);
 
           peer.SendBlockRequest(BlockDownload);
         }
