@@ -3,8 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Diagnostics.Eventing.Reader;
-using System.Runtime.CompilerServices;
 
 namespace BTokenLib
 {
@@ -12,7 +10,7 @@ namespace BTokenLib
   {
     class Synchronization
     {
-      Synchronization SynchronizationRoot;
+      Synchronization SynchronizationParent;
       List<Synchronization> SynchronizationBranches = new();
 
       Token Token;
@@ -21,30 +19,25 @@ namespace BTokenLib
       Header HeaderTip;
       Header HeaderTipBlockchain;
 
-      Dictionary<int, Header> HeadersDownloading = new();
+      Dictionary<byte[], Header> HeadersDownloading = new(new EqualityComparerByteArray());
       Header HeaderDownloadNext;
 
       const int CAPACITY_MAX_QueueBlocksInsertion = 20;
       Dictionary<int, Block> QueueBlocks = new();
       ConcurrentBag<Block> PoolBlocks = new();
 
-      public bool FlagIsAborted;
-
       bool FlagSynchronizationLocked;
 
 
       public Synchronization(Synchronization synchronizationRoot, Header headerRoot, Header headerTip)
       {
-        SynchronizationRoot = synchronizationRoot;
+        SynchronizationParent = synchronizationRoot;
         HeaderRoot = headerRoot;
         HeaderTip = headerTip;
       }
 
       public bool TryLockSynchronization()
       {
-        if (FlagIsAborted)
-          return false;
-
         int randomTimeout = Random.Shared.Next(5, 10);
 
         while (randomTimeout > 0)
@@ -144,97 +137,133 @@ namespace BTokenLib
 
       Header FetchHeaderDownload()
       {
-        if (!FlagIsAborted) // kann eine abortet Sync wieder belebt werden wenn neue Header kommen?
-          if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
+        if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
             && HeadersDownloading.Any())
-            return HeadersDownloading[HeadersDownloading.Keys.Min()];
-          else if (HeaderDownloadNext != null)
-          {
-            Header headerDownload = HeaderDownloadNext;
-            HeadersDownloading.Add(headerDownload.Height, headerDownload);
-            HeaderDownloadNext = HeaderDownloadNext.HeaderNext;
-            return headerDownload;
-          }
+          return HeadersDownloading.Values.MinBy(h => h.Height);
+        else if (HeaderDownloadNext != null)
+        {
+          Header headerDownload = HeaderDownloadNext;
+          HeadersDownloading.Add(headerDownload.Hash, headerDownload);
+          HeaderDownloadNext = HeaderDownloadNext.HeaderNext;
+          return headerDownload;
+        }
 
         return null;
       }
 
-      public bool TryInsertBlock(Block block, out Synchronization sychronizationRoot)
+      Synchronization GetSynchronizationRoot()
       {
-        sychronizationRoot = this;
+        if (SynchronizationParent == null)
+          return this;
 
-        if (FlagIsAborted)
-          return false;
+        return SynchronizationParent.GetSynchronizationRoot();
+      }
 
+      public bool TryInsertBlock(Block block, ref Synchronization sychronizationRoot)
+      {
         int heightBlock = block.Header.Height;
-
-        try
+        if (!HeadersDownloading.Remove(block.Header.Hash))
         {
-          if(!HeadersDownloading.Remove(heightBlock)) // muss mit Hash statt mit height arbeiten.
-          {
-            foreach (Synchronization syncBranch in SynchronizationBranches)
-              if (syncBranch.TryInsertBlock(block, out sychronizationRoot))
-                return true;
+          foreach (Synchronization syncBranch in SynchronizationBranches)
+            if (syncBranch.TryInsertBlock(block, ref sychronizationRoot))
+              return true;
 
-            block.Header = null;
+          block.Header = null;
+          return false;
+        }
+
+        QueueBlocks.Add(heightBlock, block);
+
+        if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
+          do
+          {
+            HeaderTipBlockchain = block.Header;
+
+            try
+            {
+              Token?.InsertBlock(block);
+            }
+            catch
+            {
+              return false;
+            }
+          } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
+
+        if (TryReorg())
+          sychronizationRoot = this;
+
+        return true;
+      }
+
+      bool TryReorg()
+      {
+        if (SynchronizationParent == null ||
+          (SynchronizationParent.HeaderTipBlockchain.DifficultyAccumulated >= HeaderTipBlockchain.DifficultyAccumulated))
+        {
+          return false;
+        }
+
+        Header headerAncestor = HeaderRoot.HeaderPrevious;
+
+        if (SynchronizationParent.Token != null)
+        {
+          SynchronizationParent.RewindTokenToHeight(headerAncestor.Height);
+
+          Token = SynchronizationParent.Token;
+
+          try
+          {
+            RollTokenForwardToTip();
+          }
+          catch
+          {
+            Token = null;
+
+            SynchronizationParent.RollTokenForwardToTip();
+
             return false;
           }
 
-          QueueBlocks.Add(heightBlock, block);
+          SynchronizationParent.Token = null;
+        }
 
-          if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
-            do
-            {
-              HeaderTipBlockchain = block.Header;
+        Header headerRootNewSyncParent = headerAncestor.HeaderNext;
+        headerAncestor.HeaderNext = HeaderRoot;
+        HeaderRoot = SynchronizationParent.HeaderRoot;
+        SynchronizationParent.HeaderRoot = headerRootNewSyncParent;
 
-              try
-              {
-                Token?.InsertBlock(block);
-              }
-              catch
-              {
-                FlagIsAborted = true;
-                return;
-              }
-            } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
+        List<Synchronization> branches = SynchronizationParent.SynchronizationBranches.ToList();
 
-          if(HeaderTipBlockchain.DifficultyAccumulated > SynchronizationRoot?.HeaderTipBlockchain.DifficultyAccumulated)
+        foreach (Synchronization syncBranch in branches)
+          if (syncBranch.HeaderRoot.Height <= HeaderRoot.Height)
           {
-            SynchronizationRoot.TryReorgToken(this);
+            SynchronizationParent.SynchronizationBranches.Remove(syncBranch);
+
+            if (syncBranch != this)
+            {
+              syncBranch.SynchronizationParent = this;
+              SynchronizationBranches.Add(syncBranch);
+            }
           }
-        }
-        finally
-        {
-          ReleaseLockSynchronization();
-        }
+
+        SynchronizationBranches.Add(SynchronizationParent);
+
+        Synchronization syncParentNew = SynchronizationParent.SynchronizationParent;
+        SynchronizationParent.SynchronizationParent = this;
+        SynchronizationParent = syncParentNew;
+
+        if (Token != null)
+          return true;
+
+        return TryReorg();
       }
-          
+
       public bool IsHeaderTipStrongerThanBlockTip(Synchronization sync)
       {
         return HeaderTip.DifficultyAccumulated >
           sync.HeaderTipBlockchain.DifficultyAccumulated;
       }
 
-      public bool TryReorgToken(Synchronization sync)
-      {
-        if (HeaderTipBlockchain.DifficultyAccumulated 
-          < sync.HeaderTipBlockchain.DifficultyAccumulated)
-        {
-          sync.Token = Token;
-
-          if (TryRewindToHeight(sync.GetHeightAncestor())
-            && sync.TryRollForwardToTip())
-          {
-            Token = null;
-            return true;
-          }
-
-          sync.Token = null;
-          sync.FlagIsAborted = true;
-        }
-
-        return false;
-      }
 
       public List<byte[]> GetLocator()
       {

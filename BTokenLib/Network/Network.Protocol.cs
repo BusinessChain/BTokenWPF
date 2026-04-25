@@ -48,17 +48,6 @@ namespace BTokenLib
 
         Token.ReleaseLock();
       }
-      else if (command == "hashesDB")
-      {
-        //HashesDB = Token.ParseHashesDB(
-        //  Payload,
-        //  LengthDataPayload,
-        //  HeaderchainDownload.HeaderTip);
-
-        ResetTimer();
-
-        Network.SyncDB(this);
-      }
       else if (command == "notfound")
       {
         NotFoundMessage notFoundMessage = new(Payload);

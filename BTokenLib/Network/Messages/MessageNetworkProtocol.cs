@@ -16,21 +16,19 @@ namespace BTokenLib
         public byte[] Payload;
         public int LengthDataPayload;
 
+        public DOSMonitorPer10Minutes DOSMonitor;
+
 
         public MessageNetworkProtocol(string command)
           : this(command, new byte[0])
         { }
 
         public MessageNetworkProtocol(string command, byte[] payload)
-          : this(command, payload, payload.Length)
-        { }
-
-        public MessageNetworkProtocol(string command, byte[] payload, int lengthPayload)
         {
           Command = command;
           Payload = payload;
 
-          LengthDataPayload = lengthPayload;
+          LengthDataPayload = payload.Length;
         }
 
         public virtual byte[] GetPayloadBuffer()
@@ -39,6 +37,7 @@ namespace BTokenLib
         }
 
         public abstract void Run(Peer peer);
+
       }
     }
   }

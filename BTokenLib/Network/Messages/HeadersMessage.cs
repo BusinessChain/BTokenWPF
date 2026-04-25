@@ -22,39 +22,41 @@ namespace BTokenLib
 
         public HeadersMessage()
           : this(null)
-        { }
+        {
+          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
+        }
 
         public HeadersMessage(Header headerRoot)
           : base("headers")
         {
-          HeaderRoot = headerRoot;
+          //HeaderRoot = headerRoot;
 
-          if (HeaderRoot != null)
-          {
-            int indexPayload = 0;
+          //if (HeaderRoot != null)
+          //{
+          //  int indexPayload = 0;
 
-            byte[] headersCountVarIntFormat = VarInt.GetBytes(Headers.Count);
-            Array.Copy(headersCountVarIntFormat, 0, Payload, indexPayload, headersCountVarIntFormat.Length);
+          //  byte[] headersCountVarIntFormat = VarInt.GetBytes(Headers.Count);
+          //  Array.Copy(headersCountVarIntFormat, 0, Payload, indexPayload, headersCountVarIntFormat.Length);
 
-            indexPayload += headersCountVarIntFormat.Length;
+          //  indexPayload += headersCountVarIntFormat.Length;
 
-            foreach (Header header in Headers)
-            {
-              byte[] headerSerialized = header.Serialize();
-              Array.Copy(headerSerialized, 0, Payload, indexPayload, headerSerialized.Length);
-              indexPayload += headerSerialized.Length;
+          //  foreach (Header header in Headers)
+          //  {
+          //    byte[] headerSerialized = header.Serialize();
+          //    Array.Copy(headerSerialized, 0, Payload, indexPayload, headerSerialized.Length);
+          //    indexPayload += headerSerialized.Length;
 
-              Payload[indexPayload] = 0;
-              indexPayload += 1;
-            }
-            LengthDataPayload = indexPayload;
-          }
+          //    Payload[indexPayload] = 0;
+          //    indexPayload += 1;
+          //  }
+          //  LengthDataPayload = indexPayload;
+          //}
         }
 
 
         public override void Run(Peer peer)
         {
-          IncrementDOSCounter();
+          DOSMonitor.Increment(1);
 
           int startIndex = 0;
           int countHeaders = VarInt.GetInt(Payload, ref startIndex);
@@ -70,7 +72,7 @@ namespace BTokenLib
               out List<byte[]> headerslocator,
               ref BlockDownload))
             {
-              DecrementDOSCounter();
+              DOSMonitor.Decrement(1);
             }
 
             if(headerslocator != null)

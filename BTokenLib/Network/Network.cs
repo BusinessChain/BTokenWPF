@@ -141,6 +141,12 @@ namespace BTokenLib
       return false;
     }
 
+    void ReleaseLockSynchronization()
+    {
+      lock (LOCK_FlagSyncLocked)
+        FlagSyncLocked = false;
+    }
+
 
     public void InsertBlock(Block block)
     {
@@ -149,44 +155,11 @@ namespace BTokenLib
 
       try
       {
-        SynchronizationRoot.TryInsertBlock(block, out SynchronizationRoot);
-
-        if (!HeadersDownloading.Remove(heightBlock)) // muss mit Hash statt mit height arbeiten.
-        {
-
-        }
-
-        if (QueueBlocks.TryAdd(heightBlock, block))
-          if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
-            do
-            {
-              HeaderTipBlockchain = block.Header;
-
-              try
-              {
-                Token?.InsertBlock(block);
-              }
-              catch
-              {
-                FlagIsAborted = true;
-                return;
-              }
-            } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
-
-        SynchronizationRoot.TryReorgToken(this);
-
-
-
-        if (SynchronizationRoot.TryReorgToken(sync))
-          SynchronizationRoot = sync;
-
-        foreach (Synchronization syncInProgress in SynchronizationsInProgress)
-          if (!syncInProgress.IsHeaderTipStrongerThanBlockTip(SynchronizationRoot))
-            syncInProgress.FlagIsAborted = true;
+        SynchronizationRoot.TryInsertBlock(block, ref SynchronizationRoot);
       }
       finally
       {
-        SynchronizationRoot.ReleaseLockSynchronization();
+        ReleaseLockSynchronization();
       }
     }
 

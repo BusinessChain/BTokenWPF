@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Automation;
 
 
 namespace BTokenLib
@@ -10,7 +11,12 @@ namespace BTokenLib
       class TXMessage : MessageNetworkProtocol
       {
         public TXMessage()
-          : base("tx") { }
+          : base("tx")
+        {
+          // amount bytes per 10 minutes
+          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5000000);
+          
+        }
 
         public TXMessage(byte[] tXRaw)
           : base("tx")

@@ -31,9 +31,11 @@ namespace BTokenLib
 
       readonly Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new()
       {
-        {"getheaders", new GetDataMessage()},
+        {"getdata", new GetDataMessage()},
+        {"getheaders", new GetHeadersMessage()},
         {"headers", new HeadersMessage()},
-        {"block", new BlockMessage()}
+        {"block", new BlockMessage()},
+        {"tx", new TXMessage()}
       };
 
       async Task StartMessageReceiver()
