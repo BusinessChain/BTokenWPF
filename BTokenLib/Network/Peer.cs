@@ -43,6 +43,8 @@ namespace BTokenLib
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
 
+      Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol;
+
       SHA256 SHA256 = SHA256.Create();
 
       ILogEntryNotifier LogEntryNotifier;
@@ -58,6 +60,8 @@ namespace BTokenLib
         ConnectionType connection)
       {
         Network = network;
+
+        MessagesNetworkProtocol = Network.GetMessagesNetworkProtocol();
 
         TcpClient = tcpClient;
         IPAddress = ip;

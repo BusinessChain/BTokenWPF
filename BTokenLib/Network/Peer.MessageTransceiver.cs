@@ -15,8 +15,6 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      MessageNetworkProtocol MessageNetwork;
-
       const int TIMEOUT_HANDSHAKE_MILLISECONDS = 5000;
       public StateProtocol StateCurrent = StateProtocol.Handshake;
 
@@ -29,14 +27,6 @@ namespace BTokenLib
       byte[] LengthRead = new byte[4];
       byte[] ChecksumRead = new byte[ChecksumSize];
 
-      readonly Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new()
-      {
-        {"getdata", new GetDataMessage()},
-        {"getheaders", new GetHeadersMessage()},
-        {"headers", new HeadersMessage()},
-        {"block", new BlockMessage()},
-        {"tx", new TXMessage()}
-      };
 
       async Task StartMessageReceiver()
       {

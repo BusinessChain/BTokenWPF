@@ -64,7 +64,8 @@ namespace BTokenLib
       Network = new Network(
         this,
         port: 8777,
-        flagEnableInboundConnections: true);
+        flagEnableInboundConnections: true,
+        flagEnableRelay: true);
     }
 
     public override Header CreateHeaderGenesis()

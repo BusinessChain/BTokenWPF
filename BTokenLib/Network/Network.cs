@@ -45,7 +45,8 @@ namespace BTokenLib
     public Network(
       Token token,
       UInt16 port, 
-      bool flagEnableInboundConnections)
+      bool flagEnableInboundConnections,
+      bool flagEnableRelay)
     {
       Token = token;
       LogEntryNotifier = token.LogEntryNotifier;
