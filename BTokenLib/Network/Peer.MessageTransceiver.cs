@@ -27,6 +27,7 @@ namespace BTokenLib
       byte[] LengthRead = new byte[4];
       byte[] ChecksumRead = new byte[ChecksumSize];
 
+      readonly Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol;
 
       async Task StartMessageReceiver()
       {
@@ -140,15 +141,14 @@ namespace BTokenLib
         }
       }
       
-      void SendBlockRequest(Block blockDownload)
+      void SendBlockRequest(byte[] hash)
       {
-        if (blockDownload?.Header == null)
-          return;
+        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, hash));
+      }
 
-        BlockMessage blockMessage = MessagesNetworkProtocol["block"] as BlockMessage;
-        blockMessage.BlockDownload = blockDownload;
+      async Task SendBlock()
+      {
 
-        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, blockDownload.Header.Hash));
       }
 
       async Task Handshake()

@@ -18,6 +18,7 @@ namespace BTokenLib
       Header HeaderRoot;
       Header HeaderTip;
       Header HeaderTipBlockchain;
+      int HeightBlockInsertNext;
 
       Dictionary<byte[], Header> HeadersDownloading = new(new EqualityComparerByteArray());
       Header HeaderDownloadNext;
@@ -34,6 +35,7 @@ namespace BTokenLib
         SynchronizationParent = synchronizationRoot;
         HeaderRoot = headerRoot;
         HeaderTip = headerTip;
+        HeightBlockInsertNext = HeaderRoot.Height;
       }
 
       public bool TryLockSynchronization()
@@ -62,17 +64,9 @@ namespace BTokenLib
           FlagSynchronizationLocked = false;
       }
 
-      public bool TryExtendHeaderchain(
-        Header header, 
-        out List<byte[]> locator,
-        ref Block blockDownload)
+      public bool TryExtendHeaderchain(Header header, out List<byte[]> locator, Block blockDownload)
       {
         locator = null;
-
-        if (blockDownload == null)
-          blockDownload = new(Token);
-
-        blockDownload.Header = null;
 
         if (header == null || !TryLockSynchronization())
           return false;
@@ -86,7 +80,7 @@ namespace BTokenLib
             if (headerAncestor == HeaderRoot)
             {
               foreach (Synchronization sync in SynchronizationBranches)
-                if (sync.TryExtendHeaderchain(header, out locator, ref blockDownload))
+                if (sync.TryExtendHeaderchain(header, out locator, blockDownload))
                   return true;
 
               locator = GetLocator();
@@ -102,7 +96,7 @@ namespace BTokenLib
             {
               foreach (Synchronization sync in SynchronizationBranches)
                 if (sync.HeaderRoot.Hash.IsAllBytesEqual(header.Hash))
-                  return sync.TryExtendHeaderchain(header.HeaderNext, out locator, ref blockDownload);
+                  return sync.TryExtendHeaderchain(header.HeaderNext, out locator, blockDownload);
 
               Header headerTip = header.AppendToHeader(headerAncestor);
               Synchronization syncBranch = new(this, header, headerTip);
@@ -140,7 +134,8 @@ namespace BTokenLib
         if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
             && HeadersDownloading.Any())
           return HeadersDownloading.Values.MinBy(h => h.Height);
-        else if (HeaderDownloadNext != null)
+        
+        if (HeaderDownloadNext != null)
         {
           Header headerDownload = HeaderDownloadNext;
           HeadersDownloading.Add(headerDownload.Hash, headerDownload);
@@ -159,38 +154,47 @@ namespace BTokenLib
         return SynchronizationParent.GetSynchronizationRoot();
       }
 
-      public bool TryInsertBlock(Block block, ref Synchronization sychronizationRoot)
+      public bool TryInsertBlock(ref Block block, ref Synchronization sychronizationRoot)
       {
-        int heightBlock = block.Header.Height;
         if (!HeadersDownloading.Remove(block.Header.Hash))
         {
           foreach (Synchronization syncBranch in SynchronizationBranches)
-            if (syncBranch.TryInsertBlock(block, ref sychronizationRoot))
+            if (syncBranch.TryInsertBlock(ref block, ref sychronizationRoot))
               return true;
 
           block.Header = null;
           return false;
         }
 
-        QueueBlocks.Add(heightBlock, block);
+        int heightBlock = block.Header.Height;
 
-        if (heightBlock == HeaderRoot.Height || heightBlock == HeaderTipBlockchain?.Height + 1)
+        if (heightBlock == HeightBlockInsertNext)
+        {
           do
           {
-            HeaderTipBlockchain = block.Header;
-
             try
             {
               Token?.InsertBlock(block);
+              HeaderTipBlockchain = block.Header;
             }
             catch
             {
               return false;
             }
+
+            PoolBlocks.Add(block);
           } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
 
-        if (TryReorg())
-          sychronizationRoot = this;
+          if (TryReorg())
+            sychronizationRoot = this;
+        }
+        else
+          QueueBlocks.Add(heightBlock, block);
+
+        if (!PoolBlocks.TryTake(out block))
+          block = new(Token);
+
+        block.Header = FetchHeaderDownload();
 
         return true;
       }
@@ -263,7 +267,6 @@ namespace BTokenLib
         return HeaderTip.DifficultyAccumulated >
           sync.HeaderTipBlockchain.DifficultyAccumulated;
       }
-
 
       public List<byte[]> GetLocator()
       {

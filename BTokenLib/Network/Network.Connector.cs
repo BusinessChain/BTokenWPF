@@ -208,21 +208,6 @@ namespace BTokenLib
       return true;
     }
 
-
-
-
-    Dictionary<string, MessageNetworkProtocol> GetMessagesNetworkProtocol()
-    {
-      return new()
-          {
-            { "getdata", new GetDataMessage()},
-            { "getheaders", new GetHeadersMessage()},
-            { "headers", new HeadersMessage()},
-            { "block", new BlockMessage()},
-            { "tx", new TXMessage()}
-          };
-    }
-
     async Task CreatePeer(TcpClient tcpClient, ConnectionType connection, IPAddress iP)
     {
       try

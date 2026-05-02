@@ -43,8 +43,6 @@ namespace BTokenLib
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
 
-      Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol;
-
       SHA256 SHA256 = SHA256.Create();
 
       ILogEntryNotifier LogEntryNotifier;
@@ -61,7 +59,16 @@ namespace BTokenLib
       {
         Network = network;
 
-        MessagesNetworkProtocol = Network.GetMessagesNetworkProtocol();
+        Block blockDownload = new(network.Token);
+
+        MessagesNetworkProtocol = new()
+        {
+          {"getdata", new GetDataMessage(Network)},
+          {"getheaders", new GetHeadersMessage(Network)},
+          {"headers", new HeadersMessage(blockDownload)},
+          {"block", new BlockMessage(Network, blockDownload)},
+          {"tx", new TXMessage()}
+        };
 
         TcpClient = tcpClient;
         IPAddress = ip;
@@ -175,17 +182,6 @@ namespace BTokenLib
         await SendMessage(invMessage);
       }
       
-      public async Task RequestDB()
-      {
-        $"Start downloading DB {HashDBDownload.ToHexString()}."
-          .Log(this, LogFile, Network.LogEntryNotifier);
-
-        State = StateProtocol.DBDownload;
-
-        SetTimer("receive DB", TIMEOUT_RESPONSE_MILLISECONDS);
-
-        await SendMessage(new GetDataMessage(InventoryType.MSG_DB, HashDBDownload));
-      }
 
       public void Dispose()
       {

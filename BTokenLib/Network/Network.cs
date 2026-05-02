@@ -15,6 +15,7 @@ namespace BTokenLib
     protected Token Token;
     protected UInt16 Port;
     public bool EnableInboundConnections;
+    public bool EnableRelay;
     public ILogEntryNotifier LogEntryNotifier;
 
     object LOCK_Peers = new();
@@ -49,6 +50,10 @@ namespace BTokenLib
       bool flagEnableRelay)
     {
       Token = token;
+
+      EnableInboundConnections = flagEnableInboundConnections;
+      EnableRelay = flagEnableRelay;
+
       LogEntryNotifier = token.LogEntryNotifier;
       string pathRoot = token.GetName();
 
@@ -156,7 +161,7 @@ namespace BTokenLib
 
       try
       {
-        SynchronizationRoot.TryInsertBlock(block, ref SynchronizationRoot);
+        SynchronizationRoot.TryInsertBlock(ref block, ref SynchronizationRoot);
       }
       finally
       {

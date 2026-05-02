@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 
 namespace BTokenLib
@@ -10,6 +9,8 @@ namespace BTokenLib
   {
     abstract class MessageNetworkProtocol
     {
+      public Network Network;
+
       public string Command;
       public byte[] Payload;
       public int LengthDataPayload;
@@ -18,11 +19,17 @@ namespace BTokenLib
 
 
       public MessageNetworkProtocol(string command)
-        : this(command, new byte[0])
+        : this(command, new byte[0], null)
       { }
 
-      public MessageNetworkProtocol(string command, byte[] payload)
+      public MessageNetworkProtocol(string command, Network network)
+        : this(command, new byte[0], network)
+      { }
+
+      public MessageNetworkProtocol(string command, byte[] payload, Network network)
       {
+        Network = network;
+
         Command = command;
         Payload = payload;
 

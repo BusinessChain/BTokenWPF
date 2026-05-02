@@ -8,61 +8,67 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class GetDataMessage : MessageNetworkProtocol
+    partial class Peer
     {
-      public List<Inventory> Inventories = new();
-
-
-      public GetDataMessage()
-        : base("getdata")
+      class GetDataMessage : MessageNetworkProtocol
       {
-
-      }
-
-      public GetDataMessage(byte[] buffer)
-        : base("getdata", buffer)
-      {
-        int startIndex = 0;
-
-        int inventoryCount = VarInt.GetInt(
-          Payload,
-          ref startIndex);
-
-        for (int i = 0; i < inventoryCount; i++)
-          Inventories.Add(Inventory.Parse(
-            Payload,
-            ref startIndex));
-      }
-
-      public GetDataMessage(InventoryType inventoryType, byte[] hash)
-        : this(new List<Inventory>() { new Inventory(inventoryType, hash) })
-      { }
-
-      public GetDataMessage(List<Inventory> inventories)
-        : base("getdata")
-      {
-        Inventories = inventories;
-
-        List<byte> payload = new();
-
-        payload.AddRange(VarInt.GetBytes(Inventories.Count()));
-
-        for (int i = 0; i < Inventories.Count(); i++)
-          payload.AddRange(Inventories[i].GetBytes());
-
-        Payload = payload.ToArray();
-        LengthDataPayload = Payload.Length;
-      }
-
-      public override MessageNetworkProtocol Create()
-      {
-        return new GetDataMessage();
-      }
+        public List<Inventory> Inventories = new();
 
 
-      public override void Run(Peer peer)
-      {
+        public GetDataMessage(Network network)
+          : base("getdata", network)
+        { }
 
+        public GetDataMessage(InventoryType inventoryType, byte[] hash)
+          : this(new List<Inventory>() { new Inventory(inventoryType, hash) })
+        { }
+
+        public GetDataMessage(List<Inventory> inventories)
+          : base("getdata")
+        {
+          Inventories = inventories;
+
+          List<byte> payload = new();
+
+          payload.AddRange(VarInt.GetBytes(Inventories.Count()));
+
+          for (int i = 0; i < Inventories.Count(); i++)
+            payload.AddRange(Inventories[i].GetBytes());
+
+          Payload = payload.ToArray();
+          LengthDataPayload = Payload.Length;
+        }
+
+        public override void Run(Peer peer)
+        {
+          int startIndex = 0;
+
+          int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
+
+          for (int i = 0; i < inventoryCount; i++)
+          {
+            Inventory inventory = Inventory.Parse(Payload, ref startIndex);
+
+            if (inventory.Type == InventoryType.MSG_TX)
+            {
+              if (Token.TryGetTX(inventory.Hash, out TX tXInPool))
+                await SendMessage(new TXMessage(tXInPool.TXRaw));
+              else
+                await SendMessage(new NotFoundMessage(
+                  new List<Inventory>() { inventory }));
+            }
+            else if (inventory.Type == InventoryType.MSG_BLOCK)
+            {
+              if (Network.TryLoadBlock(inventory.Hash, out Block block))
+                peer.SendBlock();
+            }
+            else if (inventory.Type == InventoryType.MSG_DB)
+            {
+            }
+            else
+              await SendMessage(new RejectMessage(inventory.Hash));
+          }
+        }
       }
     }
   }
