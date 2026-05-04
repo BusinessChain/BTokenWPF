@@ -59,14 +59,12 @@ namespace BTokenLib
             }
             else if (inventory.Type == InventoryType.MSG_BLOCK)
             {
-              if (Network.TryLoadBlock(inventory.Hash, out Block block))
-                peer.SendBlock();
+              if (Network.TryLoadBlock(inventory.Hash, out byte[] buffer))
+                peer.SendBlock(buffer);
             }
             else if (inventory.Type == InventoryType.MSG_DB)
             {
             }
-            else
-              await SendMessage(new RejectMessage(inventory.Hash));
           }
         }
       }

@@ -146,9 +146,10 @@ namespace BTokenLib
         SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, hash));
       }
 
-      async Task SendBlock()
+      async Task SendBlock(byte[] buffer)
       {
-
+        MessageNetworkProtocol["block"]
+        SendMessage(new BlockMessage(InventoryType.MSG_BLOCK, hash));
       }
 
       async Task Handshake()

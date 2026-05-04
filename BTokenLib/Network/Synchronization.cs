@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.IO;
 
 namespace BTokenLib
 {
@@ -20,6 +21,8 @@ namespace BTokenLib
       Header HeaderTipBlockchain;
       int HeightBlockInsertNext;
 
+      string PathDirectoryBlocks;
+
       Dictionary<byte[], Header> HeadersDownloading = new(new EqualityComparerByteArray());
       Header HeaderDownloadNext;
 
@@ -36,6 +39,14 @@ namespace BTokenLib
         HeaderRoot = headerRoot;
         HeaderTip = headerTip;
         HeightBlockInsertNext = HeaderRoot.Height;
+
+        if (synchronizationRoot == null)
+          PathDirectoryBlocks = "blocksSyncRoot";
+        else
+        {
+          int indexBranch = synchronizationRoot.SynchronizationBranches.Count;
+          PathDirectoryBlocks = Path.Combine(synchronizationRoot.PathDirectoryBlocks, $"branch{indexBranch}");
+        }
       }
 
       public bool TryLockSynchronization()
@@ -175,12 +186,15 @@ namespace BTokenLib
             try
             {
               Token?.InsertBlock(block);
-              HeaderTipBlockchain = block.Header;
             }
             catch
             {
               return false;
             }
+
+            HeaderTipBlockchain = block.Header;
+
+            block.WriteToDisk(PathDirectoryBlocks);
 
             PoolBlocks.Add(block);
           } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
@@ -262,10 +276,38 @@ namespace BTokenLib
         return TryReorg();
       }
 
-      public bool IsHeaderTipStrongerThanBlockTip(Synchronization sync)
+      public bool TryGetBlock(byte[] hash, out byte[] buffer)
       {
-        return HeaderTip.DifficultyAccumulated >
-          sync.HeaderTipBlockchain.DifficultyAccumulated;
+        buffer = null;
+
+        Header header = HeaderRoot;
+
+        while (header != null)
+        {
+          if(header.Hash.IsAllBytesEqual(hash))
+          {
+            string pathFile = Path.Combine(PathDirectoryBlocks, header.Height.ToString());
+
+            try
+            {
+              buffer = File.ReadAllBytes(pathFile);
+            }
+            catch
+            {
+              return false;
+            }
+
+            return true;
+          }
+
+          header = header.HeaderNext;
+        }
+
+        foreach(Synchronization syncBranch in SynchronizationBranches)
+          if (TryGetBlock(hash, out buffer))
+            return true;
+
+        return false;
       }
 
       public List<byte[]> GetLocator()

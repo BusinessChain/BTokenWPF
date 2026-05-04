@@ -153,7 +153,6 @@ namespace BTokenLib
         FlagSyncLocked = false;
     }
 
-
     public void InsertBlock(Block block)
     {
       if (!TryLockSynchronization())
@@ -175,14 +174,21 @@ namespace BTokenLib
         return SynchronizationRoot.GetLocator();
     }
     
-    public bool TryLoadBlock(byte[] hash, out Block block)
+    public bool TryLoadBlock(byte[] hash, out byte[] buffer)
     {
-      block = null;
+      buffer = null;
 
-      if (TryLoadHeader(hash, out Header header))
-        return TryLoadBlock(header.Height, out block);
+      if (!TryLockSynchronization())
+        return false;
 
-      return false;
+      try
+      {
+        return SynchronizationRoot.TryGetBlock(hash, out buffer);
+      }
+      finally
+      {
+        ReleaseLockSynchronization();
+      }
     }
 
     bool TryLoadHeader(byte[] hash, out Header header)
