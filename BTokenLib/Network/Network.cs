@@ -174,8 +174,9 @@ namespace BTokenLib
         return SynchronizationRoot.GetLocator();
     }
     
-    public bool TryLoadBlock(byte[] hash, out byte[] buffer)
+    public bool TryLoadBlock(byte[] hash, out byte[] buffer, out int heightBlock)
     {
+      heightBlock = -1;
       buffer = null;
 
       if (!TryLockSynchronization())
@@ -183,7 +184,7 @@ namespace BTokenLib
 
       try
       {
-        return SynchronizationRoot.TryGetBlock(hash, out buffer);
+        return SynchronizationRoot.TryGetBlock(hash, out buffer, ref heightBlock);
       }
       finally
       {

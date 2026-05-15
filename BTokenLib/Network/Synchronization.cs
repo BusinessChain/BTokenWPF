@@ -276,7 +276,7 @@ namespace BTokenLib
         return TryReorg();
       }
 
-      public bool TryGetBlock(byte[] hash, out byte[] buffer)
+      public bool TryGetBlock(byte[] hash, out byte[] buffer, ref int heightBlock)
       {
         buffer = null;
 
@@ -297,6 +297,7 @@ namespace BTokenLib
               return false;
             }
 
+            heightBlock = header.Height;
             return true;
           }
 
@@ -304,7 +305,7 @@ namespace BTokenLib
         }
 
         foreach(Synchronization syncBranch in SynchronizationBranches)
-          if (TryGetBlock(hash, out buffer))
+          if (TryGetBlock(hash, out buffer, ref heightBlock))
             return true;
 
         return false;

@@ -14,26 +14,14 @@ namespace BTokenLib
       {
         const string Command = "getheaders";
 
+        Network Network;
+
         Header HaederAncestorSentLast;
 
 
         public GetHeadersMessage(Network network)
-        { }
-
-        public GetHeadersMessage(List<byte[]> headerLocator, uint versionProtocol)
         {
-          List<byte> payload = new();
-
-          payload.AddRange(BitConverter.GetBytes(versionProtocol));
-          payload.AddRange(VarInt.GetBytes(headerLocator.Count()));
-
-          for (int i = 0; i < headerLocator.Count(); i++)
-            payload.AddRange(headerLocator.ElementAt(i));
-
-          payload.AddRange("0000000000000000000000000000000000000000000000000000000000000000".ToBinary());
-
-          Payload = payload.ToArray();
-          LengthDataPayload = Payload.Length;
+          Network = network;
         }
 
         public override void Run(Peer peer)
@@ -66,11 +54,32 @@ namespace BTokenLib
           {
             HeadersMessage.SendHeaders(peer, headerAncestor.HeaderNext);
 
-            if(headerAncestor.Height > HaederAncestorSentLast.Height)
+            if (headerAncestor.Height >= HaederAncestorSentLast.Height + HeadersMessage.MaxCountHeaders)
               DOSMonitor.Decrement(1);
 
             HaederAncestorSentLast = headerAncestor;
           }
+          else
+            throw new ProtocolException("No common genesis block, different chain.");
+        }
+
+        public static async Task SendGetHeaders(Peer peer, List<byte[]> locator)
+        {
+          List<byte> payload = new();
+
+          payload.AddRange(BitConverter.GetBytes(VersionMessage.ProtocolVersion));
+          payload.AddRange(VarInt.GetBytes(locator.Count()));
+
+          foreach (byte[] locatorHash in locator)
+            payload.AddRange(locatorHash);
+
+          payload.AddRange("0000000000000000000000000000000000000000000000000000000000000000".ToBinary());
+
+          byte[] buffer = payload.ToArray();
+
+          await peer.SendMessage(Command, buffer.Length, buffer);
+
+          peer.Log($"Send getheaders. Locator: {locator.First().ToHexString()} ... {locator.Last().ToHexString()}");
         }
 
         public override string GetCommand()

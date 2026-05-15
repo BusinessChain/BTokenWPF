@@ -29,6 +29,9 @@ namespace BTokenLib
 
       Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new();
 
+      SemaphoreSlim SemaphoreSendMessage = new(1);
+
+
       async Task StartMessageReceiver()
       {
         DateTime timeEventExceptionLast = DateTime.UtcNow;
@@ -110,9 +113,6 @@ namespace BTokenLib
           throw;
         }
       }
-
-
-      SemaphoreSlim SemaphoreSendMessage = new(1);
 
       async Task SendMessage(MessageNetworkProtocol message)
       {

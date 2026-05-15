@@ -10,11 +10,13 @@ namespace BTokenLib
     {
       class VersionMessage : MessageNetworkProtocol
       {
+        public const UInt32 ProtocolVersion = 70015;
+
+
         public VersionMessage()
-          : base("version") { }
+        { }
 
         public VersionMessage(
-          uint protocolVersion,
           ulong networkServicesLocal,
           long unixTimeSeconds,
           ulong networkServicesRemote,
@@ -26,11 +28,10 @@ namespace BTokenLib
           string userAgent,
           int blockchainHeight,
           byte relayOption)
-          : base("version")
         {
           List<byte> versionPayload = new();
 
-          versionPayload.AddRange(BitConverter.GetBytes(protocolVersion));
+          versionPayload.AddRange(BitConverter.GetBytes(ProtocolVersion));
           versionPayload.AddRange(BitConverter.GetBytes(networkServicesLocal));
           versionPayload.AddRange(BitConverter.GetBytes(unixTimeSeconds));
           versionPayload.AddRange(BitConverter.GetBytes(networkServicesRemote));
@@ -53,11 +54,6 @@ namespace BTokenLib
           byte[] byteArray = BitConverter.GetBytes(uint16);
           Array.Reverse(byteArray);
           return byteArray;
-        }
-
-        public override MessageNetworkProtocol Create()
-        {
-          return new VersionMessage();
         }
       }
     }

@@ -37,7 +37,6 @@ namespace BTokenLib
            
       const string UserAgent = "/BTokenCore:0.0.0/";
       public ConnectionType Connection;
-      const UInt32 ProtocolVersion = 70015;
       public IPAddress IPAddress;
       TcpClient TcpClient;
       NetworkStream NetworkStream;
@@ -130,7 +129,7 @@ namespace BTokenLib
         StartMessageReceiver();
 
         if (Connection == ConnectionType.OUTBOUND)
-          SendGetHeaders(Network.GetLocator());
+          GetHeadersMessage.SendGetHeaders(this, Network.GetLocator());
       }
 
       public void BroadcastTX(TX tX)
@@ -144,7 +143,6 @@ namespace BTokenLib
       async Task SendVersion()
       {
         await SendMessage(new VersionMessage(
-              protocolVersion: ProtocolVersion,
               networkServicesLocal: 0,
               unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
               networkServicesRemote: 0,
@@ -158,21 +156,6 @@ namespace BTokenLib
               relayOption: 0x01));
       }
 
-      async Task SendGetHeaders(List<byte[]> locator)
-      {
-        SetTimer("Get headers.", TIMEOUT_RESPONSE_MILLISECONDS);
-
-        try
-        {
-          await SendMessage(new GetHeadersMessage(locator, ProtocolVersion));
-          Log($"Send getheaders. Locator: {locator.First().ToHexString()} ... {locator.Last().ToHexString()}");
-        }
-        catch (Exception ex)
-        {
-          Log($"Exception {ex.GetType().Name} when sending getheaders message.");
-        }
-      }
-
       public async Task AdvertizeTX(TX tX)
       {
         Log($"Advertize token {tX}.");
@@ -184,7 +167,6 @@ namespace BTokenLib
         await SendMessage(invMessage);
       }
       
-
       public void Dispose()
       {
         Log($"Dispose {Connection}.");

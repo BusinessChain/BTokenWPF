@@ -9,8 +9,6 @@ namespace BTokenLib
   {
     abstract class MessageNetworkProtocol
     {
-      public Network Network;
-
       public byte[] Payload;
       public int LengthDataPayload;
 
@@ -18,16 +16,11 @@ namespace BTokenLib
 
 
       public MessageNetworkProtocol()
-        : this(new byte[0], null)
+        : this(new byte[0])
       { }
 
-      public MessageNetworkProtocol(Network network)
-        : this(new byte[0], network)
-      { }
-
-      public MessageNetworkProtocol(byte[] payload, Network network)
+      public MessageNetworkProtocol(byte[] payload)
       {
-        Network = network;
 
         Payload = payload;
 

@@ -16,19 +16,21 @@ namespace BTokenLib
       {
         const string Command = "headers";
 
-        const int MaxCountHeaders = 2000;
+        public const int MaxCountHeaders = 2000;
+
+        Network Network;
 
         Block BlockDownload;
 
         SHA256 SHA256 = SHA256.Create();
 
 
-        public HeadersMessage(Block blockDownload)
+        public HeadersMessage(Block blockDownload, Network network)
         {
-          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
+          Network = network;
           BlockDownload = blockDownload;
+          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
         }
-
 
         public override void Run(Peer peer)
         {
@@ -52,7 +54,7 @@ namespace BTokenLib
             }
 
             if (headerslocator != null)
-              peer.SendGetHeaders(headerslocator);
+              GetHeadersMessage.SendGetHeaders(peer, headerslocator);
           }
           else if (countHeaders == 0 && BlockDownload.Header != null)
             GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);

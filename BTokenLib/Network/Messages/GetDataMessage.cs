@@ -15,28 +15,16 @@ namespace BTokenLib
       {
         const string Command = "getdata";
 
-        public List<Inventory> Inventories = new();
+        Network Network;
+
+        int HeightBlockDownloadedLast;
 
 
         public GetDataMessage(Network network)
-          : base(network)
+          : base()
         {
+          Network = network;
           DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
-        }
-
-        public GetDataMessage(List<Inventory> inventories)
-        {
-          Inventories = inventories;
-
-          List<byte> payload = new();
-
-          payload.AddRange(VarInt.GetBytes(Inventories.Count()));
-
-          for (int i = 0; i < Inventories.Count(); i++)
-            payload.AddRange(Inventories[i].GetBytes());
-
-          Payload = payload.ToArray();
-          LengthDataPayload = Payload.Length;
         }
 
         public override void Run(Peer peer)
@@ -58,8 +46,15 @@ namespace BTokenLib
             }
             else if (inventory.Type == InventoryType.MSG_BLOCK)
             {
-              if (Network.TryLoadBlock(inventory.Hash, out byte[] buffer))
+              if (Network.TryLoadBlock(inventory.Hash, out byte[] buffer, out int heightBlock))
+              {
                 BlockMessage.SendBlock(peer, buffer);
+
+                if (heightBlock > HeightBlockDownloadedLast)
+                  DOSMonitor.Decrement(1);
+
+                HeightBlockDownloadedLast = heightBlock;
+              }
             }
             else if (inventory.Type == InventoryType.MSG_DB)
             {

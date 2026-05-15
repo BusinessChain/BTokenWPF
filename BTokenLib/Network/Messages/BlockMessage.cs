@@ -12,12 +12,14 @@ namespace BTokenLib
       {
         const string Command = "block";
 
+        Network Network;
         public Block BlockDownload;
 
 
         public BlockMessage(Network network, Block blockDownload)
-          : base(network) 
+          : base() 
         {
+          Network = network;
           BlockDownload = blockDownload;
         }
 
