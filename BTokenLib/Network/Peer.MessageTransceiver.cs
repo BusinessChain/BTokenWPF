@@ -27,7 +27,7 @@ namespace BTokenLib
       byte[] LengthRead = new byte[4];
       byte[] ChecksumRead = new byte[ChecksumSize];
 
-      readonly Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol;
+      Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new();
 
       async Task StartMessageReceiver()
       {
@@ -116,40 +116,34 @@ namespace BTokenLib
 
       async Task SendMessage(MessageNetworkProtocol message)
       {
+        await SendMessage(message.GetCommand(), message.LengthDataPayload, message.Payload);
+      }
+
+      async Task SendMessage(string commandString, int lengthDataPayload, byte[] payload)
+      {
         await SemaphoreSendMessage.WaitAsync().ConfigureAwait(false);
 
         try
         {
           NetworkStream.Write(MagicBytes, 0, MagicBytes.Length);
 
-          byte[] command = Encoding.ASCII.GetBytes(message.Command.PadRight(CommandSize, '\0'));
+          byte[] command = Encoding.ASCII.GetBytes(commandString.PadRight(CommandSize, '\0'));
           NetworkStream.Write(command, 0, command.Length);
 
-          byte[] payloadLength = BitConverter.GetBytes(message.LengthDataPayload);
+          byte[] payloadLength = BitConverter.GetBytes(lengthDataPayload);
           NetworkStream.Write(payloadLength, 0, payloadLength.Length);
 
           byte[] checksum = SHA256.ComputeHash(
-            SHA256.ComputeHash(message.Payload, 0, message.LengthDataPayload));
+            SHA256.ComputeHash(payload, 0, lengthDataPayload));
 
           NetworkStream.Write(checksum, 0, ChecksumSize);
 
-          NetworkStream.Write(message.Payload, 0, message.LengthDataPayload);
+          NetworkStream.Write(payload, 0, lengthDataPayload);
         }
         finally
         {
           SemaphoreSendMessage.Release();
         }
-      }
-      
-      void SendBlockRequest(byte[] hash)
-      {
-        SendMessage(new GetDataMessage(InventoryType.MSG_BLOCK, hash));
-      }
-
-      async Task SendBlock(byte[] buffer)
-      {
-        MessageNetworkProtocol["block"]
-        SendMessage(new BlockMessage(InventoryType.MSG_BLOCK, hash));
       }
 
       async Task Handshake()
@@ -166,11 +160,11 @@ namespace BTokenLib
         {
           MessageNetworkProtocol message = await ReceiveMessageNext();
 
-          if (message.Command == "verack")
+          if (message.GetCommand() == "verack")
           {
             flagReceivedVerack = true;
           }
-          else if (message.Command == "version")
+          else if (message.GetCommand() == "version")
           {
             flagReceivedVersion = true;
             SendMessage(new VerAckMessage());

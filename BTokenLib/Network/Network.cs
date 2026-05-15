@@ -129,7 +129,7 @@ namespace BTokenLib
 
     bool TryLockSynchronization()
     {
-      int randomTimeout = Random.Shared.Next(5, 10);
+      int randomTimeout = Random.Shared.Next(500, 1000);
 
       while (randomTimeout > 0)
       {
@@ -140,7 +140,7 @@ namespace BTokenLib
             return true;
           }
 
-        Thread.Sleep(100);
+        Thread.Sleep(1);
         randomTimeout -= 1;
       }
 
@@ -191,14 +191,32 @@ namespace BTokenLib
       }
     }
 
-    bool TryLoadHeader(byte[] hash, out Header header)
+    bool TryLoadHeaderAncestor(List<byte[]> hashesLocator, out Header headerAncestor)
     {
-      header = HeaderTip;
+      headerAncestor = null;
 
-      while (header != null && !header.Hash.IsAllBytesEqual(hash))
-        header = header.HeaderPrevious;
+      if (!TryLockSynchronization())
+        return false;
 
-      return header != null;
+      try
+      {
+        headerAncestor = HeaderTip;
+
+        while (headerAncestor != null)
+        {
+          foreach (byte[] hashLocator in hashesLocator)
+            if (headerAncestor.Hash.IsAllBytesEqual(hashLocator))
+              return true;
+
+          headerAncestor = headerAncestor.HeaderPrevious;
+        }
+
+        return false;
+      }
+      finally
+      {
+        ReleaseLockSynchronization();
+      }
     }
 
     public bool TryLoadBlock(int blockHeight, out Block block)
@@ -210,7 +228,7 @@ namespace BTokenLib
         try
         {
           block = new(Token, File.ReadAllBytes(pathBlock));
-          block.Parse(blockHeight);
+          block.Parse();
 
           return true;
         }

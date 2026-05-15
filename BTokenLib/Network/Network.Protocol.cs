@@ -17,36 +17,7 @@ namespace BTokenLib
       }
       else if (command == "getheaders")
       {
-        byte[] hashHeaderAncestor = new byte[32];
-
-        int startIndex = 4;
-
-        int headersCount = VarInt.GetInt(Payload, ref startIndex);
-
-        $"Received getHeaders with {headersCount} locator hashes."
-
-        if (!Token.TryLock())
-        {
-          continue;
-        }
-
-        List<Header> headers = new();
-
-        Array.Copy(Payload, startIndex, hashHeaderAncestor, 0, 32);
-        startIndex += 32;
-
-        if (Network.TryLoadHeader(hashHeaderAncestor, out Header header))
-        {
-          while (header.HeaderNext != null && headers.Count < 2000)
-          {
-            headers.Add(header.HeaderNext);
-            header = header.HeaderNext;
-          }
-
-          SendHeaders(headers);
-        }
-
-        Token.ReleaseLock();
+        
       }
       else if (command == "notfound")
       {

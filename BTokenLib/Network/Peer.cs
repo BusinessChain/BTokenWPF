@@ -61,20 +61,22 @@ namespace BTokenLib
 
         Block blockDownload = new(network.Token);
 
-        MessagesNetworkProtocol = new()
-        {
-          {"getdata", new GetDataMessage(Network)},
-          {"getheaders", new GetHeadersMessage(Network)},
-          {"headers", new HeadersMessage(blockDownload)},
-          {"block", new BlockMessage(Network, blockDownload)},
-          {"tx", new TXMessage()}
-        };
+        AddMessageNetworkProtocol(new GetDataMessage(Network));
+        AddMessageNetworkProtocol(new GetHeadersMessage(Network));
+        AddMessageNetworkProtocol(new HeadersMessage(blockDownload));
+        AddMessageNetworkProtocol(new BlockMessage(Network, blockDownload));
+        AddMessageNetworkProtocol(new TXMessage());
 
         TcpClient = tcpClient;
         IPAddress = ip;
         Connection = connection;
 
         CreateLogFile($"{ip}-{Connection}");
+      }
+
+      void AddMessageNetworkProtocol(MessageNetworkProtocol message)
+      {
+        MessagesNetworkProtocol.Add(message.GetCommand(), message);
       }
 
       void CreateLogFile(string name)

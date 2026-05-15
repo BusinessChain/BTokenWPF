@@ -11,26 +11,24 @@ namespace BTokenLib
     {
       public Network Network;
 
-      public string Command;
       public byte[] Payload;
       public int LengthDataPayload;
 
       public DOSMonitorPer10Minutes DOSMonitor;
 
 
-      public MessageNetworkProtocol(string command)
-        : this(command, new byte[0], null)
+      public MessageNetworkProtocol()
+        : this(new byte[0], null)
       { }
 
-      public MessageNetworkProtocol(string command, Network network)
-        : this(command, new byte[0], network)
+      public MessageNetworkProtocol(Network network)
+        : this(new byte[0], network)
       { }
 
-      public MessageNetworkProtocol(string command, byte[] payload, Network network)
+      public MessageNetworkProtocol(byte[] payload, Network network)
       {
         Network = network;
 
-        Command = command;
         Payload = payload;
 
         LengthDataPayload = payload.Length;
@@ -43,6 +41,7 @@ namespace BTokenLib
 
       public abstract void Run(Peer peer);
 
+      public abstract string GetCommand();
     }
   }
 }

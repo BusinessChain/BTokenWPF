@@ -10,14 +10,16 @@ namespace BTokenLib
     {
       class BlockMessage : MessageNetworkProtocol
       {
+        const string Command = "block";
+
         public Block BlockDownload;
 
+
         public BlockMessage(Network network, Block blockDownload)
-          : base("block", network) 
+          : base(network) 
         {
           BlockDownload = blockDownload;
         }
-
 
         public override byte[] GetPayloadBuffer()
         {
@@ -36,7 +38,17 @@ namespace BTokenLib
           Network.InsertBlock(BlockDownload);
 
           if (BlockDownload.Header != null)
-            peer.SendBlockRequest(BlockDownload.Header.Hash);
+            GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);
+        }
+
+        public static async Task SendBlock(Peer peer, byte[] buffer)
+        {
+          await peer.SendMessage(Command, buffer.Length, buffer);
+        }
+
+        public override string GetCommand()
+        {
+          return Command;
         }
       }
     }
