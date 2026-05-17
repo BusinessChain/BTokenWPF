@@ -8,7 +8,7 @@ namespace BTokenLib
   {
     class BlockMessage : MessageNetworkProtocol
     {
-      const string Command = "block";
+      public const string Command = "block";
 
       Network Network;
       public Block BlockDownload;

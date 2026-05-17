@@ -12,7 +12,7 @@ namespace BTokenLib
   {
     class HeadersMessage : MessageNetworkProtocol
     {
-      const string Command = "headers";
+      public const string Command = "headers";
 
       public const int MaxCountHeaders = 2000;
 

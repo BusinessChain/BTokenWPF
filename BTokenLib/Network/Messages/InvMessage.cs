@@ -11,7 +11,7 @@ namespace BTokenLib
     {
       class InvMessage : MessageNetworkProtocol
       {
-        const string Command = "inv";
+        public const string Command = "inv";
 
         public List<Inventory> Inventories = new();
 

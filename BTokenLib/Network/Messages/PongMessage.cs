@@ -8,7 +8,7 @@ namespace BTokenLib
     {
       class PongMessage : MessageNetworkProtocol
       {
-        const string Command = "pong";
+        public const string Command = "pong";
 
 
         public PongMessage()
@@ -22,7 +22,7 @@ namespace BTokenLib
 
         public override void Run(Peer peer)
         {
-          PingMessage messagePing = messageNetworkOld as PingMessage;
+          PingMessage messagePing = peer.MessagesNetworkProtocol[PingMessage.Command];
 
           if (messagePing == null)
             throw new ProtocolException("Transistion into state 'pong' from other than state 'ping' is not supported.");

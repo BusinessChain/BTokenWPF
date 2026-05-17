@@ -8,6 +8,8 @@ namespace BTokenLib
   {
     class VersionMessage : MessageNetworkProtocol
     {
+      public const string Command = "version";
+
       public const UInt32 ProtocolVersion = 70015;
 
 
@@ -52,6 +54,11 @@ namespace BTokenLib
         byte[] byteArray = BitConverter.GetBytes(uint16);
         Array.Reverse(byteArray);
         return byteArray;
+      }
+
+      public override string GetCommand()
+      {
+        return Command;
       }
     }
   }

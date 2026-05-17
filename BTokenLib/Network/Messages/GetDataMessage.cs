@@ -11,7 +11,7 @@ namespace BTokenLib
   {
     class GetDataMessage : MessageNetworkProtocol
     {
-      const string Command = "getdata";
+      public const string Command = "getdata";
 
       Network Network;
 

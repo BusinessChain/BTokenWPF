@@ -9,7 +9,7 @@ namespace BTokenLib
     {
       class PingMessage : MessageNetworkProtocol
       {
-        const string Command = "ping";
+        public const string Command = "ping";
 
         public UInt64 Nonce;
 

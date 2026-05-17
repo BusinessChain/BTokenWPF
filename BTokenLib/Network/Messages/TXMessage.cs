@@ -9,7 +9,6 @@ namespace BTokenLib
     class TXMessage : MessageNetworkProtocol
     {
       public TXMessage()
-        : base("tx")
       {
         // amount bytes per 10 minutes
         DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5000000);

@@ -8,19 +8,18 @@ namespace BTokenLib
 {
   partial class Network
   {
-    partial class Peer
+    class VerAckMessage : MessageNetworkProtocol
     {
-      class VerAckMessage : MessageNetworkProtocol
+      public const string Command = "verack";
+
+
+      public VerAckMessage()
+      { }
+
+
+      public override string GetCommand()
       {
-        public VerAckMessage()
-          : base("verack")
-        { }
-
-
-        public override MessageNetworkProtocol Create()
-        {
-          return new VerAckMessage();
-        }
+        return Command;
       }
     }
   }

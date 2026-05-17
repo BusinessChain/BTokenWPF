@@ -10,7 +10,7 @@ namespace BTokenLib
   {
     class GetHeadersMessage : MessageNetworkProtocol
     {
-      const string Command = "getheaders";
+      public const string Command = "getheaders";
 
       Network Network;
 
