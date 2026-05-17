@@ -9,30 +9,29 @@ namespace BTokenLib
     {
       class PingMessage : MessageNetworkProtocol
       {
+        const string Command = "ping";
+
         public UInt64 Nonce;
 
 
         public PingMessage()
-          : base("ping")
         { }
 
         public PingMessage(byte[] payload)
-          : base("ping")
         {
           Payload = payload;
           LengthDataPayload = Payload.Length;
         }
 
-        public override MessageNetworkProtocol Create()
+
+        public override void Run(Peer peer)
         {
-          return new PingMessage();
+          peer.SendMessage(new PongMessage(Payload, LengthDataPayload));
         }
 
-        public override void RunMessage(Peer peer)
+        public override string GetCommand()
         {
-          $"Received ping message.".Log(this, peer.LogEntryNotifier);
-
-          peer.SendMessage(new PongMessage(Payload, LengthDataPayload));
+          return Command;
         }
       }
     }

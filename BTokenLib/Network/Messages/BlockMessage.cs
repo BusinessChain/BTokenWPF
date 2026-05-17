@@ -6,52 +6,49 @@ namespace BTokenLib
 {
   partial class Network
   {
-    partial class Peer
+    class BlockMessage : MessageNetworkProtocol
     {
-      class BlockMessage : MessageNetworkProtocol
+      const string Command = "block";
+
+      Network Network;
+      public Block BlockDownload;
+
+
+      public BlockMessage(Network network, Block blockDownload)
+        : base()
       {
-        const string Command = "block";
+        Network = network;
+        BlockDownload = blockDownload;
+      }
 
-        Network Network;
-        public Block BlockDownload;
+      public override byte[] GetPayloadBuffer()
+      {
+        return BlockDownload.Buffer;
+      }
 
+      public override void Run(Peer peer)
+      {
+        if (BlockDownload?.Header == null)
+          throw new ProtocolException($"Received unrequested block message.");
 
-        public BlockMessage(Network network, Block blockDownload)
-          : base() 
-        {
-          Network = network;
-          BlockDownload = blockDownload;
-        }
+        BlockDownload.LengthDataPayload = LengthDataPayload;
 
-        public override byte[] GetPayloadBuffer()
-        {
-          return BlockDownload.Buffer;
-        }
+        BlockDownload.Parse();
 
-        public override void Run(Peer peer)
-        {
-          if (BlockDownload?.Header == null)
-            throw new ProtocolException($"Received unrequested block message.");
+        Network.InsertBlock(BlockDownload);
 
-          BlockDownload.LengthDataPayload = LengthDataPayload;
+        if (BlockDownload.Header != null)
+          GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);
+      }
 
-          BlockDownload.Parse();
+      public static async Task SendBlock(Peer peer, byte[] buffer)
+      {
+        await peer.SendMessage(Command, buffer.Length, buffer);
+      }
 
-          Network.InsertBlock(BlockDownload);
-
-          if (BlockDownload.Header != null)
-            GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);
-        }
-
-        public static async Task SendBlock(Peer peer, byte[] buffer)
-        {
-          await peer.SendMessage(Command, buffer.Length, buffer);
-        }
-
-        public override string GetCommand()
-        {
-          return Command;
-        }
+      public override string GetCommand()
+      {
+        return Command;
       }
     }
   }

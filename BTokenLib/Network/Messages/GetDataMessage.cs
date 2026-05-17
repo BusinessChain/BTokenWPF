@@ -9,76 +9,73 @@ namespace BTokenLib
 {
   partial class Network
   {
-    partial class Peer
+    class GetDataMessage : MessageNetworkProtocol
     {
-      class GetDataMessage : MessageNetworkProtocol
+      const string Command = "getdata";
+
+      Network Network;
+
+      int HeightBlockDownloadedLast;
+
+
+      public GetDataMessage(Network network)
+        : base()
       {
-        const string Command = "getdata";
+        Network = network;
+        DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
+      }
 
-        Network Network;
+      public override void Run(Peer peer)
+      {
+        DOSMonitor.Increment(1);
 
-        int HeightBlockDownloadedLast;
+        int startIndex = 0;
 
+        int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
 
-        public GetDataMessage(Network network)
-          : base()
+        for (int i = 0; i < inventoryCount; i++)
         {
-          Network = network;
-          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
-        }
+          Inventory inventory = Inventory.Parse(Payload, ref startIndex);
 
-        public override void Run(Peer peer)
-        {
-          DOSMonitor.Increment(1);
-
-          int startIndex = 0;
-
-          int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
-
-          for (int i = 0; i < inventoryCount; i++)
+          if (inventory.Type == InventoryType.MSG_TX)
           {
-            Inventory inventory = Inventory.Parse(Payload, ref startIndex);
-
-            if (inventory.Type == InventoryType.MSG_TX)
+            if (Token.TryGetTX(inventory.Hash, out TX tXInPool))
+              await SendMessage(new TXMessage(tXInPool.TXRaw));
+          }
+          else if (inventory.Type == InventoryType.MSG_BLOCK)
+          {
+            if (Network.TryLoadBlock(inventory.Hash, out byte[] buffer, out int heightBlock))
             {
-              if (Token.TryGetTX(inventory.Hash, out TX tXInPool))
-                await SendMessage(new TXMessage(tXInPool.TXRaw));
-            }
-            else if (inventory.Type == InventoryType.MSG_BLOCK)
-            {
-              if (Network.TryLoadBlock(inventory.Hash, out byte[] buffer, out int heightBlock))
-              {
-                BlockMessage.SendBlock(peer, buffer);
+              BlockMessage.SendBlock(peer, buffer);
 
-                if (heightBlock > HeightBlockDownloadedLast)
-                  DOSMonitor.Decrement(1);
+              if (heightBlock > HeightBlockDownloadedLast)
+                DOSMonitor.Decrement(1);
 
-                HeightBlockDownloadedLast = heightBlock;
-              }
-            }
-            else if (inventory.Type == InventoryType.MSG_DB)
-            {
+              HeightBlockDownloadedLast = heightBlock;
             }
           }
+          else if (inventory.Type == InventoryType.MSG_DB)
+          {
+          }
         }
+      }
 
-        public static async Task SendBlockRequest(Peer peer, byte[] hash)
-        {
-          List<byte> payload = new();
+      public static async Task SendBlockRequest(Peer peer, byte[] hash)
+      {
+        List<byte> payload = new();
 
-          payload.AddRange(VarInt.GetBytes(1));
-          payload.AddRange(BitConverter.GetBytes((uint)InventoryType.MSG_BLOCK));
-          payload.AddRange(hash);
+        payload.AddRange(VarInt.GetBytes(1));
+        payload.AddRange(BitConverter.GetBytes((uint)InventoryType.MSG_BLOCK));
+        payload.AddRange(hash);
 
-          byte[] buffer = payload.ToArray();
+        byte[] buffer = payload.ToArray();
 
-          await peer.SendMessage(Command, buffer.Length, buffer);
-        }
+        await peer.SendMessage(Command, buffer.Length, buffer);
+      }
 
-        public override string GetCommand()
-        {
-          return Command;
-        }
+      public override string GetCommand()
+      {
+        return Command;
       }
     }
   }

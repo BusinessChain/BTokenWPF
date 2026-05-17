@@ -10,6 +10,8 @@ namespace BTokenLib
     public uint Version;
     public uint NBits;
 
+    public uint UnixTimeSeconds;
+
     const double MAX_TARGET = 2.695994666715064E67;
     const int RETARGETING_BLOCK_INTERVAL = 2016;
     const ulong RETARGETING_TIMESPAN_INTERVAL_SECONDS = 14 * 24 * 60 * 60;
@@ -30,11 +32,12 @@ namespace BTokenLib
         headerHash,
         hashPrevious,
         merkleRootHash,
-        unixTimeSeconds,
         nonce)
     {
       Version = version;
       NBits = nBits;
+
+      UnixTimeSeconds = unixTimeSeconds;
 
       BlockRewardInitial = 5000000000; // 200 BTK;
       PeriodHalveningBlockReward = 210000;
@@ -49,7 +52,7 @@ namespace BTokenLib
 
     public override Header AppendToHeader(Header headerPrevious)
     {
-      uint medianTimePastSeconds = GetMedianTimePastSeconds(headerPrevious);
+      uint medianTimePastSeconds = GetMedianTimePastSeconds(headerPrevious as HeaderBitcoin);
 
       if (UnixTimeSeconds < medianTimePastSeconds)
         throw new ProtocolException(string.Format(
@@ -66,7 +69,7 @@ namespace BTokenLib
       return base.AppendToHeader(headerPrevious);
     }
 
-    static uint GetMedianTimePastSeconds(Header header)
+    static uint GetMedianTimePastSeconds(HeaderBitcoin header)
     {
       const int MEDIAN_TIME_PAST = 11;
 
@@ -80,7 +83,7 @@ namespace BTokenLib
         if (header.HeaderPrevious == null)
           break;
 
-        header = header.HeaderPrevious;
+        header = header.HeaderPrevious as HeaderBitcoin;
         depth++;
       }
 
@@ -94,11 +97,11 @@ namespace BTokenLib
       if (((header.Height + 1) % RETARGETING_BLOCK_INTERVAL) != 0)
         return header.NBits;
 
-      Header headerIntervalStart = header;
+      HeaderBitcoin headerIntervalStart = header;
       int depth = RETARGETING_BLOCK_INTERVAL;
 
       while (--depth > 0 && headerIntervalStart.HeaderPrevious != null)
-        headerIntervalStart = headerIntervalStart.HeaderPrevious;
+        headerIntervalStart = headerIntervalStart.HeaderPrevious as HeaderBitcoin;
 
       ulong actualTimespan = Limit(
         header.UnixTimeSeconds -

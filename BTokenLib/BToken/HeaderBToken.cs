@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public class HeaderBToken : Header
   {
-    public const int COUNT_HEADER_BYTES = 108;
+    public const int COUNT_HEADER_BYTES = 100;
 
     // Statt den aktuellen DB Hash, könnte auch der diesem Block vorangehende DB Hash
     // aufgeführt werden. Dies hätte beim Mining der vorteil, dass das Inserten des 
@@ -48,9 +48,7 @@ namespace BTokenLib
 
       HashDatabase.CopyTo(buffer, 64);
 
-      BitConverter.GetBytes(UnixTimeSeconds).CopyTo(buffer, 96);
-
-      BitConverter.GetBytes(Nonce).CopyTo(buffer, 100);
+      BitConverter.GetBytes(Nonce).CopyTo(buffer, 96);
 
       return buffer;
     }

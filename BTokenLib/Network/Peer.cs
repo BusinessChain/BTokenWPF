@@ -16,7 +16,7 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      Network Network;
+      Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol;
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
@@ -34,7 +34,8 @@ namespace BTokenLib
       }
 
       byte[] HashDBDownload;
-           
+
+      int Port;
       const string UserAgent = "/BTokenCore:0.0.0/";
       public ConnectionType Connection;
       public IPAddress IPAddress;
@@ -51,76 +52,65 @@ namespace BTokenLib
 
 
       public Peer(
-        Network network,
+        Dictionary<string, MessageNetworkProtocol> protocol,
         IPAddress ip,
         TcpClient tcpClient,
+        int port,
         ConnectionType connection)
       {
-        Network = network;
-
-        Block blockDownload = new(network.Token);
-
-        AddMessageNetworkProtocol(new GetDataMessage(Network));
-        AddMessageNetworkProtocol(new GetHeadersMessage(Network));
-        AddMessageNetworkProtocol(new HeadersMessage(blockDownload));
-        AddMessageNetworkProtocol(new BlockMessage(Network, blockDownload));
-        AddMessageNetworkProtocol(new TXMessage());
+        MessagesNetworkProtocol = protocol;
 
         TcpClient = tcpClient;
+        Port = port;
         IPAddress = ip;
         Connection = connection;
 
-        CreateLogFile($"{ip}-{Connection}");
+        //CreateLogFile($"{ip}-{Connection}");
       }
 
-      void AddMessageNetworkProtocol(MessageNetworkProtocol message)
-      {
-        MessagesNetworkProtocol.Add(message.GetCommand(), message);
-      }
+      //void CreateLogFile(string name)
+      //{
+      //  string pathLogFileActive = Path.Combine(
+      //    Network.DirectoryPeersActive.FullName,
+      //    name);
 
-      void CreateLogFile(string name)
-      {
-        string pathLogFileActive = Path.Combine(
-          Network.DirectoryPeersActive.FullName,
-          name);
+      //  if (File.Exists(pathLogFileActive))
+      //    throw new ProtocolException($"Peer {this} already active.");
 
-        if (File.Exists(pathLogFileActive))
-          throw new ProtocolException($"Peer {this} already active.");
+      //  string pathLogFileDisposed = Path.Combine(
+      //    Network.DirectoryPeersDisposed.FullName,
+      //    name);
 
-        string pathLogFileDisposed = Path.Combine(
-          Network.DirectoryPeersDisposed.FullName,
-          name);
+      //  if (File.Exists(pathLogFileDisposed))
+      //  {
+      //    TimeSpan secondsSincePeerDisposal = TimePeerCreation - File.GetLastWriteTime(pathLogFileDisposed);
+      //    int secondsBannedRemaining = TIMESPAN_PEER_BANNED_SECONDS - (int)secondsSincePeerDisposal.TotalSeconds;
 
-        if (File.Exists(pathLogFileDisposed))
-        {
-          TimeSpan secondsSincePeerDisposal = TimePeerCreation - File.GetLastWriteTime(pathLogFileDisposed);
-          int secondsBannedRemaining = TIMESPAN_PEER_BANNED_SECONDS - (int)secondsSincePeerDisposal.TotalSeconds;
+      //    if (secondsBannedRemaining > 0)
+      //      throw new ProtocolException(
+      //        $"Peer {this} is banned for {secondsBannedRemaining} seconds.");
 
-          if (secondsBannedRemaining > 0)
-            throw new ProtocolException(
-              $"Peer {this} is banned for {secondsBannedRemaining} seconds.");
+      //    File.Move(pathLogFileDisposed, pathLogFileActive);
+      //  }
 
-          File.Move(pathLogFileDisposed, pathLogFileActive);
-        }
+      //  string pathLogFileArchive = Path.Combine(
+      //    Network.DirectoryPeersArchive.FullName,
+      //    name);
 
-        string pathLogFileArchive = Path.Combine(
-          Network.DirectoryPeersArchive.FullName,
-          name);
+      //  if (File.Exists(pathLogFileArchive))
+      //    File.Move(pathLogFileArchive, pathLogFileActive);
 
-        if (File.Exists(pathLogFileArchive))
-          File.Move(pathLogFileArchive, pathLogFileActive);
+      //  LogFile = new StreamWriter(
+      //    pathLogFileActive,
+      //    append: true);
+      //}
 
-        LogFile = new StreamWriter(
-          pathLogFileActive,
-          append: true);
-      }
-
-      public async Task Start()
+      public async Task Start(List<byte[]> locator)
       {
         Log($"Start peer - {Connection}.");
 
         if (!TcpClient.Connected)
-          await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
+          await TcpClient.ConnectAsync(IPAddress, Port).ConfigureAwait(false);
 
         NetworkStream = TcpClient.GetStream();
 
@@ -129,7 +119,7 @@ namespace BTokenLib
         StartMessageReceiver();
 
         if (Connection == ConnectionType.OUTBOUND)
-          GetHeadersMessage.SendGetHeaders(this, Network.GetLocator());
+          GetHeadersMessage.SendGetHeaders(this, locator);
       }
 
       public void BroadcastTX(TX tX)
@@ -147,9 +137,9 @@ namespace BTokenLib
               unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
               networkServicesRemote: 0,
               iPAddressRemote: IPAddress.Loopback,
-              portRemote: Network.Port,
+              portRemote: Port,
               iPAddressLocal: IPAddress.Loopback,
-              portLocal: Network.Port,
+              portLocal: Port,
               nonce: 0,
               userAgent: UserAgent,
               blockchainHeight: 0,
@@ -177,13 +167,13 @@ namespace BTokenLib
 
         LogFile.Dispose();
 
-        string pathLogFile = ((FileStream)LogFile.BaseStream).Name;
-        string nameLogFile = Path.GetFileName(pathLogFile);
-        string pathLogFileDisposed = Path.Combine(
-          Network.DirectoryPeersDisposed.FullName, nameLogFile);
+        //string pathLogFile = ((FileStream)LogFile.BaseStream).Name;
+        //string nameLogFile = Path.GetFileName(pathLogFile);
+        //string pathLogFileDisposed = Path.Combine(
+        //  Network.DirectoryPeersDisposed.FullName, nameLogFile);
 
-        File.Move(pathLogFile, pathLogFileDisposed);
-        File.SetCreationTime(pathLogFileDisposed, DateTime.Now);
+        //File.Move(pathLogFile, pathLogFileDisposed);
+        //File.SetCreationTime(pathLogFileDisposed, DateTime.Now);
       }
 
       public string GetStatus()

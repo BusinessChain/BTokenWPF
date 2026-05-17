@@ -12,8 +12,8 @@ namespace BTokenLib
 {
   public partial class Network
   {
-    protected Token Token;
-    protected UInt16 Port;
+    Token Token;
+    int Port;
     public bool EnableInboundConnections;
     public bool EnableRelay;
     public ILogEntryNotifier LogEntryNotifier;
@@ -39,9 +39,9 @@ namespace BTokenLib
     public Header HeaderTip;
     public Header HeaderGenesis;
 
-    protected LiteDatabase LiteDatabase;
-    protected ILiteCollection<BsonDocument> DatabaseMetaCollection;
-    protected ILiteCollection<BsonDocument> DatabaseHeaderCollection;
+    LiteDatabase LiteDatabase;
+    ILiteCollection<BsonDocument> DatabaseMetaCollection;
+    ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
     public Network(
       Token token,
@@ -268,16 +268,11 @@ namespace BTokenLib
     {
       string messageStatus = "";
 
-      var ageBlock = TimeSpan.FromSeconds(
-        DateTimeOffset.UtcNow.ToUnixTimeSeconds() - HeaderTip.UnixTimeSeconds);
-
       messageStatus +=
         $"Height: {HeaderTip.Height}\n" +
         $"Block tip: {HeaderTip.Hash.ToHexString().Substring(0, 24) + " ..."}\n" +
         $"Difficulty Tip: {HeaderTip.Difficulty}\n" +
-        $"Acc. Difficulty: {HeaderTip.DifficultyAccumulated}\n" +
-        $"Timestamp: {DateTimeOffset.FromUnixTimeSeconds(HeaderTip.UnixTimeSeconds)}\n" +
-        $"Age: {ageBlock}\n";
+        $"Acc. Difficulty: {HeaderTip.DifficultyAccumulated}\n";
 
       string statusPeers = "";
       int countPeers;

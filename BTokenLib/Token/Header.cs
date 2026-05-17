@@ -13,7 +13,6 @@ namespace BTokenLib
     public byte[] Hash;
     public byte[] HashPrevious;
     public byte[] MerkleRoot;
-    public uint UnixTimeSeconds;
     public uint Nonce;
 
     public Header HeaderPrevious;
@@ -45,13 +44,11 @@ namespace BTokenLib
       byte[] headerHash,
       byte[] hashPrevious,
       byte[] merkleRootHash,
-      uint unixTimeSeconds,
       uint nonce)
     {
       Hash = headerHash;
       HashPrevious = hashPrevious;
       MerkleRoot = merkleRootHash;
-      UnixTimeSeconds = unixTimeSeconds;
       Nonce = nonce;
     }
 

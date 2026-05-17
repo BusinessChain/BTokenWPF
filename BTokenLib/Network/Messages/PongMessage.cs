@@ -8,23 +8,19 @@ namespace BTokenLib
     {
       class PongMessage : MessageNetworkProtocol
       {
+        const string Command = "pong";
+
+
         public PongMessage()
-          : base("pong")
         { }
 
         public PongMessage(byte[] payload, int lengthDataPayload)
-          : base("pong")
         {
           Payload = payload;
           LengthDataPayload = lengthDataPayload;
         }
 
-        public override MessageNetworkProtocol Create()
-        {
-          return new PongMessage();
-        }
-
-        public override void RunMessage(Peer peer)
+        public override void Run(Peer peer)
         {
           PingMessage messagePing = messageNetworkOld as PingMessage;
 
@@ -35,6 +31,11 @@ namespace BTokenLib
             throw new ProtocolException("'Pong' message did not return same nonce as sended in 'ping' message.");
 
           peer.MessageNetworkCurrent = null;
+        }
+
+        public override string GetCommand()
+        {
+          return Command;
         }
       }
     }

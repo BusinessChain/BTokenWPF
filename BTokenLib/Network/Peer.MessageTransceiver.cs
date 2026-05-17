@@ -27,8 +27,6 @@ namespace BTokenLib
       byte[] LengthRead = new byte[4];
       byte[] ChecksumRead = new byte[ChecksumSize];
 
-      Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol = new();
-
       SemaphoreSlim SemaphoreSendMessage = new(1);
 
 
@@ -119,7 +117,7 @@ namespace BTokenLib
         await SendMessage(message.GetCommand(), message.LengthDataPayload, message.Payload);
       }
 
-      async Task SendMessage(string commandString, int lengthDataPayload, byte[] payload)
+      public async Task SendMessage(string commandString, int lengthDataPayload, byte[] payload)
       {
         await SemaphoreSendMessage.WaitAsync().ConfigureAwait(false);
 

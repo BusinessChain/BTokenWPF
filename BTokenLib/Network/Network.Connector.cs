@@ -208,13 +208,35 @@ namespace BTokenLib
       return true;
     }
 
+    Dictionary<string, MessageNetworkProtocol> CreateMessageNetworkProtocl()
+    {
+      Dictionary<string, MessageNetworkProtocol> protocol = new();
+
+      Block blockDownload = new(Token);
+
+      AddMessageNetworkProtocol(protocol, new GetDataMessage(this));
+      AddMessageNetworkProtocol(protocol, new GetHeadersMessage(this));
+      AddMessageNetworkProtocol(protocol, new HeadersMessage(this, blockDownload));
+      AddMessageNetworkProtocol(protocol, new BlockMessage(this, blockDownload));
+      AddMessageNetworkProtocol(protocol, new TXMessage());
+
+      return protocol;
+    }
+
+    static void AddMessageNetworkProtocol(
+      Dictionary<string, MessageNetworkProtocol> protocol, 
+      MessageNetworkProtocol message)
+    {
+      protocol.Add(message.GetCommand(), message);
+    }
+
     async Task CreatePeer(TcpClient tcpClient, ConnectionType connection, IPAddress iP)
     {
       try
       {
-        Peer peer = new(this, iP, tcpClient, connection);
+        Peer peer = new(CreateMessageNetworkProtocl(), iP, tcpClient, Port, connection);
 
-        await peer.Start();
+        await peer.Start(GetLocator());
 
         lock (LOCK_Peers)
           Peers.Add(peer);

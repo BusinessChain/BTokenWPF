@@ -11,13 +11,14 @@ namespace BTokenLib
     {
       class InvMessage : MessageNetworkProtocol
       {
+        const string Command = "inv";
+
         public List<Inventory> Inventories = new();
 
         public InvMessage()
-          : base("inv") { }
+        { }
 
         public InvMessage(List<Inventory> inventories)
-          : base("inv")
         {
           Inventories = inventories;
 
@@ -33,9 +34,7 @@ namespace BTokenLib
         }
 
         public InvMessage(byte[] buffer)
-          : base(
-              "inv",
-              buffer)
+          : base(buffer)
         {
           int startIndex = 0;
 
@@ -49,15 +48,14 @@ namespace BTokenLib
               ref startIndex));
         }
 
-
-        public override MessageNetworkProtocol Create()
+        public override void Run(Peer peer)
         {
-          return new InvMessage();
+
         }
 
-        public override void RunMessage(Peer peer)
+        public override string GetCommand()
         {
-
+          return Command;
         }
       }
     }

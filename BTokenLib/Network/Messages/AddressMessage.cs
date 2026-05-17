@@ -11,13 +11,15 @@ namespace BTokenLib
     {
       class AddressMessage : MessageNetworkProtocol
       {
+        const string Command = "addr";
+
         public List<NetworkAddress> NetworkAddresses = new();
 
         public AddressMessage()
-          : base("addr") { }
+        { }
 
         public AddressMessage(byte[] messagePayload)
-          : base("addr", messagePayload)
+          : base(messagePayload)
         {
           int startIndex = 0;
 
@@ -37,16 +39,16 @@ namespace BTokenLib
             NetworkAddresses.Add(address);
           }
         }
+            
 
-
-        public override MessageNetworkProtocol Create()
+        public override void Run(Peer peer)
         {
-          return new AddressMessage();
+
         }
 
-        public override void RunMessage(Peer peer)
+        public override string GetCommand()
         {
-
+          return Command;
         }
       }
     }
