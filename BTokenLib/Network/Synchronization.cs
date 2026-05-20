@@ -165,6 +165,7 @@ namespace BTokenLib
         return SynchronizationParent.GetSynchronizationRoot();
       }
 
+      // Token über Interface an das Netzwerk andoggen.
       public bool TryInsertBlock(ref Block block, ref Synchronization sychronizationRoot)
       {
         if (!HeadersDownloading.Remove(block.Header.Hash))

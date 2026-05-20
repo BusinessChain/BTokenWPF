@@ -1,10 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net;
-using System.Text;
-using System.Linq;
-using System.Threading;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -16,7 +14,13 @@ namespace BTokenLib
   {
     partial class Peer
     {
-      Dictionary<string, MessageNetworkProtocol> MessagesNetworkProtocol;
+      public Network Network;
+
+      public Dictionary<string, MessageNetworkProtocol> ProtocolStateMachine;
+
+      TcpClient TcpClient;
+      public ConnectionType Connection;
+      public IPAddress IPAddress;
 
       const int TIMEOUT_RESPONSE_MILLISECONDS = 5000;
 
@@ -35,11 +39,6 @@ namespace BTokenLib
 
       byte[] HashDBDownload;
 
-      int Port;
-      const string UserAgent = "/BTokenCore:0.0.0/";
-      public ConnectionType Connection;
-      public IPAddress IPAddress;
-      TcpClient TcpClient;
       NetworkStream NetworkStream;
       CancellationTokenSource Cancellation = new();
 
@@ -52,18 +51,16 @@ namespace BTokenLib
 
 
       public Peer(
-        Dictionary<string, MessageNetworkProtocol> protocol,
-        IPAddress ip,
+        Dictionary<string, MessageNetworkProtocol> protocolStateMachine,
         TcpClient tcpClient,
-        int port,
-        ConnectionType connection)
+        ConnectionType connection,
+        IPAddress iPAddress)
       {
-        MessagesNetworkProtocol = protocol;
+        ProtocolStateMachine = protocolStateMachine;
 
         TcpClient = tcpClient;
-        Port = port;
-        IPAddress = ip;
         Connection = connection;
+        IPAddress = iPAddress;
 
         //CreateLogFile($"{ip}-{Connection}");
       }
@@ -110,7 +107,7 @@ namespace BTokenLib
         Log($"Start peer - {Connection}.");
 
         if (!TcpClient.Connected)
-          await TcpClient.ConnectAsync(IPAddress, Port).ConfigureAwait(false);
+          await TcpClient.ConnectAsync(IPAddress, Network.Port).ConfigureAwait(false);
 
         NetworkStream = TcpClient.GetStream();
 
@@ -130,22 +127,6 @@ namespace BTokenLib
         SendMessage(invMessage);
       }
    
-      async Task SendVersion()
-      {
-        await SendMessage(new VersionMessage(
-              networkServicesLocal: 0,
-              unixTimeSeconds: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-              networkServicesRemote: 0,
-              iPAddressRemote: IPAddress.Loopback,
-              portRemote: Port,
-              iPAddressLocal: IPAddress.Loopback,
-              portLocal: Port,
-              nonce: 0,
-              userAgent: UserAgent,
-              blockchainHeight: 0,
-              relayOption: 0x01));
-      }
-
       public async Task AdvertizeTX(TX tX)
       {
         Log($"Advertize token {tX}.");

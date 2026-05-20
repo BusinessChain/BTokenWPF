@@ -13,7 +13,6 @@ namespace BTokenLib
   public partial class Network
   {
     Token Token;
-    int Port;
     public bool EnableInboundConnections;
     public bool EnableRelay;
     public ILogEntryNotifier LogEntryNotifier;
@@ -45,7 +44,7 @@ namespace BTokenLib
 
     public Network(
       Token token,
-      UInt16 port, 
+      int port, 
       bool flagEnableInboundConnections,
       bool flagEnableRelay)
     {

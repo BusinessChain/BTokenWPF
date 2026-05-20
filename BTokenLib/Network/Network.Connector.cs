@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net;
-using System.Linq;
 using System.Net.Sockets;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -11,6 +11,14 @@ namespace BTokenLib
 {
   partial class Network
   {
+    // Das Netzwerk holt die Konfiguration vom Token ab.
+    int Port;
+    UInt32 ProtocolVersion = 70015;
+    ulong NetworkServicesLocal = 0;
+    ulong NetworkServicesRemote = 0;
+    string UserAgent = "/BTokenCore:0.0.0/";
+    byte RelayOption = 0x01;
+
     const int TIMESPAN_LOOP_PEER_CONNECTOR_SECONDS = 10;
     const int TIMESPAN_PEER_BANNED_SECONDS = 10;
     int CountMaxPeers = 3;
@@ -19,16 +27,7 @@ namespace BTokenLib
 
     public bool FlagEnableOutboundConnections = true;
 
-    public enum StateNetwork
-    {
-      Idle,
-      ConnectingPeerOutbound,
-      ConnectingPeerInbound
-    }
-    public StateNetwork State = StateNetwork.Idle;
-
     public enum ConnectionType { OUTBOUND, INBOUND };
-
     List<string> IPAddresses = new();
 
 
@@ -208,7 +207,25 @@ namespace BTokenLib
       return true;
     }
 
-    Dictionary<string, MessageNetworkProtocol> CreateMessageNetworkProtocl()
+    async Task CreatePeer(TcpClient tcpClient, ConnectionType connection, IPAddress iP)
+    {
+      try
+      {
+        Peer peer = new(CreateStateMachineProtocol(), tcpClient, Port, connection, iP);
+
+        await peer.Start(GetLocator());
+
+        lock (LOCK_Peers)
+          Peers.Add(peer);
+      }
+      catch (Exception ex)
+      {
+        Log($"Could not start peer {iP}: {ex.Message}");
+        tcpClient.Dispose();
+      }
+    }
+
+    Dictionary<string, MessageNetworkProtocol> CreateStateMachineProtocol()
     {
       Dictionary<string, MessageNetworkProtocol> protocol = new();
 
@@ -224,28 +241,10 @@ namespace BTokenLib
     }
 
     static void AddMessageNetworkProtocol(
-      Dictionary<string, MessageNetworkProtocol> protocol, 
+      Dictionary<string, MessageNetworkProtocol> protocol,
       MessageNetworkProtocol message)
     {
       protocol.Add(message.GetCommand(), message);
-    }
-
-    async Task CreatePeer(TcpClient tcpClient, ConnectionType connection, IPAddress iP)
-    {
-      try
-      {
-        Peer peer = new(CreateMessageNetworkProtocl(), iP, tcpClient, Port, connection);
-
-        await peer.Start(GetLocator());
-
-        lock (LOCK_Peers)
-          Peers.Add(peer);
-      }
-      catch (Exception ex)
-      {
-        Log($"Could not start peer {iP}: {ex.Message}");
-        tcpClient.Dispose();
-      }
     }
   }
 }

@@ -1,12 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Net;
 using System.Linq;
 using System.Text;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
+using System.Net.Sockets;
 
 
 namespace BTokenLib
@@ -69,7 +67,7 @@ namespace BTokenLib
         await ReadBytes(CommandRead, CommandRead.Length);
         string commandString = Encoding.ASCII.GetString(CommandRead).TrimEnd('\0');
 
-        MessageNetworkProtocol message = MessagesNetworkProtocol[commandString];
+        MessageNetworkProtocol message = ProtocolStateMachine[commandString];
 
         await ReadBytes(LengthRead, LengthRead.Length);
         message.LengthDataPayload = BitConverter.ToInt32(LengthRead);
@@ -149,7 +147,7 @@ namespace BTokenLib
         SetTimer("Timeout handshake.", TIMEOUT_HANDSHAKE_MILLISECONDS);
 
         if (Connection == ConnectionType.OUTBOUND)
-          SendVersion();
+          VersionMessage.SendVersion(this);
 
         bool flagReceivedVersion = false;
         bool flagReceivedVerack = false;
@@ -168,7 +166,7 @@ namespace BTokenLib
             SendMessage(new VerAckMessage());
 
             if (Connection == ConnectionType.INBOUND)
-              SendVersion();
+              VersionMessage.SendVersion(this);
           }
         }
       }
