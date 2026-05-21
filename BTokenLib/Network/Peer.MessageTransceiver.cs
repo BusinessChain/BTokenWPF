@@ -115,61 +115,32 @@ namespace BTokenLib
         await SendMessage(message.GetCommand(), message.LengthDataPayload, message.Payload);
       }
 
-      public async Task SendMessage(string commandString, int lengthDataPayload, byte[] payload)
-      {
-        await SemaphoreSendMessage.WaitAsync().ConfigureAwait(false);
-
-        try
+        public async Task SendMessage(string commandString, int lengthDataPayload, byte[] payload)
         {
-          NetworkStream.Write(MagicBytes, 0, MagicBytes.Length);
+          await SemaphoreSendMessage.WaitAsync().ConfigureAwait(false);
 
-          byte[] command = Encoding.ASCII.GetBytes(commandString.PadRight(CommandSize, '\0'));
-          NetworkStream.Write(command, 0, command.Length);
-
-          byte[] payloadLength = BitConverter.GetBytes(lengthDataPayload);
-          NetworkStream.Write(payloadLength, 0, payloadLength.Length);
-
-          byte[] checksum = SHA256.ComputeHash(
-            SHA256.ComputeHash(payload, 0, lengthDataPayload));
-
-          NetworkStream.Write(checksum, 0, ChecksumSize);
-
-          NetworkStream.Write(payload, 0, lengthDataPayload);
-        }
-        finally
-        {
-          SemaphoreSendMessage.Release();
-        }
-      }
-
-      async Task Handshake()
-      {
-        SetTimer("Timeout handshake.", TIMEOUT_HANDSHAKE_MILLISECONDS);
-
-        if (Connection == ConnectionType.OUTBOUND)
-          VersionMessage.SendVersion(this);
-
-        bool flagReceivedVersion = false;
-        bool flagReceivedVerack = false;
-
-        while (!flagReceivedVersion || !flagReceivedVerack)
-        {
-          MessageNetworkProtocol message = await ReceiveMessageNext();
-
-          if (message.GetCommand() == "verack")
+          try
           {
-            flagReceivedVerack = true;
+            NetworkStream.Write(MagicBytes, 0, MagicBytes.Length);
+
+            byte[] command = Encoding.ASCII.GetBytes(commandString.PadRight(CommandSize, '\0'));
+            NetworkStream.Write(command, 0, command.Length);
+
+            byte[] payloadLength = BitConverter.GetBytes(lengthDataPayload);
+            NetworkStream.Write(payloadLength, 0, payloadLength.Length);
+
+            byte[] checksum = SHA256.ComputeHash(
+              SHA256.ComputeHash(payload, 0, lengthDataPayload));
+
+            NetworkStream.Write(checksum, 0, ChecksumSize);
+
+            NetworkStream.Write(payload, 0, lengthDataPayload);
           }
-          else if (message.GetCommand() == "version")
+          finally
           {
-            flagReceivedVersion = true;
-            SendMessage(new VerAckMessage());
-
-            if (Connection == ConnectionType.INBOUND)
-              VersionMessage.SendVersion(this);
+            SemaphoreSendMessage.Release();
           }
         }
-      }
 
       void SetTimer(string descriptionTimeOut = "", int millisecondsTimer = int.MaxValue)
       {

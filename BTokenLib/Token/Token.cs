@@ -58,7 +58,7 @@ namespace BTokenLib
       while (token.TokenParent != null)
         token = token.TokenParent;
 
-      token.Network.StartSync();
+      //token.Network.StartSync();
     }
 
     public bool TryLock()

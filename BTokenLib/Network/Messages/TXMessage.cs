@@ -8,6 +8,8 @@ namespace BTokenLib
   {
     class TXMessage : MessageNetworkProtocol
     {
+      public const string Command = "tx";
+
       public TXMessage()
       {
         // amount bytes per 10 minutes
@@ -16,20 +18,19 @@ namespace BTokenLib
       }
 
       public TXMessage(byte[] tXRaw)
-        : base("tx")
       {
         Payload = tXRaw;
         LengthDataPayload = Payload.Length;
       }
 
-      public override MessageNetworkProtocol Create()
+      public override void Run(Peer peer)
       {
-        return new TXMessage();
+
       }
 
-      public override void RunMessage(Peer peer)
+      public override string GetCommand()
       {
-
+        return Command;
       }
     }
   }

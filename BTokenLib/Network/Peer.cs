@@ -111,12 +111,15 @@ namespace BTokenLib
 
         NetworkStream = TcpClient.GetStream();
 
-        await Handshake();
-
         StartMessageReceiver();
 
         if (Connection == ConnectionType.OUTBOUND)
-          GetHeadersMessage.SendGetHeaders(this, locator);
+        {
+          VersionMessage.SendVersion(this);
+
+          VerAckMessage messageVerack = (VerAckMessage)ProtocolStateMachine[VerAckMessage.Command];
+          messageVerack.Locator = locator;
+        }
       }
 
       public void BroadcastTX(TX tX)

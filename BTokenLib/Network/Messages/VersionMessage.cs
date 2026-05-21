@@ -11,7 +11,6 @@ namespace BTokenLib
     {
       public const string Command = "version";
 
-
       public VersionMessage()
       { }
 
@@ -44,7 +43,15 @@ namespace BTokenLib
 
         await peer.SendMessage(Command, buffer.Length, buffer);
       }
+      
+      public override void Run(Peer peer)
+      {
+        VerAckMessage.Send(peer);
 
+        if (peer.Connection == ConnectionType.INBOUND)
+          SendVersion(peer);
+      }
+      
       public override string GetCommand()
       {
         return Command;

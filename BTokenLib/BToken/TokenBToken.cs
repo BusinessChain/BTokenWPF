@@ -75,7 +75,6 @@ namespace BTokenLib
         hashPrevious: "0000000000000000000000000000000000000000000000000000000000000000".ToBinary(),
         merkleRootHash: "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".ToBinary(),
         hashDatabase: "0000000000000000000000000000000000000000000000000000000000000000".ToBinary(),
-        unixTimeSeconds: 1231006505,
         nonce: 0);
 
       return header;
