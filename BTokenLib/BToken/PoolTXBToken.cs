@@ -25,8 +25,6 @@ namespace BTokenLib
 
       TokenBToken Token;
 
-      readonly object LOCK_TXsPool = new();
-
       int SequenceNumberTX;
 
       Dictionary<byte[], (TXBToken tX, int sequenceNumberTX)> TXsByHash = new(new EqualityComparerByteArray());

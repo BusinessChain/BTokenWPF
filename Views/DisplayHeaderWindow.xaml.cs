@@ -45,9 +45,6 @@ namespace BTokenWPF
         $"{header.CountTXs}\n" +
         $"{header.Difficulty}\n" +
         $"{header.DifficultyAccumulated}\n" +
-        $"{header.CountBytesTXs}\n" +
-        $"{header.CountBytesTXsAccumulated}\n" +
-        $"{DateTimeOffset.FromUnixTimeSeconds(header.UnixTimeSeconds)}\n" +
         $"{header.Nonce}\n";
 
       if (Token.Network.TryLoadBlock(Header.Height, out Block block))

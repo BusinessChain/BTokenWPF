@@ -263,6 +263,11 @@ namespace BTokenLib
           peer.BroadcastTX(tX);
     }
 
+    public double GetFeeRate()
+    {
+      return 0.0;
+    }
+
     public string GetStatus()
     {
       string messageStatus = "";

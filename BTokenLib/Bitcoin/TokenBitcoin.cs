@@ -180,5 +180,16 @@ namespace BTokenLib
             //"134.19.118.183", "152.169.255.224",
         };
     }
+
+    public override bool TryGetTX(byte[] hash, out TX tX)
+    {
+      tX = null;
+      return false;
+    }
+
+    public override void InsertBlock(Block block)
+    {
+
+    }
   }
 }

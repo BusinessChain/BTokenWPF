@@ -86,14 +86,9 @@ namespace BTokenLib
 
     public abstract Header CreateHeaderGenesis();
 
-    public virtual void InsertBlock(Block block) 
-    {
-      DatabaseHeaderCollection.Upsert(new BsonDocument
-      {
-        ["_id"] = block.Header.Hash,
-        ["buffer"] = block.Header.Serialize()
-      });
-    }
+    public abstract bool TryGetTX(byte[] hash, out TX tX);
+
+    public abstract void InsertBlock(Block block);
 
     public bool TryReverseBlock(Block block)
     {

@@ -85,6 +85,12 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
+    public override bool TryGetTX(byte[] hash, out TX tX)
+    {
+      tX = null;
+      return false;
+    }
+
     public override void InsertBlock(Block block)
     {
       try

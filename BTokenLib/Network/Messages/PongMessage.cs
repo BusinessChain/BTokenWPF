@@ -22,7 +22,7 @@ namespace BTokenLib
 
         public override void Run(Peer peer)
         {
-          PingMessage messagePing = peer.MessagesNetworkProtocol[PingMessage.Command];
+          PingMessage messagePing = peer.ProtocolStateMachine[PingMessage.Command] as PingMessage;
 
           if (messagePing == null)
             throw new ProtocolException("Transistion into state 'pong' from other than state 'ping' is not supported.");
@@ -30,7 +30,7 @@ namespace BTokenLib
           if (messagePing.Payload != Payload)
             throw new ProtocolException("'Pong' message did not return same nonce as sended in 'ping' message.");
 
-          peer.MessageNetworkCurrent = null;
+          peer.ProtocolStateMachine = null;
         }
 
         public override string GetCommand()

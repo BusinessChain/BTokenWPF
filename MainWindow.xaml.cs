@@ -87,30 +87,30 @@ namespace BTokenWPF
 
     void ButtonBitcoinMiner_Click(object sender, RoutedEventArgs e)
     {
-      if (BToken.TokenParent.IsMining)
-      {
-        BToken.TokenParent.StopMining();
-        ButtonStartBitcoinMiner.Content = "Start BitcoinMiner";
-      }
-      else
-      {
-        BToken.TokenParent.StartMining();
-        ButtonStartBitcoinMiner.Content = "Stop BitcoinMiner";
-      }
+      //if (BToken.TokenParent.IsMining)
+      //{
+      //  BToken.TokenParent.StopMining();
+      //  ButtonStartBitcoinMiner.Content = "Start BitcoinMiner";
+      //}
+      //else
+      //{
+      //  BToken.TokenParent.StartMining();
+      //  ButtonStartBitcoinMiner.Content = "Stop BitcoinMiner";
+      //}
     }
 
     void ButtonBTokenMiner_Click(object sender, RoutedEventArgs e)
     {
-      if (BToken.IsMining)
-      {
-        BToken.StopMining();
-        ButtonStartBTokenMiner.Content = "Start BTokenMiner";
-      }
-      else
-      {
-        BToken.StartMining();
-        ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
-      }
+      //if (BToken.IsMining)
+      //{
+      //  BToken.StopMining();
+      //  ButtonStartBTokenMiner.Content = "Start BTokenMiner";
+      //}
+      //else
+      //{
+      //  BToken.StartMining();
+      //  ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
+      //}
     }
 
     void ButtonStartSynchronizationNode_Click(object sender, RoutedEventArgs e)

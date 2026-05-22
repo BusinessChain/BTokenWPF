@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Windows.Automation;
+using System.Threading.Tasks;
 
 
 namespace BTokenLib
@@ -26,6 +26,11 @@ namespace BTokenLib
       public override void Run(Peer peer)
       {
 
+      }
+
+      public static async Task Send(Peer peer, byte[] buffer)
+      {
+        await peer.SendMessage(Command, buffer.Length, buffer);
       }
 
       public override string GetCommand()

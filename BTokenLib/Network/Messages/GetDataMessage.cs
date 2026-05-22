@@ -39,8 +39,8 @@ namespace BTokenLib
 
           if (inventory.Type == InventoryType.MSG_TX)
           {
-            if (Token.TryGetTX(inventory.Hash, out TX tXInPool))
-              await SendMessage(new TXMessage(tXInPool.TXRaw));
+            if (Network.Token.TryGetTX(inventory.Hash, out TX tXInPool))
+              TXMessage.Send(peer, tXInPool.TXRaw);
           }
           else if (inventory.Type == InventoryType.MSG_BLOCK)
           {

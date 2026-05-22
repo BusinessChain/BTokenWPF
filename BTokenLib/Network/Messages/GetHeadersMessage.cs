@@ -65,7 +65,7 @@ namespace BTokenLib
       {
         List<byte> payload = new();
 
-        payload.AddRange(BitConverter.GetBytes(VersionMessage.ProtocolVersion));
+        payload.AddRange(BitConverter.GetBytes(peer.Network.ProtocolVersion));
         payload.AddRange(VarInt.GetBytes(locator.Count()));
 
         foreach (byte[] locatorHash in locator)

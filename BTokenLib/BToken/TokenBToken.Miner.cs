@@ -126,7 +126,6 @@ namespace BTokenLib
         HashPrevious = Network.HeaderTip.Hash,
         HeaderPrevious = Network.HeaderTip,
         Height = height,
-        UnixTimeSeconds = (uint)DateTimeOffset.Now.ToUnixTimeSeconds(),
         MerkleRoot = block.ComputeMerkleRoot(),
         CountTXs = block.TXs.Count,
         Fee = feeTXs
@@ -151,7 +150,7 @@ namespace BTokenLib
         if (blockMined == null)
         {
           blockMined = new(this, File.ReadAllBytes(Path.Combine(PathBlocksMined, blockMined.Header.Height.ToString())));
-          blockMined.Parse(Network.HeaderTip.Height + 1);
+          blockMined.Parse();
         }
 
         InsertBlock(blockMined);
