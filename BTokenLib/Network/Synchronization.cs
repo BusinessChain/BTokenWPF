@@ -165,7 +165,6 @@ namespace BTokenLib
         return SynchronizationParent.GetSynchronizationRoot();
       }
 
-      // Token über Interface an das Netzwerk andoggen.
       public bool TryInsertBlock(ref Block block, ref Synchronization sychronizationRoot)
       {
         if (!HeadersDownloading.Remove(block.Header.Hash))
@@ -201,7 +200,9 @@ namespace BTokenLib
           } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
 
           if (TryReorg())
+          {
             sychronizationRoot = this;
+          }
         }
         else
           QueueBlocks.Add(heightBlock, block);
@@ -216,36 +217,82 @@ namespace BTokenLib
 
       bool TryReorg()
       {
-        if (SynchronizationParent == null ||
-          (SynchronizationParent.HeaderTipBlockchain.DifficultyAccumulated >= HeaderTipBlockchain.DifficultyAccumulated))
-        {
+        if (SynchronizationParent == null
+          || (HeaderTipBlockchain.DifficultyAccumulated <= SynchronizationParent.HeaderTipBlockchain.DifficultyAccumulated))
           return false;
-        }
 
         Header headerAncestor = HeaderRoot.HeaderPrevious;
 
         if (SynchronizationParent.Token != null)
-        {
-          SynchronizationParent.RewindTokenToHeight(headerAncestor.Height);
-
-          Token = SynchronizationParent.Token;
-
-          try
-          {
-            RollTokenForwardToTip();
-          }
-          catch
-          {
-            Token = null;
-
-            SynchronizationParent.RollTokenForwardToTip();
-
+          if (!TryReorgToken(headerAncestor.Height))
             return false;
-          }
 
-          SynchronizationParent.Token = null;
+        PromoteSynchronization(headerAncestor);
+
+        if (Token == null)
+          return TryReorg();
+
+        return true;
+      }
+
+      bool TryReorgToken(int heightAncestor)
+      {
+        SynchronizationParent.RewindTokenToHeight(heightAncestor);
+
+        Token = SynchronizationParent.Token;
+
+        try
+        {
+          RollTokenForwardToTip(heightAncestor);
+        }
+        catch
+        {
+          Token = null;
+
+          SynchronizationParent.RollTokenForwardToTip(heightAncestor);
+
+          return false;
         }
 
+        SynchronizationParent.Token = null;
+
+        return true;
+      }
+
+      void RewindTokenToHeight(int heightAncestor)
+      {
+        Block block = new(Token);
+
+        int height = HeaderTip.Height;
+
+        while(height > heightAncestor)
+        {
+          block.LoadFromDisk(PathDirectoryBlocks, height);
+
+          Token.ReverseBlock(block);
+
+          height--;
+        }
+      }
+
+      void RollTokenForwardToTip(int heightAncestor)
+      {
+        Block block = new(Token);
+
+        int height = heightAncestor + 1;
+
+        while (height <= HeaderTip.Height)
+        {
+          block.LoadFromDisk(PathDirectoryBlocks, height);
+
+          Token.InsertBlock(block);
+
+          height++;
+        }
+      }
+
+      void PromoteSynchronization(Header headerAncestor)
+      {
         Header headerRootNewSyncParent = headerAncestor.HeaderNext;
         headerAncestor.HeaderNext = HeaderRoot;
         HeaderRoot = SynchronizationParent.HeaderRoot;
@@ -270,11 +317,6 @@ namespace BTokenLib
         Synchronization syncParentNew = SynchronizationParent.SynchronizationParent;
         SynchronizationParent.SynchronizationParent = this;
         SynchronizationParent = syncParentNew;
-
-        if (Token != null)
-          return true;
-
-        return TryReorg();
       }
 
       public bool TryGetBlock(byte[] hash, out byte[] buffer, ref int heightBlock)

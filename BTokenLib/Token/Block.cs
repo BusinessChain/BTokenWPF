@@ -181,6 +181,15 @@ namespace BTokenLib
       File.Move(pathTemp, pathFileBlock, overwrite: true);
     }
 
+    public void LoadFromDisk(string pathDirectory, int height)
+    {
+      string pathFileBlock = Path.Combine(pathDirectory, Header.Height.ToString());
+
+      Buffer = File.ReadAllBytes(pathFileBlock);
+
+      Parse();
+    }
+
     public override string ToString()
     {
       return Header.ToString();

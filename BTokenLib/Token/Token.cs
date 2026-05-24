@@ -90,23 +90,11 @@ namespace BTokenLib
 
     public abstract void InsertBlock(Block block);
 
-    public bool TryReverseBlock(Block block)
+    public void ReverseBlock(Block block)
     {
-      try
-      {
-        ReverseBlockInCache(block);
+      ReverseBlockInCache(block);
 
-        Wallet.ReverseBlock(block);
-
-        return true;
-      }
-      catch (ProtocolException ex)
-      {
-        $"{ex.GetType().Name} when reversing block {block}, height {block.Header.Height} loaded from disk: \n{ex.Message}."
-        .Log(this, LogEntryNotifier);
-
-        return false;
-      }
+      Wallet.ReverseBlock(block);
     }
 
     protected virtual void ReverseBlockInCache(Block block) { }
