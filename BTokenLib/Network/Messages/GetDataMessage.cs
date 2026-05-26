@@ -13,15 +13,13 @@ namespace BTokenLib
     {
       public const string Command = "getdata";
 
-      Network Network;
 
       int HeightBlockDownloadedLast;
 
 
-      public GetDataMessage(Network network)
+      public GetDataMessage()
         : base()
       {
-        Network = network;
         DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
       }
 
@@ -39,12 +37,12 @@ namespace BTokenLib
 
           if (inventory.Type == InventoryType.MSG_TX)
           {
-            if (Network.Token.TryGetTX(inventory.Hash, out TX tXInPool))
+            if (peer.Network.Token.TryGetTX(inventory.Hash, out TX tXInPool))
               TXMessage.Send(peer, tXInPool.TXRaw);
           }
           else if (inventory.Type == InventoryType.MSG_BLOCK)
           {
-            if (Network.TryLoadBlock(inventory.Hash, out byte[] buffer, out int heightBlock))
+            if (peer.Network.TryLoadBlock(inventory.Hash, out byte[] buffer, out int heightBlock))
             {
               BlockMessage.SendBlock(peer, buffer);
 

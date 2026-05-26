@@ -401,7 +401,7 @@ namespace BTokenLib
           logFile.Flush();
         }
 
-      logEntryNotifier.NotifyLogEntry(logString, module.GetType().Name);
+      logEntryNotifier?.NotifyLogEntry(logString, module.GetType().Name);
     }
 
     public static string GetIPFromFileName(this string fileName)

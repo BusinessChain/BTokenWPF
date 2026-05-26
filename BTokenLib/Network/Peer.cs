@@ -102,7 +102,7 @@ namespace BTokenLib
       //    append: true);
       //}
 
-      public async Task Start(List<byte[]> locator)
+      public async Task Start()
       {
         Log($"Start peer - {Connection}.");
 
@@ -116,9 +116,7 @@ namespace BTokenLib
         if (Connection == ConnectionType.OUTBOUND)
         {
           VersionMessage.SendVersion(this);
-
           VerAckMessage messageVerack = (VerAckMessage)ProtocolStateMachine[VerAckMessage.Command];
-          messageVerack.Locator = locator;
         }
       }
 

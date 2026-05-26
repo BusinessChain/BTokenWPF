@@ -16,16 +16,13 @@ namespace BTokenLib
 
       public const int MaxCountHeaders = 2000;
 
-      Network Network;
-
       Block BlockDownload;
 
       SHA256 SHA256 = SHA256.Create();
 
 
-      public HeadersMessage(Network network, Block blockDownload)
-      {
-        Network = network;
+      public HeadersMessage(Block blockDownload)
+      {;
         BlockDownload = blockDownload;
         DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
       }
@@ -41,9 +38,9 @@ namespace BTokenLib
           throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
         else if (countHeaders > 0)
         {
-          Header headerRoot = ParseHeaderchain(countHeaders, ref startIndex);
+          Header headerRoot = ParseHeaderchain(peer, countHeaders, ref startIndex);
 
-          if (Network.SynchronizationRoot.TryExtendHeaderchain(
+          if (peer.Network.SynchronizationRoot.TryExtendHeaderchain(
             headerRoot,
             out List<byte[]> headerslocator,
             BlockDownload))
@@ -58,9 +55,9 @@ namespace BTokenLib
           GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);
       }
 
-      Header ParseHeaderchain(int countHeaders, ref int startIndex)
+      Header ParseHeaderchain(Peer peer, int countHeaders, ref int startIndex)
       {
-        Header headerRoot = Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
+        Header headerRoot = peer.Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
         VarInt.GetInt(Payload, ref startIndex);
 
         Header headerTip = headerRoot;
@@ -69,7 +66,7 @@ namespace BTokenLib
 
         while (countHeaders > 0)
         {
-          Header header = Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
+          Header header = peer.Network.Token.ParseHeader(Payload, ref startIndex, SHA256);
           VarInt.GetInt(Payload, ref startIndex);
 
           header.AppendToHeader(headerTip);

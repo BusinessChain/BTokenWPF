@@ -10,14 +10,12 @@ namespace BTokenLib
     {
       public const string Command = "block";
 
-      Network Network;
       public Block BlockDownload;
 
 
-      public BlockMessage(Network network, Block blockDownload)
+      public BlockMessage(Block blockDownload)
         : base()
       {
-        Network = network;
         BlockDownload = blockDownload;
       }
 
@@ -35,7 +33,7 @@ namespace BTokenLib
 
         BlockDownload.Parse();
 
-        Network.InsertBlock(BlockDownload);
+        peer.Network.InsertBlock(BlockDownload);
 
         if (BlockDownload.Header != null)
           GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);

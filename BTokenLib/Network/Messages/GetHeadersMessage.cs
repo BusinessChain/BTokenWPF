@@ -12,14 +12,11 @@ namespace BTokenLib
     {
       public const string Command = "getheaders";
 
-      Network Network;
-
       Header HaederAncestorSentLast;
 
 
-      public GetHeadersMessage(Network network)
+      public GetHeadersMessage()
       {
-        Network = network;
       }
 
       public override void Run(Peer peer)
@@ -48,7 +45,7 @@ namespace BTokenLib
           hashesLocator.Add(hashLocator);
         }
 
-        if (Network.TryLoadHeaderAncestor(hashesLocator, out Header headerAncestor))
+        if (peer.Network.TryLoadHeaderAncestor(hashesLocator, out Header headerAncestor))
         {
           HeadersMessage.SendHeaders(peer, headerAncestor.HeaderNext);
 

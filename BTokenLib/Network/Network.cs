@@ -78,52 +78,13 @@ namespace BTokenLib
       HeaderGenesis = Token.CreateHeaderGenesis();
     }
 
-    public async Task Start()
+    public void Start()
     {
+      Log($"Load state from disk.");
+      SynchronizationRoot.LoadFromDisk();
+
       Log($"Start Network.");
-
       StartPeerConnector();
-
-      LoadSynchronizationFromDisk();
-    }
-
-    void LoadSynchronizationFromDisk()
-    {
-      // Load initial Synchronization from Token database
-      // Connect Token database.
-      Log($"Load Blocks from disk.");
-
-      int heightBlockNext = Directory.GetFiles(PathBlockArchive, "*.blk")
-      .Select(Path.GetFileNameWithoutExtension)
-      .Where(name => int.TryParse(name, out _))
-      .Select(name => int.Parse(name))
-      .DefaultIfEmpty(0)               
-      .Min();
-
-      while (TryLoadBlock(heightBlockNext, out Block block))
-        try
-        {
-          if (HeaderTip == null)
-            HeaderTip = block.Header;
-          else
-            block.Header.AppendToHeader(HeaderTip);
-
-          Token.InsertBlock(block);
-
-          HeaderTip.HeaderNext = block.Header;
-          HeaderTip = block.Header;
-
-          heightBlockNext += 1;
-        }
-        catch (ProtocolException ex)
-        {
-          $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-          .Log(this, LogEntryNotifier);
-
-          File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
-        }
-
-      HeaderTip ??= HeaderGenesis;
     }
 
     bool TryLockSynchronization()

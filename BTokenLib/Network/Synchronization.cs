@@ -4,6 +4,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
+using Org.BouncyCastle.Asn1.Mozilla;
 
 namespace BTokenLib
 {
@@ -374,6 +375,44 @@ namespace BTokenLib
         }
 
         return locator;
+      }
+
+      public void LoadFromDisk()
+      {
+        // Load initial Synchronization from Token database
+        // Connect Token database.
+
+        int heightBlockNext = Directory.GetFiles(PathBlockArchive, "*.blk")
+        .Select(Path.GetFileNameWithoutExtension)
+        .Where(name => int.TryParse(name, out _))
+        .Select(name => int.Parse(name))
+        .DefaultIfEmpty(0)
+        .Min();
+
+        while (TryLoadBlock(heightBlockNext, out Block block))
+          try
+          {
+            if (HeaderTip == null)
+              HeaderTip = block.Header;
+            else
+              block.Header.AppendToHeader(HeaderTip);
+
+            Token.InsertBlock(block);
+
+            HeaderTip.HeaderNext = block.Header;
+            HeaderTip = block.Header;
+
+            heightBlockNext += 1;
+          }
+          catch (ProtocolException ex)
+          {
+            $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+            .Log(this, LogEntryNotifier);
+
+            File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
+          }
+
+        HeaderTip ??= HeaderGenesis;
       }
     }
   }

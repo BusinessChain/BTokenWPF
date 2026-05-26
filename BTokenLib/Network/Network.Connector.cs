@@ -231,11 +231,13 @@ namespace BTokenLib
 
       Block blockDownload = new(Token);
 
-      AddMessageNetworkProtocol(protocol, new GetDataMessage(this));
-      AddMessageNetworkProtocol(protocol, new GetHeadersMessage(this));
-      AddMessageNetworkProtocol(protocol, new HeadersMessage(this, blockDownload));
-      AddMessageNetworkProtocol(protocol, new BlockMessage(this, blockDownload));
+      AddMessageNetworkProtocol(protocol, new GetDataMessage());
+      AddMessageNetworkProtocol(protocol, new GetHeadersMessage());
+      AddMessageNetworkProtocol(protocol, new HeadersMessage(blockDownload));
+      AddMessageNetworkProtocol(protocol, new BlockMessage(blockDownload));
       AddMessageNetworkProtocol(protocol, new TXMessage());
+      AddMessageNetworkProtocol(protocol, new VerAckMessage());
+      AddMessageNetworkProtocol(protocol, new VersionMessage());
 
       return protocol;
     }

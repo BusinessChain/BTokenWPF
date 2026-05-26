@@ -41,12 +41,10 @@ namespace BTokenLib
 
     public void Start()
     {
-      $"Start Token {GetName()}".Log(this, LogFile, LogEntryNotifier);
-
-      Network.Start(); // hier soll man erst rauskommen, wenn synchronisiert ist.
-
       if (TokenParent != null)
         TokenParent.Start();
+
+      Network.Start();
     }
 
     public abstract List<string> GetSeedAddresses();
