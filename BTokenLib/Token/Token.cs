@@ -13,8 +13,6 @@ namespace BTokenLib
     public byte[] IDToken;
     public Network Network;
 
-    public Token TokenParent;
-
     public int SizeBlockMax;
 
     public Wallet Wallet;
@@ -37,14 +35,6 @@ namespace BTokenLib
     public virtual void Reset()
     {
       Wallet.Clear();
-    }
-
-    public void Start()
-    {
-      if (TokenParent != null)
-        TokenParent.Start();
-
-      Network.Start();
     }
 
     public abstract List<string> GetSeedAddresses();

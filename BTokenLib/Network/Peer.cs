@@ -120,6 +120,11 @@ namespace BTokenLib
         }
       }
 
+      public void StartHeaderSync()
+      {
+        Network.StartHeaderSync(this);
+      }
+
       public void BroadcastTX(TX tX)
       {
         InvMessage invMessage = new(new List<Inventory> {

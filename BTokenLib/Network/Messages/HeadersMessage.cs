@@ -27,7 +27,7 @@ namespace BTokenLib
         DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
       }
 
-      public override void Run(Peer peer)
+      public override async Task Run(Peer peer)
       {
         DOSMonitor.Increment(1);
 
@@ -40,16 +40,15 @@ namespace BTokenLib
         {
           Header headerRoot = ParseHeaderchain(peer, countHeaders, ref startIndex);
 
-          if (peer.Network.SynchronizationRoot.TryExtendHeaderchain(
+          List<byte[]> headerslocator = await peer.Network.ExtendHeaderchain(
             headerRoot,
-            out List<byte[]> headerslocator,
-            BlockDownload))
-          {
-            DOSMonitor.Decrement(1);
-          }
+            BlockDownload);
 
           if (headerslocator != null)
+          {
+            DOSMonitor.Decrement(1);
             GetHeadersMessage.SendGetHeaders(peer, headerslocator);
+          }
         }
         else if (countHeaders == 0 && BlockDownload.Header != null)
           GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);

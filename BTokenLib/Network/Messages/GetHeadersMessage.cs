@@ -19,7 +19,7 @@ namespace BTokenLib
       {
       }
 
-      public override void Run(Peer peer)
+      public override async Task Run(Peer peer)
       {
         DOSMonitor.Increment(1);
 
@@ -45,7 +45,9 @@ namespace BTokenLib
           hashesLocator.Add(hashLocator);
         }
 
-        if (peer.Network.TryLoadHeaderAncestor(hashesLocator, out Header headerAncestor))
+        Header headerAncestor = await peer.Network.LoadHeaderAncestor(hashesLocator);
+
+        if (headerAncestor != null)
         {
           HeadersMessage.SendHeaders(peer, headerAncestor.HeaderNext);
 
@@ -54,9 +56,9 @@ namespace BTokenLib
 
           HaederAncestorSentLast = headerAncestor;
         }
-        else
-          throw new ProtocolException("No common genesis block, different chain.");
       }
+
+
 
       public static async Task SendGetHeaders(Peer peer, List<byte[]> locator)
       {

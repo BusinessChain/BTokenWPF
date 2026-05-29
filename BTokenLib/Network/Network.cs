@@ -12,18 +12,21 @@ namespace BTokenLib
 {
   public partial class Network
   {
-    Token Token;
+    public Network NetworkParent;
+    // Bekommt ein Netzwerk ein Block
+    // werden die Ankertoken in den ChildNetzwerken vermerkt. Wenn dann die Childnetzwerke gesyncted
+    // werden, soll keine Abhängigkeit zum Parent mehr bestehen, so dass die ChildNetzwerke parallel
+    // gesyncet werden können.
+    public List<Network> NetworksChild = new();
+
+    public Token Token;
+
     public bool EnableInboundConnections;
     public bool EnableRelay;
     public ILogEntryNotifier LogEntryNotifier;
 
     object LOCK_Peers = new();
     List<Peer> Peers = new();
-
-    public string PathBlockArchive;
-    public string PathBlockArchiveMain = "PathBlockArchiveMain";
-    public string PathBlockArchiveFork = "PathBlockArchiveFork";
-    public string PathFileHeaderchain;
 
     DirectoryInfo DirectoryPeers;
     DirectoryInfo DirectoryPeersActive;
@@ -32,11 +35,11 @@ namespace BTokenLib
     public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
     Synchronization SynchronizationRoot;
+
+    SemaphoreSlim SemaphoreSynchronizationRoot = new(1);
+
     readonly object LOCK_FlagSyncLocked = new object();
     bool FlagSyncLocked;
-
-    public Header HeaderTip;
-    public Header HeaderGenesis;
 
     LiteDatabase LiteDatabase;
     ILiteCollection<BsonDocument> DatabaseMetaCollection;
@@ -74,12 +77,13 @@ namespace BTokenLib
       LiteDatabase = new LiteDatabase($"{token.GetName()}.db;Mode=Exclusive");
       DatabaseHeaderCollection = LiteDatabase.GetCollection<BsonDocument>("headers");
       DatabaseMetaCollection = LiteDatabase.GetCollection<BsonDocument>("meta");
-      
-      HeaderGenesis = Token.CreateHeaderGenesis();
     }
 
     public void Start()
     {
+      if (NetworkParent != null)
+        NetworkParent.Start();
+
       Log($"Load state from disk.");
       SynchronizationRoot.LoadFromDisk();
 
@@ -87,35 +91,65 @@ namespace BTokenLib
       StartPeerConnector();
     }
 
-    bool TryLockSynchronization()
+    async Task StartHeaderSync(Peer peer)
     {
-      int randomTimeout = Random.Shared.Next(500, 1000);
+      if (!await TryLockSynchronization(10000)) 
+        return;
 
-      while (randomTimeout > 0)
+      try
       {
-        lock (LOCK_FlagSyncLocked)
-          if (!FlagSyncLocked)
-          {
-            FlagSyncLocked = true;
-            return true;
-          }
-
-        Thread.Sleep(1);
-        randomTimeout -= 1;
+        if (SynchronizationRoot.HeaderTip.Height < NetworkParent.SynchronizationRoot.HeaderTip.Height)
+          GetHeadersMessage.SendGetHeaders(peer, GetLocator());
       }
+      finally
+      {
+        ReleaseLockSynchronization();
+      }
+    }
 
-      return false;
+    async Task<bool> TryLockSynchronization(int timeout)
+    {
+      if (NetworkParent != null)
+        return await NetworkParent.TryLockSynchronization(timeout);
+
+      return await SemaphoreSynchronizationRoot.WaitAsync(timeout).ConfigureAwait(false);
     }
 
     void ReleaseLockSynchronization()
     {
-      lock (LOCK_FlagSyncLocked)
-        FlagSyncLocked = false;
+      if (NetworkParent != null)
+        NetworkParent.ReleaseLockSynchronization();
+      else
+        SemaphoreSynchronizationRoot.Release();
     }
 
-    public void InsertBlock(Block block)
+    public async Task<List<byte[]>> ExtendHeaderchain(
+      Header headerRoot,
+      Block blockDownload)
     {
-      if (!TryLockSynchronization())
+      List<byte[]> headerslocator = null;
+
+      if (!await TryLockSynchronization(10000))
+        return headerslocator;
+
+      try
+      {
+        SynchronizationRoot.TryExtendHeaderchain(
+          headerRoot,
+          out headerslocator,
+          blockDownload);
+
+        return headerslocator;
+      }
+      finally
+      {
+        ReleaseLockSynchronization();
+      }
+    }
+
+    async Task InsertBlock(Peer peer, Block block)
+    {
+      if (!await TryLockSynchronization(10000))
         return;
 
       try
@@ -133,46 +167,46 @@ namespace BTokenLib
       lock (SynchronizationRoot)
         return SynchronizationRoot.GetLocator();
     }
-    
-    public bool TryLoadBlock(byte[] hash, out byte[] buffer, out int heightBlock)
-    {
-      heightBlock = -1;
-      buffer = null;
 
-      if (!TryLockSynchronization())
-        return false;
+    async Task<Header> LoadHeaderAncestor(List<byte[]> hashesLocator)
+    {
+      Header headerAncestor = null;
+
+      if (!await TryLockSynchronization(10000))
+        return headerAncestor;
 
       try
       {
-        return SynchronizationRoot.TryGetBlock(hash, out buffer, ref heightBlock);
-      }
-      finally
-      {
-        ReleaseLockSynchronization();
-      }
-    }
-
-    bool TryLoadHeaderAncestor(List<byte[]> hashesLocator, out Header headerAncestor)
-    {
-      headerAncestor = null;
-
-      if (!TryLockSynchronization())
-        return false;
-
-      try
-      {
-        headerAncestor = HeaderTip;
+        headerAncestor = SynchronizationRoot.HeaderTip;
 
         while (headerAncestor != null)
         {
           foreach (byte[] hashLocator in hashesLocator)
             if (headerAncestor.Hash.IsAllBytesEqual(hashLocator))
-              return true;
+              return headerAncestor;
 
           headerAncestor = headerAncestor.HeaderPrevious;
         }
 
-        return false;
+        return headerAncestor;
+      }
+      finally
+      {
+        ReleaseLockSynchronization();
+      }
+    }
+    
+    public async Task<Block> LoadBlock(byte[] hash)
+    {
+      Block block = null;
+
+      if (!await TryLockSynchronization(10000))
+        return block;
+
+      try
+      {
+        block = SynchronizationRoot.GetBlock(hash);
+        return block;
       }
       finally
       {
@@ -180,39 +214,22 @@ namespace BTokenLib
       }
     }
 
-    public bool TryLoadBlock(int blockHeight, out Block block)
+    public async Task<Block> LoadBlock(int height)
     {
-      block = null;
-      string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+      Block block = null;
 
-      while (true)
-        try
-        {
-          block = new(Token, File.ReadAllBytes(pathBlock));
-          block.Parse();
+      if (!await TryLockSynchronization(10000))
+        return block;
 
-          return true;
-        }
-        catch (FileNotFoundException)
-        {
-          return false;
-        }
-        catch (IOException ex)
-        {
-          ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
-            $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
-
-          Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-        }
-        catch (Exception ex)
-        {
-          $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
-          .Log(this, Token.LogEntryNotifier);
-
-          File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
-
-          return false;
-        }
+      try
+      {
+        block = SynchronizationRoot.GetBlock(height);
+        return block;
+      }
+      finally
+      {
+        ReleaseLockSynchronization();
+      }
     }
 
     public void BroadcastTX(TX tX)
@@ -224,44 +241,34 @@ namespace BTokenLib
           peer.BroadcastTX(tX);
     }
 
-    public double GetFeeRate()
-    {
-      return 0.0;
-    }
-
     public string GetStatus()
     {
-      string messageStatus = "";
+      return "Todo";
+      //string messageStatus = "";
 
-      messageStatus +=
-        $"Height: {HeaderTip.Height}\n" +
-        $"Block tip: {HeaderTip.Hash.ToHexString().Substring(0, 24) + " ..."}\n" +
-        $"Difficulty Tip: {HeaderTip.Difficulty}\n" +
-        $"Acc. Difficulty: {HeaderTip.DifficultyAccumulated}\n";
+      //messageStatus +=
+      //  $"Height: {HeaderTip.Height}\n" +
+      //  $"Block tip: {HeaderTip.Hash.ToHexString().Substring(0, 24) + " ..."}\n" +
+      //  $"Difficulty Tip: {HeaderTip.Difficulty}\n" +
+      //  $"Acc. Difficulty: {HeaderTip.DifficultyAccumulated}\n";
 
-      string statusPeers = "";
-      int countPeers;
+      //string statusPeers = "";
+      //int countPeers;
 
-      lock (LOCK_Peers)
-      {
-        Peers.ForEach(p => { statusPeers += p.GetStatus(); });
-        countPeers = Peers.Count;
-      }
+      //lock (LOCK_Peers)
+      //{
+      //  Peers.ForEach(p => { statusPeers += p.GetStatus(); });
+      //  countPeers = Peers.Count;
+      //}
 
-      return
-        $"\n Status Network: \n " +
-        $"{messageStatus} \n " +
-        $"{statusPeers} \n " +
-        $"Count peers: {countPeers}";
+      //return
+      //  $"\n Status Network: \n " +
+      //  $"{messageStatus} \n " +
+      //  $"{statusPeers} \n " +
+      //  $"Count peers: {countPeers}";
     }
 
     readonly object Lock_StateNetwork = new object();
-
-    double GetDifficultyAccumulatedHeaderTip()
-    {
-      lock (Lock_StateNetwork)
-        return HeaderTip.DifficultyAccumulated;
-    }
 
     public void Log(string messageLog)
     {

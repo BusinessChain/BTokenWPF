@@ -21,8 +21,8 @@ namespace BTokenLib
 
     const int TIMESPAN_LOOP_PEER_CONNECTOR_SECONDS = 10;
     const int TIMESPAN_PEER_BANNED_SECONDS = 10;
-    int CountMaxPeers = 3;
 
+    const int COUNT_MAX_OUTBOUND_CONNECTIONS = 3;
     const int COUNT_MAX_INBOUND_CONNECTIONS = 3;
 
     public bool FlagEnableOutboundConnections = true;
@@ -44,7 +44,7 @@ namespace BTokenLib
         {
           Peers.RemoveAll(p => p.StateCurrent == Peer.StateProtocol.Disposed);
 
-          int countPeersCreate = CountMaxPeers - Peers.Count;
+          int countPeersCreate = COUNT_MAX_OUTBOUND_CONNECTIONS - Peers.Count;
 
           if (countPeersCreate > 0)
           {

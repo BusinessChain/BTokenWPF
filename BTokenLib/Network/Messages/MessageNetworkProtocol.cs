@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 
 namespace BTokenLib
@@ -32,7 +33,7 @@ namespace BTokenLib
         return Payload;
       }
 
-      public abstract void Run(Peer peer);
+      public abstract Task Run(Peer peer);
 
       public abstract string GetCommand();
     }

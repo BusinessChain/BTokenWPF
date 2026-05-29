@@ -19,7 +19,7 @@ namespace BTokenWPF
         InitializeComponent();
 
         BToken = new(this);
-        BToken.Start();
+        BToken.Network.Start();
 
         UpdateTextBoxStatus();
       }
@@ -40,7 +40,7 @@ namespace BTokenWPF
         while (true)
         {
           await Task.Delay(1000);
-          LabelBitcoinStatus.Content = BToken.TokenParent.Network.GetStatus();
+          LabelBitcoinStatus.Content = BToken.Network.NetworkParent.GetStatus();
           LabelBTokenStatus.Content = BToken.Network.GetStatus();
         }
       }
@@ -120,7 +120,7 @@ namespace BTokenWPF
 
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
     {
-      OpenWindowToken(BToken.TokenParent);
+      OpenWindowToken(BToken.Network.NetworkParent.Token);
     }
 
     void ButtonOpenBTokenWindow_Click(object sender, RoutedEventArgs e)

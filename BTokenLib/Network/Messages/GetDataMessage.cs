@@ -23,7 +23,7 @@ namespace BTokenLib
         DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
       }
 
-      public override void Run(Peer peer)
+      public override async Task Run(Peer peer)
       {
         DOSMonitor.Increment(1);
 
@@ -42,14 +42,16 @@ namespace BTokenLib
           }
           else if (inventory.Type == InventoryType.MSG_BLOCK)
           {
-            if (peer.Network.TryLoadBlock(inventory.Hash, out byte[] buffer, out int heightBlock))
+            Block block = await peer.Network.LoadBlock(inventory.Hash);
+            
+            if (block != null)
             {
-              BlockMessage.SendBlock(peer, buffer);
+              BlockMessage.SendBlock(peer, block.Buffer);
 
-              if (heightBlock > HeightBlockDownloadedLast)
+              if (block.Header.Height > HeightBlockDownloadedLast)
                 DOSMonitor.Decrement(1);
 
-              HeightBlockDownloadedLast = heightBlock;
+              HeightBlockDownloadedLast = block.Header.Height;
             }
           }
           else if (inventory.Type == InventoryType.MSG_DB)

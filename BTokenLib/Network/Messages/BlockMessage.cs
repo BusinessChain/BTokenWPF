@@ -24,7 +24,7 @@ namespace BTokenLib
         return BlockDownload.Buffer;
       }
 
-      public override void Run(Peer peer)
+      public override async Task Run(Peer peer)
       {
         if (BlockDownload?.Header == null)
           throw new ProtocolException($"Received unrequested block message.");
@@ -33,7 +33,7 @@ namespace BTokenLib
 
         BlockDownload.Parse();
 
-        peer.Network.InsertBlock(BlockDownload);
+        await peer.Network.InsertBlock(peer, BlockDownload);
 
         if (BlockDownload.Header != null)
           GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);

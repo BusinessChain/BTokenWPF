@@ -4,7 +4,6 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
-using Org.BouncyCastle.Asn1.Mozilla;
 
 namespace BTokenLib
 {
@@ -17,8 +16,9 @@ namespace BTokenLib
 
       Token Token;
 
+      Header HeaderGenesis = Token.CreateHeaderGenesis();
       Header HeaderRoot;
-      Header HeaderTip;
+      public Header HeaderTip;
       Header HeaderTipBlockchain;
       int HeightBlockInsertNext;
 
@@ -30,8 +30,6 @@ namespace BTokenLib
       const int CAPACITY_MAX_QueueBlocksInsertion = 20;
       Dictionary<int, Block> QueueBlocks = new();
       ConcurrentBag<Block> PoolBlocks = new();
-
-      bool FlagSynchronizationLocked;
 
 
       public Synchronization(Synchronization synchronizationRoot, Header headerRoot, Header headerTip)
@@ -49,96 +47,63 @@ namespace BTokenLib
           PathDirectoryBlocks = Path.Combine(synchronizationRoot.PathDirectoryBlocks, $"branch{indexBranch}");
         }
       }
-
-      public bool TryLockSynchronization()
-      {
-        int randomTimeout = Random.Shared.Next(5, 10);
-
-        while (randomTimeout > 0)
-        {
-          lock (this)
-            if (!FlagSynchronizationLocked)
-            {
-              FlagSynchronizationLocked = true;
-              return true;
-            }
-
-          Thread.Sleep(10);
-          randomTimeout -= 1;
-        }
-
-        return false;
-      }
-
-      void ReleaseLockSynchronization()
-      {
-        lock (this)
-          FlagSynchronizationLocked = false;
-      }
-
+        
       public bool TryExtendHeaderchain(Header header, out List<byte[]> locator, Block blockDownload)
       {
         locator = null;
 
-        if (header == null || !TryLockSynchronization())
+        if (header == null)
           return false;
 
-        try
+        Header headerAncestor = HeaderTip;
+
+        while (!headerAncestor.Hash.IsAllBytesEqual(header.HashPrevious))
         {
-          Header headerAncestor = HeaderTip;
-
-          while (!headerAncestor.Hash.IsAllBytesEqual(header.HashPrevious))
+          if (headerAncestor == HeaderRoot)
           {
-            if (headerAncestor == HeaderRoot)
-            {
-              foreach (Synchronization sync in SynchronizationBranches)
-                if (sync.TryExtendHeaderchain(header, out locator, blockDownload))
-                  return true;
+            foreach (Synchronization sync in SynchronizationBranches)
+              if (sync.TryExtendHeaderchain(header, out locator, blockDownload))
+                return true;
 
-              locator = GetLocator();
-              return false;
-            }
-
-            headerAncestor = headerAncestor.HeaderPrevious;
+            locator = GetLocator();
+            return false;
           }
 
-          while (headerAncestor != HeaderTip)
+          headerAncestor = headerAncestor.HeaderPrevious;
+        }
+
+        while (headerAncestor != HeaderTip)
+        {
+          if (headerAncestor.HeaderNext.Hash.IsAllBytesEqual(header.Hash) == false)
           {
-            if (headerAncestor.HeaderNext.Hash.IsAllBytesEqual(header.Hash) == false)
-            {
-              foreach (Synchronization sync in SynchronizationBranches)
-                if (sync.HeaderRoot.Hash.IsAllBytesEqual(header.Hash))
-                  return sync.TryExtendHeaderchain(header.HeaderNext, out locator, blockDownload);
+            foreach (Synchronization sync in SynchronizationBranches)
+              if (sync.HeaderRoot.Hash.IsAllBytesEqual(header.Hash))
+                return sync.TryExtendHeaderchain(header.HeaderNext, out locator, blockDownload);
 
-              Header headerTip = header.AppendToHeader(headerAncestor);
-              Synchronization syncBranch = new(this, header, headerTip);
-              SynchronizationBranches.Add(syncBranch);
+            Header headerTip = header.AppendToHeader(headerAncestor);
+            Synchronization syncBranch = new(this, header, headerTip);
+            SynchronizationBranches.Add(syncBranch);
 
-              blockDownload.Header = syncBranch.FetchHeaderDownload();
-              locator = new List<byte[]> { headerTip.Hash };
-              return false;
-            }
-
-            if (header.HeaderNext == null)
-            {
-              blockDownload.Header = FetchHeaderDownload();
-              locator = null;
-              return false;
-            }
-
-            headerAncestor = headerAncestor.HeaderNext;
-            header = header.HeaderNext;
+            blockDownload.Header = syncBranch.FetchHeaderDownload();
+            locator = new List<byte[]> { headerTip.Hash };
+            return false;
           }
 
-          blockDownload.Header = FetchHeaderDownload();
-          HeaderTip = header.AppendToHeader(HeaderTip);
-          locator = new List<byte[]> { HeaderTip.Hash };
-          return true;
+          if (header.HeaderNext == null)
+          {
+            blockDownload.Header = FetchHeaderDownload();
+            locator = null;
+            return false;
+          }
+
+          headerAncestor = headerAncestor.HeaderNext;
+          header = header.HeaderNext;
         }
-        finally
-        {
-          ReleaseLockSynchronization();
-        }
+
+        blockDownload.Header = FetchHeaderDownload();
+        HeaderTip = header.AppendToHeader(HeaderTip);
+        locator = new List<byte[]> { HeaderTip.Hash };
+        return true;
       }
 
       Header FetchHeaderDownload()
@@ -320,9 +285,12 @@ namespace BTokenLib
         SynchronizationParent = syncParentNew;
       }
 
-      public bool TryGetBlock(byte[] hash, out byte[] buffer, ref int heightBlock)
+      public Block GetBlock(byte[] hash)
       {
-        buffer = null;
+        Block block = null;
+
+        int heightBlock = -1;
+        byte[] buffer = null;
 
         Header header = HeaderRoot;
 
@@ -353,6 +321,42 @@ namespace BTokenLib
             return true;
 
         return false;
+      }
+      
+      public Block GetBlock(int height)
+      {
+        SynchronizationRoot.TryGetBlock()
+      block = null;
+        string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+
+        while (true)
+          try
+          {
+            block = new(Token, File.ReadAllBytes(pathBlock));
+            block.Parse();
+
+            return true;
+          }
+          catch (FileNotFoundException)
+          {
+            return false;
+          }
+          catch (IOException ex)
+          {
+            ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
+              $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
+
+            Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
+          }
+          catch (Exception ex)
+          {
+            $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
+            .Log(this, Token.LogEntryNotifier);
+
+            File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
+
+            return false;
+          }
       }
 
       public List<byte[]> GetLocator()
