@@ -25,38 +25,35 @@ namespace BTokenLib
       byte[] LengthRead = new byte[4];
       byte[] ChecksumRead = new byte[ChecksumSize];
 
-      SemaphoreSlim SemaphoreSendMessage = new(1);
+      SemaphoreSlim SemaphoreSendMessage = new(1); 
+      
+      DOSMonitorPer10Minutes DOSMonitor;
 
 
       async Task StartMessageReceiver()
       {
-        DateTime timeEventExceptionLast = DateTime.UtcNow;
-        TimeSpan oneHour = TimeSpan.FromHours(1);
-        int banScore = 0;
-
-        while (banScore < 3)
+        while (true)
         {
           try
           {
             MessageNetworkProtocol message = await ReceiveMessageNext();
+
+            message.DOSMonitor.Increment(1);
+
             message.Run(this);
           }
           catch (Exception ex)
           {
-            if (DateTime.UtcNow - timeEventExceptionLast < oneHour)
-              banScore += 1;
-            else
-              banScore = 1;
-
-            timeEventExceptionLast = DateTime.UtcNow;
-
             Log(
               $"{ex.GetType().Name} in message receiver: " +
-              $"\n{ex.Message}\n" +
-              $"Ban score: {banScore}");
+              $"\n{ex.Message}");
+
+            if (DOSMonitor.IsOverflow)
+              break;
           }
         }
 
+        Log($"Disconnect from peer {this}");
         Dispose();
       }
 

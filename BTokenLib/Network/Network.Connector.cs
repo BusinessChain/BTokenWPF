@@ -230,8 +230,9 @@ namespace BTokenLib
       Dictionary<string, MessageNetworkProtocol> protocol = new();
 
       Block blockDownload = new(Token);
+      Block blockUpload = new(Token);
 
-      AddMessageNetworkProtocol(protocol, new GetDataMessage());
+      AddMessageNetworkProtocol(protocol, new GetDataMessage(blockUpload));
       AddMessageNetworkProtocol(protocol, new GetHeadersMessage());
       AddMessageNetworkProtocol(protocol, new HeadersMessage(blockDownload));
       AddMessageNetworkProtocol(protocol, new BlockMessage(blockDownload));

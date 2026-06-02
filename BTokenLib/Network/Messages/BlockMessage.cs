@@ -29,6 +29,8 @@ namespace BTokenLib
         if (BlockDownload?.Header == null)
           throw new ProtocolException($"Received unrequested block message.");
 
+        DOSMonitor.Decrement(1);
+
         BlockDownload.LengthDataPayload = LengthDataPayload;
 
         BlockDownload.Parse();
@@ -39,9 +41,9 @@ namespace BTokenLib
           GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);
       }
 
-      public static async Task SendBlock(Peer peer, byte[] buffer)
+      public static async Task SendBlock(Peer peer, Block block)
       {
-        await peer.SendMessage(Command, buffer.Length, buffer);
+        await peer.SendMessage(Command, block.LengthDataPayload, block.Buffer);
       }
 
       public override string GetCommand()

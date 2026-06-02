@@ -23,7 +23,7 @@ namespace BTokenLib
         LengthDataPayload = Payload.Length;
       }
 
-      public override void Run(Peer peer)
+      public override async Task Run(Peer peer)
       {
 
       }

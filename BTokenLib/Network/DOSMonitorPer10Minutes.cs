@@ -6,6 +6,7 @@ namespace BTokenLib
   {
     int Counter;
     int MaxLevel;
+    public bool IsOverflow;
 
     DateTime TimestampLastIncrement = DateTime.Now;
 
@@ -24,7 +25,10 @@ namespace BTokenLib
       TimestampLastIncrement = DateTime.Now;
 
       if (Counter > MaxLevel)
+      {
+        IsOverflow = true;
         throw new ProtocolException($"Exceed MaxLevel in DoS counter {GetType()}");
+      }
     }
 
     public void Decrement(int amount)

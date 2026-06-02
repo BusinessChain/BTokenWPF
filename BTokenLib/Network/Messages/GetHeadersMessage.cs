@@ -21,8 +21,6 @@ namespace BTokenLib
 
       public override async Task Run(Peer peer)
       {
-        DOSMonitor.Increment(1);
-
         int startIndex = 0;
 
         byte[] version = new byte[4];

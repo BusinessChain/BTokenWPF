@@ -13,20 +13,22 @@ namespace BTokenLib
     {
       public const string Command = "getdata";
 
+      Block BlockUpload;
+
 
       int HeightBlockDownloadedLast;
 
 
-      public GetDataMessage()
+      public GetDataMessage(Block blockUpload)
         : base()
       {
+        BlockUpload = blockUpload;
+
         DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
       }
 
       public override async Task Run(Peer peer)
       {
-        DOSMonitor.Increment(1);
-
         int startIndex = 0;
 
         int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
@@ -42,16 +44,18 @@ namespace BTokenLib
           }
           else if (inventory.Type == InventoryType.MSG_BLOCK)
           {
-            Block block = await peer.Network.LoadBlock(inventory.Hash);
-            
-            if (block != null)
-            {
-              BlockMessage.SendBlock(peer, block.Buffer);
+            BlockUpload.Header = null;
 
-              if (block.Header.Height > HeightBlockDownloadedLast)
+            await peer.Network.LoadBlock(inventory.Hash, BlockUpload);
+            
+            if (BlockUpload.Header != null)
+            {
+              BlockMessage.SendBlock(peer, BlockUpload);
+
+              if (BlockUpload.Header.Height > HeightBlockDownloadedLast)
                 DOSMonitor.Decrement(1);
 
-              HeightBlockDownloadedLast = block.Header.Height;
+              HeightBlockDownloadedLast = BlockUpload.Header.Height;
             }
           }
           else if (inventory.Type == InventoryType.MSG_DB)

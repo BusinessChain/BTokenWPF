@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
+using System.IO;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.IO;
 
 namespace BTokenLib
 {
@@ -16,9 +15,9 @@ namespace BTokenLib
 
       Token Token;
 
-      Header HeaderGenesis = Token.CreateHeaderGenesis();
-      Header HeaderRoot;
       public Header HeaderTip;
+      Header HeaderGenesis;
+      Header HeaderRoot;
       Header HeaderTipBlockchain;
       int HeightBlockInsertNext;
 
@@ -31,6 +30,16 @@ namespace BTokenLib
       Dictionary<int, Block> QueueBlocks = new();
       ConcurrentBag<Block> PoolBlocks = new();
 
+      Block BlockLoad;
+
+      public Synchronization(Token token)
+      {
+        Token = token;
+
+        HeaderGenesis = Token.CreateHeaderGenesis();
+
+        BlockLoad = new(Token);
+      }
 
       public Synchronization(Synchronization synchronizationRoot, Header headerRoot, Header headerTip)
       {
@@ -47,7 +56,44 @@ namespace BTokenLib
           PathDirectoryBlocks = Path.Combine(synchronizationRoot.PathDirectoryBlocks, $"branch{indexBranch}");
         }
       }
-        
+
+      public void LoadFromDisk()
+      {
+        int heightBlockNext = Directory.GetFiles(PathDirectoryBlocks, "*.blk")
+        .Select(Path.GetFileNameWithoutExtension)
+        .Where(name => int.TryParse(name, out _))
+        .Select(name => int.Parse(name))
+        .DefaultIfEmpty(0)
+        .Min();
+
+        while (true)
+          try
+          {
+            LoadBlock(heightBlockNext, BlockLoad);
+
+            if (HeaderTip == null)
+              HeaderTip = block.Header;
+            else
+              block.Header.AppendToHeader(HeaderTip);
+
+            Token.InsertBlock(block);
+
+            HeaderTip.HeaderNext = block.Header;
+            HeaderTip = block.Header;
+
+            heightBlockNext += 1;
+          }
+          catch (ProtocolException ex)
+          {
+            $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+            .Log(this, LogEntryNotifier);
+
+            File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
+          }
+
+        HeaderTip ??= HeaderGenesis;
+      }
+
       public bool TryExtendHeaderchain(Header header, out List<byte[]> locator, Block blockDownload)
       {
         locator = null;
@@ -285,78 +331,57 @@ namespace BTokenLib
         SynchronizationParent = syncParentNew;
       }
 
-      public Block GetBlock(byte[] hash)
+      public void GetBlock(byte[] hash, Block blockUpload)
       {
-        Block block = null;
-
-        int heightBlock = -1;
-        byte[] buffer = null;
-
         Header header = HeaderRoot;
 
         while (header != null)
         {
           if(header.Hash.IsAllBytesEqual(hash))
           {
-            string pathFile = Path.Combine(PathDirectoryBlocks, header.Height.ToString());
-
-            try
-            {
-              buffer = File.ReadAllBytes(pathFile);
-            }
-            catch
-            {
-              return false;
-            }
-
-            heightBlock = header.Height;
-            return true;
+            blockUpload.Header = header;
+            LoadBlock(header.Height, blockUpload);
+            return;
           }
 
           header = header.HeaderNext;
         }
 
-        foreach(Synchronization syncBranch in SynchronizationBranches)
-          if (TryGetBlock(hash, out buffer, ref heightBlock))
-            return true;
+        foreach (Synchronization syncBranch in SynchronizationBranches)
+        {
+          syncBranch.GetBlock(hash, blockUpload);
 
-        return false;
+          if (blockUpload.Header != null)
+            return;
+        }
       }
       
-      public Block GetBlock(int height)
+      public void LoadBlock(int height, Block blockUpload)
       {
-        SynchronizationRoot.TryGetBlock()
-      block = null;
-        string pathBlock = Path.Combine(PathBlockArchive, blockHeight.ToString());
+        string pathFile = Path.Combine(PathDirectoryBlocks, height.ToString());
 
-        while (true)
-          try
-          {
-            block = new(Token, File.ReadAllBytes(pathBlock));
-            block.Parse();
+        using FileStream fileBlock = File.OpenRead(pathFile);
 
-            return true;
-          }
-          catch (FileNotFoundException)
-          {
-            return false;
-          }
-          catch (IOException ex)
-          {
-            ($"{ex.GetType().Name} when attempting to load file {pathBlock}: {ex.Message}.\n" +
-              $"Retry in {TIMEOUT_FILE_RELOAD_SECONDS} seconds.").Log(this, Token.LogEntryNotifier);
+        if (fileBlock.Length > blockUpload.Buffer.Length)
+          throw new InvalidOperationException("Block too large for buffer.");
 
-            Thread.Sleep(TIMEOUT_FILE_RELOAD_SECONDS * 1000);
-          }
-          catch (Exception ex)
-          {
-            $"{ex.GetType().Name} when loading block height {blockHeight} from disk. Block deleted."
-            .Log(this, Token.LogEntryNotifier);
+        blockUpload.LengthDataPayload = (int)fileBlock.Length;
 
-            File.Delete(Path.Combine(PathBlockArchive, blockHeight.ToString()));
+        int offset = 0;
+        while (offset < blockUpload.LengthDataPayload)
+        {
+          int n = fileBlock.Read(
+              blockUpload.Buffer,
+              offset,
+              blockUpload.LengthDataPayload - offset);
 
-            return false;
-          }
+          if (n == 0)
+            throw new EndOfStreamException();
+
+          offset += n;
+        }
+
+        blockUpload.Parse();
       }
 
       public List<byte[]> GetLocator()
@@ -379,44 +404,6 @@ namespace BTokenLib
         }
 
         return locator;
-      }
-
-      public void LoadFromDisk()
-      {
-        // Load initial Synchronization from Token database
-        // Connect Token database.
-
-        int heightBlockNext = Directory.GetFiles(PathBlockArchive, "*.blk")
-        .Select(Path.GetFileNameWithoutExtension)
-        .Where(name => int.TryParse(name, out _))
-        .Select(name => int.Parse(name))
-        .DefaultIfEmpty(0)
-        .Min();
-
-        while (TryLoadBlock(heightBlockNext, out Block block))
-          try
-          {
-            if (HeaderTip == null)
-              HeaderTip = block.Header;
-            else
-              block.Header.AppendToHeader(HeaderTip);
-
-            Token.InsertBlock(block);
-
-            HeaderTip.HeaderNext = block.Header;
-            HeaderTip = block.Header;
-
-            heightBlockNext += 1;
-          }
-          catch (ProtocolException ex)
-          {
-            $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-            .Log(this, LogEntryNotifier);
-
-            File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
-          }
-
-        HeaderTip ??= HeaderGenesis;
       }
     }
   }

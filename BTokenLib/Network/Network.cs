@@ -32,7 +32,6 @@ namespace BTokenLib
     DirectoryInfo DirectoryPeersActive;
     DirectoryInfo DirectoryPeersArchive;
     DirectoryInfo DirectoryPeersDisposed;
-    public const int TIMEOUT_FILE_RELOAD_SECONDS = 10;
 
     Synchronization SynchronizationRoot;
 
@@ -52,6 +51,8 @@ namespace BTokenLib
       bool flagEnableRelay)
     {
       Token = token;
+
+      SynchronizationRoot = new(Token);
 
       EnableInboundConnections = flagEnableInboundConnections;
       EnableRelay = flagEnableRelay;
@@ -196,35 +197,14 @@ namespace BTokenLib
       }
     }
     
-    public async Task<Block> LoadBlock(byte[] hash)
+    public async Task LoadBlock(byte[] hash, Block blockUpload)
     {
-      Block block = null;
-
       if (!await TryLockSynchronization(10000))
-        return block;
+        return;
 
       try
       {
-        block = SynchronizationRoot.GetBlock(hash);
-        return block;
-      }
-      finally
-      {
-        ReleaseLockSynchronization();
-      }
-    }
-
-    public async Task<Block> LoadBlock(int height)
-    {
-      Block block = null;
-
-      if (!await TryLockSynchronization(10000))
-        return block;
-
-      try
-      {
-        block = SynchronizationRoot.GetBlock(height);
-        return block;
+        SynchronizationRoot.GetBlock(hash, blockUpload);
       }
       finally
       {
