@@ -43,8 +43,11 @@ namespace BTokenLib
 
       Header header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
 
-      if (!header.Hash.IsAllBytesEqual(Header.Hash))
+      if (Header != null && !Header.Hash.IsAllBytesEqual(header.Hash))
         throw new ProtocolException($"Received unexpected block {header} expected was {Header}.");
+
+      if (Header == null)
+        Header = header;
 
       Header.CountTXs = VarInt.GetInt(Buffer, ref startIndex);
 

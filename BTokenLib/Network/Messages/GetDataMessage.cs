@@ -46,7 +46,7 @@ namespace BTokenLib
           {
             BlockUpload.Header = null;
 
-            await peer.Network.LoadBlock(inventory.Hash, BlockUpload);
+            await peer.Network.GetBlock(inventory.Hash, BlockUpload);
             
             if (BlockUpload.Header != null)
             {

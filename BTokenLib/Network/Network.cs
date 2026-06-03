@@ -197,7 +197,7 @@ namespace BTokenLib
       }
     }
     
-    public async Task LoadBlock(byte[] hash, Block blockUpload)
+    public async Task GetBlock(byte[] hash, Block blockUpload)
     {
       if (!await TryLockSynchronization(10000))
         return;

@@ -37,6 +37,7 @@ namespace BTokenLib
         Token = token;
 
         HeaderGenesis = Token.CreateHeaderGenesis();
+        HeaderTip = HeaderGenesis;
 
         BlockLoad = new(Token);
       }
@@ -69,29 +70,28 @@ namespace BTokenLib
         while (true)
           try
           {
+            BlockLoad.Header = null;
             LoadBlock(heightBlockNext, BlockLoad);
 
             if (HeaderTip == null)
-              HeaderTip = block.Header;
+              HeaderTip = BlockLoad.Header;
             else
-              block.Header.AppendToHeader(HeaderTip);
+              BlockLoad.Header.AppendToHeader(HeaderTip);
 
-            Token.InsertBlock(block);
+            Token.InsertBlock(BlockLoad);
 
-            HeaderTip.HeaderNext = block.Header;
-            HeaderTip = block.Header;
+            HeaderTip.HeaderNext = BlockLoad.Header;
+            HeaderTip = BlockLoad.Header;
 
             heightBlockNext += 1;
           }
           catch (ProtocolException ex)
           {
-            $"{ex.GetType().Name} when inserting block {block}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
-            .Log(this, LogEntryNotifier);
+            $"{ex.GetType().Name} when inserting block {BlockLoad}, height {heightBlockNext} loaded from disk: \n{ex.Message}. \nBlock is deleted."
+            .Log(this, Token.LogEntryNotifier);
 
-            File.Delete(Path.Combine(PathBlockArchive, heightBlockNext.ToString()));
+            break;
           }
-
-        HeaderTip ??= HeaderGenesis;
       }
 
       public bool TryExtendHeaderchain(Header header, out List<byte[]> locator, Block blockDownload)
