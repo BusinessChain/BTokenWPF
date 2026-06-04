@@ -273,15 +273,14 @@ namespace BTokenLib
 
       void RewindTokenToHeight(int heightAncestor)
       {
-        Block block = new(Token);
-
         int height = HeaderTip.Height;
 
         while(height > heightAncestor)
         {
-          block.LoadFromDisk(PathDirectoryBlocks, height);
+          BlockLoad.Header = null;
+          LoadBlock(height, BlockLoad);
 
-          Token.ReverseBlock(block);
+          Token.ReverseBlock(BlockLoad);
 
           height--;
         }
@@ -289,15 +288,14 @@ namespace BTokenLib
 
       void RollTokenForwardToTip(int heightAncestor)
       {
-        Block block = new(Token);
-
         int height = heightAncestor + 1;
 
         while (height <= HeaderTip.Height)
         {
-          block.LoadFromDisk(PathDirectoryBlocks, height);
+          BlockLoad.Header = null;
+          LoadBlock(height, BlockLoad);
 
-          Token.InsertBlock(block);
+          Token.InsertBlock(BlockLoad);
 
           height++;
         }

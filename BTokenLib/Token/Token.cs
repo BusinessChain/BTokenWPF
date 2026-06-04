@@ -39,21 +39,8 @@ namespace BTokenLib
 
     public abstract List<string> GetSeedAddresses();
 
-    public void StartSync()
-    {
-      Token token = this;
-
-      while (token.TokenParent != null)
-        token = token.TokenParent;
-
-      //token.Network.StartSync();
-    }
-
     public bool TryLock()
     {
-      if (TokenParent != null)
-        return TokenParent.TryLock();
-
       lock (this)
       {
         if (IsLocked)
@@ -66,9 +53,6 @@ namespace BTokenLib
 
     public void ReleaseLock()
     {
-      if (TokenParent != null)
-        TokenParent.ReleaseLock();
-      else
         IsLocked = false;
     }
 

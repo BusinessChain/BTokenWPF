@@ -12,7 +12,10 @@ namespace BTokenLib
 {
   public partial class Network
   {
+    // In BToken hat ein Token immer nur genau ein Parent Netzwerk und darüber nichts mehr.
+    // Damit wird eine maximale Skalierung angestrebt.
     public Network NetworkParent;
+
     // Bekommt ein Netzwerk ein Block
     // werden die Ankertoken in den ChildNetzwerken vermerkt. Wenn dann die Childnetzwerke gesyncted
     // werden, soll keine Abhängigkeit zum Parent mehr bestehen, so dass die ChildNetzwerke parallel
@@ -43,6 +46,18 @@ namespace BTokenLib
     LiteDatabase LiteDatabase;
     ILiteCollection<BsonDocument> DatabaseMetaCollection;
     ILiteCollection<BsonDocument> DatabaseHeaderCollection;
+
+
+    public Network(
+      Network networkParent,
+      Token token,
+      int port,
+      bool flagEnableInboundConnections,
+      bool flagEnableRelay) 
+      : this(token, port, flagEnableInboundConnections, flagEnableRelay)
+    {
+      NetworkParent = networkParent;
+    }
 
     public Network(
       Token token,

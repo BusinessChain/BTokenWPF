@@ -40,7 +40,7 @@ namespace BTokenLib
     public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
 
-    public TokenBToken(ILogEntryNotifier logEntryNotifier)
+    public TokenBToken(ILogEntryNotifier logEntryNotifier, Token tokenParent)
       : base(logEntryNotifier)
     {
       Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
@@ -57,15 +57,19 @@ namespace BTokenLib
 
       AppDomain.CurrentDomain.ProcessExit += (s, e) => { Database?.Dispose(); };
 
-      TokenParent = new TokenBitcoin(logEntryNotifier);
-
       IDToken = new byte[3] { (byte)'B', (byte)'T', (byte)'K' };
 
       Network = new Network(
+        tokenParent.Network,
         this,
         port: 8777,
         flagEnableInboundConnections: true,
         flagEnableRelay: true);
+    }
+
+    public void Start()
+    {
+      Network.Start();
     }
 
     public override Header CreateHeaderGenesis()

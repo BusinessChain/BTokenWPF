@@ -213,7 +213,7 @@ namespace BTokenLib
       {
         Peer peer = new(CreateStateMachineProtocol(), tcpClient, connection, iP);
 
-        await peer.Start(GetLocator());
+        await peer.Start();
 
         lock (LOCK_Peers)
           Peers.Add(peer);

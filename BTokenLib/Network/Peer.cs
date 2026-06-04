@@ -114,10 +114,7 @@ namespace BTokenLib
         StartMessageReceiver();
 
         if (Connection == ConnectionType.OUTBOUND)
-        {
           VersionMessage.SendVersion(this);
-          VerAckMessage messageVerack = (VerAckMessage)ProtocolStateMachine[VerAckMessage.Command];
-        }
       }
 
       public void StartHeaderSync()

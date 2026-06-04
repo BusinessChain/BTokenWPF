@@ -18,8 +18,8 @@ namespace BTokenWPF
       {
         InitializeComponent();
 
-        BToken = new(this);
-        BToken.Network.Start();
+        BToken = new TokenBToken(this, new TokenBitcoin(this));
+        BToken.Start();
 
         UpdateTextBoxStatus();
       }
@@ -115,7 +115,7 @@ namespace BTokenWPF
 
     void ButtonStartSynchronizationNode_Click(object sender, RoutedEventArgs e)
     {
-      BToken.StartSync();
+      BToken.Network.Start();
     }
 
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
