@@ -36,7 +36,7 @@ namespace BTokenLib
     DirectoryInfo DirectoryPeersArchive;
     DirectoryInfo DirectoryPeersDisposed;
 
-    Synchronization SynchronizationRoot;
+    Blockchain SynchronizationRoot;
 
     SemaphoreSlim SemaphoreSynchronizationRoot = new(1);
 
@@ -114,7 +114,7 @@ namespace BTokenLib
 
       try
       {
-        if (SynchronizationRoot.HeaderTip.Height < NetworkParent.SynchronizationRoot.HeaderTip.Height)
+        if (NetworkParent.SynchronizationRoot.IsHigherThan(SynchronizationRoot))
           GetHeadersMessage.SendGetHeaders(peer, GetLocator());
       }
       finally
@@ -184,7 +184,7 @@ namespace BTokenLib
         return SynchronizationRoot.GetLocator();
     }
 
-    async Task<Header> LoadHeaderAncestor(List<byte[]> hashesLocator)
+    async Task<List<Header>> GetHeaders(List<byte[]> hashesLocator)
     {
       Header headerAncestor = null;
 

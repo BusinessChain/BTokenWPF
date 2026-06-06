@@ -101,16 +101,16 @@ namespace BTokenWPF
 
     void ButtonBTokenMiner_Click(object sender, RoutedEventArgs e)
     {
-      //if (BToken.IsMining)
-      //{
-      //  BToken.StopMining();
-      //  ButtonStartBTokenMiner.Content = "Start BTokenMiner";
-      //}
-      //else
-      //{
-      //  BToken.StartMining();
-      //  ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
-      //}
+      if (BToken.IsMining)
+      {
+        BToken.StopMining();
+        ButtonStartBTokenMiner.Content = "Start BTokenMiner";
+      }
+      else
+      {
+        BToken.StartMining();
+        ButtonStartBTokenMiner.Content = "Stop BTokenMiner";
+      }
     }
 
     void ButtonStartSynchronizationNode_Click(object sender, RoutedEventArgs e)

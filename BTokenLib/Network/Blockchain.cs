@@ -8,18 +8,17 @@ namespace BTokenLib
 {
   partial class Network
   {
-    class Synchronization
+    class Blockchain
     {
-      Synchronization SynchronizationParent;
-      List<Synchronization> SynchronizationBranches = new();
+      Blockchain BlockchainParent;
+      List<Blockchain> BlockchainBranches = new();
 
       Token Token;
 
-      public Header HeaderTip;
+      Header HeaderTip;
       Header HeaderGenesis;
       Header HeaderRoot;
       Header HeaderTipBlockchain;
-      int HeightBlockInsertNext;
 
       string PathDirectoryBlocks;
 
@@ -32,7 +31,7 @@ namespace BTokenLib
 
       Block BlockLoad;
 
-      public Synchronization(Token token)
+      public Blockchain(Token token)
       {
         Token = token;
 
@@ -42,18 +41,17 @@ namespace BTokenLib
         BlockLoad = new(Token);
       }
 
-      public Synchronization(Synchronization synchronizationRoot, Header headerRoot, Header headerTip)
+      public Blockchain(Blockchain synchronizationRoot, Header headerRoot, Header headerTip)
       {
-        SynchronizationParent = synchronizationRoot;
+        BlockchainParent = synchronizationRoot;
         HeaderRoot = headerRoot;
         HeaderTip = headerTip;
-        HeightBlockInsertNext = HeaderRoot.Height;
 
         if (synchronizationRoot == null)
           PathDirectoryBlocks = "blocksSyncRoot";
         else
         {
-          int indexBranch = synchronizationRoot.SynchronizationBranches.Count;
+          int indexBranch = synchronizationRoot.BlockchainBranches.Count;
           PathDirectoryBlocks = Path.Combine(synchronizationRoot.PathDirectoryBlocks, $"branch{indexBranch}");
         }
       }
@@ -73,10 +71,7 @@ namespace BTokenLib
             BlockLoad.Header = null;
             LoadBlock(heightBlockNext, BlockLoad);
 
-            if (HeaderTip == null)
-              HeaderTip = BlockLoad.Header;
-            else
-              BlockLoad.Header.AppendToHeader(HeaderTip);
+            BlockLoad.Header.AppendToHeader(HeaderTip);
 
             Token.InsertBlock(BlockLoad);
 
@@ -94,6 +89,11 @@ namespace BTokenLib
           }
       }
 
+      public bool IsHigherThan(Blockchain sync)
+      {
+        return HeaderTip.Height > sync.HeaderTip.Height;
+      }
+
       public bool TryExtendHeaderchain(Header header, out List<byte[]> locator, Block blockDownload)
       {
         locator = null;
@@ -107,7 +107,7 @@ namespace BTokenLib
         {
           if (headerAncestor == HeaderRoot)
           {
-            foreach (Synchronization sync in SynchronizationBranches)
+            foreach (Blockchain sync in BlockchainBranches)
               if (sync.TryExtendHeaderchain(header, out locator, blockDownload))
                 return true;
 
@@ -122,13 +122,13 @@ namespace BTokenLib
         {
           if (headerAncestor.HeaderNext.Hash.IsAllBytesEqual(header.Hash) == false)
           {
-            foreach (Synchronization sync in SynchronizationBranches)
+            foreach (Blockchain sync in BlockchainBranches)
               if (sync.HeaderRoot.Hash.IsAllBytesEqual(header.Hash))
                 return sync.TryExtendHeaderchain(header.HeaderNext, out locator, blockDownload);
 
             Header headerTip = header.AppendToHeader(headerAncestor);
-            Synchronization syncBranch = new(this, header, headerTip);
-            SynchronizationBranches.Add(syncBranch);
+            Blockchain syncBranch = new(this, header, headerTip);
+            BlockchainBranches.Add(syncBranch);
 
             blockDownload.Header = syncBranch.FetchHeaderDownload();
             locator = new List<byte[]> { headerTip.Hash };
@@ -169,19 +169,19 @@ namespace BTokenLib
         return null;
       }
 
-      Synchronization GetSynchronizationRoot()
+      Blockchain GetSynchronizationRoot()
       {
-        if (SynchronizationParent == null)
+        if (BlockchainParent == null)
           return this;
 
-        return SynchronizationParent.GetSynchronizationRoot();
+        return BlockchainParent.GetSynchronizationRoot();
       }
 
-      public bool TryInsertBlock(ref Block block, ref Synchronization sychronizationRoot)
+      public bool TryInsertBlock(ref Block block, ref Blockchain sychronizationRoot)
       {
         if (!HeadersDownloading.Remove(block.Header.Hash))
         {
-          foreach (Synchronization syncBranch in SynchronizationBranches)
+          foreach (Blockchain syncBranch in BlockchainBranches)
             if (syncBranch.TryInsertBlock(ref block, ref sychronizationRoot))
               return true;
 
@@ -191,7 +191,7 @@ namespace BTokenLib
 
         int heightBlock = block.Header.Height;
 
-        if (heightBlock == HeightBlockInsertNext)
+        if (heightBlock == HeaderTipBlockchain.Height + 1)
         {
           do
           {
@@ -229,13 +229,13 @@ namespace BTokenLib
 
       bool TryReorg()
       {
-        if (SynchronizationParent == null
-          || (HeaderTipBlockchain.DifficultyAccumulated <= SynchronizationParent.HeaderTipBlockchain.DifficultyAccumulated))
+        if (BlockchainParent == null
+          || (HeaderTipBlockchain.DifficultyAccumulated <= BlockchainParent.HeaderTipBlockchain.DifficultyAccumulated))
           return false;
 
         Header headerAncestor = HeaderRoot.HeaderPrevious;
 
-        if (SynchronizationParent.Token != null)
+        if (BlockchainParent.Token != null)
           if (!TryReorgToken(headerAncestor.Height))
             return false;
 
@@ -249,9 +249,9 @@ namespace BTokenLib
 
       bool TryReorgToken(int heightAncestor)
       {
-        SynchronizationParent.RewindTokenToHeight(heightAncestor);
+        BlockchainParent.RewindTokenToHeight(heightAncestor);
 
-        Token = SynchronizationParent.Token;
+        Token = BlockchainParent.Token;
 
         try
         {
@@ -261,12 +261,12 @@ namespace BTokenLib
         {
           Token = null;
 
-          SynchronizationParent.RollTokenForwardToTip(heightAncestor);
+          BlockchainParent.RollTokenForwardToTip(heightAncestor);
 
           return false;
         }
 
-        SynchronizationParent.Token = null;
+        BlockchainParent.Token = null;
 
         return true;
       }
@@ -305,28 +305,28 @@ namespace BTokenLib
       {
         Header headerRootNewSyncParent = headerAncestor.HeaderNext;
         headerAncestor.HeaderNext = HeaderRoot;
-        HeaderRoot = SynchronizationParent.HeaderRoot;
-        SynchronizationParent.HeaderRoot = headerRootNewSyncParent;
+        HeaderRoot = BlockchainParent.HeaderRoot;
+        BlockchainParent.HeaderRoot = headerRootNewSyncParent;
 
-        List<Synchronization> branches = SynchronizationParent.SynchronizationBranches.ToList();
+        List<Blockchain> branches = BlockchainParent.BlockchainBranches.ToList();
 
-        foreach (Synchronization syncBranch in branches)
+        foreach (Blockchain syncBranch in branches)
           if (syncBranch.HeaderRoot.Height <= HeaderRoot.Height)
           {
-            SynchronizationParent.SynchronizationBranches.Remove(syncBranch);
+            BlockchainParent.BlockchainBranches.Remove(syncBranch);
 
             if (syncBranch != this)
             {
-              syncBranch.SynchronizationParent = this;
-              SynchronizationBranches.Add(syncBranch);
+              syncBranch.BlockchainParent = this;
+              BlockchainBranches.Add(syncBranch);
             }
           }
 
-        SynchronizationBranches.Add(SynchronizationParent);
+        BlockchainBranches.Add(BlockchainParent);
 
-        Synchronization syncParentNew = SynchronizationParent.SynchronizationParent;
-        SynchronizationParent.SynchronizationParent = this;
-        SynchronizationParent = syncParentNew;
+        Blockchain syncParentNew = BlockchainParent.BlockchainParent;
+        BlockchainParent.BlockchainParent = this;
+        BlockchainParent = syncParentNew;
       }
 
       public void GetBlock(byte[] hash, Block blockUpload)
@@ -345,7 +345,7 @@ namespace BTokenLib
           header = header.HeaderNext;
         }
 
-        foreach (Synchronization syncBranch in SynchronizationBranches)
+        foreach (Blockchain syncBranch in BlockchainBranches)
         {
           syncBranch.GetBlock(hash, blockUpload);
 

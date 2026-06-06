@@ -43,17 +43,20 @@ namespace BTokenLib
           hashesLocator.Add(hashLocator);
         }
 
-        Header headerAncestor = await peer.Network.LoadHeaderAncestor(hashesLocator);
+        List<Header> headerAncestor = await peer.Network.GetHeaders(hashesLocator);
 
-        if (headerAncestor != null)
-        {
-          HeadersMessage.SendHeaders(peer, headerAncestor.HeaderNext);
 
-          if (headerAncestor.Height >= HaederAncestorSentLast.Height + HeadersMessage.MaxCountHeaders)
-            DOSMonitor.Decrement(1);
+        //Header headerAncestor = await peer.Network.LoadHeaderAncestor(hashesLocator);
 
-          HaederAncestorSentLast = headerAncestor;
-        }
+        //if (headerAncestor != null)
+        //{
+        HeadersMessage.SendHeaders(peer, headerAncestor.HeaderNext);
+
+        //  if (headerAncestor.Height >= HaederAncestorSentLast.Height + HeadersMessage.MaxCountHeaders)
+        //    DOSMonitor.Decrement(1);
+
+        //  HaederAncestorSentLast = headerAncestor;
+        //}
       }
 
 

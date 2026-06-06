@@ -81,7 +81,8 @@ namespace BTokenLib
         List<byte> bufferList = new();
 
         int i = 0;
-
+        // Diese Logik muss in den Synchronizator gezügelt werden, 
+        // Möglichst keine Header operationen ausserhalb von Synchronizator, weil sonst evt. nicht gelockt.
         while (headerRoot != null && i < MaxCountHeaders)
         {
           bufferList.AddRange(headerRoot.Serialize());
