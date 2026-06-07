@@ -184,27 +184,16 @@ namespace BTokenLib
         return SynchronizationRoot.GetLocator();
     }
 
-    async Task<List<Header>> GetHeaders(List<byte[]> hashesLocator)
+    async Task<(List<byte[]> headers, int heightAncestor)> GetHeadersSerialized(
+      List<byte[]> hashesLocator, 
+      int maxCountHeaders)
     {
-      Header headerAncestor = null;
-
       if (!await TryLockSynchronization(10000))
-        return headerAncestor;
+        return (headers: new(), heightAncestor: -1);
 
       try
       {
-        headerAncestor = SynchronizationRoot.HeaderTip;
-
-        while (headerAncestor != null)
-        {
-          foreach (byte[] hashLocator in hashesLocator)
-            if (headerAncestor.Hash.IsAllBytesEqual(hashLocator))
-              return headerAncestor;
-
-          headerAncestor = headerAncestor.HeaderPrevious;
-        }
-
-        return headerAncestor;
+        return SynchronizationRoot.GetHeadersSerialized(hashesLocator, maxCountHeaders);
       }
       finally
       {

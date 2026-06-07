@@ -12,7 +12,7 @@ namespace BTokenLib
     {
       public const string Command = "getheaders";
 
-      Header HaederAncestorSentLast;
+      int HeightAncestorSentLast;
 
 
       public GetHeadersMessage()
@@ -43,23 +43,19 @@ namespace BTokenLib
           hashesLocator.Add(hashLocator);
         }
 
-        List<Header> headerAncestor = await peer.Network.GetHeaders(hashesLocator);
+        (List<byte[]> headers, int heightAncestor) tupleHeadersSerialized = 
+          await peer.Network.GetHeadersSerialized(
+            hashesLocator,
+            HeadersMessage.MAX_COUNT_HEADERS);
+              
+        HeadersMessage.SendHeaders(peer, tupleHeadersSerialized.headers);
 
-
-        //Header headerAncestor = await peer.Network.LoadHeaderAncestor(hashesLocator);
-
-        //if (headerAncestor != null)
-        //{
-        HeadersMessage.SendHeaders(peer, headerAncestor.HeaderNext);
-
-        //  if (headerAncestor.Height >= HaederAncestorSentLast.Height + HeadersMessage.MaxCountHeaders)
-        //    DOSMonitor.Decrement(1);
-
-        //  HaederAncestorSentLast = headerAncestor;
-        //}
+        if (tupleHeadersSerialized.heightAncestor > HeightAncestorSentLast)
+        {
+          DOSMonitor.Decrement(1);
+          HeightAncestorSentLast = tupleHeadersSerialized.heightAncestor;
+        }
       }
-
-
 
       public static async Task SendGetHeaders(Peer peer, List<byte[]> locator)
       {

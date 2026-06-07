@@ -157,7 +157,7 @@ namespace BTokenLib
         if ((QueueBlocks.Count > CAPACITY_MAX_QueueBlocksInsertion || HeaderDownloadNext == null)
             && HeadersDownloading.Any())
           return HeadersDownloading.Values.MinBy(h => h.Height);
-        
+
         if (HeaderDownloadNext != null)
         {
           Header headerDownload = HeaderDownloadNext;
@@ -275,7 +275,7 @@ namespace BTokenLib
       {
         int height = HeaderTip.Height;
 
-        while(height > heightAncestor)
+        while (height > heightAncestor)
         {
           BlockLoad.Header = null;
           LoadBlock(height, BlockLoad);
@@ -335,7 +335,7 @@ namespace BTokenLib
 
         while (header != null)
         {
-          if(header.Hash.IsAllBytesEqual(hash))
+          if (header.Hash.IsAllBytesEqual(hash))
           {
             blockUpload.Header = header;
             LoadBlock(header.Height, blockUpload);
@@ -353,7 +353,7 @@ namespace BTokenLib
             return;
         }
       }
-      
+
       public void LoadBlock(int height, Block blockUpload)
       {
         string pathFile = Path.Combine(PathDirectoryBlocks, height.ToString());
@@ -402,6 +402,37 @@ namespace BTokenLib
         }
 
         return locator;
+      }
+
+      public (List<byte[]> headers, int heightAncestor) GetHeadersSerialized(
+        List<byte[]> hashesLocator,
+        int maxCountHeaders)
+      {
+        Header header = HeaderTip;
+
+        while (header != null)
+        {
+          foreach (byte[] hashLocator in hashesLocator)
+            if (header.Hash.IsAllBytesEqual(hashLocator))
+              goto LABEL_HeaderAncestorFound;
+
+          header = header.HeaderPrevious;
+        }
+
+        return (headers: new(), heightAncestor: -1);
+
+      LABEL_HeaderAncestorFound:
+
+        List<byte[]> headers = new();
+        int heightAncestor = header.Height;
+
+        while (header.HeaderNext != null && headers.Count < maxCountHeaders)
+        {
+          headers.Add(header.HeaderNext.Serialize());
+          header = header.HeaderNext;
+        }
+
+        return (headers, heightAncestor);
       }
     }
   }

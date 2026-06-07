@@ -14,7 +14,7 @@ namespace BTokenLib
     {
       public const string Command = "headers";
 
-      public const int MaxCountHeaders = 2000;
+      public const int MAX_COUNT_HEADERS = 2000;
 
       Block BlockDownload;
 
@@ -32,7 +32,7 @@ namespace BTokenLib
         int startIndex = 0;
         int countHeaders = VarInt.GetInt(Payload, ref startIndex);
 
-        if (countHeaders > MaxCountHeaders)
+        if (countHeaders > MAX_COUNT_HEADERS)
           throw new ProtocolException($"Too many headers {countHeaders} in headers message.");
         else if (countHeaders > 0)
         {
@@ -76,18 +76,14 @@ namespace BTokenLib
         return headerRoot;
       }
 
-      public static async Task SendHeaders(Peer peer, Header headerRoot)
+      public static async Task SendHeaders(Peer peer, List<byte[]> headersSerialized)
       {
         List<byte> bufferList = new();
 
-        int i = 0;
-        // Diese Logik muss in den Synchronizator gezügelt werden, 
-        // Möglichst keine Header operationen ausserhalb von Synchronizator, weil sonst evt. nicht gelockt.
-        while (headerRoot != null && i < MaxCountHeaders)
+        foreach (byte[] headerSerialized in headersSerialized)
         {
-          bufferList.AddRange(headerRoot.Serialize());
-          headerRoot = headerRoot.HeaderNext;
-          i += 1;
+          bufferList.AddRange(headerSerialized);
+          bufferList.Add(0x00);
         }
 
         bufferList.InsertRange(0, VarInt.GetBytes(bufferList.Count));
