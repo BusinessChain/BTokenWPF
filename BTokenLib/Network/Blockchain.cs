@@ -16,7 +16,6 @@ namespace BTokenLib
       Token Token;
 
       Header HeaderTip;
-      Header HeaderGenesis;
       Header HeaderRoot;
       Header HeaderTipBlockchain;
 
@@ -31,12 +30,10 @@ namespace BTokenLib
 
       Block BlockLoad;
 
+
       public Blockchain(Token token)
       {
         Token = token;
-
-        HeaderGenesis = Token.CreateHeaderGenesis();
-        HeaderTip = HeaderGenesis;
 
         BlockLoad = new(Token);
       }
@@ -71,11 +68,18 @@ namespace BTokenLib
             BlockLoad.Header = null;
             LoadBlock(heightBlockNext, BlockLoad);
 
-            BlockLoad.Header.AppendToHeader(HeaderTip);
-
             Token.InsertBlock(BlockLoad);
 
-            HeaderTip.HeaderNext = BlockLoad.Header;
+            if (HeaderRoot == null)
+            {
+              HeaderRoot = BlockLoad.Header;
+            }
+            else
+            {
+              BlockLoad.Header.AppendToHeader(HeaderTip);
+              HeaderTip.HeaderNext = BlockLoad.Header;
+            }
+
             HeaderTip = BlockLoad.Header;
 
             heightBlockNext += 1;
@@ -87,6 +91,17 @@ namespace BTokenLib
 
             break;
           }
+
+        if (HeaderRoot == null)
+        {
+          HeaderRoot = Token.CreateHeaderGenesis();
+          HeaderTip = HeaderRoot;
+        }
+      }
+
+      public int GetHeight()
+      {
+        return HeaderTip.Height;
       }
 
       public bool IsHigherThan(Blockchain sync)
@@ -177,12 +192,17 @@ namespace BTokenLib
         return BlockchainParent.GetSynchronizationRoot();
       }
 
-      public bool TryInsertBlock(ref Block block, ref Blockchain sychronizationRoot)
+      public bool TryInsertBlock(
+        ref Block block, 
+        ref Blockchain sychronizationRoot, 
+        out bool isSyncComplete)
       {
+        isSyncComplete = false;
+
         if (!HeadersDownloading.Remove(block.Header.Hash))
         {
           foreach (Blockchain syncBranch in BlockchainBranches)
-            if (syncBranch.TryInsertBlock(ref block, ref sychronizationRoot))
+            if (syncBranch.TryInsertBlock(ref block, ref sychronizationRoot, out isSyncComplete))
               return true;
 
           block.Header = null;
@@ -223,6 +243,8 @@ namespace BTokenLib
           block = new(Token);
 
         block.Header = FetchHeaderDownload();
+
+        isSyncComplete = block.Header != null && block.Header == HeaderTip;
 
         return true;
       }

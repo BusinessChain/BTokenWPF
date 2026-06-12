@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace BTokenLib
@@ -24,7 +25,7 @@ namespace BTokenLib
         }
 
 
-        public override void Run(Peer peer)
+        public override async Task Run(Peer peer)
         {
           peer.SendMessage(new PongMessage(Payload, LengthDataPayload));
         }

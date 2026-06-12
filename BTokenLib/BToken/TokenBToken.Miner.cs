@@ -27,7 +27,10 @@ namespace BTokenLib
     public void StartMining()
     {
       if (IsMining)
+      {
+        StopMining();
         return;
+      }
 
       IsMining = true;
 
@@ -52,7 +55,7 @@ namespace BTokenLib
       int timerCreateNextToken = 0;
       int timeMinerLoopMilliseconds = 100;
 
-      FeeSatoshiPerByteAnchorToken = TokenParent.Network.GetFeeRate();
+      FeeSatoshiPerByteAnchorToken = Network.NetworkParent.GetFeeRate();
 
       if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
         FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;

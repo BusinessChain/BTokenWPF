@@ -22,6 +22,8 @@ namespace BTokenLib
     public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
+    Dictionary<byte[], TokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
+
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
@@ -189,7 +191,20 @@ namespace BTokenLib
 
     public override void InsertBlock(Block block)
     {
+      for (int i = 0; i < block.TXs.Count; i += 1)
+      {
+        TXBitcoin tX = block.TXs[i] as TXBitcoin;
 
+        foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
+        {
+          if (tXOutput.TokenAnchor != null)
+            CacheAnchorTokens.Add(
+              tXOutput.TokenAnchor.HashBlockReferenced,
+              tXOutput.TokenAnchor);
+        }
+      }
+
+      Wallet?.InsertBlock(block);
     }
   }
 }

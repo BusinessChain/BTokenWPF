@@ -23,7 +23,7 @@ namespace BTokenLib
       public override async Task Run(Peer peer)
       {
         if (peer.Connection == ConnectionType.OUTBOUND)
-          peer.StartHeaderSync();
+          peer.Network.StartHeaderSync(peer);
       }
 
       public override string GetCommand()

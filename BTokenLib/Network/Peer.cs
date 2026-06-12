@@ -117,11 +117,6 @@ namespace BTokenLib
           VersionMessage.SendVersion(this);
       }
 
-      public void StartHeaderSync()
-      {
-        Network.StartHeaderSync(this);
-      }
-
       public void BroadcastTX(TX tX)
       {
         InvMessage invMessage = new(new List<Inventory> {

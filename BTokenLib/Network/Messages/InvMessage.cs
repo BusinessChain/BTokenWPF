@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace BTokenLib
@@ -48,7 +49,7 @@ namespace BTokenLib
               ref startIndex));
         }
 
-        public override void Run(Peer peer)
+        public override async Task Run(Peer peer)
         {
 
         }

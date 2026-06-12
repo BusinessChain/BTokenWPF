@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+
 
 namespace BTokenLib
 {
@@ -20,7 +22,7 @@ namespace BTokenLib
           LengthDataPayload = lengthDataPayload;
         }
 
-        public override void Run(Peer peer)
+        public override async Task Run(Peer peer)
         {
           PingMessage messagePing = peer.ProtocolStateMachine[PingMessage.Command] as PingMessage;
 

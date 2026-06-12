@@ -36,7 +36,7 @@ namespace BTokenLib
         versionPayload.AddRange(GetBytes((ushort)peer.Network.Port));
         versionPayload.AddRange(BitConverter.GetBytes((ulong)0));
         versionPayload.AddRange(VarString.GetBytes(peer.Network.UserAgent));
-        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.HeaderTip.Height));
+        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.BlockchainRoot.GetHeight()));
         versionPayload.Add(peer.Network.RelayOption);
 
         byte[] buffer = versionPayload.ToArray();
@@ -44,7 +44,7 @@ namespace BTokenLib
         await peer.SendMessage(Command, buffer.Length, buffer);
       }
       
-      public override void Run(Peer peer)
+      public override async Task Run(Peer peer)
       {
         VerAckMessage.Send(peer);
 

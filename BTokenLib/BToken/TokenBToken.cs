@@ -21,6 +21,7 @@ namespace BTokenLib
     const long TIMESPAN_DAY_SECONDS = 24 * 3600;
 
     Dictionary<byte[], Account> Cache = new(new EqualityComparerByteArray());
+
     Dictionary<byte[], Account> AccountsStaged = new(new EqualityComparerByteArray());
 
     LiteDatabase Database;
@@ -111,7 +112,12 @@ namespace BTokenLib
         }
 
         foreach (var account in AccountsStaged)
-          Cache[account.Key] = account.Value;
+        {
+          if (account.Value.Balance > 0)
+            Cache[account.Key] = account.Value;
+          else
+            Cache.Remove(account.Key);
+        }
       }
       finally
       {
@@ -120,96 +126,137 @@ namespace BTokenLib
       
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
 
-      if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
-        EvictBlockFromCache();
+      //if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
+      //  EvictBlockFromCache();
 
-      Wallet.InsertBlock(block);
+      Wallet?.InsertBlock(block);
     }
 
-    void EvictBlockFromCache()
+    void StageOutput(TXOutputBToken output, int blockHeight)
     {
-      int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+      if (output.Value <= 0)
+        throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
 
-      while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV)
-        if (Network.TryLoadBlock(heightBlock, out Block block))
-        {
-          $"Loaded block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
-
-          RemoveAccountsFromCache(block);
-
-          foreach (TXBToken tX in block.TXs)
+      if (AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
+        accountStaged.Balance += output.Value;
+      else
+      {
+        //if (Cache.TryGetValue(output.IDAccount, out Account accountCached))
+        //  accountStaged = new()
+        //  {
+        //    ID = accountCached.ID,
+        //    BlockHeightAccountCreated = accountCached.BlockHeightAccountCreated,
+        //    Nonce = accountCached.Nonce,
+        //    Balance = accountCached.Balance + output.Value
+        //  };
+        //else
+        if (DatabaseAccountCollection.FindById(output.IDAccount) is Account accountStored)
+          accountStaged = new()
           {
-            if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
-            {
-              accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
-                throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
-
-              if (accountSource.BlockHeightLastUpdated < heightBlock)
-              {
-                accountSource.BlockHeightLastUpdated = heightBlock;
-                AccountsStaged.Add(accountSource.ID, accountSource);
-              }
-            }
-
-            accountSource.Nonce += 1;
-            accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
-
-            foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-            {
-              if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
-              {
-                accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
-                  new()
-                  {
-                    ID = tXOutput.IDAccount,
-                    BlockHeightAccountCreated = heightBlock
-                  };
-
-                if (accountOutput.BlockHeightLastUpdated < heightBlock)
-                {
-                  accountOutput.BlockHeightLastUpdated = heightBlock;
-                  AccountsStaged.Add(accountOutput.ID, accountOutput);
-                }
-              }
-
-              accountOutput.Balance += tXOutput.Value;
-            }
-          }
-
-          List<byte[]> accountIDsWhereBalanceZero = AccountsStaged.Values.Where(a => a.Balance == 0).Select(a => a.ID).ToList();
-
-          foreach (byte[] id in accountIDsWhereBalanceZero)
-          {
-            DatabaseAccountCollection.Delete(id);
-            AccountsStaged.Remove(id);
-          }
-
-          foreach (var batch in AccountsStaged.Values.Chunk(500))
-            DatabaseAccountCollection.Upsert(batch);
-
-          DatabaseMetaCollection.Upsert(new BsonDocument
-          {
-            ["_id"] = "lastProcessedBlock",
-            ["hash"] = block.Header.Hash,
-            ["height"] = heightBlock
-          });
-
-          heightBlock += 1;
-        }
+            ID = accountStored.ID,
+            BlockHeightAccountCreated = accountStored.BlockHeightAccountCreated,
+            Nonce = accountStored.Nonce,
+            Balance = accountStored.Balance + output.Value
+          };
         else
-        {
-          $"Failed to load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
-          // Reload state
-        }
+          accountStaged = new()
+          {
+            ID = output.IDAccount,
+            BlockHeightAccountCreated = blockHeight,
+            Nonce = 0,
+            Balance = output.Value
+          };
 
-      Database.Checkpoint();
+        AccountsStaged.Add(output.IDAccount, accountStaged);
+      }
     }
+
+    //void EvictBlockFromCache()
+    //{
+    //  int heightBlock = DatabaseMetaCollection.FindById("lastProcessedBlock")["height"].AsInt32 + 1;
+
+    //  while (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE * HYSTERESIS_COUNT_MAX_CACHE_ARCHIV)
+    //    if (Network.TryLoadBlock(heightBlock, out Block block)) 
+    //      // hier doch einfach die ältesten entries löschen, mit Dictionary<int, List<Account>> AccountsGroupedByBlockheightLastModified = new(); arbeiten
+    //    {
+    //      $"Loaded block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+
+    //      RemoveAccountsFromCache(block);
+
+    //      foreach (TXBToken tX in block.TXs)
+    //      {
+    //        if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountSource))
+    //        {
+    //          accountSource = DatabaseAccountCollection.FindById(tX.IDAccountSource) ??
+    //            throw new ProtocolException($"Account {tX.IDAccountSource.ToHexString()} referenced by TX {tX} not found in database.");
+
+    //          if (accountSource.BlockHeightLastUpdated < heightBlock)
+    //          {
+    //            accountSource.BlockHeightLastUpdated = heightBlock;
+    //            AccountsStaged.Add(accountSource.ID, accountSource);
+    //          }
+    //        }
+
+    //        accountSource.Nonce += 1;
+    //        accountSource.Balance -= tX.Fee + tX.GetValueOutputs();
+
+    //        foreach (TXOutputBToken tXOutput in tX.TXOutputs)
+    //        {
+    //          if (!AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountOutput))
+    //          {
+    //            accountOutput = DatabaseAccountCollection.FindById(tXOutput.IDAccount) ??
+    //              new()
+    //              {
+    //                ID = tXOutput.IDAccount,
+    //                BlockHeightAccountCreated = heightBlock
+    //              };
+
+    //            if (accountOutput.BlockHeightLastUpdated < heightBlock)
+    //            {
+    //              accountOutput.BlockHeightLastUpdated = heightBlock;
+    //              AccountsStaged.Add(accountOutput.ID, accountOutput);
+    //            }
+    //          }
+
+    //          accountOutput.Balance += tXOutput.Value;
+    //        }
+    //      }
+
+    //      List<byte[]> accountIDsWhereBalanceZero = AccountsStaged.Values.Where(a => a.Balance == 0).Select(a => a.ID).ToList();
+
+    //      foreach (byte[] id in accountIDsWhereBalanceZero)
+    //      {
+    //        DatabaseAccountCollection.Delete(id);
+    //        AccountsStaged.Remove(id);
+    //      }
+
+    //      foreach (var batch in AccountsStaged.Values.Chunk(500))
+    //        DatabaseAccountCollection.Upsert(batch);
+
+    //      DatabaseMetaCollection.Upsert(new BsonDocument
+    //      {
+    //        ["_id"] = "lastProcessedBlock",
+    //        ["hash"] = block.Header.Hash,
+    //        ["height"] = heightBlock
+    //      });
+
+    //      heightBlock += 1;
+    //    }
+    //    else
+    //    {
+    //      $"Failed to load block {block} for insertion in disk database and removal from cache.".Log(this, LogEntryNotifier);
+    //      // Reload state
+    //    }
+
+    //  Database.Checkpoint();
+    //}
 
     Account GetCopyOfAccount(byte[] accountID)
     {
-      if (Cache.TryGetValue(accountID, out Account accountCached))
-        return new(accountCached);
-      else if (DatabaseAccountCollection.FindById(accountID) is Account accountStored)
+      //if (Cache.TryGetValue(accountID, out Account accountCached))
+      //  return new(accountCached);
+      //else
+      if (DatabaseAccountCollection.FindById(accountID) is Account accountStored)
         return new(accountStored);
       else
         throw new ProtocolException($"Account {accountID.ToHexString()} not found in database.");
@@ -242,63 +289,25 @@ namespace BTokenLib
 
       accountStaged.SpendTX(tX);
     }
+         
+    //void RemoveAccountsFromCache(Block block)
+    //{
+    //  int heightBlock = block.Header.Height;
 
-    void StageOutput(TXOutputBToken output, int blockHeight)
-    {
-      if (output.Value <= 0)
-        throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
+    //  foreach (TXBToken tX in block.TXs)
+    //  {
+    //    TryRemove(tX.IDAccountSource);
 
-      if (AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
-        accountStaged.Balance += output.Value;
-      else
-      {
-        if (Cache.TryGetValue(output.IDAccount, out Account accountCached))
-          accountStaged = new()
-          {
-            ID = accountCached.ID,
-            BlockHeightAccountCreated = accountCached.BlockHeightAccountCreated,
-            Nonce = accountCached.Nonce,
-            Balance = accountCached.Balance + output.Value
-          };
-        else if (DatabaseAccountCollection.FindById(output.IDAccount) is Account accountStored)
-          accountStaged = new()
-          {
-            ID = accountStored.ID,
-            BlockHeightAccountCreated = accountStored.BlockHeightAccountCreated,
-            Nonce = accountStored.Nonce,
-            Balance = accountStored.Balance + output.Value
-          };
-        else
-          accountStaged = new()
-          {
-            ID = output.IDAccount,
-            BlockHeightAccountCreated = blockHeight,
-            Nonce = 0,
-            Balance = output.Value
-          };
+    //    foreach (TXOutputBToken outputBToken in tX.TXOutputs)
+    //      TryRemove(outputBToken.IDAccount);
+    //  }
 
-        AccountsStaged.Add(output.IDAccount, accountStaged);
-      }
-    }
-     
-    void RemoveAccountsFromCache(Block block)
-    {
-      int heightBlock = block.Header.Height;
-
-      foreach (TXBToken tX in block.TXs)
-      {
-        TryRemove(tX.IDAccountSource);
-
-        foreach (TXOutputBToken outputBToken in tX.TXOutputs)
-          TryRemove(outputBToken.IDAccount);
-      }
-
-      void TryRemove(byte[] id)
-      {
-        if (Cache.TryGetValue(id, out Account account) && account.BlockHeightLastUpdated == heightBlock)
-          Cache.Remove(id);
-      }
-    }
+    //  void TryRemove(byte[] id)
+    //  {
+    //    if (Cache.TryGetValue(id, out Account account) && account.BlockHeightLastUpdated == heightBlock)
+    //      Cache.Remove(id);
+    //  }
+    //}
 
     protected override void ReverseBlockInCache(Block block)
     {
@@ -314,8 +323,8 @@ namespace BTokenLib
           foreach (TXOutputBToken output in tX.TXOutputs)
             ReverseOutputInCache(output);
 
-          foreach (var account in AccountsStaged)
-            Cache[account.Key] = account.Value;
+          //foreach (var account in AccountsStaged)
+          //  Cache[account.Key] = account.Value;
         }
       }
       finally
@@ -328,8 +337,8 @@ namespace BTokenLib
     {
       if (!AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
       {
-        if (!Cache.TryGetValue(output.IDAccount, out accountStaged))
-          throw new ProtocolException($"TX Output cannot be reversed because account {output.IDAccount.ToHexString()} does not exist in cache.");
+        //if (!Cache.TryGetValue(output.IDAccount, out accountStaged))
+        //  throw new ProtocolException($"TX Output cannot be reversed because account {output.IDAccount.ToHexString()} does not exist in cache.");
 
         AccountsStaged.Add(output.IDAccount, accountStaged);
       }
@@ -341,13 +350,13 @@ namespace BTokenLib
     {
       if (!AccountsStaged.TryGetValue(tX.IDAccountSource, out Account accountStaged))
       {
-        if (!Cache.TryGetValue(tX.IDAccountSource, out accountStaged))
-          accountStaged = new()
-          {
-            ID = tX.IDAccountSource,
-            BlockHeightAccountCreated = tX.BlockheightAccountCreated,
-            Nonce = tX.Nonce,
-          };
+        //if (!Cache.TryGetValue(tX.IDAccountSource, out accountStaged))
+        //  accountStaged = new()
+        //  {
+        //    ID = tX.IDAccountSource,
+        //    BlockHeightAccountCreated = tX.BlockheightAccountCreated,
+        //    Nonce = tX.Nonce,
+        //  };
 
         AccountsStaged.Add(tX.IDAccountSource, accountStaged);
       }
@@ -402,7 +411,7 @@ namespace BTokenLib
     public override void Reset()
     {
       base.Reset();
-      Cache.Clear();
+      //Cache.Clear();
     }
 
     public override List<string> GetSeedAddresses()
