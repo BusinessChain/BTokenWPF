@@ -15,6 +15,9 @@ namespace BTokenLib
 
     public byte[] TXRaw;
 
+    public List<TXOutput> TXOutputs = new();
+
+
 
     public abstract List<TokenAnchor> GetTokenAnchors();
 

@@ -60,7 +60,32 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    public abstract void InsertBlock(Block block);
+    bool TryInsertAnchorToken()
+    {
+
+    }
+
+    protected abstract void InsertTX(TX tX);
+
+    public virtual void InsertBlock(Block block)
+    {
+      for (int i = 0; i < block.TXs.Count; i += 1)
+      {
+        TX tX = block.TXs[i];
+
+        InsertTX(tX);
+
+        foreach (TXOutput tXOutput in tX.TXOutputs)
+        {
+          if (tXOutput.TokenAnchor != null)
+            CacheAnchorTokens.Add(
+              tXOutput.TokenAnchor.HashBlockReferenced,
+              tXOutput.TokenAnchor);
+        }
+      }
+
+      Wallet?.InsertBlock(block);
+    }
 
     public void ReverseBlock(Block block)
     {

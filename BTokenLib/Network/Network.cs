@@ -12,8 +12,6 @@ namespace BTokenLib
 {
   public partial class Network
   {
-    // In BToken hat ein Token immer nur genau ein Parent Netzwerk und darüber nichts mehr.
-    // Damit wird eine maximale Skalierung angestrebt.
     public Network NetworkParent;
 
     // Bekommt ein Netzwerk ein Block
@@ -191,7 +189,9 @@ namespace BTokenLib
 
       if (isSyncComplete)
         foreach (Network networkChild in NetworksChild)
-          networkChild.StartHeaderSync();
+          networkChild.StartHeaderSync(); 
+      //irgendwo ab hier muss der miner getriggert werden.
+      //und selbst geminte Blöcke eingefügt/broadcastet werden.
     }
 
     List<byte[]> GetLocator()

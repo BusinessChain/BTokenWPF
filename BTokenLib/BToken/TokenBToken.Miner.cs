@@ -16,7 +16,6 @@ namespace BTokenLib
     const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
     const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
-    double FeeSatoshiPerByteAnchorToken;
     List<Block> BlocksMinedCache = new();
     string PathBlocksMined;
 
@@ -24,19 +23,10 @@ namespace BTokenLib
 
     bool IsMining;
 
+
     public void StartMining()
     {
-      if (IsMining)
-      {
-        StopMining();
-        return;
-      }
-
       IsMining = true;
-
-      $"Start {GetName()} miner".Log(this, LogEntryNotifier);
-
-      new Thread(RunMining).Start();
     }
 
     public void StopMining()
@@ -44,7 +34,7 @@ namespace BTokenLib
       IsMining = false;
     }
 
-    protected async void RunMining()
+    public async void StartMining()
     {
       $"Miner starts.".Log(this, LogFile, LogEntryNotifier);
 
@@ -55,10 +45,7 @@ namespace BTokenLib
       int timerCreateNextToken = 0;
       int timeMinerLoopMilliseconds = 100;
 
-      FeeSatoshiPerByteAnchorToken = Network.NetworkParent.GetFeeRate();
-
-      if (FeeSatoshiPerByteAnchorToken < MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN)
-        FeeSatoshiPerByteAnchorToken = MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN;
+      IsMining = true;
 
       while (IsMining)
       {

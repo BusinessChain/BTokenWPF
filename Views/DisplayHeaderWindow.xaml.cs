@@ -47,11 +47,11 @@ namespace BTokenWPF
         $"{header.DifficultyAccumulated}\n" +
         $"{header.Nonce}\n";
 
-      if (Token.Network.TryLoadBlock(Header.Height, out Block block))
-        foreach (TX tX in block.TXs)
-          ListBoxTXs.Items.Add(new ListBoxItemTX(tX));
-      else
-        MessageBox.Show("Could not load block from disk.");
+      //if (Token.Network.TryLoadBlock(Header.Height, out Block block))
+      //  foreach (TX tX in block.TXs)
+      //    ListBoxTXs.Items.Add(new ListBoxItemTX(tX));
+      //else
+      //  MessageBox.Show("Could not load block from disk.");
     }
 
     void ListBoxTXs_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

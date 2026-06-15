@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
+
 namespace BTokenLib
 {
   public partial class TokenBToken : Token
@@ -34,8 +35,6 @@ namespace BTokenLib
       /// It is in a sense an extension of the nonce.
       /// </summary>
       public int BlockheightAccountCreated;
-
-      public List<TXOutputBToken> TXOutputs = new();
 
 
       public TXBToken()

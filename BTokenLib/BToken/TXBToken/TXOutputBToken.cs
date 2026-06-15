@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    public class TXOutputBToken
+    class TXOutputBToken : TXOutput
     {
       public enum TypesToken
       {
@@ -23,8 +23,6 @@ namespace BTokenLib
       public byte[] IDAccount;
 
       public byte[] Data;
-
-      public TokenAnchor TokenAnchor = new();
 
       public byte[] Script;
 

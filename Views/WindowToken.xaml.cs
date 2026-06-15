@@ -147,25 +147,25 @@ namespace BTokenWPF
 
     void UpdateListBoxHeaderchain()
     {
-      Header header = null;
+      //Header header = null;
 
-      if (ListBoxBlockchain.Items.Count > 0)
-        header = ((ListBoxItemHeader)ListBoxBlockchain.Items.GetItemAt(0)).Header;
+      //if (ListBoxBlockchain.Items.Count > 0)
+      //  header = ((ListBoxItemHeader)ListBoxBlockchain.Items.GetItemAt(0)).Header;
 
-      if (Token.Network.HeaderTip != header)
-        if (ListBoxBlockchain.Items.Count > 0 && Token.Network.HeaderTip.HeaderPrevious == header)
-          ListBoxBlockchain.Items.Insert(0, new ListBoxItemHeader(Token.Network.HeaderTip));
-        else
-        {
-          ListBoxBlockchain.Items.Clear();
-          header = Token.Network.HeaderTip;
+      //if (Token.Network.HeaderTip != header)
+      //  if (ListBoxBlockchain.Items.Count > 0 && Token.Network.HeaderTip.HeaderPrevious == header)
+      //    ListBoxBlockchain.Items.Insert(0, new ListBoxItemHeader(Token.Network.HeaderTip));
+      //  else
+      //  {
+      //    ListBoxBlockchain.Items.Clear();
+      //    header = Token.Network.HeaderTip;
 
-          while (header != null)
-          {
-            ListBoxBlockchain.Items.Add(new ListBoxItemHeader(header));
-            header = header.HeaderPrevious;
-          }
-        }
+      //    while (header != null)
+      //    {
+      //      ListBoxBlockchain.Items.Add(new ListBoxItemHeader(header));
+      //      header = header.HeaderPrevious;
+      //    }
+      //  }
     }
 
     void ListBoxBlockchain_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

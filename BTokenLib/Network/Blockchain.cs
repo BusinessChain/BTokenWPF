@@ -109,7 +109,10 @@ namespace BTokenLib
         return HeaderTip.Height > sync.HeaderTip.Height;
       }
 
-      public bool TryExtendHeaderchain(Header header, out List<byte[]> locator, Block blockDownload)
+      public bool TryExtendHeaderchain(
+        Header header,
+        out List<byte[]> locator,
+        Block blockDownload)
       {
         locator = null;
 
@@ -162,6 +165,7 @@ namespace BTokenLib
         }
 
         blockDownload.Header = FetchHeaderDownload();
+
         HeaderTip = header.AppendToHeader(HeaderTip);
         locator = new List<byte[]> { HeaderTip.Hash };
         return true;
@@ -228,6 +232,8 @@ namespace BTokenLib
 
             block.WriteToDisk(PathDirectoryBlocks);
 
+            isSyncComplete = block.Header == HeaderTip;
+
             PoolBlocks.Add(block);
           } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
 
@@ -243,8 +249,6 @@ namespace BTokenLib
           block = new(Token);
 
         block.Header = FetchHeaderDownload();
-
-        isSyncComplete = block.Header != null && block.Header == HeaderTip;
 
         return true;
       }

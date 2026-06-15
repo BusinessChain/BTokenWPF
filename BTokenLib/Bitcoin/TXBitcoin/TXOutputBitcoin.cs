@@ -5,7 +5,7 @@ namespace BTokenLib
 {
   public partial class TokenBitcoin : Token
   {
-    public class TXOutputBitcoin
+    public class TXOutputBitcoin : TXOutput
     {
       public enum TypesToken
       {
@@ -21,7 +21,6 @@ namespace BTokenLib
       public long Value;
 
       public byte[] Data;
-      public TokenAnchor TokenAnchor;
 
       public byte[] Script;
 

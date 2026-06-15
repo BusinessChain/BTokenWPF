@@ -45,6 +45,7 @@ namespace BTokenLib
       SHA256 SHA256 = SHA256.Create();
 
       ILogEntryNotifier LogEntryNotifier;
+      // Only the network should create a log file.
       StreamWriter LogFile;
 
       DateTime TimePeerCreation = DateTime.Now;

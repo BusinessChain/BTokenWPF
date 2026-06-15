@@ -10,7 +10,6 @@ namespace BTokenLib
     public class TXBitcoin : TX
     {
       public List<TXInputBitcoin> Inputs = new();
-      public List<TXOutputBitcoin> TXOutputs = new();
 
 
       public void Serialize(WalletBitcoin wallet)
