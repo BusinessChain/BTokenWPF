@@ -8,15 +8,6 @@ namespace BTokenLib
   {
     class TXOutputBToken : TXOutput
     {
-      public enum TypesToken
-      {
-        Unspecified = 0x00,
-        P2PKH = 0x01,
-        AnchorToken = 0x02,
-        Data = 0x03
-      }
-
-      public TypesToken Type;
 
       public long Value;
 

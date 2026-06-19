@@ -61,7 +61,7 @@ namespace BTokenLib
         int countOutputs = VarInt.GetInt(buffer, ref index);
 
         for (int i = 0; i < countOutputs; i++)
-          TXOutputs.Add(new(buffer, ref index));
+          TXOutputs.Add(ParseTXOutputBToken(buffer, ref index));
 
         Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
 
@@ -70,6 +70,28 @@ namespace BTokenLib
 
         CountBytes = index - indexTxStart;
       }
+
+      TXOutput ParseTXOutputBToken(byte[] buffer, ref int startIndex)
+      {
+        double value = BitConverter.ToInt64(buffer, startIndex);
+        startIndex += 8;
+
+        int lengthScript = VarInt.GetInt(buffer, ref startIndex);
+
+        if (lengthScript == LENGTH_SCRIPT_P2PKH &&
+          PREFIX_P2PKH.IsAllBytesEqual(buffer, startIndex))
+        {
+          return new TXOutputBToken(buffer, ref startIndex);
+        }
+        else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
+          WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
+        {
+          return new TokenAnchor(buffer, ref startIndex);
+        }
+        else
+          return null;
+      }
+
 
       public override bool IsSuccessorTo(TX tX)
       {

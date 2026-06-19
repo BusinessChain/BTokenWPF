@@ -5,36 +5,39 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  public abstract class TX
+  public partial class Token
   {
-    public byte[] Hash;
-
-    public int CountBytes;
-
-    public long Fee;
-
-    public byte[] TXRaw;
-
-    public List<TXOutput> TXOutputs = new();
-
-
-
-    public abstract List<TokenAnchor> GetTokenAnchors();
-
-    public abstract long GetValueOutputs();
-
-    public void WriteToStream(Stream stream)
+    public abstract class TX
     {
-      stream.Write(TXRaw, 0, TXRaw.Length);
+      public byte[] Hash;
+
+      public int CountBytes;
+
+      public long Fee;
+
+      public byte[] TXRaw;
+
+      public List<TXOutput> TXOutputs = new();
+
+
+
+      public abstract List<TokenAnchor> GetTokenAnchors();
+
+      public abstract long GetValueOutputs();
+
+      public void WriteToStream(Stream stream)
+      {
+        stream.Write(TXRaw, 0, TXRaw.Length);
+      }
+
+      public abstract List<(string label, string value)> GetLabelsValuePairs();
+
+      public override string ToString()
+      {
+        return Hash.ToHexString();
+      }
+
+      public abstract bool IsSuccessorTo(TX tX);
     }
-
-    public abstract List<(string label, string value)> GetLabelsValuePairs();
-
-    public override string ToString()
-    {
-      return Hash.ToHexString();
-    }
-
-    public abstract bool IsSuccessorTo(TX tX);    
   }
 }

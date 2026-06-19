@@ -22,8 +22,6 @@ namespace BTokenLib
     public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
-    Dictionary<byte[], TokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
-
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
@@ -137,13 +135,36 @@ namespace BTokenLib
       int countTXOutputs = VarInt.GetInt(buffer, ref index);
 
       for (int i = 0; i < countTXOutputs; i++)
-        tX.TXOutputs.Add(new TXOutputBitcoin(buffer, ref index));
+      {
+        tX.TXOutputs.Add(ParseTXOutputBitcoin(buffer, ref index));
+      }
 
       index += 4; //BYTE_LENGTH_LOCK_TIME
 
       tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
 
       return tX;
+    }
+
+    TXOutput ParseTXOutputBitcoin(byte[] buffer, ref int startIndex)
+    {
+      double value = BitConverter.ToInt64(buffer, startIndex);
+      startIndex += 8;
+
+      int lengthScript = VarInt.GetInt(buffer, ref startIndex);
+
+      if (lengthScript == LENGTH_SCRIPT_P2PKH &&
+        PREFIX_P2PKH.IsAllBytesEqual(buffer, startIndex))
+      {
+        return new TXOutputBitcoin(buffer, ref startIndex);
+      }
+      else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
+        WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
+      {
+        return new TokenAnchor(buffer, ref startIndex);
+      }
+      else
+        return null;
     }
 
     public override List<string> GetSeedAddresses()

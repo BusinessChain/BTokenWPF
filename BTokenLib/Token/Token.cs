@@ -60,12 +60,9 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    bool TryInsertAnchorToken()
-    {
-
-    }
-
     protected abstract void InsertTX(TX tX);
+
+    Dictionary<byte[], TokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
 
     public virtual void InsertBlock(Block block)
     {
@@ -77,10 +74,12 @@ namespace BTokenLib
 
         foreach (TXOutput tXOutput in tX.TXOutputs)
         {
-          if (tXOutput.TokenAnchor != null)
+          TokenAnchor tokenAnchor = tXOutput as TokenAnchor;
+
+          if (tokenAnchor != null)
             CacheAnchorTokens.Add(
-              tXOutput.TokenAnchor.HashBlockReferenced,
-              tXOutput.TokenAnchor);
+              tokenAnchor.HashBlockReferenced,
+              tokenAnchor);
         }
       }
 
@@ -95,19 +94,8 @@ namespace BTokenLib
     }
 
     protected virtual void ReverseBlockInCache(Block block) { }
-                  
+
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
-
-    public TX ParseTX(byte[] tXRaw, SHA256 sHA256)
-    {
-      int startIndex = 0;
-
-      TX tX = ParseTX(tXRaw, ref startIndex, sHA256);
-
-      tX.TXRaw = tXRaw;
-
-      return tX;
-    }
 
     public abstract TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase = false);
 

@@ -123,16 +123,16 @@ namespace BTokenLib
 
         for (int i = 0; i < TXOutputs.Count; i++)
         {
-          TXOutputBitcoin output = TXOutputs[i];
+          TXOutputBitcoin output = TXOutputs[i] as TXOutputBitcoin;
 
           labelValuePairs.Add(($"Output{i} :: Type", $"{output.Type}"));
 
-          if (output.Type == TXOutputBitcoin.TypesToken.P2PKH)
+          if (output.Type == TXOutput.TypesToken.P2PKH)
           {
             labelValuePairs.Add(($"Output{i} :: PublicKeyHash160", $"{output.PublicKeyHash160.BinaryToBase58Check()}"));
             labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
           }
-          else if (output.Type == TXOutputBitcoin.TypesToken.AnchorToken)
+          else if (output.Type == TXOutput.TypesToken.AnchorToken)
           {
             labelValuePairs.Add(($"Output{i} :: IDToken", $"{output.TokenAnchor.IDToken.ToHexString()}"));
             labelValuePairs.Add(($"Output{i} :: HashBlockReferenced", $"{output.TokenAnchor.HashBlockReferenced.ToHexString()}"));
