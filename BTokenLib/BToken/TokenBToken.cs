@@ -96,44 +96,31 @@ namespace BTokenLib
       return false;
     }
 
-    public override void InsertBlock(Block block)
+    protected override void CommitStaged(Block block)
     {
-      try
+      foreach (var account in AccountsStaged)
       {
-        for (int i = 0; i < block.TXs.Count; i += 1)
-        {
-          TXBToken tX = block.TXs[i] as TXBToken;
-
-          foreach (TXOutputBToken tXOutput in tX.TXOutputs)
-            StageOutput(tXOutput, block.Header.Height);
-
-          if (i > 0)
-            StageSpendInput(tX);
-        }
-
-        foreach (var account in AccountsStaged)
-        {
-          if (account.Value.Balance > 0)
-            Cache[account.Key] = account.Value;
-          else
-            Cache.Remove(account.Key);
-        }
+        if (account.Value.Balance > 0)
+          Cache[account.Key] = account.Value;
+        else
+          Cache.Remove(account.Key);
       }
-      finally
-      {
-        AccountsStaged.Clear();
-      }
-      
+
       TXPool.RemoveTXs(block.TXs.Select(tX => tX.Hash));
 
       //if (Cache.Count > COUNT_MAX_ACCOUNTS_IN_CACHE)
       //  EvictBlockFromCache();
-
-      Wallet?.InsertBlock(block);
     }
 
-    void StageOutput(TXOutputBToken output, int blockHeight)
+    protected override void DiscardStaged()
     {
+      AccountsStaged.Clear();
+    }
+
+    protected override void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
+    {
+      var output = tXOutput as TXOutputBToken;
+
       if (output.Value <= 0)
         throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
 
@@ -282,12 +269,14 @@ namespace BTokenLib
       }
     }
 
-    void StageSpendInput(TXBToken tX)
+    protected override void StageSpendTXInput(TX tX)
     {
-      Account accountStaged = GetCopyOfAccount(tX.IDAccountSource);
+      var tXBToken = tX as TXBToken;
+
+      Account accountStaged = GetCopyOfAccount(tXBToken.IDAccountSource);
       AccountsStaged.Add(accountStaged.ID, accountStaged);
 
-      accountStaged.SpendTX(tX);
+      accountStaged.SpendTX(tXBToken);
     }
          
     //void RemoveAccountsFromCache(Block block)

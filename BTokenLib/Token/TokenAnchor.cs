@@ -21,8 +21,6 @@ namespace BTokenLib
       {
         startIndex += WalletBitcoin.PREFIX_ANCHOR_TOKEN.Length;
 
-        TokenAnchor = new();
-
         Array.Copy(buffer, startIndex, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
         startIndex += TokenAnchor.LENGTH_IDTOKEN;
 

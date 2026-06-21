@@ -5,8 +5,6 @@ namespace BTokenWPF
 {
   public partial class ListBoxItemTX : UserControl
   {
-    public TX TX;
-
     public ListBoxItemTX(TX tX)
     {
       TX = tX;

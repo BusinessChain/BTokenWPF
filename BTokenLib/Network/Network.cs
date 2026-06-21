@@ -232,7 +232,7 @@ namespace BTokenLib
       }
     }
 
-    public void BroadcastTX(TX tX)
+    public void BroadcastTX(Token.TX tX)
     {
       $"Advertize token {tX}.".Log(this, Token.LogEntryNotifier);
 

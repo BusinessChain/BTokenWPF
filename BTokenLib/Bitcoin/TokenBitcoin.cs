@@ -209,23 +209,5 @@ namespace BTokenLib
       tX = null;
       return false;
     }
-
-    public override void InsertBlock(Block block)
-    {
-      for (int i = 0; i < block.TXs.Count; i += 1)
-      {
-        TXBitcoin tX = block.TXs[i] as TXBitcoin;
-
-        foreach (TXOutputBitcoin tXOutput in tX.TXOutputs)
-        {
-          if (tXOutput.TokenAnchor != null)
-            CacheAnchorTokens.Add(
-              tXOutput.TokenAnchor.HashBlockReferenced,
-              tXOutput.TokenAnchor);
-        }
-      }
-
-      Wallet?.InsertBlock(block);
-    }
   }
 }

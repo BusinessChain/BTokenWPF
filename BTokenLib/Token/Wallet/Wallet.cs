@@ -48,7 +48,7 @@ namespace BTokenLib
 
     public abstract void InsertBlock(Block block);
 
-    public abstract void InsertTXUnconfirmed(TX tX);
+    public abstract void InsertTXUnconfirmed(Token.TX tX);
 
     public abstract void ReverseBlock(Block block);
 

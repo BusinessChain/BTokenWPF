@@ -60,31 +60,49 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    protected abstract void InsertTX(TX tX);
-
     Dictionary<byte[], TokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
 
-    public virtual void InsertBlock(Block block)
+    public void InsertBlock(Block block)
     {
-      for (int i = 0; i < block.TXs.Count; i += 1)
+      try
       {
-        TX tX = block.TXs[i];
-
-        InsertTX(tX);
-
-        foreach (TXOutput tXOutput in tX.TXOutputs)
+        for (int i = 0; i < block.TXs.Count; i += 1)
         {
-          TokenAnchor tokenAnchor = tXOutput as TokenAnchor;
+          TX tX = block.TXs[i];
 
-          if (tokenAnchor != null)
-            CacheAnchorTokens.Add(
-              tokenAnchor.HashBlockReferenced,
-              tokenAnchor);
+          // Das muss doch im BToken sein, Bitcoin macht das ja ncht
+          foreach (TXOutput tXOutput in tX.TXOutputs)
+            StageInsertTXOutput(tXOutput, block.Header.Height);
+
+          if (i > 0)
+            StageSpendTXInput(tX);
+
+          foreach (TXOutput tXOutput in tX.TXOutputs)
+            if (tXOutput is TokenAnchor tokenAnchor)
+            {
+              if (CacheAnchorTokens.Any(t => t.Value.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)))
+                continue;
+
+              CacheAnchorTokens.Add(
+                tokenAnchor.HashBlockReferenced,
+                tokenAnchor);
+            }
         }
+
+        CommitStaged(block);
+      }
+      finally
+      {
+        DiscardStaged();
       }
 
       Wallet?.InsertBlock(block);
     }
+
+    protected virtual void StageSpendTXInput(TX tX) { }
+    protected virtual void StageInsertTXOutput(TXOutput output, int blockHeight) { }
+    protected virtual void CommitStaged(Block block) { }
+    protected virtual void DiscardStaged() { }
 
     public void ReverseBlock(Block block)
     {
