@@ -120,36 +120,6 @@ namespace BTokenLib
         if (!Crypto.VerifySignature(buffer, indexTxStart, lengthMessage, KeyPublic, signature))
           throw new ProtocolException($"TX {this} contains invalid signature.");
       }
-
-      public override List<(string label, string value)> GetLabelsValuePairs()
-      {
-        List<(string label, string value)> labelValuePairs = new List<(string label, string value)>()
-      {
-        ("Type", $"{GetType().Name}"),
-        ("Hash", $"{this}"),
-        ("IDAccountSource", $"{IDAccountSource.BinaryToBase58Check()}"),
-        ("BlockheightAccountInit", $"{BlockheightAccountCreated}"),
-        ("Nonce", $"{Nonce}"),
-        ("ValueOutputs", $"{GetValueOutputs()}"),
-        ("Fee", $"{Fee}")
-      };
-
-        for (int i = 0; i < TXOutputs.Count; i++)
-        {
-          TXOutputBToken output = TXOutputs[i];
-
-          labelValuePairs.Add(($"Output{i} :: IDAccount", $"{output.IDAccount.BinaryToBase58Check()}"));
-          labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
-        }
-
-        return labelValuePairs;
-      }
-
-      public override long GetValueOutputs()
-      {
-        return TXOutputs.Sum(t => t.Value);
-      }
-
       public void Serialize(Wallet wallet)
       {
         Serialize();

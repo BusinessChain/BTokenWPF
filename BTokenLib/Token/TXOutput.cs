@@ -19,6 +19,8 @@ namespace BTokenLib
         Data = 0x03
       }
 
+      public long Value;
+
       public TypesToken Type;
 
       public TokenAnchor TokenAnchor;

@@ -8,7 +8,6 @@ namespace BTokenLib
     public class TXOutputBitcoin : TXOutput
     {
       public byte[] PublicKeyHash160 = new byte[20];
-      public long Value;
 
       public byte[] Data;
 

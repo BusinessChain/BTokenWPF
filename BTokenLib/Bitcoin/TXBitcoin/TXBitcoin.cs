@@ -96,50 +96,9 @@ namespace BTokenLib
         return false;
       }
 
-      public override long GetValueOutputs()
-      {
-        return TXOutputs.Sum(o => o.Value);
-      }
-
       public override List<TokenAnchor> GetTokenAnchors()
       {
         return TXOutputs.Where(t => t.TokenAnchor != null).Select(t => t.TokenAnchor).ToList();
-      }
-
-      public override List<(string label, string value)> GetLabelsValuePairs()
-      {
-        List<(string label, string value)> labelValuePairs = new()
-      {
-        ("Hash", $"{this}")
-      };
-
-        for (int i = 0; i < Inputs.Count; i++)
-        {
-          TXInputBitcoin tXInput = Inputs[i];
-          labelValuePairs.Add(($"Input{i} :: TXIDOutput", $"{tXInput.TXIDOutput.ToHexString()}"));
-          labelValuePairs.Add(($"Input{i} :: OutputIndex", $"{tXInput.OutputIndex}"));
-          labelValuePairs.Add(($"Input{i} :: Sequence", $"{tXInput.Sequence}"));
-        }
-
-        for (int i = 0; i < TXOutputs.Count; i++)
-        {
-          TXOutputBitcoin output = TXOutputs[i] as TXOutputBitcoin;
-
-          labelValuePairs.Add(($"Output{i} :: Type", $"{output.Type}"));
-
-          if (output.Type == TXOutput.TypesToken.P2PKH)
-          {
-            labelValuePairs.Add(($"Output{i} :: PublicKeyHash160", $"{output.PublicKeyHash160.BinaryToBase58Check()}"));
-            labelValuePairs.Add(($"Output{i} :: Value", $"{output.Value}"));
-          }
-          else if (output.Type == TXOutput.TypesToken.AnchorToken)
-          {
-            labelValuePairs.Add(($"Output{i} :: IDToken", $"{output.TokenAnchor.IDToken.ToHexString()}"));
-            labelValuePairs.Add(($"Output{i} :: HashBlockReferenced", $"{output.TokenAnchor.HashBlockReferenced.ToHexString()}"));
-            labelValuePairs.Add(($"Output{i} :: HashBlockPreviousReferenced", $"{output.TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
-          }
-        }
-        return labelValuePairs;
       }
     }
   }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 
 
@@ -23,14 +24,15 @@ namespace BTokenLib
 
       public abstract List<TokenAnchor> GetTokenAnchors();
 
-      public abstract long GetValueOutputs();
+      public long GetValueOutputs()
+      {
+        return TXOutputs.Sum(t => t.Value);
+      }
 
       public void WriteToStream(Stream stream)
       {
         stream.Write(TXRaw, 0, TXRaw.Length);
       }
-
-      public abstract List<(string label, string value)> GetLabelsValuePairs();
 
       public override string ToString()
       {

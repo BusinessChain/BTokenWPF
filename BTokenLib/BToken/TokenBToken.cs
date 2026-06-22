@@ -44,7 +44,7 @@ namespace BTokenLib
     public TokenBToken(ILogEntryNotifier logEntryNotifier, Token tokenParent)
       : base(logEntryNotifier)
     {
-      Wallet = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
+      WalletToken = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
       TXPool = new PoolTXBToken(this);
 
@@ -96,7 +96,7 @@ namespace BTokenLib
       return false;
     }
 
-    protected override void CommitStaged(Block block)
+    protected void CommitStaged(Block block)
     {
       foreach (var account in AccountsStaged)
       {
@@ -112,12 +112,35 @@ namespace BTokenLib
       //  EvictBlockFromCache();
     }
 
-    protected override void DiscardStaged()
+    protected void DiscardStaged()
     {
       AccountsStaged.Clear();
     }
 
-    protected override void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
+    protected override void InsertBlockInDatabase(Block block) 
+    {
+      try
+      {
+        for (int i = 0; i < block.TXs.Count; i += 1)
+        {
+          TXBToken tX = (TXBToken)block.TXs[i];
+
+          foreach (TXOutput tXOutput in tX.TXOutputs)
+            StageInsertTXOutput(tXOutput, block.Header.Height);
+
+          if (i > 0)
+            StageSpendTXInput(tX);
+        }
+
+        CommitStaged(block);
+      }
+      finally
+      {
+        DiscardStaged();
+      }
+    }
+
+    protected void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
     {
       var output = tXOutput as TXOutputBToken;
 
@@ -269,7 +292,7 @@ namespace BTokenLib
       }
     }
 
-    protected override void StageSpendTXInput(TX tX)
+    protected void StageSpendTXInput(TX tX)
     {
       var tXBToken = tX as TXBToken;
 

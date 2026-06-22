@@ -6,192 +6,190 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public class Block
+  public partial class Token
   {
-    Token Token;
-
-    public Header Header;
-    public List<TX> TXs = new();
-
-    // The buffer is constant in size [SizeBlockMax]
-    // LengthDataPayload signifies the length of used data in buffer.
-    public byte[] Buffer;
-    public int LengthDataPayload;
-
-    public SHA256 SHA256 = SHA256.Create();
-
-
-    public Block(Token token) 
-      : this(
-          token, 
-          new byte[token.SizeBlockMax])
-    { }
-
-    public Block(Token token, byte[] buffer)
+    public class Block
     {
-      Token = token;
-      Buffer = buffer;
-    }
+      Token Token;
 
-    public void Parse()
-    {
-      Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
-      Dictionary<byte[], TX> tXAnchorWinners = new(new EqualityComparerByteArray());
+      public Header Header;
+      public List<TX> TXs = new();
 
-      TXs.Clear();
-      int startIndex = 0;
+      // The buffer is constant in size [SizeBlockMax]
+      // LengthDataPayload signifies the length of used data in buffer.
+      public byte[] Buffer;
+      public int LengthDataPayload;
 
-      Header header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
+      public SHA256 SHA256 = SHA256.Create();
 
-      if (Header != null && !Header.Hash.IsAllBytesEqual(header.Hash))
-        throw new ProtocolException($"Received unexpected block {header} expected was {Header}.");
 
-      if (Header == null)
-        Header = header;
+      public Block(Token token)
+        : this(
+            token,
+            new byte[token.SizeBlockMax])
+      { }
 
-      Header.CountTXs = VarInt.GetInt(Buffer, ref startIndex);
-
-      if (Header.CountTXs == 0)
-        throw new ProtocolException($"Block {this} lacks coinbase transaction.");
-
-      int startIndexBeginningOfTXs = startIndex;
-
-      TX tX;
-
-      for (int t = 0; t < Header.CountTXs; t += 1)
+      public Block(Token token, byte[] buffer)
       {
-        tX = Token.ParseTX(Buffer, ref startIndex, SHA256, flagIsCoinbase: t == 0);
+        Token = token;
+        Buffer = buffer;
+      }
 
-        TXs.Add(tX);
+      public void Parse()
+      {
+        Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
+        Dictionary<byte[], TX> tXAnchorWinners = new(new EqualityComparerByteArray());
 
-        foreach(TokenAnchor tokenAnchor in tX.GetTokenAnchors())
+        TXs.Clear();
+        int startIndex = 0;
+
+        Header header = Token.ParseHeader(Buffer, ref startIndex, SHA256);
+
+        if (Header != null && !Header.Hash.IsAllBytesEqual(header.Hash))
+          throw new ProtocolException($"Received unexpected block {header} expected was {Header}.");
+
+        if (Header == null)
+          Header = header;
+
+        Header.CountTXs = VarInt.GetInt(Buffer, ref startIndex);
+
+        if (Header.CountTXs == 0)
+          throw new ProtocolException($"Block {this} lacks coinbase transaction.");
+
+        int startIndexBeginningOfTXs = startIndex;
+
+        TX tX;
+
+        for (int t = 0; t < Header.CountTXs; t += 1)
         {
-          byte[] differenceHash = SHA256.HashData(Header.Hash).SubtractByteWise(tokenAnchor.HashBlockReferenced);
+          tX = Token.ParseTX(Buffer, ref startIndex, SHA256, flagIsCoinbase: t == 0);
 
-          if (tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out TX tXAnchorWinner))
+          TXs.Add(tX);
+
+          foreach (TokenAnchor tokenAnchor in tX.GetTokenAnchors())
           {
-            bool flagIsGreaterThan = differenceHash.IsGreaterThan(biggestDifferencesTemp[tokenAnchor.IDToken]);
+            byte[] differenceHash = SHA256.HashData(Header.Hash).SubtractByteWise(tokenAnchor.HashBlockReferenced);
 
-            if (flagIsGreaterThan || tX.IsSuccessorTo(tXAnchorWinner))
+            if (tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out TX tXAnchorWinner))
+            {
+              bool flagIsGreaterThan = differenceHash.IsGreaterThan(biggestDifferencesTemp[tokenAnchor.IDToken]);
+
+              if (flagIsGreaterThan || tX.IsSuccessorTo(tXAnchorWinner))
+              {
+                tXAnchorWinners[tokenAnchor.IDToken] = tX;
+                Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
+
+                if (flagIsGreaterThan)
+                  biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
+              }
+            }
+            else
             {
               tXAnchorWinners[tokenAnchor.IDToken] = tX;
-              Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
-
-              if (flagIsGreaterThan)
-                biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
+              biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
             }
           }
-          else
+        }
+
+        if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
+          throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");
+
+        Header.Fee = TXs.Sum(t => t.Fee);
+
+        Header.VerifyCoinbase(TXs[0].GetValueOutputs());
+      }
+
+      public byte[] ComputeMerkleRoot()
+      {
+        const int HASH_BYTE_SIZE = 32;
+
+        if (TXs.Count == 1)
+          return TXs[0].Hash;
+
+        int tXsLengthMod2 = TXs.Count & 1;
+        var merkleList = new byte[TXs.Count + tXsLengthMod2][];
+        int merkleIndex = merkleList.Length;
+
+        for (int i = 0; i < TXs.Count; i++)
+          merkleList[i] = TXs[i].Hash;
+
+        if (tXsLengthMod2 != 0)
+          merkleList[TXs.Count] = merkleList[TXs.Count - 1];
+
+        byte[] leafPair = new byte[2 * HASH_BYTE_SIZE];
+
+        while (true)
+        {
+          merkleIndex >>= 1;
+
+          for (int i = 0; i < merkleIndex; i++)
           {
-            tXAnchorWinners[tokenAnchor.IDToken] = tX;
-            biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
+            int i2 = i << 1;
+            merkleList[i2].CopyTo(leafPair, 0);
+            merkleList[i2 + 1].CopyTo(leafPair, HASH_BYTE_SIZE);
+
+            merkleList[i] = SHA256.ComputeHash(SHA256.ComputeHash(leafPair));
+          }
+
+          if (merkleIndex == 1)
+            return merkleList[0];
+
+          if ((merkleIndex & 1) != 0)
+          {
+            merkleList[merkleIndex] = merkleList[merkleIndex - 1];
+            merkleIndex += 1;
           }
         }
       }
 
-      if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
-        throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");
-
-      Header.Fee = TXs.Sum(t => t.Fee);
-
-      Header.VerifyCoinbase(TXs[0].GetValueOutputs());
-    }
-
-    public byte[] ComputeMerkleRoot()
-    {
-      const int HASH_BYTE_SIZE = 32;
-
-      if (TXs.Count == 1)
-        return TXs[0].Hash;
-
-      int tXsLengthMod2 = TXs.Count & 1;
-      var merkleList = new byte[TXs.Count + tXsLengthMod2][];
-      int merkleIndex = merkleList.Length;
-
-      for (int i = 0; i < TXs.Count; i++)
-        merkleList[i] = TXs[i].Hash;
-
-      if (tXsLengthMod2 != 0)
-        merkleList[TXs.Count] = merkleList[TXs.Count - 1];
-
-      byte[] leafPair = new byte[2 * HASH_BYTE_SIZE];
-
-      while (true)
+      public void Serialize()
       {
-        merkleIndex >>= 1;
-        
-        for (int i = 0; i < merkleIndex; i++)
-        {
-          int i2 = i << 1;
-          merkleList[i2].CopyTo(leafPair, 0);
-          merkleList[i2 + 1].CopyTo(leafPair, HASH_BYTE_SIZE);
+        int startIndex = 0;
 
-          merkleList[i] = SHA256.ComputeHash(SHA256.ComputeHash(leafPair));
-        }
-
-        if (merkleIndex == 1)
-          return merkleList[0];
-
-        if ((merkleIndex & 1) != 0)
-        {
-          merkleList[merkleIndex] = merkleList[merkleIndex - 1];
-          merkleIndex += 1;
-        }
-      }
-    }
-
-    public void Serialize()
-    {
-      int startIndex = 0;
-
-      byte[] bufferHeader = Header.Serialize();
-
-      bufferHeader.CopyTo(Buffer, startIndex);
-      startIndex += bufferHeader.Length;
-
-      byte[] countTXs = VarInt.GetBytes(TXs.Count);
-      countTXs.CopyTo(Buffer, startIndex);
-      startIndex += countTXs.Length;
-
-      for(int i = 0; i < TXs.Count; i++)
-      {
-        TXs[i].TXRaw.CopyTo(Buffer, startIndex);
-        startIndex += TXs[i].TXRaw.Length;
-      }
-
-      LengthDataPayload = startIndex;
-    }
-
-    public void WriteToDisk(string pathDirectory)
-    {
-      string pathFileBlock = Path.Combine(pathDirectory, Header.Height.ToString());
-      string pathTemp = pathFileBlock + ".tmp";
-
-      using (FileStream fileStream = new(pathTemp, FileMode.Create, FileAccess.Write))
-      {
         byte[] bufferHeader = Header.Serialize();
-        fileStream.Write(bufferHeader, 0, bufferHeader.Length);
+
+        bufferHeader.CopyTo(Buffer, startIndex);
+        startIndex += bufferHeader.Length;
 
         byte[] countTXs = VarInt.GetBytes(TXs.Count);
-        fileStream.Write(countTXs, 0, countTXs.Length);
+        countTXs.CopyTo(Buffer, startIndex);
+        startIndex += countTXs.Length;
 
         for (int i = 0; i < TXs.Count; i++)
-          fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+        {
+          TXs[i].TXRaw.CopyTo(Buffer, startIndex);
+          startIndex += TXs[i].TXRaw.Length;
+        }
 
-        fileStream.Flush(true);
+        LengthDataPayload = startIndex;
       }
 
-      File.Move(pathTemp, pathFileBlock, overwrite: true);
-    }
+      public void WriteToDisk(string pathDirectory)
+      {
+        string pathFileBlock = Path.Combine(pathDirectory, Header.Height.ToString());
+        string pathTemp = pathFileBlock + ".tmp";
 
-    public override string ToString()
-    {
-      return Header.ToString();
-    }
+        using (FileStream fileStream = new(pathTemp, FileMode.Create, FileAccess.Write))
+        {
+          byte[] bufferHeader = Header.Serialize();
+          fileStream.Write(bufferHeader, 0, bufferHeader.Length);
 
-    public void Clear()
-    {
-      TXs.Clear();
+          byte[] countTXs = VarInt.GetBytes(TXs.Count);
+          fileStream.Write(countTXs, 0, countTXs.Length);
+
+          for (int i = 0; i < TXs.Count; i++)
+            fileStream.Write(TXs[i].TXRaw, 0, TXs[i].TXRaw.Length);
+
+          fileStream.Flush(true);
+        }
+
+        File.Move(pathTemp, pathFileBlock, overwrite: true);
+      }
+
+      public override string ToString()
+      {
+        return Header.ToString();
+      }
     }
   }
 }

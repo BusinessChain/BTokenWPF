@@ -15,7 +15,7 @@ namespace BTokenLib
 
     public int SizeBlockMax;
 
-    public Wallet Wallet;
+    public Wallet WalletToken;
 
     public StreamWriter LogFile;
     public ILogEntryNotifier LogEntryNotifier;
@@ -34,7 +34,7 @@ namespace BTokenLib
 
     public virtual void Reset()
     {
-      Wallet.Clear();
+      WalletToken.Clear();
     }
 
     public abstract List<string> GetSeedAddresses();
@@ -62,53 +62,34 @@ namespace BTokenLib
 
     Dictionary<byte[], TokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
 
+
     public void InsertBlock(Block block)
     {
-      try
-      {
-        for (int i = 0; i < block.TXs.Count; i += 1)
-        {
-          TX tX = block.TXs[i];
+      InsertBlockInDatabase(block);
 
-          // Das muss doch im BToken sein, Bitcoin macht das ja ncht
-          foreach (TXOutput tXOutput in tX.TXOutputs)
-            StageInsertTXOutput(tXOutput, block.Header.Height);
+      foreach(TX tX in block.TXs)
+        foreach (TXOutput tXOutput in tX.TXOutputs)
+          if (tXOutput is TokenAnchor tokenAnchor)
+          {
+            if (CacheAnchorTokens.Any(t => t.Value.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)))
+              continue;
 
-          if (i > 0)
-            StageSpendTXInput(tX);
+            CacheAnchorTokens.Add(
+              tokenAnchor.HashBlockReferenced,
+              tokenAnchor);
+          }
 
-          foreach (TXOutput tXOutput in tX.TXOutputs)
-            if (tXOutput is TokenAnchor tokenAnchor)
-            {
-              if (CacheAnchorTokens.Any(t => t.Value.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)))
-                continue;
 
-              CacheAnchorTokens.Add(
-                tokenAnchor.HashBlockReferenced,
-                tokenAnchor);
-            }
-        }
-
-        CommitStaged(block);
-      }
-      finally
-      {
-        DiscardStaged();
-      }
-
-      Wallet?.InsertBlock(block);
+      WalletToken?.InsertBlock(block);
     }
 
-    protected virtual void StageSpendTXInput(TX tX) { }
-    protected virtual void StageInsertTXOutput(TXOutput output, int blockHeight) { }
-    protected virtual void CommitStaged(Block block) { }
-    protected virtual void DiscardStaged() { }
+    protected virtual void InsertBlockInDatabase(Block block) { }
 
     public void ReverseBlock(Block block)
     {
       ReverseBlockInCache(block);
 
-      Wallet.ReverseBlock(block);
+      WalletToken.ReverseBlock(block);
     }
 
     protected virtual void ReverseBlockInCache(Block block) { }
@@ -139,7 +120,7 @@ namespace BTokenLib
       try
       {
         AddToTXPool(tX);
-        Wallet.InsertTXUnconfirmed(tX);
+        WalletToken.InsertTXUnconfirmed(tX);
       }
       finally
       {

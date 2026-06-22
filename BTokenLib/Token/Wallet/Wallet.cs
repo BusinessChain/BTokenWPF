@@ -6,58 +6,61 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public abstract class Wallet
+  public abstract partial class Token
   {
-    public SHA256 SHA256 = SHA256.Create();
-
-    public string KeyPrivateDecimal;
-    public byte[] KeyPublic;
-    public byte[] Hash160PKeyPublic = new byte[20];
-    public string AddressAccount;
-
-    public List<TX> HistoryTXs = new();
-
-    public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
-
-    /// <summary>
-    /// Contains outputs that are spent by unconfirmed transactions. The outputs themselves might origin from confirmed and unconfirmed transactions.
-    /// </summary>
-    public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
-
-
-    public Wallet(string privKeyDec)
+    public abstract class Wallet
     {
-      KeyPrivateDecimal = privKeyDec;
+      public SHA256 SHA256 = SHA256.Create();
 
-      KeyPublic = Crypto.GetPubKeyFromPrivKey(KeyPrivateDecimal);
+      public string KeyPrivateDecimal;
+      public byte[] KeyPublic;
+      public byte[] Hash160PKeyPublic = new byte[20];
+      public string AddressAccount;
 
-      Hash160PKeyPublic = Crypto.ComputeHash160(KeyPublic, SHA256);
+      public List<TX> HistoryTXs = new();
 
-      AddressAccount = Hash160PKeyPublic.BinaryToBase58Check();
-    }
+      public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
+
+      /// <summary>
+      /// Contains outputs that are spent by unconfirmed transactions. The outputs themselves might origin from confirmed and unconfirmed transactions.
+      /// </summary>
+      public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
 
 
-    public byte[] GetSignature(byte[] dataToBeSigned)
-    {
-      return Crypto.GetSignature(KeyPrivateDecimal, dataToBeSigned);
-    }
-      
-    public abstract void SendTXValue(string address, long value, double feePerByte, int sequence = 0);
+      public Wallet(string privKeyDec)
+      {
+        KeyPrivateDecimal = privKeyDec;
 
-    public abstract void SendTXData(byte[] data, double feePerByte, int sequence = 0);
+        KeyPublic = Crypto.GetPubKeyFromPrivKey(KeyPrivateDecimal);
 
-    public abstract void InsertBlock(Block block);
+        Hash160PKeyPublic = Crypto.ComputeHash160(KeyPublic, SHA256);
 
-    public abstract void InsertTXUnconfirmed(Token.TX tX);
+        AddressAccount = Hash160PKeyPublic.BinaryToBase58Check();
+      }
 
-    public abstract void ReverseBlock(Block block);
 
-    public abstract long GetBalance();
+      public byte[] GetSignature(byte[] dataToBeSigned)
+      {
+        return Crypto.GetSignature(KeyPrivateDecimal, dataToBeSigned);
+      }
 
-    public virtual void Clear()
-    {
-      OutputsSpendableUnconfirmed.Clear();
-      OutputsSpentUnconfirmed.Clear();
+      public abstract void SendTXValue(string address, long value, double feePerByte, int sequence = 0);
+
+      public abstract void SendTXData(byte[] data, double feePerByte, int sequence = 0);
+
+      public abstract void InsertBlock(Block block);
+
+      public abstract void InsertTXUnconfirmed(Token.TX tX);
+
+      public abstract void ReverseBlock(Block block);
+
+      public abstract long GetBalance();
+
+      public virtual void Clear()
+      {
+        OutputsSpendableUnconfirmed.Clear();
+        OutputsSpentUnconfirmed.Clear();
+      }
     }
   }
 }

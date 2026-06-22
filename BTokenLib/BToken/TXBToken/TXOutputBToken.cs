@@ -8,9 +8,6 @@ namespace BTokenLib
   {
     class TXOutputBToken : TXOutput
     {
-
-      public long Value;
-
       public byte[] IDAccount;
 
       public byte[] Data;
