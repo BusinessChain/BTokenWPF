@@ -136,7 +136,7 @@ namespace BTokenLib
       else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
         WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
       {
-        return new TokenAnchor(buffer, ref startIndex);
+        return new TXOutputTokenAnchor(buffer, ref startIndex);
       }
       else
         return null;

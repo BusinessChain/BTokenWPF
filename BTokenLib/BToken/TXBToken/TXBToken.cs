@@ -81,12 +81,12 @@ namespace BTokenLib
         if (lengthScript == LENGTH_SCRIPT_P2PKH &&
           PREFIX_P2PKH.IsAllBytesEqual(buffer, startIndex))
         {
-          return new TXOutputBToken(buffer, ref startIndex);
+          return new TXOutputP2PKH(buffer, ref startIndex);
         }
         else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
           WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
         {
-          return new TokenAnchor(buffer, ref startIndex);
+          return new TXOutputTokenAnchor(buffer, ref startIndex);
         }
         else
           return null;
@@ -129,7 +129,7 @@ namespace BTokenLib
         tXRaw.AddRange(BitConverter.GetBytes(Fee));
 
         tXRaw.AddRange(VarInt.GetBytes(TXOutputs.Count));
-        foreach (TXOutputBToken output in TXOutputs)
+        foreach (TXOutputP2PKH output in TXOutputs)
         {
           tXRaw.Add((byte)output.Type);
           tXRaw.AddRange(output.Script);

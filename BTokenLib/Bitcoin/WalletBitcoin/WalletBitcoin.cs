@@ -31,10 +31,10 @@ namespace BTokenLib
       public const byte LengthDataAnchorToken = 70;
 
       public static byte[] PREFIX_ANCHOR_TOKEN =
-        new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
+        new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TXOutputTokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 
       public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
-        PREFIX_ANCHOR_TOKEN.Length + TokenAnchor.LENGTH_IDTOKEN + 32 + 32;
+        PREFIX_ANCHOR_TOKEN.Length + TXOutputTokenAnchor.LENGTH_IDTOKEN + 32 + 32;
 
       public List<TXOutputWallet> OutputsSpendable = new();
 
@@ -66,21 +66,7 @@ namespace BTokenLib
         };
 
         SendTX(tXOutput, feePerByte, sequence);
-      }
-
-      public override void SendTXData(
-        byte[] data, 
-        double feePerByte,
-        int sequence)
-      {
-        TXOutputBitcoin tXOutput = new()
-        {
-          Type = TXOutputBitcoin.TypesToken.Data,
-          Script = new List<byte>() { OP_RETURN, (byte)data.Length }.Concat(data).ToArray()
-        };
-
-        SendTX(tXOutput, feePerByte, sequence);
-      }
+      }      
 
       void SendTX(TXOutputBitcoin tXOutput, double feePerByte, int sequence)
       {
@@ -138,7 +124,7 @@ namespace BTokenLib
         if (flagCreateOutputChange)
           tX.TXOutputs.Add(new TXOutputBitcoin
           {
-            Type = TXOutputBitcoin.TypesToken.P2PKH,
+            Type = TXOutput.TypesToken.P2PKH,
             Value = valueChange,
             Script = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray()
           });
@@ -206,9 +192,9 @@ namespace BTokenLib
 
       bool TryAddTXOutputWallet(List<TXOutputWallet> listOutputs, TXBitcoin tX, int indexOutput)
       {
-        TXOutputBitcoin tXOutputReferenced = tX.TXOutputs[indexOutput];
+        TXOutputBitcoin tXOutputReferenced = (TXOutputBitcoin)tX.TXOutputs[indexOutput];
 
-        if (tXOutputReferenced.Type == TXOutputBitcoin.TypesToken.P2PKH &&
+        if (tXOutputReferenced.Type == TXOutput.TypesToken.P2PKH &&
           tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(Hash160PKeyPublic))
         {
           listOutputs.Add(

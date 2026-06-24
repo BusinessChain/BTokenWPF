@@ -60,7 +60,7 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    Dictionary<byte[], TokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
+    Dictionary<byte[], TXOutputTokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
 
 
     public void InsertBlock(Block block)
@@ -69,7 +69,7 @@ namespace BTokenLib
 
       foreach(TX tX in block.TXs)
         foreach (TXOutput tXOutput in tX.TXOutputs)
-          if (tXOutput is TokenAnchor tokenAnchor)
+          if (tXOutput is TXOutputTokenAnchor tokenAnchor)
           {
             if (CacheAnchorTokens.Any(t => t.Value.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)))
               continue;

@@ -20,9 +20,6 @@ namespace BTokenLib
       public long Value;
 
       public TypesToken Type;
-
-      //brauchts das noch?
-      public TokenAnchor TokenAnchor;
     }
   }
 }

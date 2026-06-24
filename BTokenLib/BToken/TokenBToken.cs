@@ -142,7 +142,7 @@ namespace BTokenLib
 
     protected void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
     {
-      var output = tXOutput as TXOutputBToken;
+      var output = tXOutput as TXOutputP2PKH;
 
       if (output.Value <= 0)
         throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
@@ -332,7 +332,7 @@ namespace BTokenLib
           if(i > 0)
             ReverseSpendInputInCache(tX);
 
-          foreach (TXOutputBToken output in tX.TXOutputs)
+          foreach (TXOutputP2PKH output in tX.TXOutputs)
             ReverseOutputInCache(output);
 
           //foreach (var account in AccountsStaged)
@@ -345,7 +345,7 @@ namespace BTokenLib
       }
     }
 
-    void ReverseOutputInCache(TXOutputBToken output)
+    void ReverseOutputInCache(TXOutputP2PKH output)
     {
       if (!AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
       {

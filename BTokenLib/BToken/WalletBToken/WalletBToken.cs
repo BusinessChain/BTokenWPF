@@ -42,9 +42,9 @@ namespace BTokenLib
           BlockheightAccountCreated = blockHeight,
         };
 
-        TXOutputBToken tXOutput = new()
+        TXOutputP2PKH tXOutput = new()
         {
-          Type = TXOutputBToken.TypesToken.P2PKH,
+          Type = TXOutputP2PKH.TypesToken.P2PKH,
           Script = BitConverter.GetBytes(blockReward).Concat(Hash160PKeyPublic).ToArray()
         };
 
@@ -59,9 +59,9 @@ namespace BTokenLib
         double feePerByte,
         int sequence)
       {
-        TXOutputBToken tXOutput = new()
+        TXOutputP2PKH tXOutput = new()
         {
-          Type = TXOutputBToken.TypesToken.P2PKH,
+          Type = TXOutputP2PKH.TypesToken.P2PKH,
           Script = BitConverter.GetBytes(value).Concat(addressDest.Base58CheckToPubKeyHash()).ToArray()
         };
 
@@ -73,9 +73,9 @@ namespace BTokenLib
         double feePerByte,
         int sequence)
       {
-        TXOutputBToken tXOutput = new()
+        TXOutputP2PKH tXOutput = new()
         {
-          Type = TXOutputBToken.TypesToken.Data,
+          Type = TXOutputP2PKH.TypesToken.Data,
           Script = VarInt.GetBytes(data.Length).Concat(data).ToArray()
         };
 
@@ -84,7 +84,7 @@ namespace BTokenLib
 
       const int LENGTH_TX_P2PKH = 120;
 
-      void SendTX(TXOutputBToken tXOutput, double feePerByte)
+      void SendTX(TXOutputP2PKH tXOutput, double feePerByte)
       {
         long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
 
@@ -117,7 +117,7 @@ namespace BTokenLib
         if (tXBToken.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
           AccountWalletUnconfirmed.SpendTX(tXBToken);
 
-        foreach (TXOutputBToken output in tXBToken.TXOutputs)
+        foreach (TXOutputP2PKH output in tXBToken.TXOutputs)
           if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
             AccountWalletUnconfirmed.Balance += output.Value;
       }
@@ -134,7 +134,7 @@ namespace BTokenLib
             AccountWalletConfirmed.SpendTX(tX);
           }
 
-          foreach (TXOutputBToken output in tX.TXOutputs)
+          foreach (TXOutputP2PKH output in tX.TXOutputs)
             if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
             {
               flagIndexTX = true;

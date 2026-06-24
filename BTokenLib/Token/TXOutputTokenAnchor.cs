@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public partial class Token
   {
-    public class TokenAnchor : TXOutput
+    public class TXOutputTokenAnchor : TXOutput
     {
       public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
 
@@ -17,7 +17,7 @@ namespace BTokenLib
       public byte[] HashBlockPreviousReferenced = new byte[32];
 
 
-      public TokenAnchor(byte[] buffer, ref int startIndex)
+      public TXOutputTokenAnchor(byte[] buffer, ref int startIndex)
       {
         startIndex += WalletBitcoin.PREFIX_ANCHOR_TOKEN.Length;
 
@@ -31,9 +31,9 @@ namespace BTokenLib
         startIndex += HashBlockPreviousReferenced.Length;
       }
 
-      public TokenAnchor Copy()
+      public TXOutputTokenAnchor Copy()
       {
-        TokenAnchor tokenAnchor = new();
+        TXOutputTokenAnchor tokenAnchor = new();
 
         tokenAnchor.IDToken = IDToken;
         tokenAnchor.HashBlockReferenced = HashBlockReferenced;

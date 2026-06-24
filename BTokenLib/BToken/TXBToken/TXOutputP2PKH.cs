@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    class TXOutputBToken : TXOutput
+    class TXOutputP2PKH : TXOutput
     {
       public byte[] IDAccount;
 
@@ -15,10 +15,10 @@ namespace BTokenLib
       public byte[] Script;
 
 
-      public TXOutputBToken() 
+      public TXOutputP2PKH() 
       { }
 
-      public TXOutputBToken(byte[] buffer, ref int index)
+      public TXOutputP2PKH(byte[] buffer, ref int index)
       {
         Type = (TypesToken)buffer[index];
         index += 1;
