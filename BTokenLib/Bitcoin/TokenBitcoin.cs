@@ -118,32 +118,7 @@ namespace BTokenLib
 
     public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
     {
-      TXBitcoin tX = new();
-
-      int indexTxStart = index;
-
-      index += 4; // Version
-
-      int countInputs = VarInt.GetInt(buffer, ref index);
-
-      if (countInputs == 0x00)
-        throw new NotImplementedException("Segwit is not implemented.");
-
-      for (int i = 0; i < countInputs; i++)
-        tX.Inputs.Add(new TXInputBitcoin(buffer, ref index));
-
-      int countTXOutputs = VarInt.GetInt(buffer, ref index);
-
-      for (int i = 0; i < countTXOutputs; i++)
-      {
-        tX.TXOutputs.Add(ParseTXOutputBitcoin(buffer, ref index));
-      }
-
-      index += 4; //BYTE_LENGTH_LOCK_TIME
-
-      tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
-
-      return tX;
+      return new TXBitcoin(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
     TXOutput ParseTXOutputBitcoin(byte[] buffer, ref int startIndex)

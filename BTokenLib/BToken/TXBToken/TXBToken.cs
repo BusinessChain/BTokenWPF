@@ -92,22 +92,6 @@ namespace BTokenLib
           return null;
       }
 
-
-      public override bool IsSuccessorTo(TX tX)
-      {
-        TXBToken tXBToken = tX as TXBToken;
-
-        return tXBToken != null
-          && IDAccountSource.IsAllBytesEqual(tXBToken.IDAccountSource)
-          && BlockheightAccountCreated == tXBToken.BlockheightAccountCreated
-          && Nonce == tXBToken.Nonce + 1;
-      }
-
-      public override List<TokenAnchor> GetTokenAnchors()
-      {
-        return new();
-      }
-
       public void VerifySignatureTX(int indexTxStart, byte[] buffer, ref int index)
       {
         int lengthMessage = index - indexTxStart;
@@ -120,6 +104,7 @@ namespace BTokenLib
         if (!Crypto.VerifySignature(buffer, indexTxStart, lengthMessage, KeyPublic, signature))
           throw new ProtocolException($"TX {this} contains invalid signature.");
       }
+      
       public void Serialize(Wallet wallet)
       {
         Serialize();

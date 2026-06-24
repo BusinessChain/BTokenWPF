@@ -9,20 +9,19 @@ namespace BTokenLib
 {
   public partial class Token
   {
-    public class TXOutput
+    public abstract class TXOutput
     {
       public enum TypesToken
       {
         Unspecified = 0x00,
-        P2PKH = 0x01,
-        AnchorToken = 0x02,
-        Data = 0x03
+        P2PKH = 0x01
       }
 
       public long Value;
 
       public TypesToken Type;
 
+      //brauchts das noch?
       public TokenAnchor TokenAnchor;
     }
   }

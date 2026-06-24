@@ -22,8 +22,6 @@ namespace BTokenLib
 
 
 
-      public abstract List<TokenAnchor> GetTokenAnchors();
-
       public long GetValueOutputs()
       {
         return TXOutputs.Sum(t => t.Value);
@@ -39,7 +37,6 @@ namespace BTokenLib
         return Hash.ToHexString();
       }
 
-      public abstract bool IsSuccessorTo(TX tX);
     }
   }
 }

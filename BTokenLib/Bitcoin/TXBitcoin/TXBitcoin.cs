@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 
 namespace BTokenLib
@@ -11,6 +12,33 @@ namespace BTokenLib
     {
       public List<TXInputBitcoin> Inputs = new();
 
+
+      public TXBitcoin(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
+      {
+        int indexTxStart = index;
+
+        index += 4; // Version
+
+        int countInputs = VarInt.GetInt(buffer, ref index);
+
+        if (countInputs == 0x00)
+          throw new NotImplementedException("Segwit is not implemented.");
+
+        for (int i = 0; i < countInputs; i++)
+          tX.Inputs.Add(new TXInputBitcoin(buffer, ref index));
+
+        int countTXOutputs = VarInt.GetInt(buffer, ref index);
+
+        for (int i = 0; i < countTXOutputs; i++)
+        {
+          tX.TXOutputs.Add(ParseTXOutputBitcoin(buffer, ref index));
+        }
+
+        index += 4; //BYTE_LENGTH_LOCK_TIME
+
+        tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
+
+      }
 
       public void Serialize(WalletBitcoin wallet)
       {
@@ -84,21 +112,6 @@ namespace BTokenLib
         }
 
         tXRaw.RemoveRange(tXRaw.Count - 4, 4);
-      }
-
-      public override bool IsSuccessorTo(TX tX)
-      {
-        if (tX is TXBitcoin tXBitcoin)
-          foreach (TXInputBitcoin tXInput in Inputs)
-            if (tXInput.TXIDOutput.IsAllBytesEqual(tX.Hash))
-              return true;
-
-        return false;
-      }
-
-      public override List<TokenAnchor> GetTokenAnchors()
-      {
-        return TXOutputs.Where(t => t.TokenAnchor != null).Select(t => t.TokenAnchor).ToList();
       }
     }
   }

@@ -21,16 +21,14 @@ namespace BTokenLib
       {
         startIndex += WalletBitcoin.PREFIX_ANCHOR_TOKEN.Length;
 
-        Array.Copy(buffer, startIndex, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
-        startIndex += TokenAnchor.LENGTH_IDTOKEN;
+        Array.Copy(buffer, startIndex, IDToken, 0, LENGTH_IDTOKEN);
+        startIndex += LENGTH_IDTOKEN;
 
-        Array.Copy(buffer, startIndex, TokenAnchor.HashBlockReferenced, 0, TokenAnchor.HashBlockReferenced.Length);
-        startIndex += TokenAnchor.HashBlockReferenced.Length;
+        Array.Copy(buffer, startIndex, HashBlockReferenced, 0, HashBlockReferenced.Length);
+        startIndex += HashBlockReferenced.Length;
 
-        Array.Copy(buffer, startIndex, TokenAnchor.HashBlockPreviousReferenced, 0, TokenAnchor.HashBlockPreviousReferenced.Length);
-        startIndex += TokenAnchor.HashBlockPreviousReferenced.Length;
-
-        Type = TypesToken.AnchorToken;
+        Array.Copy(buffer, startIndex, HashBlockPreviousReferenced, 0, HashBlockPreviousReferenced.Length);
+        startIndex += HashBlockPreviousReferenced.Length;
       }
 
       public TokenAnchor Copy()

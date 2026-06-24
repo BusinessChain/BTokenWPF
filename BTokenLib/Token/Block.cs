@@ -37,9 +37,6 @@ namespace BTokenLib
 
       public void Parse()
       {
-        Dictionary<byte[], byte[]> biggestDifferencesTemp = new(new EqualityComparerByteArray());
-        Dictionary<byte[], TX> tXAnchorWinners = new(new EqualityComparerByteArray());
-
         TXs.Clear();
         int startIndex = 0;
 
@@ -56,40 +53,8 @@ namespace BTokenLib
         if (Header.CountTXs == 0)
           throw new ProtocolException($"Block {this} lacks coinbase transaction.");
 
-        int startIndexBeginningOfTXs = startIndex;
-
-        TX tX;
-
         for (int t = 0; t < Header.CountTXs; t += 1)
-        {
-          tX = Token.ParseTX(Buffer, ref startIndex, SHA256, flagIsCoinbase: t == 0);
-
-          TXs.Add(tX);
-
-          foreach (TokenAnchor tokenAnchor in tX.GetTokenAnchors())
-          {
-            byte[] differenceHash = SHA256.HashData(Header.Hash).SubtractByteWise(tokenAnchor.HashBlockReferenced);
-
-            if (tXAnchorWinners.TryGetValue(tokenAnchor.IDToken, out TX tXAnchorWinner))
-            {
-              bool flagIsGreaterThan = differenceHash.IsGreaterThan(biggestDifferencesTemp[tokenAnchor.IDToken]);
-
-              if (flagIsGreaterThan || tX.IsSuccessorTo(tXAnchorWinner))
-              {
-                tXAnchorWinners[tokenAnchor.IDToken] = tX;
-                Header.HashesChild[tokenAnchor.IDToken] = tokenAnchor.HashBlockReferenced;
-
-                if (flagIsGreaterThan)
-                  biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
-              }
-            }
-            else
-            {
-              tXAnchorWinners[tokenAnchor.IDToken] = tX;
-              biggestDifferencesTemp[tokenAnchor.IDToken] = differenceHash;
-            }
-          }
-        }
+          TXs.Add(Token.ParseTX(Buffer, ref startIndex, SHA256, flagIsCoinbase: t == 0));
 
         if (!Header.MerkleRoot.IsAllBytesEqual(ComputeMerkleRoot()))
           throw new ProtocolException("Header merkle root not equal to computed transactions merkle root.");

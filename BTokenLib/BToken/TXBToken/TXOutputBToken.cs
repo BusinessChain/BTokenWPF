@@ -33,36 +33,7 @@ namespace BTokenLib
           Array.Copy(buffer, index, IDAccount, 0, TXBToken.LENGTH_IDACCOUNT);
           index += TXBToken.LENGTH_IDACCOUNT;
         }
-        else if(Type == TypesToken.Data)
-        {
-          Data = new byte[VarInt.GetInt(buffer, ref index)];
-          Array.Copy(buffer, index, Data, 0, Data.Length);
-          index += Data.Length;
-        }
-        else if(Type == TypesToken.AnchorToken)
-        {
-          Array.Copy(buffer, index, TokenAnchor.IDToken, 0, TokenAnchor.LENGTH_IDTOKEN);
-          index += TokenAnchor.LENGTH_IDTOKEN;
-
-          Array.Copy(buffer, index, TokenAnchor.HashBlockReferenced, 0, TokenAnchor.HashBlockReferenced.Length);
-          index += TokenAnchor.HashBlockReferenced.Length;
-
-          Array.Copy(buffer, index, TokenAnchor.HashBlockPreviousReferenced, 0, TokenAnchor.HashBlockPreviousReferenced.Length);
-          index += TokenAnchor.HashBlockPreviousReferenced.Length;
-        }
       }
-
-      public List<(string label, string value)> GetLabelsValuePairs()
-      {
-        List<(string label, string value)> labelValuePairs = new();
-
-        labelValuePairs.Add(($"IDToken", $"{TokenAnchor.IDToken.ToHexString()}"));
-        labelValuePairs.Add(($"HashBlockReferenced", $"{TokenAnchor.HashBlockReferenced.ToHexString()}"));
-        labelValuePairs.Add(($"HashBlockPreviousReferenced", $"{TokenAnchor.HashBlockPreviousReferenced.ToHexString()}"));
-
-        return labelValuePairs;
-      }
-
     }
   }
 }
