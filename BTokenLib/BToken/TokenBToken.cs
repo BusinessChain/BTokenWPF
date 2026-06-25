@@ -57,7 +57,7 @@ namespace BTokenLib
 
       IDToken = new byte[3] { (byte)'B', (byte)'T', (byte)'K' };
 
-      Network = new Network(
+      NetworkToken = new Network(
         tokenParent.Network,
         this,
         port: 8777,
@@ -67,7 +67,7 @@ namespace BTokenLib
 
     public void Start()
     {
-      Network.Start();
+      NetworkToken.Start();
     }
 
     public override Header CreateHeaderGenesis()

@@ -10,13 +10,12 @@ namespace BTokenLib
 {
   internal abstract partial class Token
   {
-
     public const byte LENGTH_SCRIPT_P2PKH = 25;
     public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
     public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
     public byte[] IDToken;
-    public Network Network;
+    NetworkToken Network;
 
     public int SizeBlockMax;
 

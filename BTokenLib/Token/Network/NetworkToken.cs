@@ -12,9 +12,9 @@ namespace BTokenLib
 {
   internal abstract partial class Token
   {
-    partial class Network
+    partial class NetworkToken
     {
-      public Network NetworkParent;
+      public NetworkToken NetworkParent;
 
       // Bekommt ein Netzwerk ein Block
       // werden die Ankertoken in den ChildNetzwerken vermerkt. Wenn dann die Childnetzwerke gesyncted
@@ -22,7 +22,7 @@ namespace BTokenLib
       // gesyncet werden können. 
       // False isMining gleich true, dann wird auch noch gerade geschaut,
       // ob ein Block mined wurde zu broadcasten.
-      public List<Network> NetworksChild = new();
+      public List<NetworkToken> NetworksChild = new();
 
       public Token Token;
 
@@ -50,8 +50,8 @@ namespace BTokenLib
       ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
 
-      public Network(
-        Network networkParent,
+      public NetworkToken(
+        NetworkToken networkParent,
         Token token,
         int port,
         bool flagEnableInboundConnections,
@@ -61,7 +61,7 @@ namespace BTokenLib
         NetworkParent = networkParent;
       }
 
-      public Network(
+      public NetworkToken(
         Token token,
         int port,
         bool flagEnableInboundConnections,
@@ -190,7 +190,7 @@ namespace BTokenLib
         }
 
         if (isSyncComplete)
-          foreach (Network networkChild in NetworksChild)
+          foreach (NetworkToken networkChild in NetworksChild)
             networkChild.StartHeaderSync();
         //irgendwo ab hier muss der miner getriggert werden.
         //und selbst geminte Blöcke eingefügt/broadcastet werden.

@@ -53,7 +53,7 @@ namespace BTokenLib
         {
           if (headerTip == null)
           {
-            headerTip = Network.HeaderTip;
+            headerTip = NetworkToken.HeaderTip;
             headerTipParent = TokenParent.Network.HeaderTip;
           }
 
@@ -102,7 +102,7 @@ namespace BTokenLib
 
       block.TXs.AddRange(TXPool.GetTXs(COUNT_BYTES_PER_BLOCK_MAX, out long feeTXs));
 
-      int height = Network.HeaderTip.Height + 1;
+      int height = NetworkToken.HeaderTip.Height + 1;
 
       long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
       blockReward += feeTXs;
@@ -113,8 +113,8 @@ namespace BTokenLib
 
       block.Header = new HeaderBToken()
       {
-        HashPrevious = Network.HeaderTip.Hash,
-        HeaderPrevious = Network.HeaderTip,
+        HashPrevious = NetworkToken.HeaderTip.Hash,
+        HeaderPrevious = NetworkToken.HeaderTip,
         Height = height,
         MerkleRoot = block.ComputeMerkleRoot(),
         CountTXs = block.TXs.Count,

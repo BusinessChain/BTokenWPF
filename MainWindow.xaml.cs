@@ -17,7 +17,7 @@ namespace BTokenWPF
       try
       {
         InitializeComponent();
-
+        
         BToken = new TokenBToken(this, new TokenBitcoin(this));
         BToken.Start();
 

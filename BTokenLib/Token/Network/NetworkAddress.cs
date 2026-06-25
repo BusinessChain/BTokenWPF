@@ -6,7 +6,7 @@ namespace BTokenLib
 {
   internal abstract partial class Token
   {
-    partial class Network
+    partial class NetworkToken
     {
       class NetworkAddress
       {

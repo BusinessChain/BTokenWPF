@@ -12,11 +12,11 @@ namespace BTokenLib
 {
   internal abstract partial class Token
   {
-    partial class Network
+    partial class NetworkToken
     {
       partial class Peer
       {
-        public Network Network;
+        public NetworkToken Network;
 
         public Dictionary<string, MessageNetworkProtocol> ProtocolStateMachine;
 

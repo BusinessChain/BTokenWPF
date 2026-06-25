@@ -29,7 +29,7 @@ namespace BTokenLib
 
       IDToken = new byte[3] { (byte)'B', (byte)'T', (byte)'C' };
 
-      Network = new Network(
+      NetworkToken = new NetworkToken(
         this,
         port: 8333,
         flagEnableInboundConnections: false,

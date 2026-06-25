@@ -11,7 +11,7 @@ namespace BTokenLib
 {
   internal abstract partial class Token
   {
-    partial class Network
+    partial class NetworkToken
     {
       // Das Netzwerk holt die Konfiguration vom Token ab.
       int Port;

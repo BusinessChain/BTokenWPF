@@ -7,7 +7,7 @@ namespace BTokenLib
 {
   internal abstract partial class Token
   {
-    partial class Network
+    partial class NetworkToken
     {
       public enum InventoryType
       {
