@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  public partial class Token
+  internal abstract partial class Token
   {
     public abstract class TXOutput
     {

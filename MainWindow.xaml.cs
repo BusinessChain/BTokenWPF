@@ -8,7 +8,7 @@ using BTokenLib;
 
 namespace BTokenWPF
 {
-  public partial class MainWindow : Window, ILogEntryNotifier // Interfaces womiglich kombinieren.
+  public partial class MainWindow : Window, Token.ILogEntryNotifier // Interfaces womiglich kombinieren.
   {
     TokenBToken BToken;
 

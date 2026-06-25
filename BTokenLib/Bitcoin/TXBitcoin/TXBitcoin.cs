@@ -13,6 +13,9 @@ namespace BTokenLib
       public List<TXInputBitcoin> Inputs = new();
 
 
+      public TXBitcoin()
+      { }
+
       public TXBitcoin(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
       {
         int indexTxStart = index;
@@ -25,20 +28,41 @@ namespace BTokenLib
           throw new NotImplementedException("Segwit is not implemented.");
 
         for (int i = 0; i < countInputs; i++)
-          tX.Inputs.Add(new TXInputBitcoin(buffer, ref index));
+          Inputs.Add(new TXInputBitcoin(buffer, ref index));
 
         int countTXOutputs = VarInt.GetInt(buffer, ref index);
 
         for (int i = 0; i < countTXOutputs; i++)
         {
-          tX.TXOutputs.Add(ParseTXOutputBitcoin(buffer, ref index));
+          TXOutputs.Add(ParseTXOutputBitcoin(buffer, ref index));
         }
 
         index += 4; //BYTE_LENGTH_LOCK_TIME
 
-        tX.Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
-
+        Hash = sHA256.ComputeHash(sHA256.ComputeHash(buffer, indexTxStart, index - indexTxStart));
       }
+
+      TXOutput ParseTXOutputBitcoin(byte[] buffer, ref int startIndex)
+      {
+        double value = BitConverter.ToInt64(buffer, startIndex);
+        startIndex += 8;
+
+        int lengthScript = VarInt.GetInt(buffer, ref startIndex);
+
+        if (lengthScript == LENGTH_SCRIPT_P2PKH &&
+          PREFIX_P2PKH.IsAllBytesEqual(buffer, startIndex))
+        {
+          return new TXOutputBitcoin(buffer, ref startIndex);
+        }
+        else if (lengthScript == TXOutputTokenAnchor.LENGTH_SCRIPT_ANCHOR_TOKEN &&
+          TXOutputTokenAnchor.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
+        {
+          return new TXOutputTokenAnchor(buffer, ref startIndex);
+        }
+        else
+          return null;
+      }
+
 
       public void Serialize(WalletBitcoin wallet)
       {

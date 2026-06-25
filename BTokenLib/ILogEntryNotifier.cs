@@ -6,8 +6,11 @@ using System.Threading.Tasks;
 
 namespace BTokenLib
 {
-  public interface ILogEntryNotifier
+  internal abstract partial class Token
   {
-    public void NotifyLogEntry(string logEntry, string source);
+    public interface ILogEntryNotifier
+    {
+      public void NotifyLogEntry(string logEntry, string source);
+    }
   }
 }

@@ -83,8 +83,8 @@ namespace BTokenLib
         {
           return new TXOutputP2PKH(buffer, ref startIndex);
         }
-        else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
-          WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
+        else if (lengthScript == TXOutputTokenAnchor.LENGTH_SCRIPT_ANCHOR_TOKEN &&
+          TXOutputTokenAnchor.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
         {
           return new TXOutputTokenAnchor(buffer, ref startIndex);
         }

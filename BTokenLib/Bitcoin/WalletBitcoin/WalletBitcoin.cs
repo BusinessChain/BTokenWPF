@@ -8,33 +8,33 @@ namespace BTokenLib
 {
   public partial class TokenBitcoin : Token
   {
-    class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
-    {
-      public bool Equals(TXOutputWallet x, TXOutputWallet y)
-      {
-        return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
-      }
-
-      public int GetHashCode(TXOutputWallet x)
-      {
-        return BitConverter.ToInt32(x.TXID, 0) + x.Index;
-      }
-    }
-
     public partial class WalletBitcoin : Wallet
     {
+      class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
+      {
+        public bool Equals(TXOutputWallet x, TXOutputWallet y)
+        {
+          return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
+        }
+
+        public int GetHashCode(TXOutputWallet x)
+        {
+          return BitConverter.ToInt32(x.TXID, 0) + x.Index;
+        }
+      }
+
       public TokenBitcoin Token;
 
       public byte[] PublicScript;
 
-      public const byte OP_RETURN = 0x6A;
-      public const byte LengthDataAnchorToken = 70;
+      //public const byte OP_RETURN = 0x6A;
+      //public const byte LengthDataAnchorToken = 70;
 
-      public static byte[] PREFIX_ANCHOR_TOKEN =
-        new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TXOutputTokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
+      //public static byte[] PREFIX_ANCHOR_TOKEN =
+      //  new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TXOutputTokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 
-      public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
-        PREFIX_ANCHOR_TOKEN.Length + TXOutputTokenAnchor.LENGTH_IDTOKEN + 32 + 32;
+      //public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
+      //  PREFIX_ANCHOR_TOKEN.Length + TXOutputTokenAnchor.LENGTH_IDTOKEN + 32 + 32;
 
       public List<TXOutputWallet> OutputsSpendable = new();
 

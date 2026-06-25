@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace BTokenLib
 {
-  public partial class Token
+  internal abstract partial class Token
   {
     public class Block
     {

@@ -46,8 +46,6 @@ namespace BTokenLib
 
       public abstract void SendTXValue(string address, long value, double feePerByte, int sequence = 0);
 
-      public abstract void SendTXData(byte[] data, double feePerByte, int sequence = 0);
-
       public abstract void InsertBlock(Block block);
 
       public abstract void InsertTXUnconfirmed(Token.TX tX);

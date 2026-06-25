@@ -15,18 +15,15 @@ namespace BTokenLib
     public const long BLOCK_REWARD_INITIAL = 5000000000;
     public const int PERIOD_HALVENING_BLOCK_REWARD = 210000;
 
-    public const byte LENGTH_SCRIPT_P2PKH = 25;
     public const int LENGTH_P2PKH_INPUT = 148;
     public const int LENGTH_P2PKH_OUTPUT = 34;
     public const int LENGTH_TX_OVERHEAD = 10;
-    public static byte[] PREFIX_P2PKH = new byte[] { 0x76, 0xA9, 0x14 };
-    public static byte[] POSTFIX_P2PKH = new byte[] { 0x88, 0xAC };
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
       : base(logEntryNotifier)
     {
-      Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
+      //Wallet = new WalletBitcoin(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
 
       SizeBlockMax = SIZE_BLOCK_MAX;
 
@@ -119,27 +116,6 @@ namespace BTokenLib
     public override TX ParseTX(byte[] buffer, ref int index, SHA256 sHA256, bool flagIsCoinbase)
     {
       return new TXBitcoin(buffer, ref index, sHA256, flagIsCoinbase);
-    }
-
-    TXOutput ParseTXOutputBitcoin(byte[] buffer, ref int startIndex)
-    {
-      double value = BitConverter.ToInt64(buffer, startIndex);
-      startIndex += 8;
-
-      int lengthScript = VarInt.GetInt(buffer, ref startIndex);
-
-      if (lengthScript == LENGTH_SCRIPT_P2PKH &&
-        PREFIX_P2PKH.IsAllBytesEqual(buffer, startIndex))
-      {
-        return new TXOutputBitcoin(buffer, ref startIndex);
-      }
-      else if (lengthScript == WalletBitcoin.LENGTH_SCRIPT_ANCHOR_TOKEN &&
-        WalletBitcoin.PREFIX_ANCHOR_TOKEN.IsAllBytesEqual(buffer, startIndex))
-      {
-        return new TXOutputTokenAnchor(buffer, ref startIndex);
-      }
-      else
-        return null;
     }
 
     public override List<string> GetSeedAddresses()
