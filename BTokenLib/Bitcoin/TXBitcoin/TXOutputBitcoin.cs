@@ -5,7 +5,7 @@ namespace BTokenLib
 {
   public partial class TokenBitcoin : Token
   {
-    public class TXOutputBitcoin : TXOutput
+    class TXOutputBitcoin : TXOutput
     {
       public byte[] PublicKeyHash160 = new byte[20];
 

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace BTokenLib
 {
-  internal abstract partial class Token
+  public abstract partial class Token
   {
     partial class NetworkToken
     {

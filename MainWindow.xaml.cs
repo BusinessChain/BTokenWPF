@@ -40,8 +40,8 @@ namespace BTokenWPF
         while (true)
         {
           await Task.Delay(1000);
-          LabelBitcoinStatus.Content = BToken.Network.NetworkParent.GetStatus();
-          LabelBTokenStatus.Content = BToken.Network.GetStatus();
+          //LabelBitcoinStatus.Content = BToken.Network.NetworkParent.GetStatus();
+          //LabelBTokenStatus.Content = BToken.Network.GetStatus();
         }
       }
       catch(Exception ex)
@@ -102,17 +102,17 @@ namespace BTokenWPF
     void ButtonBTokenMiner_Click(object sender, RoutedEventArgs e)
     {
       ButtonStartBTokenMiner.Content = "Start/Stop BTokenMiner";
-      BToken.Network.StartMining();
+      //BToken.Network.StartMining();
     }
 
     void ButtonStartSynchronizationNode_Click(object sender, RoutedEventArgs e)
     {
-      BToken.Network.Start();
+      //BToken.Network.Start();
     }
 
     void ButtonOpenBitcoinWindow_Click(object sender, RoutedEventArgs e)
     {
-      OpenWindowToken(BToken.Network.NetworkParent.Token);
+      //OpenWindowToken(BToken.Network.NetworkParent.Token);
     }
 
     void ButtonOpenBTokenWindow_Click(object sender, RoutedEventArgs e)

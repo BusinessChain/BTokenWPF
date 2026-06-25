@@ -10,9 +10,9 @@ using LiteDB;
 
 namespace BTokenLib
 {
-  internal abstract partial class Token
+  public abstract partial class Token
   {
-    partial class NetworkToken
+    protected partial class NetworkToken
     {
       public NetworkToken NetworkParent;
 
@@ -51,14 +51,14 @@ namespace BTokenLib
 
 
       public NetworkToken(
-        NetworkToken networkParent,
+        Token tokenParent,
         Token token,
         int port,
         bool flagEnableInboundConnections,
         bool flagEnableRelay)
         : this(token, port, flagEnableInboundConnections, flagEnableRelay)
       {
-        NetworkParent = networkParent;
+        NetworkParent = tokenParent.Network;
       }
 
       public NetworkToken(

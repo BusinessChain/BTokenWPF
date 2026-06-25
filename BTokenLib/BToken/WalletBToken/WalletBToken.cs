@@ -68,20 +68,6 @@ namespace BTokenLib
         SendTX(tXOutput, feePerByte);
       }
 
-      public override void SendTXData(
-        byte[] data,
-        double feePerByte,
-        int sequence)
-      {
-        TXOutputP2PKH tXOutput = new()
-        {
-          Type = TXOutputP2PKH.TypesToken.Data,
-          Script = VarInt.GetBytes(data.Length).Concat(data).ToArray()
-        };
-
-        SendTX(tXOutput, feePerByte);
-      }
-
       const int LENGTH_TX_P2PKH = 120;
 
       void SendTX(TXOutputP2PKH tXOutput, double feePerByte)

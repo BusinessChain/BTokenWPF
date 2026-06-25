@@ -8,9 +8,9 @@ namespace BTokenWPF
 {
   public partial class DisplayTXWindow : Window
   {
-    public TX TX;
+    public Token.TX TX;
 
-    public DisplayTXWindow(TX tX)
+    public DisplayTXWindow(Token.TX tX)
     {
       TX = tX;
 
@@ -18,13 +18,13 @@ namespace BTokenWPF
 
       Title = $"TX: {tX}";
 
-      List<(string label, string value)> labelValuePairs = tX.GetLabelsValuePairs();
+      //List<(string label, string value)> labelValuePairs = tX.GetLabelsValuePairs();
 
-      foreach((string label, string value) labelValuePair in labelValuePairs)
-      {
-        TextBoxTXLabels.Text += labelValuePair.label + "\n";
-        TextBoxTXValues.Text += labelValuePair.value + "\n";
-      }
+      //foreach((string label, string value) labelValuePair in labelValuePairs)
+      //{
+      //  TextBoxTXLabels.Text += labelValuePair.label + "\n";
+      //  TextBoxTXValues.Text += labelValuePair.value + "\n";
+      //}
     }
 
   }
