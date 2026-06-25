@@ -5,56 +5,59 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  partial class Network
+  internal abstract partial class Token
   {
-    class VersionMessage : MessageNetworkProtocol
+    partial class Network
     {
-      public const string Command = "version";
-
-      public VersionMessage()
-      { }
-
-      static byte[] GetBytes(UInt16 uint16)
+      class VersionMessage : MessageNetworkProtocol
       {
-        byte[] byteArray = BitConverter.GetBytes(uint16);
-        Array.Reverse(byteArray);
-        return byteArray;
-      }
-      
-      public static async Task SendVersion(Peer peer)
-      {
-        List<byte> versionPayload = new();
+        public const string Command = "version";
 
-        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.ProtocolVersion));
-        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.NetworkServicesLocal));
-        versionPayload.AddRange(BitConverter.GetBytes(DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.NetworkServicesRemote));
-        versionPayload.AddRange(IPAddress.Loopback.GetAddressBytes());
-        versionPayload.AddRange(GetBytes((ushort)peer.Network.Port));
-        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.NetworkServicesLocal));
-        versionPayload.AddRange(IPAddress.Loopback.GetAddressBytes());
-        versionPayload.AddRange(GetBytes((ushort)peer.Network.Port));
-        versionPayload.AddRange(BitConverter.GetBytes((ulong)0));
-        versionPayload.AddRange(VarString.GetBytes(peer.Network.UserAgent));
-        versionPayload.AddRange(BitConverter.GetBytes(peer.Network.BlockchainRoot.GetHeight()));
-        versionPayload.Add(peer.Network.RelayOption);
+        public VersionMessage()
+        { }
 
-        byte[] buffer = versionPayload.ToArray();
+        static byte[] GetBytes(UInt16 uint16)
+        {
+          byte[] byteArray = BitConverter.GetBytes(uint16);
+          Array.Reverse(byteArray);
+          return byteArray;
+        }
 
-        await peer.SendMessage(Command, buffer.Length, buffer);
-      }
-      
-      public override async Task Run(Peer peer)
-      {
-        VerAckMessage.Send(peer);
+        public static async Task SendVersion(Peer peer)
+        {
+          List<byte> versionPayload = new();
 
-        if (peer.Connection == ConnectionType.INBOUND)
-          SendVersion(peer);
-      }
-      
-      public override string GetCommand()
-      {
-        return Command;
+          versionPayload.AddRange(BitConverter.GetBytes(peer.Network.ProtocolVersion));
+          versionPayload.AddRange(BitConverter.GetBytes(peer.Network.NetworkServicesLocal));
+          versionPayload.AddRange(BitConverter.GetBytes(DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+          versionPayload.AddRange(BitConverter.GetBytes(peer.Network.NetworkServicesRemote));
+          versionPayload.AddRange(IPAddress.Loopback.GetAddressBytes());
+          versionPayload.AddRange(GetBytes((ushort)peer.Network.Port));
+          versionPayload.AddRange(BitConverter.GetBytes(peer.Network.NetworkServicesLocal));
+          versionPayload.AddRange(IPAddress.Loopback.GetAddressBytes());
+          versionPayload.AddRange(GetBytes((ushort)peer.Network.Port));
+          versionPayload.AddRange(BitConverter.GetBytes((ulong)0));
+          versionPayload.AddRange(VarString.GetBytes(peer.Network.UserAgent));
+          versionPayload.AddRange(BitConverter.GetBytes(peer.Network.BlockchainRoot.GetHeight()));
+          versionPayload.Add(peer.Network.RelayOption);
+
+          byte[] buffer = versionPayload.ToArray();
+
+          await peer.SendMessage(Command, buffer.Length, buffer);
+        }
+
+        public override async Task Run(Peer peer)
+        {
+          VerAckMessage.Send(peer);
+
+          if (peer.Connection == ConnectionType.INBOUND)
+            SendVersion(peer);
+        }
+
+        public override string GetCommand()
+        {
+          return Command;
+        }
       }
     }
   }

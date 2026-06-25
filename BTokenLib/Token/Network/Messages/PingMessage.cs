@@ -4,35 +4,38 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  partial class Network
+  internal abstract partial class Token
   {
-    partial class Peer
+    partial class Network
     {
-      class PingMessage : MessageNetworkProtocol
+      partial class Peer
       {
-        public const string Command = "ping";
-
-        public UInt64 Nonce;
-
-
-        public PingMessage()
-        { }
-
-        public PingMessage(byte[] payload)
+        class PingMessage : MessageNetworkProtocol
         {
-          Payload = payload;
-          LengthDataPayload = Payload.Length;
-        }
+          public const string Command = "ping";
+
+          public UInt64 Nonce;
 
 
-        public override async Task Run(Peer peer)
-        {
-          peer.SendMessage(new PongMessage(Payload, LengthDataPayload));
-        }
+          public PingMessage()
+          { }
 
-        public override string GetCommand()
-        {
-          return Command;
+          public PingMessage(byte[] payload)
+          {
+            Payload = payload;
+            LengthDataPayload = Payload.Length;
+          }
+
+
+          public override async Task Run(Peer peer)
+          {
+            peer.SendMessage(new PongMessage(Payload, LengthDataPayload));
+          }
+
+          public override string GetCommand()
+          {
+            return Command;
+          }
         }
       }
     }

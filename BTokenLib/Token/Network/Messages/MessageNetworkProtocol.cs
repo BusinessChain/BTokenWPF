@@ -6,36 +6,39 @@ using System.Threading.Tasks;
 
 namespace BTokenLib
 {
-  partial class Network
+  internal abstract partial class Token
   {
-    abstract class MessageNetworkProtocol
+    partial class Network
     {
-      public byte[] Payload;
-      public int LengthDataPayload;
-
-      public DOSMonitorPer10Minutes DOSMonitor;
-
-
-      public MessageNetworkProtocol()
-        : this(new byte[0])
-      { }
-
-      public MessageNetworkProtocol(byte[] payload)
+      abstract class MessageNetworkProtocol
       {
+        public byte[] Payload;
+        public int LengthDataPayload;
 
-        Payload = payload;
+        public DOSMonitorPer10Minutes DOSMonitor;
 
-        LengthDataPayload = payload.Length;
+
+        public MessageNetworkProtocol()
+          : this(new byte[0])
+        { }
+
+        public MessageNetworkProtocol(byte[] payload)
+        {
+
+          Payload = payload;
+
+          LengthDataPayload = payload.Length;
+        }
+
+        public virtual byte[] GetPayloadBuffer()
+        {
+          return Payload;
+        }
+
+        public abstract Task Run(Peer peer);
+
+        public abstract string GetCommand();
       }
-
-      public virtual byte[] GetPayloadBuffer()
-      {
-        return Payload;
-      }
-
-      public abstract Task Run(Peer peer);
-
-      public abstract string GetCommand();
     }
   }
 }

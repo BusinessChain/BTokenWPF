@@ -7,79 +7,82 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  partial class Network
+  internal abstract partial class Token
   {
-    class GetDataMessage : MessageNetworkProtocol
+    partial class Network
     {
-      public const string Command = "getdata";
-
-      Block BlockUpload;
-
-
-      int HeightBlockDownloadedLast;
-
-
-      public GetDataMessage(Block blockUpload)
-        : base()
+      class GetDataMessage : MessageNetworkProtocol
       {
-        BlockUpload = blockUpload;
+        public const string Command = "getdata";
 
-        DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
-      }
+        Block BlockUpload;
 
-      public override async Task Run(Peer peer)
-      {
-        int startIndex = 0;
 
-        int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
+        int HeightBlockDownloadedLast;
 
-        for (int i = 0; i < inventoryCount; i++)
+
+        public GetDataMessage(Block blockUpload)
+          : base()
         {
-          Inventory inventory = Inventory.Parse(Payload, ref startIndex);
+          BlockUpload = blockUpload;
 
-          if (inventory.Type == InventoryType.MSG_TX)
-          {
-            if (peer.Network.Token.TryGetTX(inventory.Hash, out TX tXInPool))
-              TXMessage.Send(peer, tXInPool.TXRaw);
-          }
-          else if (inventory.Type == InventoryType.MSG_BLOCK)
-          {
-            BlockUpload.Header = null;
+          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
+        }
 
-            await peer.Network.GetBlock(inventory.Hash, BlockUpload);
-            
-            if (BlockUpload.Header != null)
+        public override async Task Run(Peer peer)
+        {
+          int startIndex = 0;
+
+          int inventoryCount = VarInt.GetInt(Payload, ref startIndex);
+
+          for (int i = 0; i < inventoryCount; i++)
+          {
+            Inventory inventory = Inventory.Parse(Payload, ref startIndex);
+
+            if (inventory.Type == InventoryType.MSG_TX)
             {
-              BlockMessage.SendBlock(peer, BlockUpload);
+              if (peer.Network.Token.TryGetTX(inventory.Hash, out TX tXInPool))
+                TXMessage.Send(peer, tXInPool.TXRaw);
+            }
+            else if (inventory.Type == InventoryType.MSG_BLOCK)
+            {
+              BlockUpload.Header = null;
 
-              if (BlockUpload.Header.Height > HeightBlockDownloadedLast)
-                DOSMonitor.Decrement(1);
+              await peer.Network.GetBlock(inventory.Hash, BlockUpload);
 
-              HeightBlockDownloadedLast = BlockUpload.Header.Height;
+              if (BlockUpload.Header != null)
+              {
+                BlockMessage.SendBlock(peer, BlockUpload);
+
+                if (BlockUpload.Header.Height > HeightBlockDownloadedLast)
+                  DOSMonitor.Decrement(1);
+
+                HeightBlockDownloadedLast = BlockUpload.Header.Height;
+              }
+            }
+            else if (inventory.Type == InventoryType.MSG_DB)
+            {
             }
           }
-          else if (inventory.Type == InventoryType.MSG_DB)
-          {
-          }
         }
-      }
 
-      public static async Task SendBlockRequest(Peer peer, byte[] hash)
-      {
-        List<byte> payload = new();
+        public static async Task SendBlockRequest(Peer peer, byte[] hash)
+        {
+          List<byte> payload = new();
 
-        payload.AddRange(VarInt.GetBytes(1));
-        payload.AddRange(BitConverter.GetBytes((uint)InventoryType.MSG_BLOCK));
-        payload.AddRange(hash);
+          payload.AddRange(VarInt.GetBytes(1));
+          payload.AddRange(BitConverter.GetBytes((uint)InventoryType.MSG_BLOCK));
+          payload.AddRange(hash);
 
-        byte[] buffer = payload.ToArray();
+          byte[] buffer = payload.ToArray();
 
-        await peer.SendMessage(Command, buffer.Length, buffer);
-      }
+          await peer.SendMessage(Command, buffer.Length, buffer);
+        }
 
-      public override string GetCommand()
-      {
-        return Command;
+        public override string GetCommand()
+        {
+          return Command;
+        }
       }
     }
   }

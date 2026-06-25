@@ -4,38 +4,41 @@ using System.Threading.Tasks;
 
 namespace BTokenLib
 {
-  partial class Network
+  internal abstract partial class Token
   {
-    class TXMessage : MessageNetworkProtocol
+    partial class Network
     {
-      public const string Command = "tx";
-
-      public TXMessage()
+      class TXMessage : MessageNetworkProtocol
       {
-        // amount bytes per 10 minutes
-        DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5000000);
+        public const string Command = "tx";
 
-      }
+        public TXMessage()
+        {
+          // amount bytes per 10 minutes
+          DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5000000);
 
-      public TXMessage(byte[] tXRaw)
-      {
-        Payload = tXRaw;
-        LengthDataPayload = Payload.Length;
-      }
+        }
 
-      public override async Task Run(Peer peer)
-      {
+        public TXMessage(byte[] tXRaw)
+        {
+          Payload = tXRaw;
+          LengthDataPayload = Payload.Length;
+        }
 
-      }
+        public override async Task Run(Peer peer)
+        {
 
-      public static async Task Send(Peer peer, byte[] buffer)
-      {
-        await peer.SendMessage(Command, buffer.Length, buffer);
-      }
+        }
 
-      public override string GetCommand()
-      {
-        return Command;
+        public static async Task Send(Peer peer, byte[] buffer)
+        {
+          await peer.SendMessage(Command, buffer.Length, buffer);
+        }
+
+        public override string GetCommand()
+        {
+          return Command;
+        }
       }
     }
   }

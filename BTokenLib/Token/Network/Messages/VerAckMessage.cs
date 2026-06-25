@@ -6,29 +6,32 @@ using System.Collections.Generic;
 
 namespace BTokenLib
 {
-  partial class Network
+  internal abstract partial class Token
   {
-    class VerAckMessage : MessageNetworkProtocol
+    partial class Network
     {
-      public const string Command = "verack";
-
-      public VerAckMessage()
-      { }
-
-      public static async Task Send(Peer peer)
+      class VerAckMessage : MessageNetworkProtocol
       {
-        await peer.SendMessage(Command, 0, new byte[0]);
-      }
+        public const string Command = "verack";
 
-      public override async Task Run(Peer peer)
-      {
-        if (peer.Connection == ConnectionType.OUTBOUND)
-          peer.Network.StartHeaderSync(peer);
-      }
+        public VerAckMessage()
+        { }
 
-      public override string GetCommand()
-      {
-        return Command;
+        public static async Task Send(Peer peer)
+        {
+          await peer.SendMessage(Command, 0, new byte[0]);
+        }
+
+        public override async Task Run(Peer peer)
+        {
+          if (peer.Connection == ConnectionType.OUTBOUND)
+            peer.Network.StartHeaderSync(peer);
+        }
+
+        public override string GetCommand()
+        {
+          return Command;
+        }
       }
     }
   }
