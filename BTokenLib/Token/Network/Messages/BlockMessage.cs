@@ -37,7 +37,7 @@ namespace BTokenLib
 
           BlockDownload.Parse();
 
-          await peer.Network.InsertBlock(peer, BlockDownload);
+          await peer.Network.InsertBlock(BlockDownload);
 
           if (BlockDownload.Header != null)
             GetDataMessage.SendBlockRequest(peer, BlockDownload.Header.Hash);

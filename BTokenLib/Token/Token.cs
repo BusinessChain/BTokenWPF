@@ -64,25 +64,9 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    Dictionary<byte[], TXOutputTokenAnchor> CacheAnchorTokens = new(new EqualityComparerByteArray());
-
-
     public void InsertBlock(Block block)
     {
       InsertBlockInDatabase(block);
-
-      foreach(TX tX in block.TXs)
-        foreach (TXOutput tXOutput in tX.TXOutputs)
-          if (tXOutput is TXOutputTokenAnchor tokenAnchor)
-          {
-            if (CacheAnchorTokens.Any(t => t.Value.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)))
-              continue;
-
-            CacheAnchorTokens.Add(
-              tokenAnchor.HashBlockReferenced,
-              tokenAnchor);
-          }
-
 
       WalletToken?.InsertBlock(block);
     }
@@ -105,6 +89,55 @@ namespace BTokenLib
     public string GetName()
     {
       return GetType().Name;
+    }
+
+
+    const int COUNT_BYTES_PER_BLOCK_MAX = 1000;
+    const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 4;
+    const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 5;
+    const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
+    const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
+    
+    Block MineBlock(out byte[] dataAnchorToken)
+    {
+      Block block = new Block(this);
+
+      LoadTXsFromPool(block, out long feeTXs);
+
+      int height = NetworkToken.HeaderTip.Height + 1;
+
+      long blockReward = BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD;
+      blockReward += feeTXs;
+
+      TX tXCoinbase = ((WalletBToken)Wallet).CreateTXCoinbase(blockReward, height);
+
+      block.TXs.Insert(0, tXCoinbase);
+
+      block.Header = new HeaderBToken()
+      {
+        HashPrevious = NetworkToken.HeaderTip.Hash,
+        HeaderPrevious = NetworkToken.HeaderTip,
+        Height = height,
+        MerkleRoot = block.ComputeMerkleRoot(),
+        CountTXs = block.TXs.Count,
+        Fee = feeTXs
+      };
+
+      block.Header.ComputeHash();
+
+      block.Serialize();
+
+      anchorToken = IDENTIFIER_BTOKEN_PROTOCOL
+      .Concat(IDToken)
+      .Concat(block.Header.Hash)
+      .Concat(block.Header.HashPrevious).ToArray();
+
+      return block;
+    }
+
+    public virtual void LoadTXsFromPool(Block block, out long feeTXs)
+    {
+      feeTXs = 0;
     }
 
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)

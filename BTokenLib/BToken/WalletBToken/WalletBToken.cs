@@ -9,7 +9,7 @@ namespace BTokenLib
 {
   public partial class TokenBToken : Token
   {
-    public partial class WalletBToken : Wallet 
+    public partial class WalletBToken : Wallet
     {
       TokenBToken Token;
 
@@ -157,6 +157,21 @@ namespace BTokenLib
       {
 
       }
+
+      public override void SendTXData(
+        byte[] data,
+        double feePerByte,
+        int sequence)
+      {
+        TXOutputBToken tXOutput = new()
+        {
+          Type = TXOutputBToken.TypesToken.Data,
+          Script = VarInt.GetBytes(data.Length).Concat(data).ToArray()
+        };
+
+        SendTX(tXOutput, feePerByte);
+      }
+    }
 
       public override long GetBalance()
       {

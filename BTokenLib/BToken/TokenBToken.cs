@@ -87,6 +87,11 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
+    public override void LoadTXsFromPool(Block block, out long feeTXs)
+    {
+      feeTXs = 0;
+    }
+
     public override bool TryGetTX(byte[] hash, out TX tX)
     {
       tX = null;
