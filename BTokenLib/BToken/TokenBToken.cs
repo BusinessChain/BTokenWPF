@@ -87,6 +87,46 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
+    public override Block CreateBlock(
+      Header headerTip,
+      int height,
+      out long feeTXs,
+      out byte[] dataAnchorToken)
+    {
+      feeTXs = 0;
+      Block block = new Block(this);
+
+      long blockReward = BLOCK_REWARD_INITIAL >>
+        height / PERIOD_HALVENING_BLOCK_REWARD;
+
+      blockReward += feeTXs;
+
+      TX tXCoinbase = ((WalletBToken)Wallet).CreateTXCoinbase(blockReward, height);
+
+      block.TXs.Insert(0, tXCoinbase);
+
+      block.Header = new HeaderBToken()
+      {
+        HashPrevious = NetworkToken.HeaderTip.Hash,
+        HeaderPrevious = NetworkToken.HeaderTip,
+        Height = height,
+        MerkleRoot = block.ComputeMerkleRoot(),
+        CountTXs = block.TXs.Count,
+        Fee = feeTXs
+      };
+
+      block.Header.ComputeHash();
+
+      block.Serialize();
+
+      dataAnchorToken = IDENTIFIER_BTOKEN_PROTOCOL
+      .Concat(IDToken)
+      .Concat(block.Header.Hash)
+      .Concat(block.Header.HashPrevious).ToArray();
+
+      return block;
+    }
+
     public override void LoadTXsFromPool(Block block, out long feeTXs)
     {
       feeTXs = 0;

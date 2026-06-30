@@ -25,7 +25,7 @@ namespace BTokenLib
         int countInputs = VarInt.GetInt(buffer, ref index);
 
         if (countInputs == 0x00)
-          throw new NotImplementedException("Segwit is not implemented.");
+          throw new NotSupportedException("Segwit is not implemented.");
 
         for (int i = 0; i < countInputs; i++)
           Inputs.Add(new TXInputBitcoin(buffer, ref index));

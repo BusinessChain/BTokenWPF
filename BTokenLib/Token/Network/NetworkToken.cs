@@ -16,12 +16,6 @@ namespace BTokenLib
     {
       public NetworkToken NetworkParent;
 
-      // Bekommt ein Netzwerk ein Block
-      // werden die Ankertoken in den ChildNetzwerken vermerkt. Wenn dann die Childnetzwerke gesyncted
-      // werden, soll keine Abhängigkeit zum Parent mehr bestehen, so dass die ChildNetzwerke parallel
-      // gesyncet werden können. 
-      // False isMining gleich true, dann wird auch noch gerade geschaut,
-      // ob ein Block mined wurde zu broadcasten.
       public List<NetworkToken> NetworksChild = new();
 
       public Token Token;
@@ -40,7 +34,7 @@ namespace BTokenLib
 
       Blockchain BlockchainRoot;
 
-      SemaphoreSlim SemaphoreBlockchainRootRoot = new(1);
+      SemaphoreSlim SemaphoreBlockchainRoot = new(1);
 
       readonly object LOCK_FlagSyncLocked = new object();
       bool FlagSyncLocked;
@@ -138,7 +132,7 @@ namespace BTokenLib
         if (NetworkParent != null)
           return await NetworkParent.TryLockBlockchain(timeout);
 
-        return await SemaphoreBlockchainRootRoot.WaitAsync(timeout).ConfigureAwait(false);
+        return await SemaphoreBlockchainRoot.WaitAsync(timeout).ConfigureAwait(false);
       }
 
       void ReleaseLockBlockchain()
@@ -146,7 +140,7 @@ namespace BTokenLib
         if (NetworkParent != null)
           NetworkParent.ReleaseLockBlockchain();
         else
-          SemaphoreBlockchainRootRoot.Release();
+          SemaphoreBlockchainRoot.Release();
       }
 
       public async Task<List<byte[]>> ExtendHeaderchain(
@@ -243,7 +237,13 @@ namespace BTokenLib
 
           if(IsMining)
           {
-            Block block = Token.MineBlock(out byte[] dataAnchorToken);
+            int height = BlockchainRoot.GetHeight() + 1;
+
+            Block block = Token.CreateBlock(
+              BlockchainRoot,
+              height, 
+              out long feeTXs, 
+              out byte[] dataAnchorToken);
 
             NetworkParent.BroadcastAnchorToken(dataAnchorToken);
 
@@ -257,6 +257,13 @@ namespace BTokenLib
           $"{ex.GetType().Name} when attempting to load mined block {tokenAnchor.HashBlockReferenced.ToHexString()}: {ex.Message}.\n".Log(this, LogEntryNotifier);
         }
       }
+
+      const int COUNT_BYTES_PER_BLOCK_MAX = 1000;
+      const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 4;
+      const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 5;
+      const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
+      const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
+
 
       void BroadcastAnchorToken(byte[] dataAnchorToken)
       {
