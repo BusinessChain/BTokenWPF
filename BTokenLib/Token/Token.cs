@@ -19,8 +19,6 @@ namespace BTokenLib
 
     public int SizeBlockMax;
 
-    public Wallet WalletToken;
-
     public StreamWriter LogFile;
     public ILogEntryNotifier LogEntryNotifier;
 
@@ -34,11 +32,6 @@ namespace BTokenLib
       LogFile = new StreamWriter(Path.Combine(GetName(), "LogToken"), append: false);
 
       LogEntryNotifier = logEntryNotifier;
-    }
-
-    public virtual void Reset()
-    {
-      WalletToken.Clear();
     }
 
     public abstract List<string> GetSeedAddresses();
@@ -67,8 +60,6 @@ namespace BTokenLib
     public void InsertBlock(Block block)
     {
       InsertBlockInDatabase(block);
-
-      WalletToken?.InsertBlock(block);
     }
 
     protected virtual void InsertBlockInDatabase(Block block) { }
@@ -93,6 +84,7 @@ namespace BTokenLib
         
     public virtual Block CreateBlock(
       int height,
+      byte[] hash160PKeyPublic,
       out byte[] dataAnchorToken)
     { throw new NotSupportedException();}
 

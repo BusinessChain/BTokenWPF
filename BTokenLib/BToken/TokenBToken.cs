@@ -41,8 +41,6 @@ namespace BTokenLib
     public TokenBToken(ILogEntryNotifier logEntryNotifier, Token tokenParent)
       : base(logEntryNotifier)
     {
-      WalletToken = new WalletBToken(File.ReadAllText($"Wallet{GetName()}/wallet"), this);
-
       TXPool = new PoolTXBToken(this);
 
       SizeBlockMax = SIZE_BLOCK_MAX;
@@ -84,7 +82,10 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
-    public override Block CreateBlock(int height, out byte[] dataAnchorToken)
+    public override Block CreateBlock(
+      int height, 
+      byte[] hash160PKeyPublic,
+      out byte[] dataAnchorToken)
     {
       Block block = new Block(this);
 
@@ -96,7 +97,7 @@ namespace BTokenLib
         (BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD)
         + feeTXs;
 
-      TX tXCoinbase = CreateTXCoinbase(blockReward, height);
+      TX tXCoinbase = CreateTXCoinbase(height, blockReward, hash160PKeyPublic);
 
       block.TXs.Insert(0, tXCoinbase);
 
@@ -115,7 +116,7 @@ namespace BTokenLib
       return block;
     }
 
-    public TX CreateTXCoinbase(long blockReward, int blockHeight)
+    TX CreateTXCoinbase(int blockHeight, long blockReward, byte[] hash160PKeyPublic)
     {
       TXBToken tX = new()
       {
@@ -126,7 +127,7 @@ namespace BTokenLib
       TXOutputP2PKH tXOutput = new()
       {
         Type = TXOutput.TypesToken.P2PKH,
-        Script = BitConverter.GetBytes(blockReward).Concat(Hash160PKeyPublic).ToArray()
+        Script = BitConverter.GetBytes(blockReward).Concat(hash160PKeyPublic).ToArray()
       };
 
       tX.Serialize();
@@ -462,12 +463,6 @@ namespace BTokenLib
         0x79, 0x62, 0xe0, 0xea, 0x1f, 0x61, 0xde, 0xb6, 0x49, 0xf6, 0xbc, 0x3f, 0x4c, 0xef, 0x38, 0xc4,
         0xf3, 0x55, 0x04, 0xe5, 0x1e, 0xc1 ,0x12, 0xde, 0x5c, 0x38, 0x4d, 0xf7, 0xba, 0x0b, 0x8d, 0x57,
         0x8a, 0x4c, 0x70, 0x2b, 0x6b, 0xf1, 0x1d, 0x5f, 0xac, 0x00, 0x00 ,0x00 ,0x00 };
-    }
-
-    public override void Reset()
-    {
-      base.Reset();
-      //Cache.Clear();
     }
 
     public override List<string> GetSeedAddresses()

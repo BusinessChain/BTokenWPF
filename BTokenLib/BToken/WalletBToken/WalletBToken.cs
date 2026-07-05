@@ -11,8 +11,6 @@ namespace BTokenLib
   {
     public partial class WalletBToken : Wallet
     {
-      TokenBToken Token;
-
       Account AccountWalletConfirmed;
       Account AccountWalletUnconfirmed;
       int SerialNumberTX;

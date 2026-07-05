@@ -191,11 +191,11 @@ namespace BTokenLib
           return null;
         }
 
-        public Block MineBlock(out byte[] dataAnchorToken)
+        public Block MineBlock(out byte[] dataAnchorToken, byte[] hash160PKeyPublic)
         {
           int height = HeaderTip.Height + 1;
 
-          Block block = Token.CreateBlock(height, out dataAnchorToken);
+          Block block = Token.CreateBlock(height, hash160PKeyPublic, out dataAnchorToken);
 
           block.Header.HashPrevious = HeaderTip.Hash;
 

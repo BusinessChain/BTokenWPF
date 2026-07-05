@@ -19,6 +19,7 @@ namespace BTokenLib
       public List<NetworkToken> NetworksChild = new();
 
       public Token Token;
+      public Wallet Wallet; // Die Blockchain braucht eine Referenz auf die Wallet sowie auf das Token.
 
       public bool EnableInboundConnections;
       public bool EnableRelay;
@@ -50,18 +51,11 @@ namespace BTokenLib
         int port,
         bool flagEnableInboundConnections,
         bool flagEnableRelay)
-        : this(token, port, flagEnableInboundConnections, flagEnableRelay)
       {
-        NetworkParent = tokenParent.Network;
-      }
-
-      public NetworkToken(
-        Token token,
-        int port,
-        bool flagEnableInboundConnections,
-        bool flagEnableRelay)
-      {
+        NetworkParent = tokenParent.Network; 
         Token = token;
+
+        Wallet = new Wallet(File.ReadAllText($"Wallet/wallet"));
 
         BlockchainRoot = new(Token);
 
@@ -174,7 +168,11 @@ namespace BTokenLib
         try
         {
           if (BlockchainRoot.TryInsertBlock(ref block, ref BlockchainRoot, out isSyncComplete))
+          {
             NotifyChildTokensOfAnchorToken(block);
+
+            Wallet.InsertBlock(block);
+          }
         }
         finally
         {
@@ -226,7 +224,9 @@ namespace BTokenLib
 
           if (IsMining)
           {
-            Block block = BlockchainRoot.MineBlock(out byte[] dataAnchorToken);
+            Block block = BlockchainRoot.MineBlock(
+              out byte[] dataAnchorToken, 
+              Wallet.Hash160PKeyPublic);
 
             NetworkParent.BroadcastAnchorToken(dataAnchorToken);
 
