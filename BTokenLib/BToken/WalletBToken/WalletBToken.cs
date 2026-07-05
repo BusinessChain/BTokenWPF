@@ -34,25 +34,6 @@ namespace BTokenLib
         DatabaseTXCollection = Database.GetCollection<DBRecordTXWallet>("RecordsTXWallet");
       }
 
-      public TX CreateTXCoinbase(long blockReward, int blockHeight)
-      {
-        TXBToken tX = new()
-        {
-          KeyPublic = new byte[32],
-          BlockheightAccountCreated = blockHeight,
-        };
-
-        TXOutputP2PKH tXOutput = new()
-        {
-          Type = TXOutputP2PKH.TypesToken.P2PKH,
-          Script = BitConverter.GetBytes(blockReward).Concat(Hash160PKeyPublic).ToArray()
-        };
-
-        tX.Serialize();
-
-        return tX;
-      }
-
       public override void SendTXValue(
         string addressDest,
         long value,

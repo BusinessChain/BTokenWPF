@@ -73,9 +73,7 @@ namespace BTokenLib
               Token.InsertBlock(BlockLoad);
 
               if (HeaderRoot == null)
-              {
                 HeaderRoot = BlockLoad.Header;
-              }
               else
               {
                 BlockLoad.Header.AppendToHeader(HeaderTip);
@@ -167,8 +165,11 @@ namespace BTokenLib
           }
 
           blockDownload.Header = FetchHeaderDownload();
+          
+          Header headerTipNew = header.AppendToHeader(HeaderTip);
+          HeaderTip.HeaderNext = header;
+          HeaderTip = headerTipNew;
 
-          HeaderTip = header.AppendToHeader(HeaderTip);
           locator = new List<byte[]> { HeaderTip.Hash };
           return true;
         }
@@ -190,12 +191,19 @@ namespace BTokenLib
           return null;
         }
 
-        Blockchain GetSynchronizationRoot()
+        public Block MineBlock(out byte[] dataAnchorToken)
         {
-          if (BlockchainParent == null)
-            return this;
+          int height = HeaderTip.Height + 1;
 
-          return BlockchainParent.GetSynchronizationRoot();
+          Block block = Token.CreateBlock(height, out dataAnchorToken);
+
+          block.Header.HashPrevious = HeaderTip.Hash;
+
+          block.Header.ComputeHash();
+
+          block.Serialize();
+
+          return block;
         }
 
         public bool TryInsertBlock(
@@ -207,8 +215,8 @@ namespace BTokenLib
 
           if (!HeadersDownloading.Remove(block.Header.Hash))
           {
-            foreach (Blockchain syncBranch in BlockchainBranches)
-              if (syncBranch.TryInsertBlock(ref block, ref sychronizationRoot, out isSyncComplete))
+            foreach (Blockchain branch in BlockchainBranches)
+              if (branch.TryInsertBlock(ref block, ref sychronizationRoot, out isSyncComplete))
                 return true;
 
             block.Header = null;

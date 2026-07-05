@@ -14,7 +14,7 @@ namespace BTokenLib
       public const byte LengthDataAnchorToken = 70;
 
       public static byte[] PREFIX_ANCHOR_TOKEN =
-        new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TXOutputTokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
+        new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
 
       public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
         PREFIX_ANCHOR_TOKEN.Length + LENGTH_IDTOKEN + 32 + 32;

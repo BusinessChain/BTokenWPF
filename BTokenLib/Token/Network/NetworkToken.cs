@@ -43,9 +43,6 @@ namespace BTokenLib
       ILiteCollection<BsonDocument> DatabaseMetaCollection;
       ILiteCollection<BsonDocument> DatabaseHeaderCollection;
 
-      Dictionary<byte[], TXOutputTokenAnchor> CacheAnchorTokens =
-        new(new EqualityComparerByteArray());
-
 
       public NetworkToken(
         Token tokenParent,
@@ -176,12 +173,8 @@ namespace BTokenLib
 
         try
         {
-          BlockchainRoot.TryInsertBlock(
-            ref block,
-            ref BlockchainRoot,
-            out isSyncComplete);
-
-          DetectTokensAnchor(block);
+          if (BlockchainRoot.TryInsertBlock(ref block, ref BlockchainRoot, out isSyncComplete))
+            NotifyChildTokensOfAnchorToken(block);
         }
         finally
         {
@@ -191,27 +184,6 @@ namespace BTokenLib
         if (isSyncComplete)
           foreach (NetworkToken networkChild in NetworksChild)
             networkChild.StartHeaderSync();
-      }
-
-      void DetectTokensAnchor(Block block)
-      {
-        foreach (TX tX in block.TXs)
-          foreach (TXOutput tXOutput in tX.TXOutputs)
-            if (tXOutput is TXOutputTokenAnchor tokenAnchor)
-            {
-              if (CacheAnchorTokens.Any(t => t.Value.IDToken.IsAllBytesEqual(tokenAnchor.IDToken)))
-                continue;
-
-              CacheAnchorTokens.Add(
-                tokenAnchor.HashBlockReferenced,
-                tokenAnchor);
-
-              NetworkToken networkChild = NetworksChild
-                .Find(n => n.Token.IDToken.IsAllBytesEqual(tokenAnchor.IDToken));
-
-              if (networkChild != null)
-                networkChild.OnTokenAnchorParent(tokenAnchor);
-            }
       }
 
       List<Block> BlocksMinedCache = new();
@@ -225,25 +197,36 @@ namespace BTokenLib
 
           if (blockMined == null)
           {
-            blockMined = new(Token, File.ReadAllBytes(Path.Combine(PathBlocksMined, blockMined.Header.Height.ToString())));
+            string pathFileBlock = Path.Combine(PathBlocksMined, blockMined.Header.Height.ToString());
+
+            if (!File.Exists(pathFileBlock))
+              return;
+
+            blockMined = new(Token, File.ReadAllBytes(pathFileBlock));
             blockMined.Parse();
           }
 
-          InsertBlock(blockMined);
+          if (BlockchainRoot.TryExtendHeaderchain(blockMined.Header, out List<byte[]> headerslocator, blockMined))
+            if (BlockchainRoot.TryInsertBlock(ref blockMined, ref BlockchainRoot, out bool isSyncComplete))
+            {
+              // Hier ein sendBlock machen und intern zuerst header und dann wenn
+              // getdata kommt blcok aus peer cache laden, statt wieder node anfragen.
+              lock (LOCK_Peers)
+                Peers.ForEach(p => HeadersMessage.SendHeaders(
+                  p,
+                  new List<byte[]> { blockMined.Header.Hash }));
 
-          Peers.ForEach(p => HeadersMessage.SendHeaders(
-            p, 
-            new List<byte[]> { blockMined.Header.Hash }));
+              NotifyChildTokensOfAnchorToken(blockMined);
+            }
 
-          if(IsMining)
+          // Der User muss jeweils definieren, mit welcher fee Rate er die Verankerung bezahlen will.
+          // Dem user kann im GUI auch ein Tool zur verfügung gestellt werden welches ihm 
+          // erlaubt, die Fee Rate automatisiert zu steuern. z.B. anhand vergangener Fee Raten
+          // oder Marktpreis Arbitrierung.
+
+          if (IsMining)
           {
-            int height = BlockchainRoot.GetHeight() + 1;
-
-            Block block = Token.CreateBlock(
-              BlockchainRoot,
-              height, 
-              out long feeTXs, 
-              out byte[] dataAnchorToken);
+            Block block = BlockchainRoot.MineBlock(out byte[] dataAnchorToken);
 
             NetworkParent.BroadcastAnchorToken(dataAnchorToken);
 
@@ -258,6 +241,19 @@ namespace BTokenLib
         }
       }
 
+      void NotifyChildTokensOfAnchorToken(Block block)
+      {
+        Dictionary<byte[], TXOutputTokenAnchor> cacheAnchorTokens =
+          new(new EqualityComparerByteArray());
+
+        foreach (TX tX in block.TXs)
+          foreach (TXOutput tXOutput in tX.TXOutputs)
+            if (tXOutput is TXOutputTokenAnchor tokenAnchor)
+              if (cacheAnchorTokens.TryAdd(tokenAnchor.HashBlockReferenced, tokenAnchor))
+                NetworksChild.Find(n => n.Token.IDToken.IsAllBytesEqual(tokenAnchor.IDToken))
+                  ?.OnTokenAnchorParent(tokenAnchor);
+      }
+
       const int COUNT_BYTES_PER_BLOCK_MAX = 1000;
       const int TIMESPAN_MINING_ANCHOR_TOKENS_SECONDS = 4;
       const int TIME_MINER_PAUSE_AFTER_RECEIVE_PARENT_BLOCK_SECONDS = 5;
@@ -267,11 +263,13 @@ namespace BTokenLib
 
       void BroadcastAnchorToken(byte[] dataAnchorToken)
       {
+        // Hier noch BToken Protokoll Identifier prependen.
+
         // Die Wallet nur für Signatur verwenden.
         Wallet.SendTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken);
       }
 
-      string PathBlocksMined;
+      string PathBlocksMined = "blocksMined";
 
 
       List<byte[]> GetLocator()

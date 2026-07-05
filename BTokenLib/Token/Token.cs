@@ -92,9 +92,7 @@ namespace BTokenLib
     }
         
     public virtual Block CreateBlock(
-      Header headerTip,
       int height,
-      out long feeTXs,
       out byte[] dataAnchorToken)
     { throw new NotSupportedException();}
 

@@ -165,11 +165,10 @@ namespace BTokenLib
         TXBundlesSortedByFee.Insert(0, tXBundle);
       }
 
-      public List<TX> GetTXs(int countBytesMax, out long feeTotal)
+      public List<TX> GetTXs(int countBytesMax)
       {
         List<TX> tXs = new();
         int countBytesCurrent = 0;
-        feeTotal = 0;
 
         for (int i = 0; i < TXBundlesSortedByFee.Count; i++)
           for (int j = 0; j < TXBundlesSortedByFee[i].TXs.Count; j++)
@@ -180,7 +179,6 @@ namespace BTokenLib
             tXs.Add(TXBundlesSortedByFee[i].TXs[j]);
 
             countBytesCurrent += TXBundlesSortedByFee[i].TXs[j].CountBytes;
-            feeTotal += TXBundlesSortedByFee[i].TXs[j].Fee;
           }
 
         return tXs;

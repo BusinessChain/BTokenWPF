@@ -25,7 +25,6 @@ namespace BTokenLib
 
         public HeadersMessage(Block blockDownload)
         {
-          ;
           BlockDownload = blockDownload;
           DOSMonitor = new DOSMonitorPer10Minutes(maxLevel: 5);
         }

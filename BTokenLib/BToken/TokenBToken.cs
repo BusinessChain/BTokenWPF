@@ -45,9 +45,6 @@ namespace BTokenLib
 
       TXPool = new PoolTXBToken(this);
 
-      PathBlocksMined = Path.Combine(GetName(), "blocksMined");
-      Directory.CreateDirectory(PathBlocksMined);
-
       SizeBlockMax = SIZE_BLOCK_MAX;
 
       DatabaseAccountCollection = Database.GetCollection<Account>("accounts");
@@ -87,49 +84,54 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
-    public override Block CreateBlock(
-      Header headerTip,
-      int height,
-      out long feeTXs,
-      out byte[] dataAnchorToken)
+    public override Block CreateBlock(int height, out byte[] dataAnchorToken)
     {
-      feeTXs = 0;
       Block block = new Block(this);
 
-      long blockReward = BLOCK_REWARD_INITIAL >>
-        height / PERIOD_HALVENING_BLOCK_REWARD;
+      block.TXs = TXPool.GetTXs(block.Buffer.Length);
 
-      blockReward += feeTXs;
+      long feeTXs = block.TXs.Sum(t => t.Fee);
 
-      TX tXCoinbase = ((WalletBToken)Wallet).CreateTXCoinbase(blockReward, height);
+      long blockReward = 
+        (BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD)
+        + feeTXs;
+
+      TX tXCoinbase = CreateTXCoinbase(blockReward, height);
 
       block.TXs.Insert(0, tXCoinbase);
 
       block.Header = new HeaderBToken()
       {
-        HashPrevious = NetworkToken.HeaderTip.Hash,
-        HeaderPrevious = NetworkToken.HeaderTip,
         Height = height,
         MerkleRoot = block.ComputeMerkleRoot(),
         CountTXs = block.TXs.Count,
         Fee = feeTXs
       };
 
-      block.Header.ComputeHash();
-
-      block.Serialize();
-
-      dataAnchorToken = IDENTIFIER_BTOKEN_PROTOCOL
-      .Concat(IDToken)
+      dataAnchorToken = IDToken
       .Concat(block.Header.Hash)
       .Concat(block.Header.HashPrevious).ToArray();
 
       return block;
     }
 
-    public override void LoadTXsFromPool(Block block, out long feeTXs)
+    public TX CreateTXCoinbase(long blockReward, int blockHeight)
     {
-      feeTXs = 0;
+      TXBToken tX = new()
+      {
+        KeyPublic = new byte[32],
+        BlockheightAccountCreated = blockHeight,
+      };
+
+      TXOutputP2PKH tXOutput = new()
+      {
+        Type = TXOutput.TypesToken.P2PKH,
+        Script = BitConverter.GetBytes(blockReward).Concat(Hash160PKeyPublic).ToArray()
+      };
+
+      tX.Serialize();
+
+      return tX;
     }
 
     public override bool TryGetTX(byte[] hash, out TX tX)
