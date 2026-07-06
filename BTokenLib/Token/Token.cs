@@ -16,6 +16,7 @@ namespace BTokenLib
 
     public byte[] IDToken;
     protected NetworkToken Network;
+    public Wallet Wallet;
 
     public int SizeBlockMax;
 
@@ -28,6 +29,8 @@ namespace BTokenLib
     public Token(ILogEntryNotifier logEntryNotifier)
     {
       Directory.CreateDirectory(GetName());
+
+      Wallet = new Wallet(File.ReadAllText($"Wallet/wallet"));
 
       LogFile = new StreamWriter(Path.Combine(GetName(), "LogToken"), append: false);
 
@@ -68,7 +71,7 @@ namespace BTokenLib
     {
       ReverseBlockInCache(block);
 
-      WalletToken.ReverseBlock(block);
+      Wallet.ReverseBlock(block);
     }
 
     protected virtual void ReverseBlockInCache(Block block) { }
@@ -81,12 +84,9 @@ namespace BTokenLib
     {
       return GetType().Name;
     }
-        
-    public virtual Block CreateBlock(
-      int height,
-      byte[] hash160PKeyPublic,
-      out byte[] dataAnchorToken)
-    { throw new NotSupportedException();}
+
+    public virtual Block CreateBlock(int height, out TXOutputTokenAnchor anchorToken)
+    { throw new NotSupportedException(); }
 
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotSupportedException(); }
@@ -105,7 +105,7 @@ namespace BTokenLib
       try
       {
         AddToTXPool(tX);
-        WalletToken.InsertTXUnconfirmed(tX);
+        Wallet.InsertTXUnconfirmed(tX);
       }
       finally
       {

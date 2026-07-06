@@ -82,10 +82,7 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
-    public override Block CreateBlock(
-      int height, 
-      byte[] hash160PKeyPublic,
-      out byte[] dataAnchorToken)
+    public override Block CreateBlock(int height, out TXOutputTokenAnchor anchorToken)
     {
       Block block = new Block(this);
 
@@ -93,11 +90,11 @@ namespace BTokenLib
 
       long feeTXs = block.TXs.Sum(t => t.Fee);
 
-      long blockReward = 
+      long blockReward =
         (BLOCK_REWARD_INITIAL >> height / PERIOD_HALVENING_BLOCK_REWARD)
         + feeTXs;
 
-      TX tXCoinbase = CreateTXCoinbase(height, blockReward, hash160PKeyPublic);
+      TX tXCoinbase = CreateTXCoinbase(height, blockReward, Wallet.Hash160PKeyPublic);
 
       block.TXs.Insert(0, tXCoinbase);
 
@@ -109,9 +106,11 @@ namespace BTokenLib
         Fee = feeTXs
       };
 
-      dataAnchorToken = IDToken
-      .Concat(block.Header.Hash)
-      .Concat(block.Header.HashPrevious).ToArray();
+      anchorToken = new TXOutputTokenAnchor()
+      {
+        HashBlockPreviousReferenced = block.Header.HashPrevious,
+        HashBlockReferenced = block.Header.Hash
+      };
 
       return block;
     }

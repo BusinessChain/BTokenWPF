@@ -36,7 +36,6 @@ namespace BTokenLib
       AddressAccount = Hash160PKeyPublic.BinaryToBase58Check();
     }
 
-
     public byte[] GetSignature(byte[] dataToBeSigned)
     {
       return Crypto.GetSignature(KeyPrivateDecimal, dataToBeSigned);

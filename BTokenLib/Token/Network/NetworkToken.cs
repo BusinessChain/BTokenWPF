@@ -19,8 +19,10 @@ namespace BTokenLib
       public List<NetworkToken> NetworksChild = new();
 
       public Token Token;
-      public Wallet Wallet; // Die Blockchain braucht eine Referenz auf die Wallet sowie auf das Token.
 
+      // Jetzt glaub ich wieder, dass die Wallet doch ins token muss, 
+      // weil die gemeinsamkeit besteht, dass sie immer über Blockchain 
+      // operation informiert werden müssen.
       public bool EnableInboundConnections;
       public bool EnableRelay;
       public ILogEntryNotifier LogEntryNotifier;
@@ -54,8 +56,6 @@ namespace BTokenLib
       {
         NetworkParent = tokenParent.Network; 
         Token = token;
-
-        Wallet = new Wallet(File.ReadAllText($"Wallet/wallet"));
 
         BlockchainRoot = new(Token);
 
@@ -168,11 +168,7 @@ namespace BTokenLib
         try
         {
           if (BlockchainRoot.TryInsertBlock(ref block, ref BlockchainRoot, out isSyncComplete))
-          {
             NotifyChildTokensOfAnchorToken(block);
-
-            Wallet.InsertBlock(block);
-          }
         }
         finally
         {
@@ -224,11 +220,9 @@ namespace BTokenLib
 
           if (IsMining)
           {
-            Block block = BlockchainRoot.MineBlock(
-              out byte[] dataAnchorToken, 
-              Wallet.Hash160PKeyPublic);
+            Block block = BlockchainRoot.MineBlock(out TXOutputTokenAnchor anchorToken);
 
-            NetworkParent.BroadcastAnchorToken(dataAnchorToken);
+            NetworkParent.BroadcastAnchorToken(anchorToken);
 
             BlocksMinedCache.Add(block);
 
@@ -261,12 +255,13 @@ namespace BTokenLib
       const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
 
-      void BroadcastAnchorToken(byte[] dataAnchorToken)
+      void BroadcastAnchorToken(TXOutputTokenAnchor tokenAnchor)
       {
-        // Hier noch BToken Protokoll Identifier prependen.
+        byte[] dataAnchorToken = tokenAnchor.Serialize();
 
         // Die Wallet nur für Signatur verwenden.
         Wallet.SendTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken);
+
       }
 
       string PathBlocksMined = "blocksMined";

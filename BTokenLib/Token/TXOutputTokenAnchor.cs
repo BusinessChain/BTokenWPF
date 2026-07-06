@@ -8,7 +8,7 @@ namespace BTokenLib
   {
     public class TXOutputTokenAnchor : TXOutput
     {
-      public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T' };
+      public static byte[] IDENTIFIER_BTOKEN_PROTOCOL = new byte[] { (byte)'B', (byte)'T', (byte)'K' };
 
       public const byte OP_RETURN = 0x6A;
       public const byte LengthDataAnchorToken = 70;
