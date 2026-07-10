@@ -85,17 +85,13 @@ namespace BTokenLib
       return GetType().Name;
     }
 
+    public abstract TX CreateTXAnchor(TXOutputTokenAnchor tokenAnchor);
+
     public virtual Block CreateBlock(int height, out TXOutputTokenAnchor anchorToken)
     { throw new NotSupportedException(); }
 
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotSupportedException(); }
-
-    public void BroadcastTX(TX tX)
-    {
-      InsertTXUnconfirmed(tX);
-      Network.BroadcastTX(tX);
-    }
 
     public void InsertTXUnconfirmed(TX tX)
     {
@@ -114,6 +110,5 @@ namespace BTokenLib
     }
 
     protected virtual void AddToTXPool(TX tX) { }
-
   }
 }

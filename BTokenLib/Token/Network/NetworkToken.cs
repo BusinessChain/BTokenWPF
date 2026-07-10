@@ -222,17 +222,30 @@ namespace BTokenLib
           {
             Block block = BlockchainRoot.MineBlock(out TXOutputTokenAnchor anchorToken);
 
-            NetworkParent.BroadcastAnchorToken(anchorToken);
-
             BlocksMinedCache.Add(block);
 
             block.WriteToDisk(PathBlocksMined);
+
+            NetworkParent.MineTokenAnchor(tokenAnchor);
           }
         }
         catch (Exception ex)
         {
           $"{ex.GetType().Name} when attempting to load mined block {tokenAnchor.HashBlockReferenced.ToHexString()}: {ex.Message}.\n".Log(this, LogEntryNotifier);
         }
+      }
+
+      void MineTokenAnchor(TXOutputTokenAnchor tokenAnchor)
+      {
+        TX tXAnchor = Token.CreateTXAnchor(tokenAnchor);
+
+        Token.InsertTXUnconfirmed(tXAnchor);
+
+        $"Advertize token {tXAnchor}.".Log(this, Token.LogEntryNotifier);
+
+        lock (LOCK_Peers)
+          foreach (Peer peer in Peers)
+            peer.BroadcastTX(tXAnchor);
       }
 
       void NotifyChildTokensOfAnchorToken(Block block)
@@ -254,15 +267,6 @@ namespace BTokenLib
       const double FACTOR_INCREMENT_FEE_PER_BYTE_ANCHOR_TOKEN = 1.02;
       const double MINIMUM_FEE_SATOSHI_PER_BYTE_ANCHOR_TOKEN = 0.1;
 
-
-      void BroadcastAnchorToken(TXOutputTokenAnchor tokenAnchor)
-      {
-        byte[] dataAnchorToken = tokenAnchor.Serialize();
-
-        // Die Wallet nur für Signatur verwenden.
-        Wallet.SendTXData(dataAnchorToken, FeeSatoshiPerByteAnchorToken);
-
-      }
 
       string PathBlocksMined = "blocksMined";
 
@@ -303,15 +307,6 @@ namespace BTokenLib
         {
           ReleaseLockBlockchain();
         }
-      }
-
-      public void BroadcastTX(Token.TX tX)
-      {
-        $"Advertize token {tX}.".Log(this, Token.LogEntryNotifier);
-
-        lock (LOCK_Peers)
-          foreach (Peer peer in Peers)
-            peer.BroadcastTX(tX);
       }
 
       public double GetFeeRate()

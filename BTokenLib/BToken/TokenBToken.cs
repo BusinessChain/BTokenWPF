@@ -115,6 +115,34 @@ namespace BTokenLib
       return block;
     }
 
+    public override TX CreateTXAnchor(TXOutputTokenAnchor tokenAnchor)
+    {
+      byte[] dataAnchorToken = tokenAnchor.Serialize();
+
+      long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
+
+      if (AccountWalletUnconfirmed.Balance < tXOutput.Value + fee)
+        throw new ProtocolException(
+          $"Not enough funds: balance {AccountWalletUnconfirmed.Balance} " +
+          $"less than tX output value {tXOutput.Value} plus fee {fee} totaling {tXOutput.Value + fee}.");
+
+      TXBToken tX = new()
+      {
+        KeyPublic = KeyPublic,
+        BlockheightAccountCreated = AccountWalletUnconfirmed.BlockHeightAccountCreated,
+        Nonce = AccountWalletUnconfirmed.Nonce,
+        Fee = fee
+      };
+
+      tX.TXOutputs.Add(tXOutput);
+
+      tX.Serialize();
+
+      byte[] signature = Wallet.GetSignature(tX.TXRaw);
+
+      tX.AddSignature(signature);
+    }
+
     TX CreateTXCoinbase(int blockHeight, long blockReward, byte[] hash160PKeyPublic)
     {
       TXBToken tX = new()

@@ -15,7 +15,6 @@ namespace BTokenLib
       Account AccountWalletUnconfirmed;
       int SerialNumberTX;
 
-      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
       List<TX> TXsUnconfirmedReceived = new();
 
       LiteDatabase Database;
@@ -68,9 +67,9 @@ namespace BTokenLib
 
         tX.TXOutputs.Add(tXOutput);
 
-        tX.Serialize(this);
-
-        TXsUnconfirmedCreated.Add((tX, 0));
+        tX.Serialize();
+        byte[] signature = GetSignature(tX.TXRaw);
+        tX.Serialize(signature);
 
         Token.BroadcastTX(tX);
       }
@@ -115,20 +114,6 @@ namespace BTokenLib
                 SerialNumberTX = SerialNumberTX++,
                 TXRaw = tX.TXRaw
               });
-
-          TXsUnconfirmedCreated.RemoveAll(tXUnconfirmed => tXUnconfirmed.tX.Hash.IsAllBytesEqual(tX.Hash));
-        }
-
-        foreach ((TXBToken tX, int) tXBToken in TXsUnconfirmedCreated.Where(t => t.ageBlock > 3))
-        {
-          try
-          {
-            Token.BroadcastTX(tXBToken.tX);
-          }
-          catch (Exception ex)
-          {
-            $"{ex.GetType().Name} when trying to rebroadcast unconfirmed transactions:\n {ex.Message}.".Log(this, Token.LogEntryNotifier);
-          }
         }
       }
 

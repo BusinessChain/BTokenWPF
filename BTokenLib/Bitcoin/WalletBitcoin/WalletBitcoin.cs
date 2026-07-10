@@ -41,8 +41,6 @@ namespace BTokenLib
       // Das muss eine Datanbank sein!!
       public Dictionary<byte[], TX> IndexTXs = new(new EqualityComparerByteArray());
 
-      List<(TX tX, int ageBlock)> TXsUnconfirmedCreated = new();
-
 
       public WalletBitcoin(string privKeyDec, TokenBitcoin token)
         : base(privKeyDec)
@@ -130,8 +128,6 @@ namespace BTokenLib
           });
 
         tX.Serialize(this);
-
-        TXsUnconfirmedCreated.Add((tX, 0));
 
         Token.BroadcastTX(tX);
       }

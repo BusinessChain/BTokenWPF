@@ -66,7 +66,7 @@ namespace BTokenLib
 
       return header;
     }
-       
+
     public override Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256)
     {
       byte[] hash = sHA256.ComputeHash(
@@ -161,5 +161,11 @@ namespace BTokenLib
       tX = null;
       return false;
     }
+
+    public override TX CreateTXAnchor(TXOutputTokenAnchor tokenAnchor)
+    {
+
+    }
+
   }
 }
