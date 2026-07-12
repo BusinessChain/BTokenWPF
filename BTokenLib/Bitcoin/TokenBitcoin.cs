@@ -162,10 +162,96 @@ namespace BTokenLib
       return false;
     }
 
-    public override TX CreateTXAnchor(TXOutputTokenAnchor tokenAnchor)
-    {
 
+    double FeePerByte;
+    List<TXOutputWallet> OutputsSpendableConfirmed = new();
+    public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
+
+    /// <summary>
+    /// Contains outputs that are spent by unconfirmed transactions. The outputs themselves might origin from confirmed and unconfirmed transactions.
+    /// </summary>
+    public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
+
+    class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
+    {
+      public bool Equals(TXOutputWallet x, TXOutputWallet y)
+      {
+        return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
+      }
+
+      public int GetHashCode(TXOutputWallet x)
+      {
+        return BitConverter.ToInt32(x.TXID, 0) + x.Index;
+      }
     }
 
+    // Hier könnte doch sogar nur ein generischer TXOutput
+    // ubergeben werden, und die Funktion in TryCreateTX
+    // umtaufen, dann kann dieselbe funktion für Anker und P2PKH verwendet werden.
+    
+    public override bool TryCreateTXAnchor(
+      TXOutputTokenAnchor tokenAnchor,
+      out TX tXAnchor)
+    {
+      tXAnchor = new TXBitcoin();
+
+      //return new()
+      //{
+      //  new TXOutputWallet()
+      //  {
+      //    TXID = "20da7491ec53757a914dc1f045afbcb0a5c3396785a9abe9fc074e017e9403fd".ToBinary(),
+      //    Value = 7106,
+      //    Index = 1
+      //  }
+      //};
+
+      long feePerInputP2PKH = (long)(LENGTH_P2PKH_INPUT * FeePerByte);
+      long feePerOutputP2PKH = (long)(LENGTH_P2PKH_OUTPUT * FeePerByte);
+
+      List<TXOutputWallet> outputsSpendable = OutputsSpendableConfirmed
+        .Where(o => o.Value > feePerInputP2PKH)
+        .Concat(OutputsSpendableUnconfirmed.Where(o => o.Value > feePerInputP2PKH))
+        .Except(OutputsSpentUnconfirmed, new EqualityComparerTXOutputWallet())
+        .Take(VarInt.PREFIX_UINT16 - 1).ToList();
+
+      long valueInputs = outputsSpendable.Sum(o => o.Value);
+
+      byte[] tokenAnchorRaw = tokenAnchor.Serialize();
+
+      long feeTX = (long)(FeePerByte
+        * (LENGTH_P2PKH_INPUT * outputsSpendable.Count
+        + LENGTH_TX_OVERHEAD
+        + tokenAnchorRaw.Length));
+
+      if (valueInputs < feeTX + tokenAnchor.Value)
+        return false;
+
+      long valueChange = valueInputs - tokenAnchor.Value - feeTX - feePerOutputP2PKH;
+
+      bool flagCreateOutputChange = valueChange > feePerInputP2PKH;
+
+      foreach (TXOutputWallet outputSpendable in outputsSpendable)
+      {
+        ((TXBitcoin)tXAnchor).Inputs.Add(new TXInputBitcoin
+        {
+          TXIDOutput = outputSpendable.TXID,
+          OutputIndex = outputSpendable.Index
+        });
+      }
+
+      tXAnchor.TXOutputs.Add(tokenAnchor);
+
+      if (flagCreateOutputChange)
+        tXAnchor.TXOutputs.Add(new TXOutputBitcoin
+        {
+          Type = TXOutput.TypesToken.P2PKH,
+          Value = valueChange,
+          Script = PREFIX_P2PKH.Concat(Wallet.Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray()
+        });
+
+      tXAnchor.Serialize(Wallet);
+
+      return true;
+    }
   }
 }

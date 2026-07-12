@@ -115,16 +115,15 @@ namespace BTokenLib
       return block;
     }
 
-    public override TX CreateTXAnchor(TXOutputTokenAnchor tokenAnchor)
+    public override bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor)
     {
+      tXAnchor = null;
       byte[] dataAnchorToken = tokenAnchor.Serialize();
 
       long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
 
       if (AccountWalletUnconfirmed.Balance < tXOutput.Value + fee)
-        throw new ProtocolException(
-          $"Not enough funds: balance {AccountWalletUnconfirmed.Balance} " +
-          $"less than tX output value {tXOutput.Value} plus fee {fee} totaling {tXOutput.Value + fee}.");
+        return false;
 
       TXBToken tX = new()
       {
@@ -136,11 +135,11 @@ namespace BTokenLib
 
       tX.TXOutputs.Add(tXOutput);
 
-      tX.Serialize();
+      tX.Serialize(Wallet);
 
-      byte[] signature = Wallet.GetSignature(tX.TXRaw);
+      InsertTXUnconfirmed(tX);
 
-      tX.AddSignature(signature);
+      return true;
     }
 
     TX CreateTXCoinbase(int blockHeight, long blockReward, byte[] hash160PKeyPublic)

@@ -54,12 +54,28 @@ namespace BTokenLib
         return tokenAnchor;
       }
 
+
+      byte[] TXOutputTokenAnchorRaw = new byte[IDENTIFIER_BTOKEN_PROTOCOL.Length + LENGTH_IDTOKEN + 32 + 32];
+
       public byte[] Serialize()
       {
-        return IDENTIFIER_BTOKEN_PROTOCOL
-        .Concat(IDToken)
-        .Concat(HashBlockReferenced)
-        .Concat(HashBlockPreviousReferenced).ToArray();
+        int startIndex = 0;
+
+        IDENTIFIER_BTOKEN_PROTOCOL.CopyTo(TXOutputTokenAnchorRaw, startIndex);
+
+        startIndex += IDENTIFIER_BTOKEN_PROTOCOL.Length;
+
+        IDToken.CopyTo(TXOutputTokenAnchorRaw, startIndex);
+
+        startIndex += LENGTH_IDTOKEN;
+
+        HashBlockReferenced.CopyTo(TXOutputTokenAnchorRaw, startIndex);
+
+        startIndex += 32;
+
+        HashBlockPreviousReferenced.CopyTo(TXOutputTokenAnchorRaw, startIndex);
+
+        return TXOutputTokenAnchorRaw;
       }
     }
   }

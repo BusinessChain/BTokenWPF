@@ -14,15 +14,11 @@ namespace BTokenLib
     public byte[] KeyPublic;
     public byte[] Hash160PKeyPublic = new byte[20];
     public string AddressAccount;
+    public byte[] PublicScript;
 
     public List<Token.TX> HistoryTXs = new();
 
-    public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
 
-    /// <summary>
-    /// Contains outputs that are spent by unconfirmed transactions. The outputs themselves might origin from confirmed and unconfirmed transactions.
-    /// </summary>
-    public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
 
 
     public Wallet(string privKeyDec)
@@ -34,6 +30,8 @@ namespace BTokenLib
       Hash160PKeyPublic = Crypto.ComputeHash160(KeyPublic, SHA256);
 
       AddressAccount = Hash160PKeyPublic.BinaryToBase58Check();
+
+      PublicScript = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray();
     }
 
     public byte[] GetSignature(byte[] dataToBeSigned)

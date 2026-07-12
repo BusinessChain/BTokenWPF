@@ -64,7 +64,7 @@ namespace BTokenLib
       }
 
 
-      public void Serialize(WalletBitcoin wallet)
+      public override void Serialize(Wallet wallet)
       {
         List<byte> tXRaw = new();
 
@@ -95,7 +95,7 @@ namespace BTokenLib
         TXRaw = tXRaw.ToArray();
       }
 
-      void SignTX(List<byte> tXRaw, WalletBitcoin wallet)
+      void SignTX(List<byte> tXRaw, Wallet wallet)
       {
         List<List<byte>> signaturesPerInput = new();
         int indexFirstInput = 5;
@@ -105,8 +105,10 @@ namespace BTokenLib
           List<byte> tXRawSign = tXRaw.ToList();
           int indexRawSign = indexFirstInput + 36 * (i + 1) + 5 * i;
 
-          tXRawSign[indexRawSign++] = (byte)wallet.PublicScript.Length;
-          tXRawSign.InsertRange(indexRawSign, wallet.PublicScript);
+          byte[] publicScript = PREFIX_P2PKH.Concat(wallet.Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray();
+
+          tXRawSign[indexRawSign++] = (byte)publicScript.Length;
+          tXRawSign.InsertRange(indexRawSign, publicScript);
 
           byte[] message = wallet.SHA256.ComputeHash(tXRawSign.ToArray());
 
@@ -130,9 +132,7 @@ namespace BTokenLib
 
           tXRaw[indexSig++] = (byte)signaturesPerInput[i].Count;
 
-          tXRaw.InsertRange(
-            indexSig,
-            signaturesPerInput[i]);
+          tXRaw.InsertRange(indexSig, signaturesPerInput[i]);
         }
 
         tXRaw.RemoveRange(tXRaw.Count - 4, 4);

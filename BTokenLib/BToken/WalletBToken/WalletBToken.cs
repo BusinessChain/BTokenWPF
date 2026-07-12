@@ -39,7 +39,7 @@ namespace BTokenLib
       {
         TXOutputP2PKH tXOutput = new()
         {
-          Type = TXOutputP2PKH.TypesToken.P2PKH,
+          Type = TXOutput.TypesToken.P2PKH,
           Script = BitConverter.GetBytes(value).Concat(addressDest.Base58CheckToPubKeyHash()).ToArray()
         };
 
@@ -48,7 +48,7 @@ namespace BTokenLib
 
       const int LENGTH_TX_P2PKH = 120;
 
-      void SendTX(TXOutputP2PKH tXOutput, double feePerByte)
+      public void SendTX(TXOutputP2PKH tXOutput, double feePerByte)
       {
         long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
 
@@ -135,7 +135,6 @@ namespace BTokenLib
 
         SendTX(tXOutput, feePerByte);
       }
-    }
 
       public override long GetBalance()
       {

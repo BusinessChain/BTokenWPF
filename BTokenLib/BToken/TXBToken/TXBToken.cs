@@ -105,17 +105,7 @@ namespace BTokenLib
           throw new ProtocolException($"TX {this} contains invalid signature.");
       }
       
-      public void AddSignature(byte[] signature)
-      {
-        List<byte> tXRaw = TXRaw.ToList();
-
-        tXRaw.Add((byte)signature.Length);
-        tXRaw.AddRange(signature);
-
-        TXRaw = tXRaw.ToArray();
-      }
-
-      public void Serialize()
+      public override void Serialize(Wallet wallet)
       {
         List<byte> tXRaw = new();
 
@@ -130,6 +120,11 @@ namespace BTokenLib
           tXRaw.Add((byte)output.Type);
           tXRaw.AddRange(output.Script);
         }
+
+        byte[] signature = wallet.GetSignature(tXRaw.ToArray());
+
+        tXRaw.Add((byte)signature.Length);
+        tXRaw.AddRange(signature);
 
         TXRaw = tXRaw.ToArray();
       }

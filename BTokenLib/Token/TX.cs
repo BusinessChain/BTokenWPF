@@ -21,6 +21,7 @@ namespace BTokenLib
       public List<TXOutput> TXOutputs = new();
 
 
+      public abstract void Serialize(Wallet wallet);
 
       public long GetValueOutputs()
       {
@@ -36,7 +37,6 @@ namespace BTokenLib
       {
         return Hash.ToHexString();
       }
-
     }
   }
 }

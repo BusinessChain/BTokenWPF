@@ -85,7 +85,7 @@ namespace BTokenLib
       return GetType().Name;
     }
 
-    public abstract TX CreateTXAnchor(TXOutputTokenAnchor tokenAnchor);
+    public abstract bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor);
 
     public virtual Block CreateBlock(int height, out TXOutputTokenAnchor anchorToken)
     { throw new NotSupportedException(); }

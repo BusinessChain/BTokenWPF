@@ -237,15 +237,15 @@ namespace BTokenLib
 
       void MineTokenAnchor(TXOutputTokenAnchor tokenAnchor)
       {
-        TX tXAnchor = Token.CreateTXAnchor(tokenAnchor);
-
-        Token.InsertTXUnconfirmed(tXAnchor);
-
-        $"Advertize token {tXAnchor}.".Log(this, Token.LogEntryNotifier);
-
-        lock (LOCK_Peers)
-          foreach (Peer peer in Peers)
-            peer.BroadcastTX(tXAnchor);
+        if (Token.TryCreateTXAnchor(tokenAnchor, out TX tXAnchor))
+          lock (LOCK_Peers)
+            foreach (Peer peer in Peers)
+              peer.BroadcastTX(tXAnchor);
+        else
+        {
+          $"Could not create anchor tX, stop mining.".Log(this, LogEntryNotifier);
+          IsMining = false;
+        }
       }
 
       void NotifyChildTokensOfAnchorToken(Block block)

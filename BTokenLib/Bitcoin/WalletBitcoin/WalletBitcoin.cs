@@ -10,22 +10,7 @@ namespace BTokenLib
   {
     public partial class WalletBitcoin : Wallet
     {
-      class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
-      {
-        public bool Equals(TXOutputWallet x, TXOutputWallet y)
-        {
-          return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
-        }
-
-        public int GetHashCode(TXOutputWallet x)
-        {
-          return BitConverter.ToInt32(x.TXID, 0) + x.Index;
-        }
-      }
-
       public TokenBitcoin Token;
-
-      public byte[] PublicScript;
 
       //public const byte OP_RETURN = 0x6A;
       //public const byte LengthDataAnchorToken = 70;
@@ -46,8 +31,6 @@ namespace BTokenLib
         : base(privKeyDec)
       {
         Token = token;
-
-        PublicScript = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray();
       }
 
       public override void SendTXValue(
@@ -58,78 +41,12 @@ namespace BTokenLib
       {
         TXOutputBitcoin tXOutput = new()
         {
-          Type = TXOutputBitcoin.TypesToken.P2PKH,
+          Type = TXOutput.TypesToken.P2PKH,
           Value = value,
           Script = PREFIX_P2PKH.Concat(addressOutput.Base58CheckToPubKeyHash()).Concat(POSTFIX_P2PKH).ToArray()
         };
 
         SendTX(tXOutput, feePerByte, sequence);
-      }      
-
-      void SendTX(TXOutputBitcoin tXOutput, double feePerByte, int sequence)
-      {
-        //return new()
-        //{
-        //  new TXOutputWallet()
-        //  {
-        //    TXID = "20da7491ec53757a914dc1f045afbcb0a5c3396785a9abe9fc074e017e9403fd".ToBinary(),
-        //    Value = 7106,
-        //    Index = 1
-        //  }
-        //};
-
-        long feePerInputP2PKH = (long)(LENGTH_P2PKH_INPUT * feePerByte);
-        long feePerOutputP2PKH = (long)(LENGTH_P2PKH_OUTPUT * feePerByte);
-
-        List<TXOutputWallet> outputsSpendable = OutputsSpendable
-          .Where(o => o.Value > feePerInputP2PKH)
-          .Concat(OutputsSpendableUnconfirmed.Where(o => o.Value > feePerInputP2PKH))
-          .Except(OutputsSpentUnconfirmed, new EqualityComparerTXOutputWallet())
-          .Take(VarInt.PREFIX_UINT16 - 1).ToList();
-
-        long valueInputs = OutputsSpendable.Sum(o => o.Value);
-
-        long feeTX = (long)(feePerByte
-          * (LENGTH_P2PKH_INPUT * OutputsSpendable.Count
-          + LENGTH_TX_OVERHEAD
-          + tXOutput.Script.Length));
-
-        if (valueInputs < feeTX + tXOutput.Value)
-          throw new ProtocolException(
-            $"Not enough funds held in unspent outputs: {valueInputs} sats." +
-            $"Fee required by P2PKH transaction: {feeTX}. Reduce specified rate for fee per byte.");
-
-        long valueChange = valueInputs - tXOutput.Value - feeTX - feePerOutputP2PKH;
-
-        // The premis is that the value of the change output has to be greater than the fee of one input,
-        // so that a future spend of that output is economically feasible.
-        bool flagCreateOutputChange = valueChange > feePerInputP2PKH;
-
-        TXBitcoin tX = new();
-
-        foreach (TXOutputWallet outputSpendable in OutputsSpendable)
-        {
-          tX.Inputs.Add(new TXInputBitcoin
-          {
-            TXIDOutput = outputSpendable.TXID,
-            OutputIndex = outputSpendable.Index,
-            Sequence = sequence
-          });
-        }
-
-        tX.TXOutputs.Add(tXOutput);
-
-        if (flagCreateOutputChange)
-          tX.TXOutputs.Add(new TXOutputBitcoin
-          {
-            Type = TXOutput.TypesToken.P2PKH,
-            Value = valueChange,
-            Script = PREFIX_P2PKH.Concat(Hash160PKeyPublic).Concat(POSTFIX_P2PKH).ToArray()
-          });
-
-        tX.Serialize(this);
-
-        Token.BroadcastTX(tX);
       }
 
       public override void InsertTXUnconfirmed(TX tX)
