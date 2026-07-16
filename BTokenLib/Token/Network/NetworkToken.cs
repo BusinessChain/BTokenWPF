@@ -235,9 +235,10 @@ namespace BTokenLib
         }
       }
 
+      long FeePerByte;
       void MineTokenAnchor(TXOutputTokenAnchor tokenAnchor)
       {
-        if (Token.TryCreateTXAnchor(tokenAnchor, out TX tX))
+        if (Token.TryCreateTXAnchor(tokenAnchor, FeePerByte, out TX tX))
           lock (LOCK_Peers)
             foreach (Peer peer in Peers)
               peer.BroadcastTX(tX);

@@ -116,26 +116,28 @@ namespace BTokenLib
     }
 
 
-    double FeePerByte;
     const int LENGTH_TX_P2PKH = 120;
     Account AccountWalletConfirmed;
-    Account AccountWalletUnconfirmed;
+    Account AccountWallet;
 
-    public override bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor)
+    public override bool TryCreateTXAnchor(
+      TXOutputTokenAnchor tokenAnchor, 
+      long feePerByte, 
+      out TX tXAnchor)
     {
       tXAnchor = null;
       byte[] dataAnchorToken = tokenAnchor.Serialize();
 
-      long fee = (long)(FeePerByte * LENGTH_TX_P2PKH);
+      long fee = feePerByte * LENGTH_TX_P2PKH;
 
-      if (AccountWalletUnconfirmed.Balance < tokenAnchor.Value + fee)
+      if (AccountWallet.Balance < fee)
         return false;
 
       TXBToken tX = new()
       {
         KeyPublic = Wallet.KeyPublic,
-        BlockheightAccountCreated = AccountWalletUnconfirmed.BlockHeightAccountCreated,
-        Nonce = AccountWalletUnconfirmed.Nonce,
+        BlockheightAccountCreated = AccountWallet.BlockHeightAccountCreated,
+        Nonce = AccountWallet.Nonce,
         Fee = fee
       };
 
@@ -212,12 +214,51 @@ namespace BTokenLib
         }
 
         CommitStaged(block);
+
+        foreach (TXBToken tX in block.TXs)
+        {
+          bool flagIndexTX = false;
+
+          if (tX.IDAccountSource.IsAllBytesEqual(Wallet.Hash160PKeyPublic))
+          {
+            flagIndexTX = true;
+            AccountWalletConfirmed.SpendTX(tX);
+          }
+
+          foreach (TXOutputP2PKH output in tX.TXOutputs)
+            if (output.IDAccount.IsAllBytesEqual(Wallet.Hash160PKeyPublic))
+            {
+              flagIndexTX = true;
+              AccountWalletConfirmed.Balance += output.Value;
+            }
+
+          if (flagIndexTX)
+            DatabaseTXCollection.Upsert(
+              new DBRecordTXWallet()
+              {
+                HashTX = tX.Hash,
+                BlockHeightOriginTX = block.Header.Height,
+                SerialNumberTX = SerialNumberTX++,
+                TXRaw = tX.TXRaw
+              });
+        }
       }
       finally
       {
         DiscardStaged();
       }
     }
+
+    /// Code von BTokenWallet
+    /// 
+
+    int SerialNumberTX;
+
+    List<TX> TXsUnconfirmedReceived = new();
+
+    ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
+
+    public const byte OP_RETURN = 0x6A;
 
     protected void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
     {
@@ -237,24 +278,24 @@ namespace BTokenLib
         //    Balance = accountCached.Balance + output.Value
         //  };
         //else
-        if (DatabaseAccountCollection.FindById(output.IDAccount) is Account accountStored)
+        if (DatabaseAccountCollection.FindById(tXOutput.IDAccount) is Account accountStored)
           accountStaged = new()
           {
             ID = accountStored.ID,
             BlockHeightAccountCreated = accountStored.BlockHeightAccountCreated,
             Nonce = accountStored.Nonce,
-            Balance = accountStored.Balance + output.Value
+            Balance = accountStored.Balance + tXOutput.Value
           };
         else
           accountStaged = new()
           {
-            ID = output.IDAccount,
+            ID = tXOutput.IDAccount,
             BlockHeightAccountCreated = blockHeight,
             Nonce = 0,
-            Balance = output.Value
+            Balance = tXOutput.Value
           };
 
-        AccountsStaged.Add(output.IDAccount, accountStaged);
+        AccountsStaged.Add(tXOutput.IDAccount, accountStaged);
       }
     }
 
@@ -361,11 +402,11 @@ namespace BTokenLib
         TXBToken tXBToken = tX as TXBToken;
 
         if (tXBToken.IDAccountSource.IsAllBytesEqual(Wallet.Hash160PKeyPublic))
-          AccountWalletUnconfirmed.SpendTX(tXBToken);
+          AccountWallet.SpendTX(tXBToken);
 
         foreach (TXOutputP2PKH output in tXBToken.TXOutputs)
           if (output.IDAccount.IsAllBytesEqual(Wallet.Hash160PKeyPublic))
-            AccountWalletUnconfirmed.Balance += output.Value;
+            AccountWallet.Balance += output.Value;
       }
       finally
       {
@@ -417,7 +458,7 @@ namespace BTokenLib
     //  }
     //}
 
-    protected override void ReverseBlockInCache(Block block)
+    public override void ReverseBlock(Block block)
     {
       try
       {

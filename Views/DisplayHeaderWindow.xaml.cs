@@ -56,19 +56,19 @@ namespace BTokenWPF
 
     void ListBoxTXs_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-      TX tX = ((ListBoxItemTX)ListBoxTXs.SelectedItem).TX;
+      //TX tX = ((ListBoxItemTX)ListBoxTXs.SelectedItem).TX;
 
-      foreach (Window w in Application.Current.Windows)
-      {
-        DisplayTXWindow windowDisplayTX = w as DisplayTXWindow;
-        if (windowDisplayTX != null && windowDisplayTX.TX == tX)
-        {
-          windowDisplayTX.Activate();
-          return;
-        }
-      }
+      //foreach (Window w in Application.Current.Windows)
+      //{
+      //  DisplayTXWindow windowDisplayTX = w as DisplayTXWindow;
+      //  if (windowDisplayTX != null && windowDisplayTX.TX == tX)
+      //  {
+      //    windowDisplayTX.Activate();
+      //    return;
+      //  }
+      //}
 
-      new DisplayTXWindow(tX).Show();
+      //new DisplayTXWindow(tX).Show();
     }
   }
 }

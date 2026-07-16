@@ -85,7 +85,7 @@ namespace BTokenWPF
 
     void UpdateTextBoxWallet()
     {
-      TextBoxBalanceSatoshies.Text = Token.Wallet.GetBalance().ToString();
+      //TextBoxBalanceSatoshies.Text = Token.Wallet.GetBalance().ToString();
 
       ListBoxWallet.Items.Clear();
       ListBoxWallet.Items.Add(new ListBoxItemWallet());

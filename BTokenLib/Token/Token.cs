@@ -62,14 +62,7 @@ namespace BTokenLib
 
     public virtual void InsertBlock(Block block) { }
 
-    public void ReverseBlock(Block block)
-    {
-      ReverseBlockInCache(block);
-
-      Wallet.ReverseBlock(block);
-    }
-
-    protected virtual void ReverseBlockInCache(Block block) { }
+    public virtual void ReverseBlock(Block block) { }
 
     public abstract Header ParseHeader(byte[] buffer, ref int index, SHA256 sHA256);
 
@@ -80,7 +73,7 @@ namespace BTokenLib
       return GetType().Name;
     }
 
-    public abstract bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor);
+    public abstract bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, long feePerByte, out TX tXAnchor);
 
     public virtual Block MineBlock(int height, out TXOutputTokenAnchor anchorToken)
     { throw new NotSupportedException(); }
