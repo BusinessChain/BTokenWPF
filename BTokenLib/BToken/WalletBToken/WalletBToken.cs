@@ -31,60 +31,7 @@ namespace BTokenLib
         DatabaseTXCollection = Database.GetCollection<DBRecordTXWallet>("RecordsTXWallet");
       }
 
-      public override void SendTXValue(
-        string addressDest,
-        long value,
-        double feePerByte,
-        int sequence)
-      {
-        TXOutputP2PKH tXOutput = new()
-        {
-          Type = TXOutput.TypesToken.P2PKH,
-          Script = BitConverter.GetBytes(value).Concat(addressDest.Base58CheckToPubKeyHash()).ToArray()
-        };
-
-        SendTX(tXOutput, feePerByte);
-      }
-
       const int LENGTH_TX_P2PKH = 120;
-
-      public void SendTX(TXOutputP2PKH tXOutput, double feePerByte)
-      {
-        long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
-
-        if (AccountWalletUnconfirmed.Balance < tXOutput.Value + fee)
-          throw new ProtocolException(
-            $"Not enough funds: balance {AccountWalletUnconfirmed.Balance} " +
-            $"less than tX output value {tXOutput.Value} plus fee {fee} totaling {tXOutput.Value + fee}.");
-
-        TXBToken tX = new()
-        {
-          KeyPublic = KeyPublic,
-          BlockheightAccountCreated = AccountWalletUnconfirmed.BlockHeightAccountCreated,
-          Nonce = AccountWalletUnconfirmed.Nonce,
-          Fee = fee
-        };
-
-        tX.TXOutputs.Add(tXOutput);
-
-        tX.Serialize();
-        byte[] signature = GetSignature(tX.TXRaw);
-        tX.Serialize(signature);
-
-        Token.BroadcastTX(tX);
-      }
-
-      public override void InsertTXUnconfirmed(TX tX)
-      {
-        TXBToken tXBToken = tX as TXBToken;
-
-        if (tXBToken.IDAccountSource.IsAllBytesEqual(Hash160PKeyPublic))
-          AccountWalletUnconfirmed.SpendTX(tXBToken);
-
-        foreach (TXOutputP2PKH output in tXBToken.TXOutputs)
-          if (output.IDAccount.IsAllBytesEqual(Hash160PKeyPublic))
-            AccountWalletUnconfirmed.Balance += output.Value;
-      }
 
       public override void InsertBlock(Block block)
       {
@@ -121,21 +68,7 @@ namespace BTokenLib
       {
 
       }
-
-      public override void SendTXData(
-        byte[] data,
-        double feePerByte,
-        int sequence)
-      {
-        TXOutputBToken tXOutput = new()
-        {
-          Type = TXOutputBToken.TypesToken.Data,
-          Script = VarInt.GetBytes(data.Length).Concat(data).ToArray()
-        };
-
-        SendTX(tXOutput, feePerByte);
-      }
-
+          
       public override long GetBalance()
       {
         return AccountWalletUnconfirmed.Balance;

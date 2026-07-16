@@ -82,7 +82,7 @@ namespace BTokenLib
       return new TXBToken(buffer, ref index, sHA256, flagIsCoinbase);
     }
 
-    public override Block CreateBlock(int height, out TXOutputTokenAnchor anchorToken)
+    public override Block MineBlock(int height, out TXOutputTokenAnchor anchorToken)
     {
       Block block = new Block(this);
 
@@ -115,25 +115,31 @@ namespace BTokenLib
       return block;
     }
 
+
+    double FeePerByte;
+    const int LENGTH_TX_P2PKH = 120;
+    Account AccountWalletConfirmed;
+    Account AccountWalletUnconfirmed;
+
     public override bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor)
     {
       tXAnchor = null;
       byte[] dataAnchorToken = tokenAnchor.Serialize();
 
-      long fee = (long)(feePerByte * LENGTH_TX_P2PKH);
+      long fee = (long)(FeePerByte * LENGTH_TX_P2PKH);
 
-      if (AccountWalletUnconfirmed.Balance < tXOutput.Value + fee)
+      if (AccountWalletUnconfirmed.Balance < tokenAnchor.Value + fee)
         return false;
 
       TXBToken tX = new()
       {
-        KeyPublic = KeyPublic,
+        KeyPublic = Wallet.KeyPublic,
         BlockheightAccountCreated = AccountWalletUnconfirmed.BlockHeightAccountCreated,
         Nonce = AccountWalletUnconfirmed.Nonce,
         Fee = fee
       };
 
-      tX.TXOutputs.Add(tXOutput);
+      tX.TXOutputs.Add(tokenAnchor);
 
       tX.Serialize(Wallet);
 
@@ -156,7 +162,7 @@ namespace BTokenLib
         Script = BitConverter.GetBytes(blockReward).Concat(hash160PKeyPublic).ToArray()
       };
 
-      tX.Serialize();
+      tX.Serialize(Wallet);
 
       return tX;
     }
@@ -188,7 +194,7 @@ namespace BTokenLib
       AccountsStaged.Clear();
     }
 
-    protected override void InsertBlockInDatabase(Block block) 
+    public override void InsertBlock(Block block) 
     {
       try
       {
@@ -196,6 +202,8 @@ namespace BTokenLib
         {
           TXBToken tX = (TXBToken)block.TXs[i];
 
+          /// !!! /// Im moment wird es falsch gemacht, es wird einfach immer davon ausgegangen, dass es sich um 
+          /// Value transfer handelt, nicht aber um Anker Tonkens.
           foreach (TXOutput tXOutput in tX.TXOutputs)
             StageInsertTXOutput(tXOutput, block.Header.Height);
 
@@ -213,13 +221,11 @@ namespace BTokenLib
 
     protected void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
     {
-      var output = tXOutput as TXOutputP2PKH;
+      if (tXOutput.Value < 0)
+        throw new ProtocolException($"Value of TX output {tXOutput.IDAccount.ToHexString()} smaller than zero.");
 
-      if (output.Value <= 0)
-        throw new ProtocolException($"Value of TX output funding {output.IDAccount.ToHexString()} is not greater than zero.");
-
-      if (AccountsStaged.TryGetValue(output.IDAccount, out Account accountStaged))
-        accountStaged.Balance += output.Value;
+      if (AccountsStaged.TryGetValue(tXOutput.IDAccount, out Account accountStaged))
+        accountStaged.Balance += tXOutput.Value;
       else
       {
         //if (Cache.TryGetValue(output.IDAccount, out Account accountCached))
@@ -343,9 +349,28 @@ namespace BTokenLib
         throw new ProtocolException($"Account {accountID.ToHexString()} not found in database.");
     }
 
-    protected override void AddToTXPool(TX tX) 
+    public void InsertTXUnconfirmed(TX tX)
     {
-      TXPool.AddTX(tX);
+      if (!TryLock())
+        throw new SynchronizationLockException("Failed to acquire database lock.");
+
+      try
+      {
+        TXPool.AddTX(tX);
+
+        TXBToken tXBToken = tX as TXBToken;
+
+        if (tXBToken.IDAccountSource.IsAllBytesEqual(Wallet.Hash160PKeyPublic))
+          AccountWalletUnconfirmed.SpendTX(tXBToken);
+
+        foreach (TXOutputP2PKH output in tXBToken.TXOutputs)
+          if (output.IDAccount.IsAllBytesEqual(Wallet.Hash160PKeyPublic))
+            AccountWalletUnconfirmed.Balance += output.Value;
+      }
+      finally
+      {
+        ReleaseLock();
+      }
     }
 
     public Account GetCopyOfAccountUnconfirmed(byte[] iDAccount)

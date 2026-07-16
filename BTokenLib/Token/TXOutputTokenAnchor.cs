@@ -25,9 +25,12 @@ namespace BTokenLib
       public byte[] HashBlockReferenced = new byte[32];
       public byte[] HashBlockPreviousReferenced = new byte[32];
 
+      byte[] TXOutputTokenAnchorRaw = new byte[IDENTIFIER_BTOKEN_PROTOCOL.Length + LENGTH_IDTOKEN + 32 + 32];
+
 
       public TXOutputTokenAnchor()
-      { }
+      { 
+      }
 
       public TXOutputTokenAnchor(byte[] buffer, ref int startIndex)
       {
@@ -42,20 +45,6 @@ namespace BTokenLib
         Array.Copy(buffer, startIndex, HashBlockPreviousReferenced, 0, HashBlockPreviousReferenced.Length);
         startIndex += HashBlockPreviousReferenced.Length;
       }
-
-      public TXOutputTokenAnchor Copy()
-      {
-        TXOutputTokenAnchor tokenAnchor = new();
-
-        tokenAnchor.IDToken = IDToken;
-        tokenAnchor.HashBlockReferenced = HashBlockReferenced;
-        tokenAnchor.HashBlockPreviousReferenced = HashBlockPreviousReferenced;
-
-        return tokenAnchor;
-      }
-
-
-      byte[] TXOutputTokenAnchorRaw = new byte[IDENTIFIER_BTOKEN_PROTOCOL.Length + LENGTH_IDTOKEN + 32 + 32];
 
       public byte[] Serialize()
       {

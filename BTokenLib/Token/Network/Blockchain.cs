@@ -195,7 +195,7 @@ namespace BTokenLib
         {
           int height = HeaderTip.Height + 1;
 
-          Block block = Token.CreateBlock(height, out anchorToken);
+          Block block = Token.MineBlock(height, out anchorToken);
 
           block.Header.HashPrevious = HeaderTip.Hash;
 

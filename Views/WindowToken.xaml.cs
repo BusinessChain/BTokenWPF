@@ -30,7 +30,7 @@ namespace BTokenWPF
     {
       try
       {
-        CheckBoxEnableOutboundConnections.IsChecked = Token.Network.FlagEnableOutboundConnections;
+        //CheckBoxEnableOutboundConnections.IsChecked = Token.Network.FlagEnableOutboundConnections;
 
         while (true)
         {
@@ -129,20 +129,20 @@ namespace BTokenWPF
 
     void ListBoxTXPool_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-      TX tX = ((ListBoxItemTX)ListBoxTXPool.SelectedItem).TX;
+      //TX tX = ((ListBoxItemTX)ListBoxTXPool.SelectedItem).TX;
 
-      foreach (Window w in Application.Current.Windows)
-      {
-        DisplayTXWindow windowDisplayTX = w as DisplayTXWindow;
+      //foreach (Window w in Application.Current.Windows)
+      //{
+      //  DisplayTXWindow windowDisplayTX = w as DisplayTXWindow;
 
-        if (windowDisplayTX != null && windowDisplayTX.TX == tX)
-        {
-          windowDisplayTX.Activate();
-          return;
-        }
-      }
+      //  if (windowDisplayTX != null && windowDisplayTX.TX == tX)
+      //  {
+      //    windowDisplayTX.Activate();
+      //    return;
+      //  }
+      //}
 
-      new DisplayTXWindow(tX).Show();
+      //new DisplayTXWindow(tX).Show();
     }
 
     void UpdateListBoxHeaderchain()
@@ -193,7 +193,7 @@ namespace BTokenWPF
 
       try
       {
-        Token.Wallet.SendTXValue(address, value, fee);
+        //Token.Wallet.SendTXValue(address, value, fee);
         // Request the tX back, from the Wallet, in order to make the text outputs below
 
         //TextBoxRawTX.Text = tX.TXRaw.Reverse().ToArray().ToHexString();

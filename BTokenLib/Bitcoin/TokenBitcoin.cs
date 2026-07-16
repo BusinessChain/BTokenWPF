@@ -165,12 +165,7 @@ namespace BTokenLib
 
     double FeePerByte;
     List<TXOutputWallet> OutputsSpendableConfirmed = new();
-    public List<TXOutputWallet> OutputsSpendableUnconfirmed = new();
 
-    /// <summary>
-    /// Contains outputs that are spent by unconfirmed transactions. The outputs themselves might origin from confirmed and unconfirmed transactions.
-    /// </summary>
-    public List<TXOutputWallet> OutputsSpentUnconfirmed = new();
 
     class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
     {
@@ -185,13 +180,7 @@ namespace BTokenLib
       }
     }
 
-    // Hier könnte doch sogar nur ein generischer TXOutput
-    // ubergeben werden, und die Funktion in TryCreateTX
-    // umtaufen, dann kann dieselbe funktion für Anker und P2PKH verwendet werden.
-    
-    public override bool TryCreateTXAnchor(
-      TXOutputTokenAnchor tokenAnchor,
-      out TX tXAnchor)
+    public override bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor)
     {
       tXAnchor = new TXBitcoin();
 
@@ -210,8 +199,6 @@ namespace BTokenLib
 
       List<TXOutputWallet> outputsSpendable = OutputsSpendableConfirmed
         .Where(o => o.Value > feePerInputP2PKH)
-        .Concat(OutputsSpendableUnconfirmed.Where(o => o.Value > feePerInputP2PKH))
-        .Except(OutputsSpentUnconfirmed, new EqualityComparerTXOutputWallet())
         .Take(VarInt.PREFIX_UINT16 - 1).ToList();
 
       long valueInputs = outputsSpendable.Sum(o => o.Value);
@@ -252,6 +239,44 @@ namespace BTokenLib
       tXAnchor.Serialize(Wallet);
 
       return true;
+    }
+
+
+    public List<TXOutputWallet> OutputsSpendable = new();
+
+    public override void InsertBlock(Block block)
+    {
+      foreach (TXBitcoin tX in block.TXs)
+      {
+        foreach (TXInputBitcoin tXInput in tX.Inputs)
+          OutputsSpendable.RemoveAll(o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) && o.Index == tXInput.OutputIndex);
+
+        for (int i = 0; i < tX.TXOutputs.Count; i++)
+          if (TryAddTXOutputWallet(OutputsSpendable, tX, i))
+
+        IndexTXs.Add(tX.Hash, tX);
+      }
+    }
+
+    bool TryAddTXOutputWallet(List<TXOutputWallet> listOutputs, TXBitcoin tX, int indexOutput)
+    {
+      TXOutputBitcoin tXOutputReferenced = (TXOutputBitcoin)tX.TXOutputs[indexOutput];
+
+      if (tXOutputReferenced.Type == TXOutput.TypesToken.P2PKH &&
+        tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(Hash160PKeyPublic))
+      {
+        listOutputs.Add(
+          new TXOutputWallet
+          {
+            TXID = tX.Hash,
+            Index = indexOutput,
+            Value = tXOutputReferenced.Value
+          });
+
+        return true;
+      }
+
+      return false;
     }
   }
 }

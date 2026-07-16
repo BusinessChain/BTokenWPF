@@ -33,56 +33,6 @@ namespace BTokenLib
         Token = token;
       }
 
-      public override void SendTXValue(
-        string addressOutput,
-        long value,
-        double feePerByte,
-        int sequence)
-      {
-        TXOutputBitcoin tXOutput = new()
-        {
-          Type = TXOutput.TypesToken.P2PKH,
-          Value = value,
-          Script = PREFIX_P2PKH.Concat(addressOutput.Base58CheckToPubKeyHash()).Concat(POSTFIX_P2PKH).ToArray()
-        };
-
-        SendTX(tXOutput, feePerByte, sequence);
-      }
-
-      public override void InsertTXUnconfirmed(TX tX)
-      {
-        TXBitcoin tXBitcoin = tX as TXBitcoin;
-
-        foreach (TXInputBitcoin tXInput in tXBitcoin.Inputs)
-        {
-          TXOutputWallet tXOutputWallet = OutputsSpendable.Find(
-            o => o.TXID.IsAllBytesEqual(tXInput.TXIDOutput) 
-            && o.Index == tXInput.OutputIndex);
-
-          if (tXOutputWallet != null)
-            OutputsSpentUnconfirmed.Add(tXOutputWallet);
-        }
-
-        for (int i = 0; i < tXBitcoin.TXOutputs.Count; i++)
-          TryAddTXOutputWallet(OutputsSpendableUnconfirmed, tXBitcoin, i);
-      }
-
-      public override void InsertBlock(Block block)
-      {
-        foreach (TXBitcoin tX in block.TXs)
-        {
-          foreach (TXInputBitcoin tXInput in tX.Inputs)
-            if (TryRemoveOutput(OutputsSpendable, tXInput.TXIDOutput, tXInput.OutputIndex))
-              TryRemoveOutput(OutputsSpentUnconfirmed, tXInput.TXIDOutput, tXInput.OutputIndex);
-
-          for (int i = 0; i < tX.TXOutputs.Count; i++)
-            if (TryAddTXOutputWallet(OutputsSpendable, tX, i))
-              TryRemoveOutput(OutputsSpendableUnconfirmed, tX.Hash, i);
-
-          IndexTXs.Add(tX.Hash, tX);
-        }
-      }
-
       public override void ReverseBlock(Block block)
       {
         for (int t = block.TXs.Count - 1; t >= 0; t--)
@@ -101,43 +51,6 @@ namespace BTokenLib
 
           IndexTXs.Remove(tX.Hash);
         }
-      }
-
-      bool TryAddTXOutputWallet(List<TXOutputWallet> listOutputs, TXBitcoin tX, int indexOutput)
-      {
-        TXOutputBitcoin tXOutputReferenced = (TXOutputBitcoin)tX.TXOutputs[indexOutput];
-
-        if (tXOutputReferenced.Type == TXOutput.TypesToken.P2PKH &&
-          tXOutputReferenced.PublicKeyHash160.IsAllBytesEqual(Hash160PKeyPublic))
-        {
-          listOutputs.Add(
-            new TXOutputWallet
-            {
-              TXID = tX.Hash,
-              Index = indexOutput,
-              Value = tXOutputReferenced.Value
-            });
-
-          return true;
-        }
-
-        return false;
-      }
-
-      static bool TryRemoveOutput(List<TXOutputWallet> outputs, byte[] tXID, int outputIndex)
-      {
-        return 0 < outputs.RemoveAll(o => o.TXID.IsAllBytesEqual(tXID) && o.Index == outputIndex);
-      }
-
-      public override void Clear()
-      {
-        OutputsSpendable.Clear();
-        base.Clear();
-      }
-
-      public override long GetBalance()
-      {
-        return OutputsSpendable.Sum(o => o.Value);
       }
     }
   }

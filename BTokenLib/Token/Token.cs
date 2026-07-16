@@ -60,12 +60,7 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    public void InsertBlock(Block block)
-    {
-      InsertBlockInDatabase(block);
-    }
-
-    protected virtual void InsertBlockInDatabase(Block block) { }
+    public virtual void InsertBlock(Block block) { }
 
     public void ReverseBlock(Block block)
     {
@@ -87,28 +82,10 @@ namespace BTokenLib
 
     public abstract bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, out TX tXAnchor);
 
-    public virtual Block CreateBlock(int height, out TXOutputTokenAnchor anchorToken)
+    public virtual Block MineBlock(int height, out TXOutputTokenAnchor anchorToken)
     { throw new NotSupportedException(); }
 
     public virtual bool TryGetDB(byte[] hash, out byte[] dataDB)
     { throw new NotSupportedException(); }
-
-    public void InsertTXUnconfirmed(TX tX)
-    {
-      if (!TryLock())
-        throw new SynchronizationLockException("Failed to acquire database lock.");
-
-      try
-      {
-        AddToTXPool(tX);
-        Wallet.InsertTXUnconfirmed(tX);
-      }
-      finally
-      {
-        ReleaseLock();
-      }
-    }
-
-    protected virtual void AddToTXPool(TX tX) { }
   }
 }

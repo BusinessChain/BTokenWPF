@@ -237,10 +237,10 @@ namespace BTokenLib
 
       void MineTokenAnchor(TXOutputTokenAnchor tokenAnchor)
       {
-        if (Token.TryCreateTXAnchor(tokenAnchor, out TX tXAnchor))
+        if (Token.TryCreateTXAnchor(tokenAnchor, out TX tX))
           lock (LOCK_Peers)
             foreach (Peer peer in Peers)
-              peer.BroadcastTX(tXAnchor);
+              peer.BroadcastTX(tX);
         else
         {
           $"Could not create anchor tX, stop mining.".Log(this, LogEntryNotifier);

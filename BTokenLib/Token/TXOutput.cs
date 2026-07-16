@@ -17,6 +17,10 @@ namespace BTokenLib
         P2PKH = 0x01
       }
 
+      public byte[] IDAccount;
+
+      public byte[] Script;
+
       public long Value;
 
       public TypesToken Type;

@@ -10,8 +10,6 @@ namespace BTokenLib
     {
       public byte[] IDAccount;
 
-      public byte[] Data;
-
       public byte[] Script;
 
 
