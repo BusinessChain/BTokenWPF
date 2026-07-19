@@ -249,16 +249,11 @@ namespace BTokenLib
       }
     }
 
-    /// Code von BTokenWallet
-    /// 
-
     int SerialNumberTX;
 
     List<TX> TXsUnconfirmedReceived = new();
 
     ILiteCollection<DBRecordTXWallet> DatabaseTXCollection;
-
-    public const byte OP_RETURN = 0x6A;
 
     protected void StageInsertTXOutput(TXOutput tXOutput, int blockHeight)
     {

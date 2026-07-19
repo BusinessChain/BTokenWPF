@@ -60,7 +60,7 @@ namespace BTokenLib
 
     public abstract bool TryGetTX(byte[] hash, out TX tX);
 
-    public virtual void InsertBlock(Block block) { }
+    public abstract void InsertBlock(Block block);
 
     public virtual void ReverseBlock(Block block) { }
 

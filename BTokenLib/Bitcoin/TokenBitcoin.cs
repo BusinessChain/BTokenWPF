@@ -9,7 +9,19 @@ namespace BTokenLib
 {
   public partial class TokenBitcoin : Token
   {
-    const UInt16 COMPORT_BITCOIN = 8333;
+    class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
+    {
+      public bool Equals(TXOutputWallet x, TXOutputWallet y)
+      {
+        return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
+      }
+
+      public int GetHashCode(TXOutputWallet x)
+      {
+        return BitConverter.ToInt32(x.TXID, 0) + x.Index;
+      }
+    }
+
     const int SIZE_BLOCK_MAX = 1 << 20; // 1 MB
 
     public const long BLOCK_REWARD_INITIAL = 5000000000;
@@ -18,6 +30,9 @@ namespace BTokenLib
     public const int LENGTH_P2PKH_INPUT = 148;
     public const int LENGTH_P2PKH_OUTPUT = 34;
     public const int LENGTH_TX_OVERHEAD = 10;
+
+    List<TXOutputWallet> OutputsSpendable = new();
+    List<TXOutputWallet> OutputsSpendableConfirmed = new();
 
 
     public TokenBitcoin(ILogEntryNotifier logEntryNotifier)
@@ -162,23 +177,6 @@ namespace BTokenLib
       return false;
     }
 
-
-    List<TXOutputWallet> OutputsSpendableConfirmed = new();
-
-
-    class EqualityComparerTXOutputWallet : IEqualityComparer<TXOutputWallet>
-    {
-      public bool Equals(TXOutputWallet x, TXOutputWallet y)
-      {
-        return x.Index == y.Index && x.TXID.IsAllBytesEqual(y.TXID);
-      }
-
-      public int GetHashCode(TXOutputWallet x)
-      {
-        return BitConverter.ToInt32(x.TXID, 0) + x.Index;
-      }
-    }
-
     public override bool TryCreateTXAnchor(TXOutputTokenAnchor tokenAnchor, long feePerByte, out TX tXAnchor)
     {
       tXAnchor = new TXBitcoin();
@@ -241,8 +239,9 @@ namespace BTokenLib
     }
 
 
-    public List<TXOutputWallet> OutputsSpendable = new();
-
+    // Hier darf es keine Exception geben, weil wir einen
+    // geparsten Bitcoin Block mit PoW immer als korrekt betrachten
+    
     public override void InsertBlock(Block block)
     {
       foreach (TXBitcoin tX in block.TXs)
@@ -256,22 +255,6 @@ namespace BTokenLib
         IndexTXs.Add(tX.Hash, tX);
       }
     }
-
-
-    /// <summary>
-    /// altes Gerümpel von WalletBitcoin
-    /// </summary>
-
-    //public const byte OP_RETURN = 0x6A;
-    //public const byte LengthDataAnchorToken = 70;
-
-    //public static byte[] PREFIX_ANCHOR_TOKEN =
-    //  new byte[] { OP_RETURN, LengthDataAnchorToken }.Concat(TXOutputTokenAnchor.IDENTIFIER_BTOKEN_PROTOCOL).ToArray();
-
-    //public readonly static int LENGTH_SCRIPT_ANCHOR_TOKEN =
-    //  PREFIX_ANCHOR_TOKEN.Length + TXOutputTokenAnchor.LENGTH_IDTOKEN + 32 + 32;
-
-    //public List<TXOutputWallet> OutputsSpendable = new();
 
     // Das muss eine Datanbank sein!!
     public Dictionary<byte[], TX> IndexTXs = new(new EqualityComparerByteArray());

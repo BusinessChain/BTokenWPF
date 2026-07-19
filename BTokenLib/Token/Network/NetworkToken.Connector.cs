@@ -32,6 +32,18 @@ namespace BTokenLib
       public enum ConnectionType { OUTBOUND, INBOUND };
       List<string> IPAddresses = new();
 
+      object LOCK_Peers = new();
+      List<Peer> Peers = new();
+
+      public bool EnableInboundConnections;
+      public bool EnableRelay;
+      public ILogEntryNotifier LogEntryNotifier;
+
+      DirectoryInfo DirectoryPeers;
+      DirectoryInfo DirectoryPeersActive;
+      DirectoryInfo DirectoryPeersArchive;
+      DirectoryInfo DirectoryPeersDisposed;
+
 
       async Task StartPeerConnector()
       {

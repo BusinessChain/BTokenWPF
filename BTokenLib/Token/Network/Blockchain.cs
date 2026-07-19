@@ -206,18 +206,15 @@ namespace BTokenLib
           return block;
         }
 
-        public bool TryInsertBlock(
-          ref Block block,
-          ref Blockchain sychronizationRoot,
-          out bool isSyncComplete)
+        public bool TryAppendBlock(ref Block block, ref Blockchain blockchainRoot)
         {
-          isSyncComplete = false;
+          bool flagAppendSuccess = false;
 
           if (!HeadersDownloading.Remove(block.Header.Hash))
           {
             foreach (Blockchain branch in BlockchainBranches)
-              if (branch.TryInsertBlock(ref block, ref sychronizationRoot, out isSyncComplete))
-                return true;
+              if (branch.TryAppendBlock(ref block, ref blockchainRoot))
+                return false;
 
             block.Header = null;
             return false;
@@ -242,15 +239,13 @@ namespace BTokenLib
 
               block.WriteToDisk(PathDirectoryBlocks);
 
-              isSyncComplete = block.Header == HeaderTip;
+              flagAppendSuccess = HeaderTipBlockchain == HeaderTip;
 
               PoolBlocks.Add(block);
             } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
 
             if (TryReorg())
-            {
-              sychronizationRoot = this;
-            }
+              blockchainRoot = this;
           }
           else
             QueueBlocks.Add(heightBlock, block);
@@ -260,7 +255,7 @@ namespace BTokenLib
 
           block.Header = FetchHeaderDownload();
 
-          return true;
+          return flagAppendSuccess;
         }
 
         bool TryReorg()
