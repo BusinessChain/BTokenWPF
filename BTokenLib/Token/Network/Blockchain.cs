@@ -17,6 +17,8 @@ namespace BTokenLib
 
         Token Token;
 
+        NetworkToken Network;
+
         Header HeaderTip;
         Header HeaderRoot;
         Header HeaderTipBlockchain;
@@ -33,9 +35,11 @@ namespace BTokenLib
         Block BlockLoad;
 
 
-        public Blockchain(Token token)
+        public Blockchain(Token token, NetworkToken network)
         {
           Token = token;
+
+          Network = network;
 
           BlockLoad = new(Token);
         }
@@ -206,7 +210,7 @@ namespace BTokenLib
           return block;
         }
 
-        public bool TryAppendBlock(ref Block block, ref Blockchain blockchainRoot)
+        public void AppendBlock(ref Block block, ref Blockchain blockchainRoot)
         {
           bool flagAppendSuccess = false;
 
@@ -242,6 +246,8 @@ namespace BTokenLib
               flagAppendSuccess = HeaderTipBlockchain == HeaderTip;
 
               PoolBlocks.Add(block);
+
+              Network.NotifyChildNetworksOfAnchorToken(block);
             } while (QueueBlocks.TryGetValue(HeaderTipBlockchain.Height + 1, out block));
 
             if (TryReorg())

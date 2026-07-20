@@ -76,11 +76,7 @@ namespace BTokenLib
 
         try
         {
-          // Den notify braucht es block weise, im append drin darf es nicht einen versteckten
-          // multi insert geben.
-          if (BlockchainRoot.TryAppendBlock(
-            ref block, ref BlockchainRoot))
-            NotifyChildNetworksOfAnchorToken(block);
+          BlockchainRoot.AppendBlock(ref block, ref BlockchainRoot);
         }
         finally
         {
@@ -115,8 +111,6 @@ namespace BTokenLib
                 Peers.ForEach(p => HeadersMessage.SendHeaders(
                   p,
                   new List<byte[]> { blockMined.Header.Hash }));
-
-              NotifyChildNetworksOfAnchorToken(blockMined);
             }
 
           // Der User muss jeweils definieren, mit welcher fee Rate er die Verankerung bezahlen will.

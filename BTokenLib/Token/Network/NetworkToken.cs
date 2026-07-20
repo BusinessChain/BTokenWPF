@@ -35,7 +35,7 @@ namespace BTokenLib
         NetworkParent = tokenParent.Network; 
         Token = token;
 
-        BlockchainRoot = new(Token);
+        BlockchainRoot = new(Token, this);
 
         EnableInboundConnections = flagEnableInboundConnections;
         EnableRelay = flagEnableRelay;
